@@ -5,9 +5,13 @@ node_modules/
 # build outputs
 dist/
 build/
+.next/
 .web-build/
 .expo/
 .expo-shared/
+
+# TypeScript
+*.tsbuildinfo
 
 # logs
 *.log

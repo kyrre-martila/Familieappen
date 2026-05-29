@@ -35,6 +35,7 @@ The repository starts as a lean fullstack monorepo:
 ```text
 familieappen/
   apps/
+    web/
     mobile/
     api/
   packages/
@@ -44,13 +45,24 @@ familieappen/
   infra/
 ```
 
+### apps/web
+
+- Next.js
+- React
+- TypeScript
+- App Router
+- Regular responsive web app shell
+- Placeholder routes only
+- No backend connection yet
+- No feature logic yet
+- No PWA, service worker or offline setup
+
 ### apps/mobile
 
 - Expo React Native
 - TypeScript
 - Expo Router
-- Minimal app shell
-- Placeholder screens only
+- Existing minimal app shell left untouched while the web product is validated
 - No backend connection yet
 - No feature logic yet
 
@@ -98,12 +110,14 @@ Do not add these until the project intentionally reaches that phase:
 - Generated SDKs
 - Heavy security scans
 - Real feature logic
+- PWA setup, service workers, push notifications or offline functionality
+- Expo/mobile expansion
 - Large component library
 
 ## Build order
 
 1. Keep the repository foundation clean and runnable.
-2. Add navigation and app shell polish only when needed for product clarity.
+2. Validate the regular web app shell and navigation before adding mobile-app or PWA work.
 3. Design the domain model before implementing persistent feature data.
 4. Add API modules only when a feature is ready to be implemented.
 5. Add database and authentication deliberately, not as part of the initial scaffold.
