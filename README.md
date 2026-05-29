@@ -9,6 +9,7 @@ The product goal is simple: save time, create overview and make family logistics
 ```text
 familieappen/
   apps/
+    web/         Next.js web app with App Router
     mobile/      Expo React Native app with Expo Router
     api/         NestJS API app
   packages/
@@ -23,7 +24,8 @@ familieappen/
 This repository is intentionally minimal. It includes:
 
 - A pnpm workspace monorepo.
-- An Expo React Native mobile shell with placeholder tabs for Home, Calendar, Meals, Shopping, Tasks, Wishlists and Settings.
+- A Next.js web shell with placeholder routes for Home, Calendar, Meals, Shopping, Tasks, Wishlists and Settings.
+- An Expo React Native mobile shell from the initial foundation, left untouched while the web product is validated.
 - A NestJS API with `GET /health`.
 - A small shared TypeScript package for family roles and sharing levels.
 - A small UI package containing design tokens.
@@ -41,6 +43,20 @@ It does not include database implementation, authentication, Docker, GitHub Acti
 pnpm install
 ```
 
+## Run the web app
+
+```bash
+pnpm dev:web
+```
+
+Equivalent package-level command:
+
+```bash
+pnpm --filter @familieappen/web dev
+```
+
+Next.js starts the responsive web shell locally.
+
 ## Run the mobile app
 
 ```bash
@@ -53,7 +69,7 @@ Equivalent package-level command:
 pnpm --filter @familieappen/mobile start
 ```
 
-Expo will show options for opening the app in Expo Go, an emulator/simulator or a web preview where supported.
+The mobile app is not the current validation focus and remains untouched by the web shell work.
 
 ## Run the API
 

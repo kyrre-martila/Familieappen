@@ -42,13 +42,14 @@ Do not introduce advanced permission systems before the product explicitly needs
 
 ### Mobile-first always
 
-FamilieAppen is primarily a mobile product. Prioritize small screens, thumb-friendly interactions, fast actions, minimal taps and clear hierarchy.
+FamilieAppen is being validated as a regular web application first. Keep the web app mobile-friendly with small-screen layouts, thumb-friendly navigation, fast actions, minimal taps and clear hierarchy, but do not add PWA/offline/mobile-app functionality yet.
 
 ## Architecture rules
 
 - Use the lean pnpm workspace monorepo structure.
-- Keep `apps/mobile` as the primary user-facing application.
+- Keep `apps/web` as the primary user-facing application while the web product is validated.
 - Keep `apps/api` as the backend boundary for future business logic.
+- Leave `apps/mobile` untouched unless mobile work is explicitly requested later.
 - Keep `packages/shared` small and focused on shared constants/types.
 - Keep `packages/ui` small and focused on tokens before components are necessary.
 
@@ -67,6 +68,8 @@ Do not add these without explicit approval:
 - Generated SDKs
 - Heavy security scans
 - Real feature logic
+- PWA setup, service workers, push notifications or offline functionality
+- Expo/mobile expansion
 - Large component library
 
 ## Design/token rules

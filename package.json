@@ -5,8 +5,10 @@
   "description": "Lean fullstack monorepo foundation for FamilieAppen.",
   "packageManager": "pnpm@10.12.1",
   "scripts": {
+    "dev:web": "pnpm --filter @familieappen/web dev",
     "dev:mobile": "pnpm --filter @familieappen/mobile start",
     "dev:api": "pnpm --filter @familieappen/api start:dev",
+    "start:web": "pnpm --filter @familieappen/web start",
     "start:api": "pnpm --filter @familieappen/api start",
     "build": "pnpm -r build",
     "typecheck": "pnpm -r typecheck"
