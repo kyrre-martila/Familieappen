@@ -1,449 +1,90 @@
-FamilieAppen
+# FamilieAppen
 
-The operating system for modern family logistics.
+FamilieAppen is a practical productivity app for modern family logistics. It helps families coordinate everyday life in one place: calendar, dinner planning, shopping lists, tasks, reminders and wishlists.
 
-FamilieAppen helps families coordinate everyday life in one place — saving time, reducing friction and making family planning easier.
+The product goal is simple: save time, create overview and make family logistics easier without unnecessary complexity.
 
-Built for real families with real logistics.
+## Monorepo structure
 
-No complicated setup.
-No unnecessary complexity.
-Just tools that help everyday life work better.
+```text
+familieappen/
+  apps/
+    mobile/      Expo React Native app with Expo Router
+    api/         NestJS API app
+  packages/
+    shared/      Shared TypeScript constants and types
+    ui/          Shared design tokens
+  docs/          Product and development documentation
+  infra/         Reserved for future infrastructure notes/configuration
+```
 
-⸻
+## Current foundation
 
-Why FamilieAppen?
+This repository is intentionally minimal. It includes:
 
-Modern family life is logistics.
+- A pnpm workspace monorepo.
+- An Expo React Native mobile shell with placeholder tabs for Home, Calendar, Meals, Shopping, Tasks, Wishlists and Settings.
+- A NestJS API with `GET /health`.
+- A small shared TypeScript package for family roles and sharing levels.
+- A small UI package containing design tokens.
 
-Who is driving to football practice?
-What is for dinner?
-Did someone buy milk?
-Who is picking up the kids?
-What happens next week?
+It does not include database implementation, authentication, Docker, GitHub Actions, Prisma, Redis, Supabase, generated SDKs or real feature logic yet.
 
-Most families coordinate everyday life across too many places:
+## Requirements
 
-* Calendar in one app
-* Spond in another
-* Shopping lists somewhere else
-* Messages everywhere
-* Dinner planning on paper
-* Wishlists in separate services
+- Node.js 20 or newer
+- pnpm 10 or newer
 
-For many families, even creating and sharing a family calendar feels unnecessarily complicated.
+## Install
 
-FamilieAppen brings family coordination together in one place.
+```bash
+pnpm install
+```
 
-The goal is simple:
+## Run the mobile app
 
-Save time. Create overview. Make family logistics easier.
+```bash
+pnpm dev:mobile
+```
 
-Not another social platform.
+Equivalent package-level command:
 
-Not unnecessary complexity.
+```bash
+pnpm --filter @familieappen/mobile start
+```
 
-Just practical tools families actually use.
+Expo will show options for opening the app in Expo Go, an emulator/simulator or a web preview where supported.
 
-⸻
+## Run the API
 
-Core Philosophy
+```bash
+pnpm dev:api
+```
 
-FamilieAppen is built around three ideas:
+Equivalent package-level command:
 
-1. Overview
+```bash
+pnpm --filter @familieappen/api start:dev
+```
 
-Know what matters today.
+Health check:
 
-* Who is doing what
-* Where children need to be
-* What is for dinner
-* What needs to be bought
-* What happens next
+```bash
+curl http://localhost:3000/health
+```
 
-2. Coordination
+Expected response:
 
-Family logistics should feel easier.
+```json
+{"status":"ok","service":"familieappen-api"}
+```
 
-* Shared planning
-* Shared responsibility
-* Better communication
-* Fewer misunderstandings
-* Less “who is driving?” chaos
+## Shared packages
 
-3. Simplicity
+- `@familieappen/shared` exports family role constants, sharing level constants and small shared types.
+- `@familieappen/ui` exports initial design tokens and `tokens.css` for future web/native alignment.
 
-Complicated things should feel simple.
+## Documentation
 
-Families should not need technical knowledge to coordinate everyday life.
-
-Example:
-
-Instead of manually creating and sharing calendars between family members, FamilieAppen helps set things up automatically.
-
-⸻
-
-Product Principles
-
-Simple by Default
-
-FamilieAppen is designed for normal families — not power users.
-
-The app should work out of the box.
-
-* Minimal setup
-* Sensible defaults
-* Clear choices
-* No technical configuration
-
-We prioritize usability over flexibility.
-
-⸻
-
-Three Sharing Levels
-
-Sharing should be powerful — but never confusing.
-
-Everything in FamilieAppen follows the same sharing model.
-
-1. Private
-
-Visible only to you.
-
-Examples:
-
-* Personal reminders
-* Private tasks
-* Personal notes
-
-2. Family
-
-Shared with your household.
-
-Examples:
-
-* Family calendar
-* Shopping list
-* Dinner planning
-* Shared reminders
-
-3. Shared with Selected People
-
-Shared with specific people outside the household.
-
-Examples:
-
-* Grandparents
-* Co-parents
-* Aunts and uncles
-* Babysitters
-
-Example use cases:
-
-* Share a wishlist with grandparents
-* Share football schedules with a co-parent
-* Share plans with a babysitter
-* Share practical information with extended family
-
-No complicated permission systems.
-
-Just three consistent sharing levels across the entire app.
-
-⸻
-
-MVP Scope (v1)
-
-Version 1 focuses only on the things families use every day.
-
-1. Family Dashboard
-
-A practical home screen for daily overview.
-
-Features:
-
-* Today’s events
-* Upcoming activities
-* Dinner today
-* Shopping status
-* Tasks & reminders
-* Family overview
-
-⸻
-
-2. Family Calendar
-
-A shared family calendar that just works.
-
-Features:
-
-* Day / week / month view
-* Color per family member
-* Repeating events
-* Shared events
-* All-day events
-* Family overview
-
-Future:
-
-* Spond calendar sync (via device calendar)
-* Apple Calendar
-* Google Calendar
-
-⸻
-
-3. Dinner Planning
-
-Simple monthly meal planning.
-
-Features:
-
-* Plan meals
-* Save favorites
-* Repeat previous weeks
-* Quick editing
-
-Future:
-
-* Recipes
-* Ingredient automation
-* Smart suggestions
-
-⸻
-
-4. Shared Shopping List
-
-One shopping list for the whole family.
-
-Features:
-
-* Live syncing
-* Shared edits
-* Check off items
-* Quick add
-* Offline support
-
-Future:
-
-* Auto-generated from dinner planning
-* Smart categories
-
-⸻
-
-5. Tasks & Reminders
-
-Simple family coordination.
-
-Features:
-
-* Shared reminders
-* Household todos
-* Assign tasks
-* Daily overview
-
-⸻
-
-6. Wishlists 🎁
-
-Private and shared family wishlists.
-
-Features:
-
-* Product links
-* Gift reservation
-* Mark as purchased
-* Hidden buyers
-* Sharing outside the app
-
-Wishlists are also part of the app’s organic growth model:
-
-People invited to see a wishlist can easily create their own family.
-
-⸻
-
-Planned Features
-
-Phase 2 — Family Coordination
-
-* Multi-family support
-* Shared custody planning
-* Pickup & driving coordination
-* Smart reminders
-* Sharing with grandparents / co-parents
-
-⸻
-
-Phase 3 — Family Value
-
-* Memory bank / family scrapbook (optional premium storage)
-* Yearbook export
-* Chores & allowance
-* Family polls
-
-⸻
-
-Phase 4 — Utility & Trust
-
-* Password vault
-* Budget & savings
-
-⸻
-
-Phase 5 — Bonus Utility
-
-* Lending registry
-
-Example:
-
-“Who borrowed the tent?”
-
-⸻
-
-Monetization Philosophy
-
-FamilieAppen should remain genuinely useful for free.
-
-Core family logistics should never be locked behind a subscription.
-
-Free Includes
-
-* Family calendar
-* Dinner planning
-* Shopping lists
-* Tasks & reminders
-* Wishlists
-* Family coordination
-
-Premium Should Feel Fair
-
-Paid features should mainly cover real infrastructure costs or premium utility.
-
-Examples:
-
-* Extra storage for family memories
-* Advanced exports (yearbooks, PDFs)
-* Ad-free experience
-* Premium memory features
-
-Advertising Principles
-
-Advertising, if used, should be:
-
-* Non-intrusive
-* Contextual
-* Useful
-* Never disruptive to core flows
-
-Examples:
-
-* Relevant offers connected to shopping lists
-* Useful recommendations around wishlists
-* Context-aware placements instead of intrusive banners
-
-The experience should always prioritize usefulness over advertising.
-
-⸻
-
-Design Principles
-
-FamilieAppen should feel:
-
-* Modern
-* Scandinavian
-* Practical
-* Warm
-* Trustworthy
-
-We avoid:
-
-* Unnecessary complexity
-* Feature bloat
-* Complicated setup
-* Intrusive advertising
-* Wasted time
-
-The app should help families save time — not waste it.
-
-⸻
-
-Technology
-
-Mobile & Frontend
-
-* React Native with Expo
-* TypeScript
-* Expo Router (file-based navigation)
-
-Backend
-
-* Supabase
-* PostgreSQL with Row Level Security
-* Supabase Realtime for live sync
-
-Authentication
-
-* Magic Link
-* Sign in with Apple
-* SMS login (later)
-
-Distribution
-
-* iOS (App Store)
-* Android (Google Play)
-* Web (optional)
-
-Infrastructure
-
-* Expo EAS Build & Submit
-* OTA updates via Expo
-
-⸻
-
-Architecture Notes
-
-Data Model Priorities
-
-These must be designed carefully before implementation:
-
-* Family membership and roles
-* Cross-family sharing
-* Sharing permissions
-* RLS policies (avoid data leaks between families)
-* Push notification triggers
-
-⸻
-
-Offline-first
-
-Shopping lists and tasks should work without network.
-
-Use optimistic UI + sync on reconnect.
-
-⸻
-
-Development Philosophy
-
-Build small.
-
-Ship useful features early.
-
-Avoid complexity until needed.
-
-A feature should solve a real family problem before it gets built.
-
-Daily usefulness beats feature quantity.
-
-⸻
-
-Status
-
-Currently in early development.
-
-The first focus is establishing:
-
-* Product direction
-* Data model
-* Family sharing architecture
-* Design system
-* Core user flows
-
-before implementation begins.
+- [Development Plan](docs/DEVELOPMENT_PLAN.md)
+- [AI Guide](docs/AI_GUIDE.md)

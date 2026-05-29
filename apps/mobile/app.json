@@ -1,0 +1,23 @@
+{
+  "expo": {
+    "name": "FamilieAppen",
+    "slug": "familieappen",
+    "scheme": "familieappen",
+    "version": "0.1.0",
+    "orientation": "portrait",
+    "userInterfaceStyle": "automatic",
+    "newArchEnabled": true,
+    "plugins": ["expo-router"],
+    "ios": {
+      "supportsTablet": true
+    },
+    "android": {
+      "adaptiveIcon": {
+        "backgroundColor": "#fffaf3"
+      }
+    },
+    "web": {
+      "bundler": "metro"
+    }
+  }
+}
