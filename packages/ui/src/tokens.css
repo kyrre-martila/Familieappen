@@ -5,24 +5,37 @@
   --space-l: clamp(1.5rem, 1.3rem + 0.9vw, 2rem);
   --space-xl: clamp(2rem, 1.75rem + 1.25vw, 3rem);
 
-  --text-label: clamp(0.875rem, 0.84rem + 0.18vw, 1rem);
+  --text-label: clamp(0.8125rem, 0.78rem + 0.16vw, 0.95rem);
   --text-body: clamp(1rem, 0.96rem + 0.2vw, 1.125rem);
-  --text-title: clamp(1.75rem, 1.45rem + 1.5vw, 2.5rem);
+  --text-title: clamp(2rem, 1.55rem + 2vw, 3rem);
+  --text-heading: clamp(1.25rem, 1.13rem + 0.6vw, 1.65rem);
+  --text-small: clamp(0.82rem, 0.79rem + 0.12vw, 0.92rem);
 
-  --page-width: 70rem;
+  --page-width: 72rem;
   --gutter: clamp(1rem, 0.75rem + 1.25vw, 2rem);
   --content-gap: var(--space-m);
   --section-gap: clamp(2rem, 1.65rem + 1.75vw, 3.5rem);
 
   --radius-s: 0.5rem;
   --radius-m: 1rem;
+  --radius-l: 1.5rem;
   --radius-pill: 999rem;
 
   --color-background: #fffaf3;
+  --color-background-soft: #f7f0e6;
   --color-surface: #ffffff;
+  --color-surface-warm: #fbf6ee;
   --color-text: #222222;
   --color-muted: #666666;
   --color-primary: #2f6f73;
+  --color-primary-strong: #214f52;
   --color-primary-soft: #d9eeee;
+  --color-accent: #f47b5f;
+  --color-accent-soft: #ffe1d8;
+  --color-success: #6f8f7a;
+  --color-success-soft: #e5efe7;
+  --color-warning: #bd7d35;
+  --color-warning-soft: #fff0d8;
   --color-border: #eadfce;
+  --color-border-strong: #dccdb8;
 }
