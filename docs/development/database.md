@@ -109,3 +109,29 @@ Known mitigations:
 - Cache pnpm and Prisma engine downloads in CI.
 - If only the checksum request is blocked but the engine binary is already trusted and available, Prisma documents `PRISMA_ENGINES_CHECKSUM_IGNORE_MISSING=1` as an escape hatch. Do not use it to hide missing engine binaries.
 - Keep `DATABASE_URL` pointed at a local or test database for migration checks; never run `migrate reset` against shared or production data.
+
+## Run 1.5 Prompt 3 verification note
+
+On 2026-05-30, a disposable local PostgreSQL 16.14 server was installed and started in the review environment because Docker was unavailable. The test database used for the attempted Prisma verification was deliberately separate from development data:
+
+```env
+DATABASE_URL="postgresql://postgres:postgres@localhost:5432/familieappen_run15_prompt3?schema=public"
+```
+
+Commands attempted from the repository root:
+
+```sh
+DATABASE_URL="postgresql://postgres:postgres@localhost:5432/familieappen_run15_prompt3?schema=public" pnpm prisma:generate
+DATABASE_URL="postgresql://postgres:postgres@localhost:5432/familieappen_run15_prompt3?schema=public" PRISMA_ENGINES_CHECKSUM_IGNORE_MISSING=1 pnpm prisma:generate
+```
+
+The first command reached the Prisma CLI but failed while fetching the schema-engine checksum from `https://binaries.prisma.sh/.../schema-engine.sha256` with `403 Forbidden`. Retrying with `PRISMA_ENGINES_CHECKSUM_IGNORE_MISSING=1` bypassed only the checksum request; the CLI then failed while fetching `schema-engine.gz` from the same host with `403 Forbidden`.
+
+Because `prisma generate` could not obtain the required Prisma schema engine, `prisma migrate deploy` / `prisma migrate reset` could not be used to verify the baseline migration in this environment. As a narrower SQL-only sanity check, the committed `20260530000000_run1_baseline/migration.sql` file was applied with `psql -v ON_ERROR_STOP=1` to a separate empty database named `familieappen_run15_prompt3_sqlcheck`; it completed successfully and created 14 public tables. This does not replace Prisma migrate verification because it does not exercise Prisma's migration engine or `_prisma_migrations` bookkeeping.
+
+Recommended local verification command once Prisma engine downloads or engine caching are available:
+
+```sh
+DATABASE_URL="postgresql://postgres:postgres@localhost:5432/familieappen_run15_prompt3?schema=public" pnpm prisma:generate
+DATABASE_URL="postgresql://postgres:postgres@localhost:5432/familieappen_run15_prompt3?schema=public" pnpm prisma:migrate:deploy
+```

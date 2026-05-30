@@ -794,3 +794,52 @@ Remaining database/Prisma risks:
 9. Should the dashboard remain a bespoke aggregator, or should it compose feature summary services with stricter module boundaries?
 10. What minimum test coverage is required before Run 2 begins?
 11. Is the mobile app expected to remain shell-only through Run 2, or should shared contracts begin accounting for native usage now?
+
+## Run 1.5 Prompt 3 result
+
+Date: 2026-05-30
+
+### Baseline migration verification
+
+A disposable local PostgreSQL 16.14 instance was installed and started in the review environment after confirming that Docker and `psql` were initially unavailable. A separate database, `familieappen_run15_prompt3`, was created and used only for the Run 1.5 Prompt 3 verification attempt with this explicit URL:
+
+```env
+DATABASE_URL="postgresql://postgres:postgres@localhost:5432/familieappen_run15_prompt3?schema=public"
+```
+
+Prisma verification is still blocked in this environment. `pnpm prisma:generate` reached the Prisma CLI, loaded `apps/api/prisma.config.ts`, and then failed because the environment's proxy returned `403 Forbidden` for Prisma's schema-engine checksum URL at `https://binaries.prisma.sh/.../schema-engine.sha256`. Retrying with `PRISMA_ENGINES_CHECKSUM_IGNORE_MISSING=1` bypassed the checksum lookup but failed on the actual schema-engine binary URL at `https://binaries.prisma.sh/.../schema-engine.gz`, also with `403 Forbidden`.
+
+Because Prisma Client generation could not obtain the required schema engine, `prisma migrate deploy` / `prisma migrate reset` was not run. Per the prompt instruction, API test harness work was not added in this pass.
+
+As a narrower SQL-only sanity check, the committed baseline SQL was applied directly to a second empty database, `familieappen_run15_prompt3_sqlcheck`, using:
+
+```sh
+psql "postgresql://postgres:postgres@localhost:5432/familieappen_run15_prompt3_sqlcheck" -v ON_ERROR_STOP=1 -f apps/api/prisma/migrations/20260530000000_run1_baseline/migration.sql
+```
+
+That direct SQL check completed successfully and created 14 public tables. This confirms the SQL file itself can apply to an empty PostgreSQL database, but it is not a substitute for Prisma migrate verification because it does not exercise Prisma's migration engine or `_prisma_migrations` state.
+
+### Tests added
+
+None. The requested auth and family-isolation API tests were intentionally deferred because the Prisma baseline could not be verified first in this environment.
+
+### Bugs found and fixed
+
+No application isolation bugs were investigated or fixed because test-harness work was stopped at the Prisma engine download blocker.
+
+### Risks remaining
+
+- Fresh-database verification through `prisma migrate deploy` or `prisma migrate reset` is still unverified until Prisma engine binaries are available through the network or a cache.
+- There is still no automated API test harness for auth, protected-route token rejection, or family isolation.
+- The SQL-only migration check does not prove that Prisma's migration metadata and deploy/reset workflow are healthy.
+
+### Recommended next Run 1.5 prompt
+
+Run 1.5 Prompt 4 should start in an environment with Prisma schema-engine binaries pre-cached or with access to `https://binaries.prisma.sh`, then rerun:
+
+```sh
+DATABASE_URL="postgresql://postgres:postgres@localhost:5432/familieappen_run15_prompt4?schema=public" pnpm prisma:generate
+DATABASE_URL="postgresql://postgres:postgres@localhost:5432/familieappen_run15_prompt4?schema=public" pnpm prisma:migrate:deploy
+```
+
+After that succeeds, add the NestJS HTTP API test harness and the auth/family-isolation regression tests requested for Prompt 3.
