@@ -843,3 +843,47 @@ DATABASE_URL="postgresql://postgres:postgres@localhost:5432/familieappen_run15_p
 ```
 
 After that succeeds, add the NestJS HTTP API test harness and the auth/family-isolation regression tests requested for Prompt 3.
+
+## Run 1.5 Prompt 3 result — API config and auth hardening
+
+Date: 2026-05-30
+
+### Files changed
+
+- `apps/api/src/config/app.config.ts`
+- `apps/api/src/config/config.service.ts`
+- `apps/api/src/auth/auth.service.ts`
+- `apps/api/.env.example`
+- `apps/api/package.json`
+- `apps/api/test/app-config.test.ts`
+- `docs/development/api-configuration.md`
+- `docs/reviews/review-run1.md`
+
+### Config rules added
+
+- API configuration now validates eagerly through `getAppConfig()` instead of silently falling back for malformed values.
+- `NODE_ENV` defaults to `development` when omitted.
+- `PORT` defaults to `4000` locally and must be an integer from `1` through `65535` when set.
+- `API_PREFIX` defaults to `api`, trims leading/trailing slashes, and only allows letters, numbers, slash separators, underscores, and hyphens.
+- `CORS_ORIGINS` defaults to `http://localhost:3000,http://127.0.0.1:3000`; custom values must be comma-separated bare `http`/`https` origins without paths, queries, hashes, or trailing slashes.
+- `DATABASE_URL` defaults to the documented local PostgreSQL URL in `development` and `test`, but is required outside those environments and must use `postgresql://` or `postgres://`.
+- `AUTH_JWT_SECRET` defaults to the documented local/test secret only in `development` and `test`; outside those environments it is required, must be at least 32 characters, and cannot be a known placeholder or the local default.
+- Auth token signing now reads the already-validated secret from `ConfigService`; auth no longer owns a production-only fallback branch.
+
+### Commands run and results
+
+- `pnpm --filter @familieappen/api test:config` passed. This covers local defaults, production requirements, strong secret enforcement, database URL enforcement, port validation, API prefix normalization, and CORS origin validation without Prisma or a database.
+- `pnpm -r typecheck` passed.
+- `pnpm -r build` passed.
+
+### Remaining auth/config risks
+
+- Access tokens are still stored by the web client in `localStorage`, so XSS would expose bearer tokens.
+- There are still no refresh tokens, token revocation, session/device records, or server-side logout semantics.
+- Auth endpoints are still missing rate limiting, login throttling, account lockout, and password reset support.
+- CORS remains static environment configuration; deployment automation must keep allowed origins in sync with real frontend hosts.
+- Database-backed auth and protected-route tests remain deferred until Prisma engine availability and disposable database bootstrap are reliable.
+
+### Recommended next Run 1.5 prompt
+
+Run 1.5 Prompt 4 should add a database-backed API test harness in an environment where Prisma engines are available, then cover auth registration/login, protected-route token rejection, token expiry/malformed-signature cases, and cross-family isolation checks. Do not make these tests required in CI until the Prisma migration/bootstrap blocker is resolved.

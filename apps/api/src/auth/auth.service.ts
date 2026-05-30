@@ -2,7 +2,6 @@ import {
   BadRequestException,
   ConflictException,
   Injectable,
-  InternalServerErrorException,
   UnauthorizedException
 } from "@nestjs/common";
 import { createHmac, randomBytes, scrypt as scryptCallback, timingSafeEqual } from "node:crypto";
@@ -219,15 +218,7 @@ export class AuthService {
   }
 
   private getJwtSecret(): string {
-    if (this.config.authJwtSecret) {
-      return this.config.authJwtSecret;
-    }
-
-    if (this.config.nodeEnv === "production") {
-      throw new InternalServerErrorException("Authentication is not configured");
-    }
-
-    return "familieappen-development-auth-secret-change-me";
+    return this.config.authJwtSecret;
   }
 
   private parseTokenPayload(encodedPayload: string): AuthTokenPayload {

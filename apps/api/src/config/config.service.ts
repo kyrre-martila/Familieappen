@@ -21,11 +21,11 @@ export class ConfigService {
     return this.config.corsOrigins;
   }
 
-  get databaseUrl(): string | undefined {
+  get databaseUrl(): string {
     return this.config.databaseUrl;
   }
 
-  get authJwtSecret(): string | undefined {
+  get authJwtSecret(): string {
     return this.config.authJwtSecret;
   }
 }
