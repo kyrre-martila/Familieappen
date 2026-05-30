@@ -21,6 +21,8 @@ model User {
   createdAt    DateTime       @default(now())
   updatedAt    DateTime       @updatedAt
   memberships  FamilyMember[]
+  createdShoppingItems ShoppingListItem[] @relation("ShoppingItemCreatedBy")
+  checkedShoppingItems ShoppingListItem[] @relation("ShoppingItemCheckedBy")
 
   @@map("users")
 }
@@ -31,6 +33,7 @@ model Family {
   createdAt DateTime       @default(now())
   updatedAt DateTime       @updatedAt
   members   FamilyMember[]
+  shoppingLists ShoppingList[]
 
   @@map("families")
 }
@@ -49,4 +52,37 @@ model FamilyMember {
   @@index([familyId])
   @@index([userId])
   @@map("family_members")
+}
+
+model ShoppingList {
+  id        String             @id @default(cuid())
+  familyId  String             @unique
+  name      String
+  createdAt DateTime           @default(now())
+  updatedAt DateTime           @updatedAt
+  family    Family             @relation(fields: [familyId], references: [id], onDelete: Cascade)
+  items     ShoppingListItem[]
+
+  @@index([familyId])
+  @@map("shopping_lists")
+}
+model ShoppingListItem {
+  id               String       @id @default(cuid())
+  shoppingListId   String
+  label            String
+  quantity         String?
+  checked          Boolean      @default(false)
+  createdByUserId  String?
+  checkedByUserId  String?
+  checkedAt        DateTime?
+  createdAt        DateTime     @default(now())
+  updatedAt        DateTime     @updatedAt
+  shoppingList     ShoppingList @relation(fields: [shoppingListId], references: [id], onDelete: Cascade)
+  createdByUser    User?        @relation("ShoppingItemCreatedBy", fields: [createdByUserId], references: [id], onDelete: SetNull)
+  checkedByUser    User?        @relation("ShoppingItemCheckedBy", fields: [checkedByUserId], references: [id], onDelete: SetNull)
+
+  @@index([shoppingListId])
+  @@index([createdByUserId])
+  @@index([checkedByUserId])
+  @@map("shopping_list_items")
 }

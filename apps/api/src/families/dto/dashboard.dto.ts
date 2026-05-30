@@ -8,6 +8,7 @@ export interface FamilyDashboardDto {
   dinnerToday: null;
   shoppingSummary: {
     uncheckedCount: number;
+    totalItems: number;
   };
   wishlistSummary: {
     upcomingBirthdays: [];

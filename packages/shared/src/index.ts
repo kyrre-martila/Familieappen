@@ -27,10 +27,33 @@ export interface FamilyDashboardResponse {
   dinnerToday: null;
   shoppingSummary: {
     uncheckedCount: number;
+    totalItems: number;
   };
   wishlistSummary: {
     upcomingBirthdays: [];
   };
+}
+
+export interface ShoppingListItem {
+  id: string;
+  shoppingListId: string;
+  label: string;
+  quantity: string | null;
+  checked: boolean;
+  createdByUserId: string | null;
+  checkedByUserId: string | null;
+  checkedAt: string | null;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface ShoppingList {
+  id: string;
+  familyId: string;
+  name: string;
+  createdAt: string;
+  updatedAt: string;
+  items: ShoppingListItem[];
 }
 
 export const sharingLevels = ["private", "family", "selected"] as const;

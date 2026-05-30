@@ -58,6 +58,11 @@ export class FamiliesService {
             displayName: user.name,
             role: "OWNER"
           }
+        },
+        shoppingLists: {
+          create: {
+            name: "Family Shopping"
+          }
         }
       },
       include: {
@@ -111,15 +116,15 @@ export class FamiliesService {
   async getFamilyDashboard(userId: string, familyId: string): Promise<FamilyDashboardDto> {
     const details = await this.getFamilyDetails(userId, familyId);
 
+    const shoppingSummary = await this.getOrCreateShoppingSummary(familyId);
+
     return {
       family: details.family,
       members: details.members,
       todayEvents: [],
       todayTasks: [],
       dinnerToday: null,
-      shoppingSummary: {
-        uncheckedCount: 0
-      },
+      shoppingSummary,
       wishlistSummary: {
         upcomingBirthdays: []
       }
@@ -179,6 +184,39 @@ export class FamiliesService {
     });
 
     return this.toFamilyMemberDto(deletedMember);
+  }
+
+  private async getOrCreateShoppingSummary(familyId: string): Promise<{ uncheckedCount: number; totalItems: number }> {
+    let shoppingList = await this.prisma.client.shoppingList.findUnique({
+      where: { familyId },
+      select: { id: true }
+    });
+
+    if (!shoppingList) {
+      shoppingList = await this.prisma.client.shoppingList.create({
+        data: {
+          familyId,
+          name: "Family Shopping"
+        },
+        select: { id: true }
+      });
+    }
+
+    const [uncheckedCount, totalItems] = await Promise.all([
+      this.prisma.client.shoppingListItem.count({
+        where: {
+          shoppingListId: shoppingList.id,
+          checked: false
+        }
+      }),
+      this.prisma.client.shoppingListItem.count({
+        where: {
+          shoppingListId: shoppingList.id
+        }
+      })
+    ]);
+
+    return { uncheckedCount, totalItems };
   }
 
   private async getUserOrThrow(userId: string): Promise<UserRecord> {
