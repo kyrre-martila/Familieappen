@@ -1,5 +1,6 @@
 import { BadRequestException, Injectable, NotFoundException } from "@nestjs/common";
 import { PrismaService } from "../prisma";
+import { FamilyDashboardDto } from "./dto/dashboard.dto";
 import {
   AddFamilyMemberRequestDto,
   AddFamilyMemberRoleDto,
@@ -104,6 +105,24 @@ export class FamiliesService {
     return {
       family: this.toFamilyDto(family),
       members: family.members.map((member: FamilyMemberRecord) => this.toFamilyMemberDto(member))
+    };
+  }
+
+  async getFamilyDashboard(userId: string, familyId: string): Promise<FamilyDashboardDto> {
+    const details = await this.getFamilyDetails(userId, familyId);
+
+    return {
+      family: details.family,
+      members: details.members,
+      todayEvents: [],
+      todayTasks: [],
+      dinnerToday: null,
+      shoppingSummary: {
+        uncheckedCount: 0
+      },
+      wishlistSummary: {
+        upcomingBirthdays: []
+      }
     };
   }
 

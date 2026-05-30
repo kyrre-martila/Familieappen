@@ -1,5 +1,6 @@
-export type FamilyMemberRole = "OWNER" | "PARENT" | "CHILD" | "GUEST";
-export type ManualFamilyMemberRole = Exclude<FamilyMemberRole, "OWNER">;
+import type { Family, FamilyDashboardResponse, FamilyMember, FamilyMemberRole, ManualFamilyMemberRole } from "@familieappen/shared";
+
+export type { Family, FamilyDashboardResponse, FamilyMember, FamilyMemberRole, ManualFamilyMemberRole };
 
 export interface AuthUser {
   id: string;
@@ -16,23 +17,6 @@ export interface AuthResponse {
     tokenType: "Bearer";
     expiresIn: number;
   };
-}
-
-export interface FamilyMember {
-  id: string;
-  userId: string | null;
-  familyId: string;
-  displayName: string;
-  role: FamilyMemberRole;
-  createdAt: string;
-  updatedAt: string;
-}
-
-export interface Family {
-  id: string;
-  name: string;
-  createdAt: string;
-  updatedAt: string;
 }
 
 export interface FamilyDetails {
@@ -90,6 +74,23 @@ export function setActiveFamilyId(familyId: string): void {
   window.localStorage.setItem(ACTIVE_FAMILY_ID_KEY, familyId);
 }
 
+export function clearActiveFamilyId(): void {
+  if (typeof window === "undefined") {
+    return;
+  }
+
+  window.localStorage.removeItem(ACTIVE_FAMILY_ID_KEY);
+}
+
+export function clearAuthSession(): void {
+  if (typeof window === "undefined") {
+    return;
+  }
+
+  window.localStorage.removeItem(ACCESS_TOKEN_KEY);
+  window.localStorage.removeItem(ACTIVE_FAMILY_ID_KEY);
+}
+
 export async function register(input: { name: string; email: string; password: string }): Promise<AuthResponse> {
   return apiRequest<AuthResponse>("/auth/register", {
     method: "POST",
@@ -119,6 +120,10 @@ export async function listFamilies(): Promise<FamilyWithMembership[]> {
 
 export async function getFamily(familyId: string): Promise<FamilyDetails> {
   return apiRequest<FamilyDetails>(`/families/${encodeURIComponent(familyId)}`);
+}
+
+export async function getFamilyDashboard(familyId: string): Promise<FamilyDashboardResponse> {
+  return apiRequest<FamilyDashboardResponse>(`/families/${encodeURIComponent(familyId)}/dashboard`);
 }
 
 export async function addFamilyMember(

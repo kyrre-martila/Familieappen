@@ -1,73 +1,106 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, type ChangeEvent } from "react";
+import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { Badge, Button, Card, EmptyState, PageContainer, SectionHeader } from "../../components/ui";
-import { FamilyDetails, getActiveFamilyId, getFamily, listFamilies, setActiveFamilyId } from "../../lib/api";
+import {
+  ApiError,
+  FamilyDashboardResponse,
+  FamilyWithMembership,
+  clearActiveFamilyId,
+  clearAuthSession,
+  getAccessToken,
+  getActiveFamilyId,
+  getFamilyDashboard,
+  listFamilies,
+  setActiveFamilyId
+} from "../../lib/api";
 
-const todayEvents = [
-  { time: "08:15", title: "School drop-off", detail: "Maja and Sofie" },
-  { time: "16:30", title: "Piano lesson", detail: "Max" },
-  { time: "18:00", title: "Football practice", detail: "Sofie" }
-];
+type DashboardStatus = "loading" | "ready" | "unauthorized" | "no-family" | "error";
 
-const upcomingActivities = ["Class trip form due tomorrow", "Dentist on Thursday", "Grandma visits Saturday"];
-const mealOverview = ["Mon · Salmon bowls", "Tue · Pasta with pesto", "Wed · Leftover night"];
-const shoppingItems = ["Milk", "Bread", "Bananas", "Toothpaste"];
-const tasks = [
-  { title: "Pack gym bag", owner: "Sofie", state: "Today" },
-  { title: "Water balcony plants", owner: "Pappa", state: "After dinner" },
-  { title: "Return library books", owner: "Maja", state: "Tomorrow" }
-];
-
-export default function HomePage() {
-  const [familyDetails, setFamilyDetails] = useState<FamilyDetails | null>(null);
-  const [dashboardMessage, setDashboardMessage] = useState("Loading your family dashboard…");
+export default function DashboardPage() {
+  const router = useRouter();
+  const [dashboard, setDashboard] = useState<FamilyDashboardResponse | null>(null);
+  const [families, setFamilies] = useState<FamilyWithMembership[]>([]);
+  const [activeFamilyId, setActiveFamilyIdState] = useState<string | null>(null);
+  const [status, setStatus] = useState<DashboardStatus>("loading");
+  const [message, setMessage] = useState("Loading your family dashboard…");
 
   useEffect(() => {
-    let isMounted = true;
-
-    async function loadDashboardFamily() {
-      try {
-        let familyId = getActiveFamilyId();
-
-        if (!familyId) {
-          const families = await listFamilies();
-          familyId = families[0]?.family.id ?? null;
-
-          if (familyId) {
-            setActiveFamilyId(familyId);
-          }
-        }
-
-        if (!familyId) {
-          if (isMounted) {
-            setDashboardMessage("Create a family to start using the dashboard.");
-          }
-          return;
-        }
-
-        const details = await getFamily(familyId);
-
-        if (isMounted) {
-          setFamilyDetails(details);
-          setDashboardMessage("Family dashboard ready.");
-        }
-      } catch {
-        if (isMounted) {
-          setDashboardMessage("Could not load family details. Please sign in again if your session expired.");
-        }
-      }
+    if (!getAccessToken()) {
+      router.replace("/login");
+      return;
     }
 
-    void loadDashboardFamily();
+    void loadDashboard();
+  }, [router]);
 
-    return () => {
-      isMounted = false;
-    };
-  }, []);
+  async function loadDashboard(preferredFamilyId?: string) {
+    setStatus("loading");
+    setMessage("Loading your family dashboard…");
 
-  const familyName = familyDetails?.family.name ?? "Your family";
-  const memberCount = familyDetails?.members.length ?? 0;
+    try {
+      const userFamilies = await listFamilies();
+      setFamilies(userFamilies);
+
+      if (userFamilies.length === 0) {
+        clearActiveFamilyId();
+        setDashboard(null);
+        setActiveFamilyIdState(null);
+        setStatus("no-family");
+        setMessage("Create a family to start using the dashboard.");
+        router.replace("/onboarding/create-family");
+        return;
+      }
+
+      const storedFamilyId = preferredFamilyId ?? getActiveFamilyId();
+      const storedFamily = userFamilies.find((family) => family.family.id === storedFamilyId);
+      const nextFamilyId = storedFamily?.family.id ?? userFamilies[0].family.id;
+
+      setActiveFamilyId(nextFamilyId);
+      setActiveFamilyIdState(nextFamilyId);
+
+      const dashboardData = await getFamilyDashboard(nextFamilyId);
+      setDashboard(dashboardData);
+      setStatus("ready");
+      setMessage("Family dashboard ready.");
+    } catch (error) {
+      if (error instanceof ApiError && error.status === 401) {
+        clearAuthSession();
+        setDashboard(null);
+        setStatus("unauthorized");
+        setMessage("Your session has expired. Please sign in again.");
+        router.replace("/login");
+        return;
+      }
+
+      if (error instanceof ApiError && error.status === 404) {
+        clearActiveFamilyId();
+        setDashboard(null);
+        setActiveFamilyIdState(null);
+        setStatus("error");
+        setMessage("That family could not be loaded for your account. Please choose another family.");
+        return;
+      }
+
+      setDashboard(null);
+      setStatus("error");
+      setMessage("Could not load the dashboard right now. Please try again.");
+    }
+  }
+
+  async function handleFamilyChange(event: ChangeEvent<HTMLSelectElement>) {
+    const familyId = event.target.value;
+    setActiveFamilyId(familyId);
+    setActiveFamilyIdState(familyId);
+    await loadDashboard(familyId);
+  }
+
+  const familyName = dashboard?.family.name ?? "Your family";
+  const memberCount = dashboard?.members.length ?? 0;
+  const isLoading = status === "loading";
+  const hasMultipleFamilies = families.length > 1;
 
   return (
     <PageContainer tone="dashboard">
@@ -75,30 +108,48 @@ export default function HomePage() {
         <div className="dashboard-hero__copy">
           <Badge tone="primary">Family overview</Badge>
           <h1 id="dashboard-title" className="dashboard-hero__title">
-            {familyName}
+            {isLoading ? "Loading dashboard…" : familyName}
           </h1>
           <p className="dashboard-hero__description">
-            {familyDetails
+            {dashboard
               ? `A calm overview for ${familyName}, with ${memberCount} family member${memberCount === 1 ? "" : "s"} set up.`
-              : dashboardMessage}
+              : message}
           </p>
         </div>
-        <div className="dashboard-hero__actions" aria-label="Quick actions">
-          <Button variant="secondary">View calendar</Button>
-          <Button variant="primary">Add plan</Button>
+        <div className="dashboard-hero__actions" aria-label="Dashboard actions">
+          {hasMultipleFamilies ? (
+            <label className="family-switcher">
+              <span className="family-switcher__label">Active family</span>
+              <select className="family-switcher__select" value={activeFamilyId ?? ""} onChange={handleFamilyChange}>
+                {families.map((family) => (
+                  <option key={family.family.id} value={family.family.id}>
+                    {family.family.name}
+                  </option>
+                ))}
+              </select>
+            </label>
+          ) : null}
+          <Link className="button button--secondary" href="/calendar">
+            View calendar
+          </Link>
+          <Link className="button button--primary" href="/onboarding/add-members">
+            Add member
+          </Link>
         </div>
       </section>
 
-      <section className="dashboard-grid" aria-label="Family dashboard">
+      {status !== "ready" ? <DashboardStatusCard status={status} message={message} onRetry={() => loadDashboard()} /> : null}
+
+      <section className="dashboard-grid" aria-label="Family dashboard" aria-busy={isLoading}>
         <Card className="dashboard-card" tone="warm">
           <SectionHeader
             action={<Badge tone="primary">{memberCount} members</Badge>}
             eyebrow="Family"
             title="Who is on the overview?"
           />
-          {familyDetails ? (
+          {dashboard ? (
             <ul className="member-list" aria-label="Dashboard family members">
-              {familyDetails.members.map((member) => (
+              {dashboard.members.map((member) => (
                 <li className="member-list__item" key={member.id}>
                   <span className="member-list__name">{member.displayName}</span>
                   <span className="member-list__role">{formatRole(member.role)}</span>
@@ -106,103 +157,116 @@ export default function HomePage() {
               ))}
             </ul>
           ) : (
-            <EmptyState title="No family loaded yet" description={dashboardMessage} />
+            <EmptyState title="No family loaded yet" description={message} />
           )}
         </Card>
 
         <Card className="dashboard-card dashboard-card--today" tone="warm">
           <SectionHeader
-            action={<Badge tone="accent">3 events</Badge>}
+            action={<Badge tone="neutral">{dashboard?.todayEvents.length ?? 0} events</Badge>}
             eyebrow="Today"
             title="What happens today?"
           />
-          <div className="timeline" aria-label="Today's events">
-            {todayEvents.map((event) => (
-              <div className="timeline__item" key={`${event.time}-${event.title}`}>
-                <time className="timeline__time">{event.time}</time>
-                <div>
-                  <p className="timeline__title">{event.title}</p>
-                  <p className="timeline__detail">{event.detail}</p>
-                </div>
-              </div>
-            ))}
-          </div>
-          <div className="mini-list" aria-label="Upcoming activities">
-            <p className="mini-list__label">Upcoming activities</p>
-            {upcomingActivities.map((activity) => (
-              <p className="mini-list__item" key={activity}>
-                {activity}
-              </p>
-            ))}
-          </div>
+          <EmptyState
+            title="No events today"
+            description="Enjoy the breathing room. Calendar plans will appear here when the calendar module is connected."
+          />
         </Card>
 
         <Card className="dashboard-card" tone="soft">
-          <SectionHeader action={<Badge tone="success">Planned</Badge>} eyebrow="Dinner" title="What is for dinner?" />
-          <div className="dinner-card">
-            <p className="dinner-card__label">Dinner today</p>
-            <p className="dinner-card__meal">Taco bowls with avocado</p>
-            <p className="dinner-card__note">Prep vegetables before football practice.</p>
-          </div>
-          <div className="compact-stack" aria-label="Quick meal overview">
-            {mealOverview.map((meal) => (
-              <span className="compact-row" key={meal}>
-                {meal}
-              </span>
-            ))}
-          </div>
+          <SectionHeader action={<Badge tone="neutral">Empty</Badge>} eyebrow="Dinner" title="What is for dinner?" />
+          <EmptyState
+            title="No dinner planned today"
+            description="Dinner plans will show here once meal planning is added."
+          />
         </Card>
 
         <Card className="dashboard-card" tone="default">
-          <SectionHeader action={<Badge tone="warning">7 left</Badge>} eyebrow="Shopping" title="What needs to be bought?" />
-          <div className="status-meter" aria-label="Shopping list status">
-            <span className="status-meter__bar" />
-          </div>
-          <p className="card-note">5 of 12 items checked before the next grocery trip.</p>
-          <div className="check-list" aria-label="Shopping list preview">
-            {shoppingItems.map((item, index) => (
-              <span className="check-list__item" key={item}>
-                <span aria-hidden="true" className={index < 2 ? "check-list__box check-list__box--done" : "check-list__box"} />
-                {item}
-              </span>
-            ))}
-          </div>
+          <SectionHeader
+            action={<Badge tone="neutral">{dashboard?.shoppingSummary.uncheckedCount ?? 0} left</Badge>}
+            eyebrow="Shopping"
+            title="What needs to be bought?"
+          />
+          <EmptyState
+            title="Shopping list is empty"
+            description="Unchecked shopping items will appear here when shopping lists are connected."
+          />
         </Card>
 
         <Card className="dashboard-card" tone="default">
-          <SectionHeader action={<Badge tone="primary">2 assigned</Badge>} eyebrow="Tasks" title="What needs to be done?" />
-          <div className="task-list" aria-label="Tasks today">
-            {tasks.map((task) => (
-              <div className="task-list__item" key={task.title}>
-                <div>
-                  <p className="task-list__title">{task.title}</p>
-                  <p className="task-list__owner">{task.owner}</p>
-                </div>
-                <Badge tone={task.state === "Tomorrow" ? "neutral" : "accent"}>{task.state}</Badge>
-              </div>
-            ))}
-          </div>
+          <SectionHeader
+            action={<Badge tone="neutral">{dashboard?.todayTasks.length ?? 0} tasks</Badge>}
+            eyebrow="Tasks"
+            title="What needs to be done?"
+          />
+          <EmptyState
+            title="No tasks due today"
+            description="Assigned family tasks will appear here when task planning is connected."
+          />
         </Card>
 
         <Card className="dashboard-card dashboard-card--wishlist" tone="accent">
-          <SectionHeader eyebrow="Wishlists" title="Upcoming birthdays" />
-          <div className="birthday-list" aria-label="Upcoming birthdays">
-            <div>
-              <p className="birthday-list__date">June 8</p>
-              <p className="birthday-list__name">Emma turns 9</p>
-            </div>
-            <div>
-              <p className="birthday-list__date">June 21</p>
-              <p className="birthday-list__name">Grandpa’s birthday</p>
-            </div>
-          </div>
+          <SectionHeader
+            action={<Badge tone="neutral">{dashboard?.wishlistSummary.upcomingBirthdays.length ?? 0} birthdays</Badge>}
+            eyebrow="Wishlists"
+            title="Upcoming birthdays"
+          />
           <EmptyState
-            title="Wishlist reminders coming later"
-            description="A gentle placeholder for gift ideas, birthdays and seasonal wishes."
+            title="No wishlist reminders yet"
+            description="Birthdays and gift reminders will appear here when wishlists are connected."
           />
         </Card>
       </section>
     </PageContainer>
+  );
+}
+
+function DashboardStatusCard({
+  status,
+  message,
+  onRetry
+}: {
+  status: DashboardStatus;
+  message: string;
+  onRetry: () => void;
+}) {
+  if (status === "loading") {
+    return (
+      <Card className="dashboard-status" tone="default">
+        <EmptyState title="Loading your dashboard" description={message} />
+      </Card>
+    );
+  }
+
+  if (status === "unauthorized") {
+    return (
+      <Card className="dashboard-status" tone="default">
+        <EmptyState title="Please sign in again" description={message} />
+        <Link className="button button--primary" href="/login">
+          Go to login
+        </Link>
+      </Card>
+    );
+  }
+
+  if (status === "no-family") {
+    return (
+      <Card className="dashboard-status" tone="default">
+        <EmptyState title="Create your first family" description={message} />
+        <Link className="button button--primary" href="/onboarding/create-family">
+          Create family
+        </Link>
+      </Card>
+    );
+  }
+
+  return (
+    <Card className="dashboard-status" tone="default">
+      <EmptyState title="Dashboard could not load" description={message} />
+      <Button variant="primary" onClick={onRetry}>
+        Try again
+      </Button>
+    </Card>
   );
 }
 

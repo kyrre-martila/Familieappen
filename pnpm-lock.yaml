@@ -108,6 +108,9 @@ importers:
 
   apps/web:
     dependencies:
+      '@familieappen/shared':
+        specifier: workspace:*
+        version: link:../../packages/shared
       '@familieappen/ui':
         specifier: workspace:*
         version: link:../../packages/ui
