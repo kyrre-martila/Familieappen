@@ -2,13 +2,13 @@ import type { ButtonHTMLAttributes, ReactNode } from "react";
 
 interface PageContainerProps {
   children: ReactNode;
-  tone?: "default" | "dashboard";
+  tone?: "default" | "dashboard" | "auth" | "welcome";
 }
 
 export function PageContainer({ children, tone = "default" }: PageContainerProps) {
-  const className = tone === "dashboard" ? "page-container page-container--dashboard" : "page-container";
+  const classes = ["page-container", tone !== "default" ? `page-container--${tone}` : ""].filter(Boolean).join(" ");
 
-  return <div className={className}>{children}</div>;
+  return <div className={classes}>{children}</div>;
 }
 
 interface CardProps {

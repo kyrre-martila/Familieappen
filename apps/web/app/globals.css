@@ -603,3 +603,212 @@ select {
     grid-column: span 2;
   }
 }
+
+.app-shell--immersive .app-shell__main {
+  display: grid;
+  min-height: 100vh;
+  align-items: center;
+  padding-block: var(--space-l);
+}
+
+.page-container--auth,
+.page-container--welcome {
+  width: min(100%, calc(var(--space-xl) * 14));
+  margin: 0 auto;
+  gap: var(--content-gap);
+}
+
+.welcome-panel,
+.auth-page,
+.auth-card,
+.auth-card__header,
+.auth-form,
+.auth-links,
+.members-form,
+.members-form__fields,
+.member-list {
+  display: grid;
+  gap: var(--content-gap);
+}
+
+.welcome-panel {
+  gap: var(--space-l);
+}
+
+.brand--center {
+  justify-items: center;
+  text-align: center;
+}
+
+.auth-card {
+  padding: var(--space-l);
+}
+
+.auth-card__header {
+  gap: var(--space-s);
+}
+
+.auth-card__eyebrow {
+  margin: 0;
+  color: var(--color-primary);
+  font-size: var(--text-small);
+  font-weight: 850;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.auth-card__title {
+  margin: 0;
+  color: var(--color-text);
+  font-size: var(--text-title);
+  line-height: 1.08;
+  letter-spacing: -0.055em;
+}
+
+.auth-card__description,
+.auth-card__footnote {
+  margin: 0;
+  color: var(--color-muted);
+}
+
+.auth-card__footnote a,
+.auth-links__link {
+  color: var(--color-primary-strong);
+  font-weight: 800;
+}
+
+.auth-actions,
+.auth-links {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-s);
+}
+
+.auth-links {
+  align-items: center;
+  justify-content: space-between;
+  border-top: 1px solid var(--color-border);
+  padding-top: var(--space-m);
+}
+
+.form-field {
+  display: grid;
+  gap: var(--space-xs);
+}
+
+.form-field__label {
+  color: var(--color-text);
+  font-size: var(--text-label);
+  font-weight: 820;
+}
+
+.form-field__input {
+  width: 100%;
+  border: 1px solid var(--color-border-strong);
+  border-radius: var(--radius-m);
+  padding: var(--space-s) var(--space-m);
+  background: var(--color-surface);
+  color: var(--color-text);
+}
+
+.form-field__input:focus {
+  border-color: var(--color-primary);
+  outline: calc(var(--space-xs) * 0.5) solid var(--color-primary-soft);
+}
+
+.onboarding-progress {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: var(--space-xs);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.onboarding-progress__step {
+  display: grid;
+  gap: var(--space-xs);
+  justify-items: center;
+  color: var(--color-muted);
+  font-size: var(--text-small);
+  font-weight: 800;
+}
+
+.onboarding-progress__dot {
+  width: 100%;
+  height: var(--space-xs);
+  border-radius: var(--radius-pill);
+  background: var(--color-border);
+}
+
+.onboarding-progress__step--complete,
+.onboarding-progress__step--current {
+  color: var(--color-primary-strong);
+}
+
+.onboarding-progress__step--complete .onboarding-progress__dot,
+.onboarding-progress__step--current .onboarding-progress__dot {
+  background: var(--color-primary);
+}
+
+.members-form__fields {
+  grid-template-columns: minmax(0, 1fr);
+}
+
+.member-list {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.member-list__item {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: var(--space-xs) var(--space-s);
+  align-items: center;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-m);
+  padding: var(--space-s);
+  background: var(--color-surface-warm);
+}
+
+.member-list__name {
+  color: var(--color-text);
+  font-weight: 820;
+}
+
+.member-list__role {
+  width: fit-content;
+  border-radius: var(--radius-pill);
+  padding: calc(var(--space-xs) * 0.75) var(--space-s);
+  background: var(--color-primary-soft);
+  color: var(--color-primary-strong);
+  font-size: var(--text-small);
+  font-weight: 800;
+}
+
+.member-list__remove {
+  grid-column: 1 / -1;
+  width: fit-content;
+  border: 0;
+  padding: 0;
+  background: transparent;
+  color: var(--color-muted);
+  cursor: pointer;
+  font-size: var(--text-small);
+  font-weight: 800;
+}
+
+@media (min-width: 36rem) {
+  .members-form__fields {
+    grid-template-columns: minmax(0, 1fr) minmax(calc(var(--space-xl) * 4), auto);
+  }
+
+  .member-list__item {
+    grid-template-columns: minmax(0, 1fr) auto auto;
+  }
+
+  .member-list__remove {
+    grid-column: auto;
+  }
+}
