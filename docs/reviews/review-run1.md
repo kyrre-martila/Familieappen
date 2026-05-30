@@ -887,3 +887,93 @@ Date: 2026-05-30
 ### Recommended next Run 1.5 prompt
 
 Run 1.5 Prompt 4 should add a database-backed API test harness in an environment where Prisma engines are available, then cover auth registration/login, protected-route token rejection, token expiry/malformed-signature cases, and cross-family isolation checks. Do not make these tests required in CI until the Prisma migration/bootstrap blocker is resolved.
+
+## Run 1.5 Prompt 4 result — API auth and family-isolation fallback harness
+
+Date: 2026-05-30
+
+### Prisma / database bootstrap attempt
+
+The run first attempted the real database-backed path requested for Prompt 4.
+
+Commands/results:
+
+- `pnpm --filter @familieappen/api prisma:generate` reached Prisma CLI and loaded `apps/api/prisma.config.ts`, but failed because `https://binaries.prisma.sh/.../schema-engine.gz.sha256` returned `403 Forbidden`.
+- `PRISMA_ENGINES_CHECKSUM_IGNORE_MISSING=1 pnpm --filter @familieappen/api prisma:generate` bypassed the checksum lookup but still failed because the schema-engine binary URL, `https://binaries.prisma.sh/.../schema-engine.gz`, returned `403 Forbidden`.
+- `psql`, `createdb`, and `docker` are not available in this container, so a disposable PostgreSQL database could not be created here after Prisma engine download failed.
+
+Because Prisma schema-engine download remains blocked, this prompt used the mandatory fallback path instead of stopping.
+
+### Fallback harness added
+
+Added a runnable NestJS HTTP security harness that does not require Prisma Client generation or a database. The harness uses:
+
+- real NestJS controllers for auth, family dashboard, shopping, tasks, wishlists, public wishlists, and calendar;
+- the real `AuthService` token issuance/verification logic;
+- the real `AuthGuard` protected-route behavior;
+- the global HTTP exception filter used by the API;
+- an in-memory Prisma boundary for auth users;
+- deterministic in-memory feature service doubles that model family membership, item ownership, wishlist sharing, and public-share token matching.
+
+The working command is:
+
+```sh
+pnpm --filter @familieappen/api test:security
+```
+
+A separate `apps/api/tsconfig.test.json` keeps test compilation explicit and allows the API test files to import `src/**` while leaving the production `tsconfig.json` unchanged.
+
+### What is tested now
+
+Auth coverage now includes:
+
+- register success;
+- duplicate email rejection;
+- login success;
+- invalid password rejection;
+- missing bearer token rejection;
+- malformed token rejection;
+- invalid signature rejection;
+- expired token rejection;
+- protected dashboard access denied without auth.
+
+Family isolation coverage now includes representative high-risk endpoint behavior for:
+
+- reading another family's dashboard;
+- reading another family's shopping list with the wrong `X-Family-Id`;
+- mutating another family's shopping item with a valid token and foreign item id;
+- mixed user/family/item combinations for shopping mutations;
+- missing family context;
+- accessing another family's wishlist list;
+- reading a foreign wishlist id with an owned family header;
+- mutating another family's wishlist item;
+- reading another family's tasks;
+- mutating another family's calendar event.
+
+Public wishlist coverage now includes:
+
+- valid public share token returns the shared wishlist;
+- invalid public share token is rejected;
+- a valid public token cannot reserve an item from a different wishlist;
+- public reserve succeeds only when token and item belong to the same shared wishlist;
+- a valid public token cannot mark purchased an item from a different wishlist;
+- public mark-purchased succeeds only when token and item belong to the same shared wishlist.
+
+### Remaining test gaps
+
+- These are fallback HTTP tests with mocked persistence boundaries; they do not prove the real Prisma-backed services are querying with the correct `familyId`, `userId`, wishlist token, or item-id constraints.
+- `prisma migrate deploy`, Prisma Client generation, and end-to-end database bootstrap remain unverified in this container because Prisma schema-engine downloads are blocked and no local PostgreSQL/Docker tooling is available.
+- The fallback harness intentionally does not redesign the auth architecture, does not replace `X-Family-Id`, and does not add refresh tokens or cookie sessions.
+- Real DB-backed e2e tests should be added once Prisma engines are cached or available. They should reuse this harness structure but replace in-memory service doubles with migrated disposable PostgreSQL fixtures.
+
+### Recommended next Run 1.5 prompt
+
+Run 1.5 Prompt 5 should focus on converting the fallback harness into true Prisma-backed e2e tests in an environment where Prisma engines are pre-cached or reachable. Start by running:
+
+```sh
+PRISMA_ENGINES_CHECKSUM_IGNORE_MISSING=1 pnpm --filter @familieappen/api prisma:generate
+DATABASE_URL="postgresql://postgres:postgres@localhost:5432/familieappen_run15_prompt5?schema=public" pnpm --filter @familieappen/api prisma:migrate:deploy
+pnpm --filter @familieappen/api test:security
+```
+
+Then add DB fixture factories for users, families, memberships, shopping items, tasks, calendar events, wishlists, wishlist items, and wishlist shares, and assert that the real services reject cross-family database records rather than only the fallback doubles.
