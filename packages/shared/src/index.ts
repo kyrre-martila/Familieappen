@@ -87,8 +87,72 @@ export interface FamilyDashboardResponse {
     totalItems: number;
   };
   wishlistSummary: {
-    upcomingBirthdays: [];
+    wishlistCount: number;
+    upcomingPlaceholder: string;
+    recentlyUpdated: WishlistSummary[];
   };
+}
+
+export interface WishlistItem {
+  id: string;
+  wishlistId: string;
+  title: string;
+  description: string | null;
+  productUrl: string | null;
+  imageUrl: string | null;
+  estimatedPrice: string | null;
+  purchased: boolean;
+  unavailable: boolean;
+  reserved: boolean;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface Wishlist {
+  id: string;
+  familyId: string;
+  ownerFamilyMemberId: string;
+  title: string;
+  description: string | null;
+  createdByUserId: string | null;
+  createdAt: string;
+  updatedAt: string;
+  items: WishlistItem[];
+}
+
+export interface WishlistSummary {
+  id: string;
+  ownerFamilyMemberId: string;
+  title: string;
+  description: string | null;
+  itemCount: number;
+  unavailableCount: number;
+  updatedAt: string;
+}
+
+export interface WishlistShare {
+  token: string;
+  shareUrl: string;
+  expiresAt: string | null;
+}
+
+export interface PublicWishlistItem {
+  id: string;
+  title: string;
+  description: string | null;
+  productUrl: string | null;
+  imageUrl: string | null;
+  estimatedPrice: string | null;
+  purchased: boolean;
+  unavailable: boolean;
+  reserved: boolean;
+}
+
+export interface PublicWishlist {
+  id: string;
+  title: string;
+  description: string | null;
+  items: PublicWishlistItem[];
 }
 
 export interface ShoppingListItem {

@@ -253,14 +253,27 @@ export default function DashboardPage() {
 
         <Card className="dashboard-card dashboard-card--wishlist" tone="accent">
           <SectionHeader
-            action={<Badge tone="neutral">{dashboard?.wishlistSummary.upcomingBirthdays.length ?? 0} birthdays</Badge>}
+            action={<Badge tone="neutral">{dashboard?.wishlistSummary.wishlistCount ?? 0} lists</Badge>}
             eyebrow="Wishlists"
-            title="Upcoming birthdays"
+            title="Gift ideas"
           />
-          <EmptyState
-            title="No wishlist reminders yet"
-            description="Birthdays and gift reminders will appear here when wishlists are connected."
-          />
+          {dashboard?.wishlistSummary.recentlyUpdated.length ? (
+            <ul className="mini-list" aria-label="Recent wishlists">
+              {dashboard.wishlistSummary.recentlyUpdated.map((wishlist) => (
+                <li className="mini-list__item" key={wishlist.id}>
+                  {wishlist.title} · {wishlist.unavailableCount}/{wishlist.itemCount} unavailable
+                </li>
+              ))}
+            </ul>
+          ) : (
+            <EmptyState
+              title="No wishlists yet"
+              description="Create a wishlist to help relatives coordinate gift ideas without spoiling surprises."
+            />
+          )}
+          <Link className="button button--secondary" href="/wishlists">
+            Open wishlists
+          </Link>
         </Card>
       </section>
     </PageContainer>

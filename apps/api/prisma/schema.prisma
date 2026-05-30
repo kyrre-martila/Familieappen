@@ -26,6 +26,8 @@ model User {
   createdTasks Task[] @relation("TaskCreatedBy")
   completedTasks Task[] @relation("TaskCompletedBy")
   createdCalendarEvents CalendarEvent[] @relation("CalendarEventCreatedBy")
+  createdWishlists Wishlist[] @relation("WishlistCreatedBy")
+  wishlistReservations WishlistReservation[] @relation("WishlistReservationReservedBy")
 
   @@map("users")
 }
@@ -40,6 +42,7 @@ model Family {
   mealPlans MealPlan[]
   tasks     Task[]
   calendarEvents CalendarEvent[]
+  wishlists Wishlist[]
 
   @@map("families")
 }
@@ -56,6 +59,7 @@ model FamilyMember {
   family      Family           @relation(fields: [familyId], references: [id], onDelete: Cascade)
   assignedTasks Task[]
   calendarEventParticipants CalendarEventParticipant[]
+  ownedWishlists Wishlist[]
 
   @@index([familyId])
   @@index([userId])
@@ -184,4 +188,74 @@ model CalendarEventParticipant {
   @@index([eventId])
   @@index([familyMemberId])
   @@map("calendar_event_participants")
+}
+
+
+model Wishlist {
+  id                  String               @id @default(cuid())
+  familyId            String
+  ownerFamilyMemberId String
+  title               String
+  description         String?
+  createdByUserId     String?
+  createdAt           DateTime             @default(now())
+  updatedAt           DateTime             @updatedAt
+  family              Family               @relation(fields: [familyId], references: [id], onDelete: Cascade)
+  ownerFamilyMember   FamilyMember         @relation(fields: [ownerFamilyMemberId], references: [id], onDelete: Cascade)
+  createdByUser       User?                @relation("WishlistCreatedBy", fields: [createdByUserId], references: [id], onDelete: SetNull)
+  items               WishlistItem[]
+  shares              WishlistShare[]
+
+  @@index([familyId])
+  @@index([ownerFamilyMemberId])
+  @@index([createdByUserId])
+  @@map("wishlists")
+}
+
+model WishlistItem {
+  id             String                @id @default(cuid())
+  wishlistId     String
+  title          String
+  description    String?
+  productUrl     String?
+  imageUrl       String?
+  estimatedPrice String?
+  purchased      Boolean               @default(false)
+  createdAt      DateTime              @default(now())
+  updatedAt      DateTime              @updatedAt
+  wishlist       Wishlist              @relation(fields: [wishlistId], references: [id], onDelete: Cascade)
+  reservations   WishlistReservation[]
+
+  @@index([wishlistId])
+  @@map("wishlist_items")
+}
+
+model WishlistReservation {
+  id                String       @id @default(cuid())
+  wishlistItemId    String
+  reservedByUserId  String?
+  reservedByName    String?
+  purchased         Boolean      @default(false)
+  createdAt         DateTime     @default(now())
+  updatedAt         DateTime     @updatedAt
+  wishlistItem      WishlistItem @relation(fields: [wishlistItemId], references: [id], onDelete: Cascade)
+  reservedByUser    User?        @relation("WishlistReservationReservedBy", fields: [reservedByUserId], references: [id], onDelete: SetNull)
+
+  @@index([wishlistItemId])
+  @@index([reservedByUserId])
+  @@map("wishlist_reservations")
+}
+
+model WishlistShare {
+  id         String    @id @default(cuid())
+  wishlistId String
+  token      String    @unique
+  expiresAt  DateTime?
+  createdAt  DateTime  @default(now())
+  updatedAt  DateTime  @updatedAt
+  wishlist   Wishlist  @relation(fields: [wishlistId], references: [id], onDelete: Cascade)
+
+  @@index([wishlistId])
+  @@index([token])
+  @@map("wishlist_shares")
 }

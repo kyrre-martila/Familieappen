@@ -77,6 +77,24 @@ type CalendarEventRecord = {
   participants: CalendarEventParticipantRecord[];
 };
 
+type WishlistReservationRecord = {
+  purchased: boolean;
+};
+
+type WishlistItemRecord = {
+  purchased: boolean;
+  reservations: WishlistReservationRecord[];
+};
+
+type WishlistRecord = {
+  id: string;
+  ownerFamilyMemberId: string;
+  title: string;
+  description: string | null;
+  updatedAt: Date;
+  items: WishlistItemRecord[];
+};
+
 type FamilyMemberRecord = {
   id: string;
   userId: string | null;
@@ -165,11 +183,12 @@ export class FamiliesService {
   async getFamilyDashboard(userId: string, familyId: string): Promise<FamilyDashboardDto> {
     const details = await this.getFamilyDetails(userId, familyId);
 
-    const [shoppingSummary, todayTasks, dinnerToday, todayEvents] = await Promise.all([
+    const [shoppingSummary, todayTasks, dinnerToday, todayEvents, wishlistSummary] = await Promise.all([
       this.getOrCreateShoppingSummary(familyId),
       this.getDashboardTasks(familyId),
       this.getDinnerToday(familyId),
-      this.getTodayEvents(familyId)
+      this.getTodayEvents(familyId),
+      this.getWishlistSummary(familyId)
     ]);
 
     return {
@@ -179,9 +198,7 @@ export class FamiliesService {
       todayTasks,
       dinnerToday,
       shoppingSummary,
-      wishlistSummary: {
-        upcomingBirthdays: []
-      }
+      wishlistSummary
     };
   }
 
@@ -238,6 +255,39 @@ export class FamiliesService {
     });
 
     return this.toFamilyMemberDto(deletedMember);
+  }
+
+
+  private async getWishlistSummary(familyId: string): Promise<FamilyDashboardDto["wishlistSummary"]> {
+    const recentlyUpdated = await this.prisma.client.wishlist.findMany({
+      where: { familyId },
+      include: { items: { include: { reservations: true } } },
+      orderBy: { updatedAt: "desc" },
+      take: 3
+    });
+    const wishlistCount = await this.prisma.client.wishlist.count({ where: { familyId } });
+
+    return {
+      wishlistCount,
+      upcomingPlaceholder: "Add birthdays or holidays later to connect wishlists to dates.",
+      recentlyUpdated: recentlyUpdated.map((wishlist: WishlistRecord) => {
+        const unavailableCount = wishlist.items.filter((item) => this.isWishlistItemUnavailable(item)).length;
+
+        return {
+          id: wishlist.id,
+          ownerFamilyMemberId: wishlist.ownerFamilyMemberId,
+          title: wishlist.title,
+          description: wishlist.description,
+          itemCount: wishlist.items.length,
+          unavailableCount,
+          updatedAt: wishlist.updatedAt.toISOString()
+        };
+      })
+    };
+  }
+
+  private isWishlistItemUnavailable(item: WishlistItemRecord): boolean {
+    return item.purchased || item.reservations.length > 0;
   }
 
   private async getTodayEvents(familyId: string): Promise<FamilyDashboardDto["todayEvents"]> {

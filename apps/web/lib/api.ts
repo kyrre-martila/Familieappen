@@ -9,10 +9,16 @@ import type {
   MealPlanDay,
   ShoppingList,
   ShoppingListItem,
-  Task
+  Task,
+  Wishlist,
+  WishlistItem,
+  WishlistShare,
+  WishlistSummary,
+  PublicWishlist,
+  PublicWishlistItem
 } from "@familieappen/shared";
 
-export type { CalendarEvent, Family, FamilyDashboardResponse, FamilyMember, FamilyMemberRole, ManualFamilyMemberRole, MealPlan, MealPlanDay, ShoppingList, ShoppingListItem, Task };
+export type { CalendarEvent, Family, FamilyDashboardResponse, FamilyMember, FamilyMemberRole, ManualFamilyMemberRole, MealPlan, MealPlanDay, ShoppingList, ShoppingListItem, Task, Wishlist, WishlistItem, WishlistShare, WishlistSummary, PublicWishlist, PublicWishlistItem };
 
 export interface AuthUser {
   id: string;
@@ -153,6 +159,98 @@ export async function removeFamilyMember(familyId: string, memberId: string): Pr
     `/families/${encodeURIComponent(familyId)}/members/${encodeURIComponent(memberId)}`,
     { method: "DELETE" }
   );
+}
+
+
+export async function getWishlists(familyId: string): Promise<WishlistSummary[]> {
+  return apiRequest<WishlistSummary[]>("/wishlists", { familyId });
+}
+
+export async function createWishlist(
+  familyId: string,
+  input: { ownerFamilyMemberId: string; title: string; description?: string }
+): Promise<Wishlist> {
+  return apiRequest<Wishlist>("/wishlists", {
+    method: "POST",
+    body: input,
+    familyId
+  });
+}
+
+export async function getWishlist(familyId: string, wishlistId: string): Promise<Wishlist> {
+  return apiRequest<Wishlist>(`/wishlists/${encodeURIComponent(wishlistId)}`, { familyId });
+}
+
+export async function addWishlistItem(
+  familyId: string,
+  wishlistId: string,
+  input: { title: string; description?: string; productUrl?: string; imageUrl?: string; estimatedPrice?: string }
+): Promise<WishlistItem> {
+  return apiRequest<WishlistItem>(`/wishlists/${encodeURIComponent(wishlistId)}/items`, {
+    method: "POST",
+    body: input,
+    familyId
+  });
+}
+
+export async function updateWishlistItem(
+  familyId: string,
+  itemId: string,
+  input: { title?: string; description?: string; productUrl?: string; imageUrl?: string; estimatedPrice?: string; purchased?: boolean }
+): Promise<WishlistItem> {
+  return apiRequest<WishlistItem>(`/wishlists/items/${encodeURIComponent(itemId)}`, {
+    method: "PATCH",
+    body: input,
+    familyId
+  });
+}
+
+export async function deleteWishlistItem(familyId: string, itemId: string): Promise<WishlistItem> {
+  return apiRequest<WishlistItem>(`/wishlists/items/${encodeURIComponent(itemId)}`, {
+    method: "DELETE",
+    familyId
+  });
+}
+
+export async function reserveWishlistItem(familyId: string, itemId: string): Promise<WishlistItem> {
+  return apiRequest<WishlistItem>(`/wishlists/items/${encodeURIComponent(itemId)}/reserve`, {
+    method: "POST",
+    familyId
+  });
+}
+
+export async function markWishlistItemPurchased(familyId: string, itemId: string): Promise<WishlistItem> {
+  return apiRequest<WishlistItem>(`/wishlists/items/${encodeURIComponent(itemId)}/mark-purchased`, {
+    method: "POST",
+    familyId
+  });
+}
+
+export async function createWishlistShare(familyId: string, wishlistId: string): Promise<WishlistShare> {
+  return apiRequest<WishlistShare>(`/wishlists/${encodeURIComponent(wishlistId)}/share`, {
+    method: "POST",
+    familyId
+  });
+}
+
+export async function getPublicWishlist(token: string): Promise<PublicWishlist> {
+  return apiRequest<PublicWishlist>(`/public/wishlists/${encodeURIComponent(token)}`, { includeAuth: false });
+}
+
+export async function reservePublicWishlistItem(token: string, itemId: string, reservedByName?: string): Promise<PublicWishlistItem> {
+  return apiRequest<PublicWishlistItem>(`/public/wishlists/${encodeURIComponent(token)}/items/${encodeURIComponent(itemId)}/reserve`, {
+    method: "POST",
+    body: { reservedByName },
+    includeAuth: false
+  });
+}
+
+export async function markPublicWishlistItemPurchased(token: string, itemId: string, reservedByName?: string): Promise<PublicWishlistItem> {
+  return apiRequest<PublicWishlistItem>(`/public/wishlists/${encodeURIComponent(token)}/items/${encodeURIComponent(itemId)}/mark-purchased`, {
+    method: "POST",
+    body: { reservedByName },
+    includeAuth: false
+  });
 }
 
 export async function getShoppingList(familyId: string): Promise<ShoppingList> {
