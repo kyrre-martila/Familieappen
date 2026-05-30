@@ -1,4 +1,5 @@
 import type {
+  CalendarEvent,
   Family,
   FamilyDashboardResponse,
   FamilyMember,
@@ -11,7 +12,7 @@ import type {
   Task
 } from "@familieappen/shared";
 
-export type { Family, FamilyDashboardResponse, FamilyMember, FamilyMemberRole, ManualFamilyMemberRole, MealPlan, MealPlanDay, ShoppingList, ShoppingListItem, Task };
+export type { CalendarEvent, Family, FamilyDashboardResponse, FamilyMember, FamilyMemberRole, ManualFamilyMemberRole, MealPlan, MealPlanDay, ShoppingList, ShoppingListItem, Task };
 
 export interface AuthUser {
   id: string;
@@ -212,6 +213,61 @@ export async function updateMealPlanDay(
 
 export async function deleteMealPlanDay(familyId: string, dayId: string): Promise<MealPlanDay> {
   return apiRequest<MealPlanDay>(`/meals/day/${encodeURIComponent(dayId)}`, {
+    method: "DELETE",
+    familyId
+  });
+}
+
+export async function getCalendarEvents(
+  familyId: string,
+  input: { from: string; to: string }
+): Promise<CalendarEvent[]> {
+  const params = new URLSearchParams({ from: input.from, to: input.to });
+
+  return apiRequest<CalendarEvent[]>(`/calendar/events?${params.toString()}`, { familyId });
+}
+
+export async function addCalendarEvent(
+  familyId: string,
+  input: {
+    title: string;
+    description?: string;
+    location?: string;
+    startsAt: string;
+    endsAt?: string;
+    allDay?: boolean;
+    participantFamilyMemberIds?: string[];
+  }
+): Promise<CalendarEvent> {
+  return apiRequest<CalendarEvent>("/calendar/events", {
+    method: "POST",
+    body: input,
+    familyId
+  });
+}
+
+export async function updateCalendarEvent(
+  familyId: string,
+  eventId: string,
+  input: {
+    title?: string;
+    description?: string;
+    location?: string;
+    startsAt?: string;
+    endsAt?: string | null;
+    allDay?: boolean;
+    participantFamilyMemberIds?: string[];
+  }
+): Promise<CalendarEvent> {
+  return apiRequest<CalendarEvent>(`/calendar/events/${encodeURIComponent(eventId)}`, {
+    method: "PATCH",
+    body: input,
+    familyId
+  });
+}
+
+export async function deleteCalendarEvent(familyId: string, eventId: string): Promise<CalendarEvent> {
+  return apiRequest<CalendarEvent>(`/calendar/events/${encodeURIComponent(eventId)}`, {
     method: "DELETE",
     familyId
   });

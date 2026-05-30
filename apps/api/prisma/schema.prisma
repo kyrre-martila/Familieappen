@@ -25,6 +25,7 @@ model User {
   checkedShoppingItems ShoppingListItem[] @relation("ShoppingItemCheckedBy")
   createdTasks Task[] @relation("TaskCreatedBy")
   completedTasks Task[] @relation("TaskCompletedBy")
+  createdCalendarEvents CalendarEvent[] @relation("CalendarEventCreatedBy")
 
   @@map("users")
 }
@@ -38,6 +39,7 @@ model Family {
   shoppingLists ShoppingList[]
   mealPlans MealPlan[]
   tasks     Task[]
+  calendarEvents CalendarEvent[]
 
   @@map("families")
 }
@@ -53,6 +55,7 @@ model FamilyMember {
   user        User?            @relation(fields: [userId], references: [id], onDelete: SetNull)
   family      Family           @relation(fields: [familyId], references: [id], onDelete: Cascade)
   assignedTasks Task[]
+  calendarEventParticipants CalendarEventParticipant[]
 
   @@index([familyId])
   @@index([userId])
@@ -143,4 +146,42 @@ model Task {
   @@index([createdByUserId])
   @@index([completedByUserId])
   @@map("tasks")
+}
+
+
+model CalendarEvent {
+  id              String                     @id @default(cuid())
+  familyId        String
+  title           String
+  description     String?
+  location        String?
+  startsAt        DateTime
+  endsAt          DateTime?
+  allDay          Boolean                    @default(false)
+  createdByUserId String?
+  createdAt       DateTime                   @default(now())
+  updatedAt       DateTime                   @updatedAt
+  family          Family                     @relation(fields: [familyId], references: [id], onDelete: Cascade)
+  createdByUser   User?                      @relation("CalendarEventCreatedBy", fields: [createdByUserId], references: [id], onDelete: SetNull)
+  participants    CalendarEventParticipant[]
+
+  @@index([familyId])
+  @@index([startsAt])
+  @@index([endsAt])
+  @@index([createdByUserId])
+  @@map("calendar_events")
+}
+
+model CalendarEventParticipant {
+  id             String         @id @default(cuid())
+  eventId        String
+  familyMemberId String
+  createdAt      DateTime       @default(now())
+  event          CalendarEvent  @relation(fields: [eventId], references: [id], onDelete: Cascade)
+  familyMember   FamilyMember   @relation(fields: [familyMemberId], references: [id], onDelete: Cascade)
+
+  @@unique([eventId, familyMemberId])
+  @@index([eventId])
+  @@index([familyMemberId])
+  @@map("calendar_event_participants")
 }
