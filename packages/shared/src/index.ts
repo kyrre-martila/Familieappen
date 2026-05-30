@@ -34,12 +34,31 @@ export interface Task {
   updatedAt: string;
 }
 
+export interface MealPlanDay {
+  id: string;
+  mealPlanId: string;
+  date: string;
+  mealName: string;
+  notes: string | null;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface MealPlan {
+  id: string;
+  familyId: string;
+  createdAt: string;
+  updatedAt: string;
+  days: MealPlanDay[];
+  recentMeals: string[];
+}
+
 export interface FamilyDashboardResponse {
   family: Family;
   members: FamilyMember[];
   todayEvents: [];
   todayTasks: Task[];
-  dinnerToday: null;
+  dinnerToday: MealPlanDay | null;
   shoppingSummary: {
     uncheckedCount: number;
     totalItems: number;

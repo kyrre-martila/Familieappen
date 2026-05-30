@@ -32,6 +32,10 @@ interface PrismaClientConnection {
   familyMember: PrismaDelegate;
   shoppingList: PrismaDelegate;
   shoppingListItem: PrismaDelegate;
+  mealPlan: PrismaDelegate;
+  mealPlanDay: PrismaDelegate & {
+    upsert(args: Record<string, unknown>): Promise<any>;
+  };
   task: PrismaDelegate;
   $connect(): Promise<void>;
   $disconnect(): Promise<void>;
