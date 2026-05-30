@@ -7,6 +7,7 @@ export interface AppConfig {
   apiPrefix: string;
   corsOrigins: string[];
   databaseUrl?: string;
+  authJwtSecret?: string;
 }
 
 const DEFAULT_PORT = 4000;
@@ -42,6 +43,7 @@ export function getAppConfig(): AppConfig {
     port: parsePort(process.env.PORT),
     apiPrefix: normalizeApiPrefix(process.env.API_PREFIX),
     corsOrigins: DEFAULT_CORS_ORIGINS,
-    databaseUrl: process.env.DATABASE_URL
+    databaseUrl: process.env.DATABASE_URL,
+    authJwtSecret: process.env.AUTH_JWT_SECRET
   };
 }

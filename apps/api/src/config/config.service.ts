@@ -24,4 +24,8 @@ export class ConfigService {
   get databaseUrl(): string | undefined {
     return this.config.databaseUrl;
   }
+
+  get authJwtSecret(): string | undefined {
+    return this.config.authJwtSecret;
+  }
 }

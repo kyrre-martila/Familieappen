@@ -2,7 +2,28 @@ import { Injectable, OnModuleDestroy } from "@nestjs/common";
 import { PrismaPg } from "@prisma/adapter-pg";
 import { ConfigService } from "../config";
 
+type UserRecord = {
+  id: string;
+  name: string;
+  email: string;
+  passwordHash: string;
+  createdAt: Date;
+  updatedAt: Date;
+};
+
+interface UserDelegate {
+  findUnique(args: { where: { email: string } }): Promise<UserRecord | null>;
+  create(args: {
+    data: {
+      name: string;
+      email: string;
+      passwordHash: string;
+    };
+  }): Promise<UserRecord>;
+}
+
 interface PrismaClientConnection {
+  user: UserDelegate;
   $connect(): Promise<void>;
   $disconnect(): Promise<void>;
   $queryRaw<T = unknown>(query: TemplateStringsArray): Promise<T>;
