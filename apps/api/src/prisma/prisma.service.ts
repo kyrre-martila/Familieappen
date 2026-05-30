@@ -40,6 +40,10 @@ interface PrismaClientConnection {
   task: PrismaDelegate;
   calendarEvent: PrismaDelegate;
   calendarEventParticipant: PrismaDelegate;
+  wishlist: PrismaDelegate;
+  wishlistItem: PrismaDelegate;
+  wishlistReservation: PrismaDelegate;
+  wishlistShare: PrismaDelegate;
   $connect(): Promise<void>;
   $disconnect(): Promise<void>;
   $queryRaw<T = unknown>(query: TemplateStringsArray): Promise<T>;

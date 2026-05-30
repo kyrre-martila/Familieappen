@@ -8,8 +8,9 @@ import { MealsModule } from "./meals";
 import { PrismaModule } from "./prisma";
 import { ShoppingModule } from "./shopping";
 import { TasksModule } from "./tasks";
+import { WishlistsModule } from "./wishlists";
 
 @Module({
-  imports: [ConfigModule, PrismaModule, HealthModule, AuthModule, FamiliesModule, ShoppingModule, TasksModule, MealsModule, CalendarModule]
+  imports: [ConfigModule, PrismaModule, HealthModule, AuthModule, FamiliesModule, ShoppingModule, TasksModule, MealsModule, CalendarModule, WishlistsModule]
 })
 export class AppModule {}

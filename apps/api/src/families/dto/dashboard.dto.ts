@@ -14,6 +14,16 @@ export interface FamilyDashboardDto {
     totalItems: number;
   };
   wishlistSummary: {
-    upcomingBirthdays: [];
+    wishlistCount: number;
+    upcomingPlaceholder: string;
+    recentlyUpdated: {
+      id: string;
+      ownerFamilyMemberId: string;
+      title: string;
+      description: string | null;
+      itemCount: number;
+      unavailableCount: number;
+      updatedAt: string;
+    }[];
   };
 }
