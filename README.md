@@ -26,7 +26,7 @@ This repository is intentionally minimal. It includes:
 - A pnpm workspace monorepo.
 - A Next.js web shell with placeholder routes for Home, Calendar, Meals, Shopping, Tasks, Wishlists and Settings.
 - An Expo React Native mobile shell from the initial foundation, left untouched while the web product is validated.
-- A NestJS API with `GET /health`.
+- A NestJS API foundation with config, CORS, safe error responses and `GET /api/health`.
 - A small shared TypeScript package for family roles and sharing levels.
 - A small UI package containing design tokens.
 
@@ -73,6 +73,8 @@ The mobile app is not the current validation focus and remains untouched by the 
 
 ## Run the API
 
+The API defaults to `PORT=4000` and `API_PREFIX=api`, so local routes are served under `/api`.
+
 ```bash
 pnpm dev:api
 ```
@@ -86,7 +88,7 @@ pnpm --filter @familieappen/api start:dev
 Health check:
 
 ```bash
-curl http://localhost:3000/health
+curl http://localhost:4000/api/health
 ```
 
 Expected response:
