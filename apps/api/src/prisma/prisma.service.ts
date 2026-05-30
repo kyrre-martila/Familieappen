@@ -32,6 +32,7 @@ interface PrismaClientConnection {
   familyMember: PrismaDelegate;
   shoppingList: PrismaDelegate;
   shoppingListItem: PrismaDelegate;
+  task: PrismaDelegate;
   $connect(): Promise<void>;
   $disconnect(): Promise<void>;
   $queryRaw<T = unknown>(query: TemplateStringsArray): Promise<T>;

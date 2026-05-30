@@ -1,10 +1,11 @@
+import { TaskDto } from "../../tasks/dto/task.dto";
 import { FamilyDto, FamilyMemberDto } from "./family.dto";
 
 export interface FamilyDashboardDto {
   family: FamilyDto;
   members: FamilyMemberDto[];
   todayEvents: [];
-  todayTasks: [];
+  todayTasks: TaskDto[];
   dinnerToday: null;
   shoppingSummary: {
     uncheckedCount: number;

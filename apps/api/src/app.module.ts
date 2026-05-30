@@ -5,8 +5,9 @@ import { FamiliesModule } from "./families";
 import { HealthModule } from "./health";
 import { PrismaModule } from "./prisma";
 import { ShoppingModule } from "./shopping";
+import { TasksModule } from "./tasks";
 
 @Module({
-  imports: [ConfigModule, PrismaModule, HealthModule, AuthModule, FamiliesModule, ShoppingModule]
+  imports: [ConfigModule, PrismaModule, HealthModule, AuthModule, FamiliesModule, ShoppingModule, TasksModule]
 })
 export class AppModule {}

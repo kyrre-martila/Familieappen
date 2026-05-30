@@ -28,6 +28,21 @@ type FamilyRecord = {
   updatedAt: Date;
 };
 
+type TaskRecord = {
+  id: string;
+  familyId: string;
+  title: string;
+  description: string | null;
+  assignedFamilyMemberId: string | null;
+  createdByUserId: string | null;
+  completed: boolean;
+  completedAt: Date | null;
+  completedByUserId: string | null;
+  dueDate: Date | null;
+  createdAt: Date;
+  updatedAt: Date;
+};
+
 type FamilyMemberRecord = {
   id: string;
   userId: string | null;
@@ -116,13 +131,16 @@ export class FamiliesService {
   async getFamilyDashboard(userId: string, familyId: string): Promise<FamilyDashboardDto> {
     const details = await this.getFamilyDetails(userId, familyId);
 
-    const shoppingSummary = await this.getOrCreateShoppingSummary(familyId);
+    const [shoppingSummary, todayTasks] = await Promise.all([
+      this.getOrCreateShoppingSummary(familyId),
+      this.getDashboardTasks(familyId)
+    ]);
 
     return {
       family: details.family,
       members: details.members,
       todayEvents: [],
-      todayTasks: [],
+      todayTasks,
       dinnerToday: null,
       shoppingSummary,
       wishlistSummary: {
@@ -184,6 +202,29 @@ export class FamiliesService {
     });
 
     return this.toFamilyMemberDto(deletedMember);
+  }
+
+  private async getDashboardTasks(familyId: string): Promise<FamilyDashboardDto["todayTasks"]> {
+    const tasks = await this.prisma.client.task.findMany({
+      where: { familyId },
+      orderBy: [{ completed: "asc" }, { dueDate: "asc" }, { createdAt: "asc" }],
+      take: 5
+    });
+
+    return tasks.map((task: TaskRecord) => ({
+      id: task.id,
+      familyId: task.familyId,
+      title: task.title,
+      description: task.description,
+      assignedFamilyMemberId: task.assignedFamilyMemberId,
+      createdByUserId: task.createdByUserId,
+      completed: task.completed,
+      completedAt: task.completedAt?.toISOString() ?? null,
+      completedByUserId: task.completedByUserId,
+      dueDate: task.dueDate?.toISOString() ?? null,
+      createdAt: task.createdAt.toISOString(),
+      updatedAt: task.updatedAt.toISOString()
+    }));
   }
 
   private async getOrCreateShoppingSummary(familyId: string): Promise<{ uncheckedCount: number; totalItems: number }> {

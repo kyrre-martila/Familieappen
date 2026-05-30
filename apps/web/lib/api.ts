@@ -5,10 +5,11 @@ import type {
   FamilyMemberRole,
   ManualFamilyMemberRole,
   ShoppingList,
-  ShoppingListItem
+  ShoppingListItem,
+  Task
 } from "@familieappen/shared";
 
-export type { Family, FamilyDashboardResponse, FamilyMember, FamilyMemberRole, ManualFamilyMemberRole, ShoppingList, ShoppingListItem };
+export type { Family, FamilyDashboardResponse, FamilyMember, FamilyMemberRole, ManualFamilyMemberRole, ShoppingList, ShoppingListItem, Task };
 
 export interface AuthUser {
   id: string;
@@ -175,6 +176,35 @@ export async function toggleShoppingItem(familyId: string, itemId: string): Prom
 
 export async function deleteShoppingItem(familyId: string, itemId: string): Promise<ShoppingListItem> {
   return apiRequest<ShoppingListItem>(`/shopping/items/${encodeURIComponent(itemId)}`, {
+    method: "DELETE",
+    familyId
+  });
+}
+
+export async function getTasks(familyId: string): Promise<Task[]> {
+  return apiRequest<Task[]>("/tasks", { familyId });
+}
+
+export async function addTask(
+  familyId: string,
+  input: { title: string; description?: string; assignedFamilyMemberId?: string; dueDate?: string }
+): Promise<Task> {
+  return apiRequest<Task>("/tasks", {
+    method: "POST",
+    body: input,
+    familyId
+  });
+}
+
+export async function toggleTask(familyId: string, taskId: string): Promise<Task> {
+  return apiRequest<Task>(`/tasks/${encodeURIComponent(taskId)}`, {
+    method: "PATCH",
+    familyId
+  });
+}
+
+export async function deleteTask(familyId: string, taskId: string): Promise<Task> {
+  return apiRequest<Task>(`/tasks/${encodeURIComponent(taskId)}`, {
     method: "DELETE",
     familyId
   });
