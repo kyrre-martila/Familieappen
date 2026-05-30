@@ -1,3 +1,4 @@
+import "dotenv/config";
 export type AppEnvironment = "development" | "test" | "production" | string;
 
 export interface AppConfig {
@@ -5,6 +6,7 @@ export interface AppConfig {
   port: number;
   apiPrefix: string;
   corsOrigins: string[];
+  databaseUrl?: string;
 }
 
 const DEFAULT_PORT = 4000;
@@ -39,6 +41,7 @@ export function getAppConfig(): AppConfig {
     nodeEnv: process.env.NODE_ENV || "development",
     port: parsePort(process.env.PORT),
     apiPrefix: normalizeApiPrefix(process.env.API_PREFIX),
-    corsOrigins: DEFAULT_CORS_ORIGINS
+    corsOrigins: DEFAULT_CORS_ORIGINS,
+    databaseUrl: process.env.DATABASE_URL
   };
 }
