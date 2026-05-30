@@ -1,6 +1,6 @@
-import { Body, Controller, Delete, Get, Headers, Param, Patch, Post, Req, UseGuards } from "@nestjs/common";
+import { Body, Controller, Delete, Get, Headers, HttpStatus, Param, Patch, Post, Req, UseGuards } from "@nestjs/common";
 import { AuthGuard } from "../auth/guards/auth.guard";
-import { ApiResponse, createApiResponse } from "../common";
+import { API_ERROR_CODES, ApiException, ApiResponse, createApiResponse } from "../common";
 import { MealPlanDayDto, MealPlanDto, UpsertMealPlanDayRequestDto } from "./dto/meal.dto";
 import { MealsService } from "./meals.service";
 
@@ -21,7 +21,7 @@ export class MealsController {
     @Req() request: AuthenticatedRequest,
     @Headers("x-family-id") familyId: string
   ): Promise<ApiResponse<MealPlanDto>> {
-    return createApiResponse(await this.mealsService.getMealPlan(request.user.id, familyId));
+    return createApiResponse(await this.mealsService.getMealPlan(request.user.id, requireFamilyId(familyId)));
   }
 
   @Post("day")
@@ -30,7 +30,7 @@ export class MealsController {
     @Headers("x-family-id") familyId: string,
     @Body() body: UpsertMealPlanDayRequestDto
   ): Promise<ApiResponse<MealPlanDayDto>> {
-    return createApiResponse(await this.mealsService.upsertDay(request.user.id, familyId, body));
+    return createApiResponse(await this.mealsService.upsertDay(request.user.id, requireFamilyId(familyId), body));
   }
 
   @Patch("day/:dayId")
@@ -40,7 +40,7 @@ export class MealsController {
     @Param("dayId") dayId: string,
     @Body() body: UpsertMealPlanDayRequestDto
   ): Promise<ApiResponse<MealPlanDayDto>> {
-    return createApiResponse(await this.mealsService.updateDay(request.user.id, familyId, dayId, body));
+    return createApiResponse(await this.mealsService.updateDay(request.user.id, requireFamilyId(familyId), dayId, body));
   }
 
   @Delete("day/:dayId")
@@ -49,6 +49,18 @@ export class MealsController {
     @Headers("x-family-id") familyId: string,
     @Param("dayId") dayId: string
   ): Promise<ApiResponse<MealPlanDayDto>> {
-    return createApiResponse(await this.mealsService.deleteDay(request.user.id, familyId, dayId));
+    return createApiResponse(await this.mealsService.deleteDay(request.user.id, requireFamilyId(familyId), dayId));
   }
+}
+
+function requireFamilyId(familyId: string | undefined): string {
+  if (!familyId) {
+    throw new ApiException(
+      HttpStatus.BAD_REQUEST,
+      API_ERROR_CODES.FAMILY_MISSING_CONTEXT,
+      "X-Family-Id header is required"
+    );
+  }
+
+  return familyId;
 }

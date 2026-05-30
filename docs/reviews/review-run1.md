@@ -977,3 +977,69 @@ pnpm --filter @familieappen/api test:security
 ```
 
 Then add DB fixture factories for users, families, memberships, shopping items, tasks, calendar events, wishlists, wishlist items, and wishlist shares, and assert that the real services reject cross-family database records rather than only the fallback doubles.
+
+## Run 1.5 Prompt 5 result
+
+### Contracts standardised
+
+- API success responses now consistently use the `{ "data": ... }` envelope, including the health endpoint.
+- API error responses now consistently use `{ "error": { "code": "...", "message": "..." } }`.
+- The global HTTP exception filter now removes framework-specific error metadata from client responses and avoids exposing stack traces or internal implementation details.
+- HTTP status codes remain the transport-level signal, while `error.code` is the stable machine-readable application signal.
+- The frontend API client was kept compatible with existing `{ data }` success envelopes and minimally updated to read both the new `error.message` field and the previous top-level `message` fallback.
+
+### Error codes added
+
+The standard API error-code registry now includes:
+
+- `auth.requires_auth`
+- `auth.invalid_token`
+- `auth.expired_token`
+- `auth.invalid_credentials`
+- `auth.email_already_exists`
+- `family.missing_context`
+- `family.access_denied`
+- `family.not_found`
+- `shopping.item_not_found`
+- `task.not_found`
+- `calendar.event_not_found`
+- `wishlist.not_found`
+- `wishlist.invalid_share_token`
+- `wishlist.item_mismatch`
+- `validation.invalid_input`
+- `validation.missing_field`
+- `server.internal_error`
+
+### Family-context behaviour
+
+- `X-Family-Id` remains the family-context mechanism.
+- Missing `X-Family-Id` now has a deterministic `400` response with `family.missing_context` when family-scoped services require a family context.
+- Family membership failures continue to hide unauthorized family existence with `404` and now include `family.not_found`.
+- Foreign family-owned resources continue to be rejected through the relevant `404` not-found semantics and now include stable resource-specific codes where the message is specific enough to identify the domain.
+
+### What stayed intentionally unchanged
+
+- Bearer-token auth remains in place.
+- No cookie migration was introduced.
+- `X-Family-Id` was not replaced.
+- No OpenAPI generation was added.
+- DTO structure was not redesigned.
+- Zod was not introduced across the API.
+- No Run 2 feature expansion was started.
+- The shared package remains useful for frontend typing but is not yet the source of truth for API DTOs.
+
+### Contract and regression coverage added
+
+- Added a dedicated API contract harness covering success envelope shape, error envelope shape, auth rejection shape, invalid token shape, expired token shape, missing family context shape, family access rejection shape, and public wishlist invalid-token shape.
+- Strengthened the security harness to assert representative machine-readable error codes for auth rejection, invalid token, expired token, missing family context, and invalid public wishlist token.
+
+### Remaining API risks
+
+- Most production services still throw framework exceptions and rely on the global filter to map messages/statuses into stable codes. This keeps the patch small, but future work should gradually replace ambiguous exception messages with explicit `ApiException` throws for high-value branches.
+- The fallback test harness still uses in-memory service doubles rather than Prisma-backed fixtures, so it verifies HTTP contract behavior and representative family-isolation semantics but not real database query predicates.
+- Route-not-found responses are normalized by the same fallback mapping and are not yet assigned a dedicated route-level error code.
+- The frontend stores only the error message today; callers do not yet receive the machine-readable code through `ApiError`.
+
+### Recommended next Run 1.5 prompt
+
+Run 1.5 Prompt 6 should focus on replacing message-based error-code inference in the most important API branches with explicit `ApiException` usage, starting with auth, family authorization, wishlist sharing, and cross-family resource lookups. If Prisma engines and PostgreSQL are available, it should also convert the contract/security harnesses into real Prisma-backed e2e tests while preserving the existing no-Prisma fallback tests.
