@@ -43,6 +43,16 @@ type TaskRecord = {
   updatedAt: Date;
 };
 
+type MealPlanDayRecord = {
+  id: string;
+  mealPlanId: string;
+  date: Date;
+  mealName: string;
+  notes: string | null;
+  createdAt: Date;
+  updatedAt: Date;
+};
+
 type FamilyMemberRecord = {
   id: string;
   userId: string | null;
@@ -131,9 +141,10 @@ export class FamiliesService {
   async getFamilyDashboard(userId: string, familyId: string): Promise<FamilyDashboardDto> {
     const details = await this.getFamilyDetails(userId, familyId);
 
-    const [shoppingSummary, todayTasks] = await Promise.all([
+    const [shoppingSummary, todayTasks, dinnerToday] = await Promise.all([
       this.getOrCreateShoppingSummary(familyId),
-      this.getDashboardTasks(familyId)
+      this.getDashboardTasks(familyId),
+      this.getDinnerToday(familyId)
     ]);
 
     return {
@@ -141,7 +152,7 @@ export class FamiliesService {
       members: details.members,
       todayEvents: [],
       todayTasks,
-      dinnerToday: null,
+      dinnerToday,
       shoppingSummary,
       wishlistSummary: {
         upcomingBirthdays: []
@@ -204,6 +215,28 @@ export class FamiliesService {
     return this.toFamilyMemberDto(deletedMember);
   }
 
+  private async getDinnerToday(familyId: string): Promise<FamilyDashboardDto["dinnerToday"]> {
+    const mealPlan = await this.prisma.client.mealPlan.findUnique({
+      where: { familyId },
+      select: { id: true }
+    });
+
+    if (!mealPlan) {
+      return null;
+    }
+
+    const now = new Date();
+    const today = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate()));
+    const day = await this.prisma.client.mealPlanDay.findFirst({
+      where: {
+        mealPlanId: mealPlan.id,
+        date: today
+      }
+    });
+
+    return day ? this.toMealPlanDayDto(day) : null;
+  }
+
   private async getDashboardTasks(familyId: string): Promise<FamilyDashboardDto["todayTasks"]> {
     const tasks = await this.prisma.client.task.findMany({
       where: { familyId },
@@ -225,6 +258,18 @@ export class FamiliesService {
       createdAt: task.createdAt.toISOString(),
       updatedAt: task.updatedAt.toISOString()
     }));
+  }
+
+  private toMealPlanDayDto(day: MealPlanDayRecord): NonNullable<FamilyDashboardDto["dinnerToday"]> {
+    return {
+      id: day.id,
+      mealPlanId: day.mealPlanId,
+      date: day.date.toISOString().slice(0, 10),
+      mealName: day.mealName,
+      notes: day.notes,
+      createdAt: day.createdAt.toISOString(),
+      updatedAt: day.updatedAt.toISOString()
+    };
   }
 
   private async getOrCreateShoppingSummary(familyId: string): Promise<{ uncheckedCount: number; totalItems: number }> {

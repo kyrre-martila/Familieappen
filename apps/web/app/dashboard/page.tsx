@@ -174,11 +174,23 @@ export default function DashboardPage() {
         </Card>
 
         <Card className="dashboard-card" tone="soft">
-          <SectionHeader action={<Badge tone="neutral">Empty</Badge>} eyebrow="Dinner" title="What is for dinner?" />
-          <EmptyState
-            title="No dinner planned today"
-            description="Dinner plans will show here once meal planning is added."
+          <SectionHeader
+            action={<Badge tone={dashboard?.dinnerToday ? "success" : "neutral"}>{dashboard?.dinnerToday ? "Planned" : "Empty"}</Badge>}
+            eyebrow="Dinner"
+            title="What is for dinner?"
           />
+          {dashboard?.dinnerToday ? (
+            <div className="dinner-today">
+              <p className="dinner-today__label">Dinner today:</p>
+              <p className="dinner-today__meal">{formatDinner(dashboard.dinnerToday.mealName)}</p>
+              {dashboard.dinnerToday.notes ? <p className="dinner-today__notes">{dashboard.dinnerToday.notes}</p> : null}
+            </div>
+          ) : (
+            <EmptyState title="No dinner planned today" description="Open meals to add a simple dinner plan for today." />
+          )}
+          <Link className="button button--secondary" href="/meals">
+            Open meals
+          </Link>
         </Card>
 
         <Card className="dashboard-card" tone="default">
@@ -309,3 +321,21 @@ function formatShoppingSummary(uncheckedCount: number): string {
   return `${uncheckedCount} item${uncheckedCount === 1 ? "" : "s"} remaining`;
 }
 
+
+function formatDinner(mealName: string): string {
+  const lowerMealName = mealName.toLowerCase();
+
+  if (lowerMealName.includes("taco")) {
+    return `${mealName} 🌮`;
+  }
+
+  if (lowerMealName.includes("pizza")) {
+    return `${mealName} 🍕`;
+  }
+
+  if (lowerMealName.includes("pasta") || lowerMealName.includes("spaghetti")) {
+    return `${mealName} 🍝`;
+  }
+
+  return mealName;
+}

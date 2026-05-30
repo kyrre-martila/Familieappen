@@ -4,12 +4,14 @@ import type {
   FamilyMember,
   FamilyMemberRole,
   ManualFamilyMemberRole,
+  MealPlan,
+  MealPlanDay,
   ShoppingList,
   ShoppingListItem,
   Task
 } from "@familieappen/shared";
 
-export type { Family, FamilyDashboardResponse, FamilyMember, FamilyMemberRole, ManualFamilyMemberRole, ShoppingList, ShoppingListItem, Task };
+export type { Family, FamilyDashboardResponse, FamilyMember, FamilyMemberRole, ManualFamilyMemberRole, MealPlan, MealPlanDay, ShoppingList, ShoppingListItem, Task };
 
 export interface AuthUser {
   id: string;
@@ -176,6 +178,40 @@ export async function toggleShoppingItem(familyId: string, itemId: string): Prom
 
 export async function deleteShoppingItem(familyId: string, itemId: string): Promise<ShoppingListItem> {
   return apiRequest<ShoppingListItem>(`/shopping/items/${encodeURIComponent(itemId)}`, {
+    method: "DELETE",
+    familyId
+  });
+}
+
+export async function getMealPlan(familyId: string): Promise<MealPlan> {
+  return apiRequest<MealPlan>("/meals", { familyId });
+}
+
+export async function addMealPlanDay(
+  familyId: string,
+  input: { date: string; mealName: string; notes?: string }
+): Promise<MealPlanDay> {
+  return apiRequest<MealPlanDay>("/meals/day", {
+    method: "POST",
+    body: input,
+    familyId
+  });
+}
+
+export async function updateMealPlanDay(
+  familyId: string,
+  dayId: string,
+  input: { date?: string; mealName?: string; notes?: string }
+): Promise<MealPlanDay> {
+  return apiRequest<MealPlanDay>(`/meals/day/${encodeURIComponent(dayId)}`, {
+    method: "PATCH",
+    body: input,
+    familyId
+  });
+}
+
+export async function deleteMealPlanDay(familyId: string, dayId: string): Promise<MealPlanDay> {
+  return apiRequest<MealPlanDay>(`/meals/day/${encodeURIComponent(dayId)}`, {
     method: "DELETE",
     familyId
   });
