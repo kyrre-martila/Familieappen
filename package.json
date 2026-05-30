@@ -11,7 +11,10 @@
     "start:web": "pnpm --filter @familieappen/web start",
     "start:api": "pnpm --filter @familieappen/api start",
     "build": "pnpm -r build",
-    "typecheck": "pnpm -r typecheck"
+    "typecheck": "pnpm -r typecheck",
+    "prisma:generate": "pnpm --filter @familieappen/api prisma:generate",
+    "prisma:migrate": "pnpm --filter @familieappen/api prisma:migrate",
+    "prisma:studio": "pnpm --filter @familieappen/api prisma:studio"
   },
   "engines": {
     "node": ">=20.0.0",

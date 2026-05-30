@@ -20,4 +20,8 @@ export class ConfigService {
   get corsOrigins(): string[] {
     return this.config.corsOrigins;
   }
+
+  get databaseUrl(): string | undefined {
+    return this.config.databaseUrl;
+  }
 }
