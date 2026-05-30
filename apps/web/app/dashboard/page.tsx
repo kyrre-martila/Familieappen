@@ -1,4 +1,8 @@
+"use client";
+
+import { useEffect, useState } from "react";
 import { Badge, Button, Card, EmptyState, PageContainer, SectionHeader } from "../../components/ui";
+import { FamilyDetails, getActiveFamilyId, getFamily, listFamilies, setActiveFamilyId } from "../../lib/api";
 
 const todayEvents = [
   { time: "08:15", title: "School drop-off", detail: "Maja and Sofie" },
@@ -16,16 +20,67 @@ const tasks = [
 ];
 
 export default function HomePage() {
+  const [familyDetails, setFamilyDetails] = useState<FamilyDetails | null>(null);
+  const [dashboardMessage, setDashboardMessage] = useState("Loading your family dashboard…");
+
+  useEffect(() => {
+    let isMounted = true;
+
+    async function loadDashboardFamily() {
+      try {
+        let familyId = getActiveFamilyId();
+
+        if (!familyId) {
+          const families = await listFamilies();
+          familyId = families[0]?.family.id ?? null;
+
+          if (familyId) {
+            setActiveFamilyId(familyId);
+          }
+        }
+
+        if (!familyId) {
+          if (isMounted) {
+            setDashboardMessage("Create a family to start using the dashboard.");
+          }
+          return;
+        }
+
+        const details = await getFamily(familyId);
+
+        if (isMounted) {
+          setFamilyDetails(details);
+          setDashboardMessage("Family dashboard ready.");
+        }
+      } catch {
+        if (isMounted) {
+          setDashboardMessage("Could not load family details. Please sign in again if your session expired.");
+        }
+      }
+    }
+
+    void loadDashboardFamily();
+
+    return () => {
+      isMounted = false;
+    };
+  }, []);
+
+  const familyName = familyDetails?.family.name ?? "Your family";
+  const memberCount = familyDetails?.members.length ?? 0;
+
   return (
     <PageContainer tone="dashboard">
       <section className="dashboard-hero" aria-labelledby="dashboard-title">
         <div className="dashboard-hero__copy">
-          <Badge tone="primary">Friday overview</Badge>
+          <Badge tone="primary">Family overview</Badge>
           <h1 id="dashboard-title" className="dashboard-hero__title">
-            Good morning, Jenny ☀️
+            {familyName}
           </h1>
           <p className="dashboard-hero__description">
-            A calm overview of today’s plans, dinner, shopping and shared family tasks.
+            {familyDetails
+              ? `A calm overview for ${familyName}, with ${memberCount} family member${memberCount === 1 ? "" : "s"} set up.`
+              : dashboardMessage}
           </p>
         </div>
         <div className="dashboard-hero__actions" aria-label="Quick actions">
@@ -35,6 +90,26 @@ export default function HomePage() {
       </section>
 
       <section className="dashboard-grid" aria-label="Family dashboard">
+        <Card className="dashboard-card" tone="warm">
+          <SectionHeader
+            action={<Badge tone="primary">{memberCount} members</Badge>}
+            eyebrow="Family"
+            title="Who is on the overview?"
+          />
+          {familyDetails ? (
+            <ul className="member-list" aria-label="Dashboard family members">
+              {familyDetails.members.map((member) => (
+                <li className="member-list__item" key={member.id}>
+                  <span className="member-list__name">{member.displayName}</span>
+                  <span className="member-list__role">{formatRole(member.role)}</span>
+                </li>
+              ))}
+            </ul>
+          ) : (
+            <EmptyState title="No family loaded yet" description={dashboardMessage} />
+          )}
+        </Card>
+
         <Card className="dashboard-card dashboard-card--today" tone="warm">
           <SectionHeader
             action={<Badge tone="accent">3 events</Badge>}
@@ -129,4 +204,8 @@ export default function HomePage() {
       </section>
     </PageContainer>
   );
+}
+
+function formatRole(role: string): string {
+  return role.charAt(0) + role.slice(1).toLowerCase();
 }

@@ -11,19 +11,24 @@ type UserRecord = {
   updatedAt: Date;
 };
 
-interface UserDelegate {
-  findUnique(args: { where: { email: string } }): Promise<UserRecord | null>;
-  create(args: {
-    data: {
-      name: string;
-      email: string;
-      passwordHash: string;
-    };
-  }): Promise<UserRecord>;
+type PrismaDelegate = {
+  findUnique(args: Record<string, unknown>): Promise<any>;
+  findFirst(args: Record<string, unknown>): Promise<any>;
+  findMany(args: Record<string, unknown>): Promise<any[]>;
+  create(args: Record<string, unknown>): Promise<any>;
+  delete(args: Record<string, unknown>): Promise<any>;
+  count(args: Record<string, unknown>): Promise<number>;
+};
+
+interface UserDelegate extends PrismaDelegate {
+  findUnique(args: Record<string, unknown>): Promise<UserRecord | null>;
+  create(args: Record<string, unknown>): Promise<UserRecord>;
 }
 
 interface PrismaClientConnection {
   user: UserDelegate;
+  family: PrismaDelegate;
+  familyMember: PrismaDelegate;
   $connect(): Promise<void>;
   $disconnect(): Promise<void>;
   $queryRaw<T = unknown>(query: TemplateStringsArray): Promise<T>;

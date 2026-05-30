@@ -18,7 +18,7 @@ export default function RegisterPage() {
             <p className="auth-card__description">No long setup. Add the basics now and adjust everything later.</p>
           </div>
 
-          <AuthForm submitLabel="Create account" submitTo="/onboarding/create-family">
+          <AuthForm mode="register" submitLabel="Create account" submitTo="/onboarding/create-family">
             <label className="form-field">
               <span className="form-field__label">Name</span>
               <input className="form-field__input" name="name" type="text" autoComplete="name" required />

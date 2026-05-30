@@ -1,4 +1,4 @@
-import { AuthForm } from "../../../components/AuthForm";
+import { CreateFamilyForm } from "../../../components/CreateFamilyForm";
 import { OnboardingProgress } from "../../../components/OnboardingProgress";
 import { Card, PageContainer } from "../../../components/ui";
 
@@ -14,12 +14,7 @@ export default function CreateFamilyPage() {
             <p className="auth-card__description">Examples: “The Hansen Family” or “Hjemme hos Martila”.</p>
           </div>
 
-          <AuthForm submitLabel="Continue" submitTo="/onboarding/add-members">
-            <label className="form-field">
-              <span className="form-field__label">Family name</span>
-              <input className="form-field__input" name="familyName" type="text" placeholder="The Hansen Family" required />
-            </label>
-          </AuthForm>
+          <CreateFamilyForm />
         </Card>
       </section>
     </PageContainer>
