@@ -53,10 +53,33 @@ export interface MealPlan {
   recentMeals: string[];
 }
 
+export interface CalendarEventParticipant {
+  id: string;
+  eventId: string;
+  familyMemberId: string;
+  createdAt: string;
+  familyMember: FamilyMember;
+}
+
+export interface CalendarEvent {
+  id: string;
+  familyId: string;
+  title: string;
+  description: string | null;
+  location: string | null;
+  startsAt: string;
+  endsAt: string | null;
+  allDay: boolean;
+  createdByUserId: string | null;
+  createdAt: string;
+  updatedAt: string;
+  participants: CalendarEventParticipant[];
+}
+
 export interface FamilyDashboardResponse {
   family: Family;
   members: FamilyMember[];
-  todayEvents: [];
+  todayEvents: CalendarEvent[];
   todayTasks: Task[];
   dinnerToday: MealPlanDay | null;
   shoppingSummary: {

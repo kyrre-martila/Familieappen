@@ -53,6 +53,30 @@ type MealPlanDayRecord = {
   updatedAt: Date;
 };
 
+
+type CalendarEventParticipantRecord = {
+  id: string;
+  eventId: string;
+  familyMemberId: string;
+  createdAt: Date;
+  familyMember: FamilyMemberRecord;
+};
+
+type CalendarEventRecord = {
+  id: string;
+  familyId: string;
+  title: string;
+  description: string | null;
+  location: string | null;
+  startsAt: Date;
+  endsAt: Date | null;
+  allDay: boolean;
+  createdByUserId: string | null;
+  createdAt: Date;
+  updatedAt: Date;
+  participants: CalendarEventParticipantRecord[];
+};
+
 type FamilyMemberRecord = {
   id: string;
   userId: string | null;
@@ -141,16 +165,17 @@ export class FamiliesService {
   async getFamilyDashboard(userId: string, familyId: string): Promise<FamilyDashboardDto> {
     const details = await this.getFamilyDetails(userId, familyId);
 
-    const [shoppingSummary, todayTasks, dinnerToday] = await Promise.all([
+    const [shoppingSummary, todayTasks, dinnerToday, todayEvents] = await Promise.all([
       this.getOrCreateShoppingSummary(familyId),
       this.getDashboardTasks(familyId),
-      this.getDinnerToday(familyId)
+      this.getDinnerToday(familyId),
+      this.getTodayEvents(familyId)
     ]);
 
     return {
       family: details.family,
       members: details.members,
-      todayEvents: [],
+      todayEvents,
       todayTasks,
       dinnerToday,
       shoppingSummary,
@@ -213,6 +238,54 @@ export class FamiliesService {
     });
 
     return this.toFamilyMemberDto(deletedMember);
+  }
+
+  private async getTodayEvents(familyId: string): Promise<FamilyDashboardDto["todayEvents"]> {
+    const now = new Date();
+    const todayStart = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate()));
+    const tomorrowStart = new Date(todayStart);
+    tomorrowStart.setUTCDate(tomorrowStart.getUTCDate() + 1);
+
+    const events = await this.prisma.client.calendarEvent.findMany({
+      where: {
+        familyId,
+        startsAt: { lt: tomorrowStart },
+        OR: [{ endsAt: { gte: todayStart } }, { endsAt: null, startsAt: { gte: todayStart } }]
+      },
+      include: {
+        participants: {
+          include: { familyMember: true },
+          orderBy: { createdAt: "asc" }
+        }
+      },
+      orderBy: [{ startsAt: "asc" }, { createdAt: "asc" }],
+      take: 6
+    });
+
+    return events.map((event: CalendarEventRecord) => this.toCalendarEventDto(event));
+  }
+
+  private toCalendarEventDto(event: CalendarEventRecord): FamilyDashboardDto["todayEvents"][number] {
+    return {
+      id: event.id,
+      familyId: event.familyId,
+      title: event.title,
+      description: event.description,
+      location: event.location,
+      startsAt: event.startsAt.toISOString(),
+      endsAt: event.endsAt?.toISOString() ?? null,
+      allDay: event.allDay,
+      createdByUserId: event.createdByUserId,
+      createdAt: event.createdAt.toISOString(),
+      updatedAt: event.updatedAt.toISOString(),
+      participants: event.participants.map((participant) => ({
+        id: participant.id,
+        eventId: participant.eventId,
+        familyMemberId: participant.familyMemberId,
+        createdAt: participant.createdAt.toISOString(),
+        familyMember: this.toFamilyMemberDto(participant.familyMember)
+      }))
+    };
   }
 
   private async getDinnerToday(familyId: string): Promise<FamilyDashboardDto["dinnerToday"]> {

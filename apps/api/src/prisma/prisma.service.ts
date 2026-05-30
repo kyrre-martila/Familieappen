@@ -17,6 +17,7 @@ type PrismaDelegate = {
   findMany(args: Record<string, unknown>): Promise<any[]>;
   create(args: Record<string, unknown>): Promise<any>;
   delete(args: Record<string, unknown>): Promise<any>;
+  deleteMany(args: Record<string, unknown>): Promise<any>;
   update(args: Record<string, unknown>): Promise<any>;
   count(args: Record<string, unknown>): Promise<number>;
 };
@@ -37,6 +38,8 @@ interface PrismaClientConnection {
     upsert(args: Record<string, unknown>): Promise<any>;
   };
   task: PrismaDelegate;
+  calendarEvent: PrismaDelegate;
+  calendarEventParticipant: PrismaDelegate;
   $connect(): Promise<void>;
   $disconnect(): Promise<void>;
   $queryRaw<T = unknown>(query: TemplateStringsArray): Promise<T>;

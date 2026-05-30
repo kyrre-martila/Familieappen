@@ -167,10 +167,21 @@ export default function DashboardPage() {
             eyebrow="Today"
             title="What happens today?"
           />
-          <EmptyState
-            title="No events today"
-            description="Enjoy the breathing room. Calendar plans will appear here when the calendar module is connected."
-          />
+          {dashboard?.todayEvents.length ? (
+            <ul className="timeline" aria-label="Today events">
+              {dashboard.todayEvents.map((event) => (
+                <li className="timeline__item" key={event.id}>
+                  <span className="timeline__time">{formatEventTime(event)}</span>
+                  <div>
+                    <p className="timeline__title">{event.title}</p>
+                    <p className="timeline__detail">{formatEventParticipants(event)}</p>
+                  </div>
+                </li>
+              ))}
+            </ul>
+          ) : (
+            <EmptyState title="No events today" description="No events today. Add family plans on the calendar when something comes up." />
+          )}
         </Card>
 
         <Card className="dashboard-card" tone="soft">
@@ -338,4 +349,23 @@ function formatDinner(mealName: string): string {
   }
 
   return mealName;
+}
+
+
+function formatEventTime(event: FamilyDashboardResponse["todayEvents"][number]): string {
+  if (event.allDay) {
+    return "All day";
+  }
+
+  return new Intl.DateTimeFormat(undefined, { hour: "2-digit", minute: "2-digit" }).format(new Date(event.startsAt));
+}
+
+function formatEventParticipants(event: FamilyDashboardResponse["todayEvents"][number]): string {
+  if (!event.participants.length) {
+    return event.location ?? "Whole family";
+  }
+
+  const participantNames = event.participants.map((participant) => participant.familyMember.displayName).join(", ");
+
+  return event.location ? `${participantNames} · ${event.location}` : participantNames;
 }

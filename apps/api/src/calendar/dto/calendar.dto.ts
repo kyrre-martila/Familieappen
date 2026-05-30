@@ -1,0 +1,49 @@
+import { FamilyMemberDto } from "../../families/dto/family.dto";
+
+export interface CalendarEventParticipantDto {
+  id: string;
+  eventId: string;
+  familyMemberId: string;
+  createdAt: string;
+  familyMember: FamilyMemberDto;
+}
+
+export interface CalendarEventDto {
+  id: string;
+  familyId: string;
+  title: string;
+  description: string | null;
+  location: string | null;
+  startsAt: string;
+  endsAt: string | null;
+  allDay: boolean;
+  createdByUserId: string | null;
+  createdAt: string;
+  updatedAt: string;
+  participants: CalendarEventParticipantDto[];
+}
+
+export interface ListCalendarEventsQueryDto {
+  from?: unknown;
+  to?: unknown;
+}
+
+export interface CreateCalendarEventRequestDto {
+  title?: unknown;
+  description?: unknown;
+  location?: unknown;
+  startsAt?: unknown;
+  endsAt?: unknown;
+  allDay?: unknown;
+  participantFamilyMemberIds?: unknown;
+}
+
+export interface UpdateCalendarEventRequestDto {
+  title?: unknown;
+  description?: unknown;
+  location?: unknown;
+  startsAt?: unknown;
+  endsAt?: unknown;
+  allDay?: unknown;
+  participantFamilyMemberIds?: unknown;
+}
