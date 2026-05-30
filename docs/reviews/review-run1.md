@@ -759,6 +759,28 @@ Minimum CI before Run 2:
    - Refresh README and developer docs.
    - Add CI workflow once tests and Prisma bootstrap are stable.
 
+## Run 1.5 Prompt 2 result
+
+Fixed in this pass:
+
+- Added the first committed Prisma migration, `20260530000000_run1_baseline`, as the reproducible baseline for the current Run 1 schema.
+- Added Prisma's migration lock file for PostgreSQL.
+- Added monorepo-friendly scripts for Prisma generate, local migration development, migration deploy, and Studio.
+- Updated `apps/api/prisma.config.ts` with a local development `DATABASE_URL` fallback so Prisma Client generation does not require production secrets.
+- Added `docs/development/database.md` with local PostgreSQL setup, `DATABASE_URL`, Prisma generate, migration apply/deploy, local reset, Studio, and Prisma engine cache/download notes.
+
+Verification notes:
+
+- `pnpm --filter @familieappen/api exec prisma migrate diff --from-empty --to-schema-datamodel prisma/schema.prisma --script` could not be used to generate the migration in this environment because Prisma engine downloads from `https://binaries.prisma.sh` returned `403 Forbidden`.
+- Re-running that command with `PRISMA_ENGINES_CHECKSUM_IGNORE_MISSING=1` still failed because the schema engine binary itself could not be downloaded.
+- A fresh PostgreSQL migration apply was not verified in this container because neither Docker nor PostgreSQL client/server tooling is installed.
+
+Remaining database/Prisma risks:
+
+- The baseline migration should be verified against a fresh PostgreSQL database in a local or CI environment that can download or cache Prisma engines.
+- CI should explicitly cache pnpm dependencies and Prisma engines before making Prisma migration checks required.
+- API e2e tests still need a disposable test database and migration bootstrap before database-backed feature safety can be trusted.
+
 ## 11. Open questions
 
 1. Should family-scoped feature APIs use `X-Family-Id` long term, or should they move to nested routes under `/families/:familyId/*`?

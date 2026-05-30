@@ -14,6 +14,8 @@
     "typecheck": "pnpm -r typecheck",
     "prisma:generate": "pnpm --filter @familieappen/api prisma:generate",
     "prisma:migrate": "pnpm --filter @familieappen/api prisma:migrate",
+    "prisma:migrate:dev": "pnpm --filter @familieappen/api prisma:migrate:dev",
+    "prisma:migrate:deploy": "pnpm --filter @familieappen/api prisma:migrate:deploy",
     "prisma:studio": "pnpm --filter @familieappen/api prisma:studio"
   },
   "engines": {
