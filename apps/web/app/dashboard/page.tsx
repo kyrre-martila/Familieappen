@@ -183,14 +183,21 @@ export default function DashboardPage() {
 
         <Card className="dashboard-card" tone="default">
           <SectionHeader
-            action={<Badge tone="neutral">{dashboard?.shoppingSummary.uncheckedCount ?? 0} left</Badge>}
+            action={<Badge tone="neutral">{dashboard?.shoppingSummary.totalItems ?? 0} items</Badge>}
             eyebrow="Shopping"
-            title="What needs to be bought?"
+            title={formatShoppingSummary(dashboard?.shoppingSummary.uncheckedCount ?? 0)}
           />
           <EmptyState
-            title="Shopping list is empty"
-            description="Unchecked shopping items will appear here when shopping lists are connected."
+            title={dashboard?.shoppingSummary.totalItems ? "Shopping list in progress" : "Shopping list is empty"}
+            description={
+              dashboard?.shoppingSummary.totalItems
+                ? "Open shopping to add, check off, or remove shared family items."
+                : "Nothing to buy right now."
+            }
           />
+          <Link className="button button--secondary" href="/shopping">
+            Open shopping
+          </Link>
         </Card>
 
         <Card className="dashboard-card" tone="default">
@@ -272,4 +279,8 @@ function DashboardStatusCard({
 
 function formatRole(role: string): string {
   return role.charAt(0) + role.slice(1).toLowerCase();
+}
+
+function formatShoppingSummary(uncheckedCount: number): string {
+  return `${uncheckedCount} item${uncheckedCount === 1 ? "" : "s"} remaining`;
 }

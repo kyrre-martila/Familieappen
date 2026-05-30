@@ -1,6 +1,14 @@
-import type { Family, FamilyDashboardResponse, FamilyMember, FamilyMemberRole, ManualFamilyMemberRole } from "@familieappen/shared";
+import type {
+  Family,
+  FamilyDashboardResponse,
+  FamilyMember,
+  FamilyMemberRole,
+  ManualFamilyMemberRole,
+  ShoppingList,
+  ShoppingListItem
+} from "@familieappen/shared";
 
-export type { Family, FamilyDashboardResponse, FamilyMember, FamilyMemberRole, ManualFamilyMemberRole };
+export type { Family, FamilyDashboardResponse, FamilyMember, FamilyMemberRole, ManualFamilyMemberRole, ShoppingList, ShoppingListItem };
 
 export interface AuthUser {
   id: string;
@@ -143,15 +151,48 @@ export async function removeFamilyMember(familyId: string, memberId: string): Pr
   );
 }
 
+export async function getShoppingList(familyId: string): Promise<ShoppingList> {
+  return apiRequest<ShoppingList>("/shopping", { familyId });
+}
+
+export async function addShoppingItem(
+  familyId: string,
+  input: { label: string; quantity?: string }
+): Promise<ShoppingListItem> {
+  return apiRequest<ShoppingListItem>("/shopping/items", {
+    method: "POST",
+    body: input,
+    familyId
+  });
+}
+
+export async function toggleShoppingItem(familyId: string, itemId: string): Promise<ShoppingListItem> {
+  return apiRequest<ShoppingListItem>(`/shopping/items/${encodeURIComponent(itemId)}`, {
+    method: "PATCH",
+    familyId
+  });
+}
+
+export async function deleteShoppingItem(familyId: string, itemId: string): Promise<ShoppingListItem> {
+  return apiRequest<ShoppingListItem>(`/shopping/items/${encodeURIComponent(itemId)}`, {
+    method: "DELETE",
+    familyId
+  });
+}
+
 async function apiRequest<TData>(
   path: string,
-  options: { method?: string; body?: unknown; includeAuth?: boolean } = {}
+  options: { method?: string; body?: unknown; includeAuth?: boolean; familyId?: string } = {}
 ): Promise<TData> {
   const headers = new Headers({ Accept: "application/json" });
   const includeAuth = options.includeAuth ?? true;
 
   if (options.body !== undefined) {
     headers.set("Content-Type", "application/json");
+  }
+
+  if (options.familyId) {
+    headers.set("X-Family-Id", options.familyId);
   }
 
   if (includeAuth) {
