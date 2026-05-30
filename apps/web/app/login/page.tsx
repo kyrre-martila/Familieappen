@@ -18,7 +18,7 @@ export default function LoginPage() {
             <p className="auth-card__description">Use your email and password to open your family dashboard.</p>
           </div>
 
-          <AuthForm submitLabel="Sign in" submitTo="/dashboard">
+          <AuthForm mode="login" submitLabel="Sign in" submitTo="/dashboard">
             <label className="form-field">
               <span className="form-field__label">Email</span>
               <input className="form-field__input" name="email" type="email" autoComplete="email" required />
