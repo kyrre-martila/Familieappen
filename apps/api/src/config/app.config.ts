@@ -1,4 +1,5 @@
 import "dotenv/config";
+
 export type AppEnvironment = "development" | "test" | "production" | string;
 
 export interface AppConfig {
@@ -6,16 +7,39 @@ export interface AppConfig {
   port: number;
   apiPrefix: string;
   corsOrigins: string[];
-  databaseUrl?: string;
-  authJwtSecret?: string;
+  databaseUrl: string;
+  authJwtSecret: string;
 }
 
+type EnvironmentVariables = NodeJS.ProcessEnv;
+
+const LOCAL_ENVIRONMENTS = new Set(["development", "test"]);
+const DEFAULT_NODE_ENV = "development";
 const DEFAULT_PORT = 4000;
 const DEFAULT_API_PREFIX = "api";
-const DEFAULT_CORS_ORIGINS = [
-  "http://localhost:3000",
-  "http://127.0.0.1:3000"
-];
+const DEFAULT_DATABASE_URL = "postgresql://postgres:postgres@localhost:5432/familieappen?schema=public";
+const DEFAULT_AUTH_JWT_SECRET = "familieappen-development-auth-secret-change-me";
+const DEFAULT_CORS_ORIGINS = ["http://localhost:3000", "http://127.0.0.1:3000"];
+const MIN_STRONG_SECRET_LENGTH = 32;
+const UNSAFE_AUTH_JWT_SECRETS = new Set([
+  "",
+  "secret",
+  "changeme",
+  "change-me",
+  "password",
+  "replace-with-a-long-random-secret",
+  DEFAULT_AUTH_JWT_SECRET
+]);
+
+function isLocalEnvironment(nodeEnv: string): boolean {
+  return LOCAL_ENVIRONMENTS.has(nodeEnv);
+}
+
+function readString(name: string, env: EnvironmentVariables): string | undefined {
+  const value = env[name]?.trim();
+
+  return value ? value : undefined;
+}
 
 function parsePort(value: string | undefined): number {
   if (!value) {
@@ -24,8 +48,8 @@ function parsePort(value: string | undefined): number {
 
   const parsedPort = Number(value);
 
-  if (!Number.isInteger(parsedPort) || parsedPort <= 0) {
-    return DEFAULT_PORT;
+  if (!Number.isInteger(parsedPort) || parsedPort < 1 || parsedPort > 65535) {
+    throw new Error("PORT must be an integer between 1 and 65535");
   }
 
   return parsedPort;
@@ -33,17 +57,121 @@ function parsePort(value: string | undefined): number {
 
 function normalizeApiPrefix(value: string | undefined): string {
   const prefix = value?.trim() || DEFAULT_API_PREFIX;
+  const normalizedPrefix = prefix.replace(/^\/+|\/+$/g, "");
 
-  return prefix.replace(/^\/+|\/+$/g, "") || DEFAULT_API_PREFIX;
+  if (!normalizedPrefix) {
+    throw new Error("API_PREFIX must contain at least one non-slash character");
+  }
+
+  if (!/^[a-zA-Z0-9][a-zA-Z0-9/_-]*$/.test(normalizedPrefix)) {
+    throw new Error("API_PREFIX may only contain letters, numbers, slashes, underscores, and hyphens");
+  }
+
+  return normalizedPrefix;
 }
 
-export function getAppConfig(): AppConfig {
+function parseCorsOrigins(value: string | undefined): string[] {
+  if (!value) {
+    return DEFAULT_CORS_ORIGINS;
+  }
+
+  const origins = value
+    .split(",")
+    .map((origin) => origin.trim())
+    .filter(Boolean);
+
+  if (origins.length === 0) {
+    throw new Error("CORS_ORIGINS must include at least one origin when set");
+  }
+
+  for (const origin of origins) {
+    validateCorsOrigin(origin);
+  }
+
+  return origins;
+}
+
+function validateCorsOrigin(origin: string): void {
+  let parsedOrigin: URL;
+
+  try {
+    parsedOrigin = new URL(origin);
+  } catch {
+    throw new Error(`CORS_ORIGINS contains an invalid origin: ${origin}`);
+  }
+
+  if (parsedOrigin.origin !== origin || parsedOrigin.pathname !== "/" || parsedOrigin.search || parsedOrigin.hash) {
+    throw new Error(`CORS_ORIGINS entries must be bare origins without paths: ${origin}`);
+  }
+
+  if (!["http:", "https:"].includes(parsedOrigin.protocol)) {
+    throw new Error(`CORS_ORIGINS entries must use http or https: ${origin}`);
+  }
+}
+
+function resolveDatabaseUrl(value: string | undefined, nodeEnv: string): string {
+  if (!value) {
+    if (isLocalEnvironment(nodeEnv)) {
+      return DEFAULT_DATABASE_URL;
+    }
+
+    throw new Error("DATABASE_URL is required outside local development and test environments");
+  }
+
+  validateDatabaseUrl(value);
+
+  return value;
+}
+
+function validateDatabaseUrl(databaseUrl: string): void {
+  let parsedUrl: URL;
+
+  try {
+    parsedUrl = new URL(databaseUrl);
+  } catch {
+    throw new Error("DATABASE_URL must be a valid PostgreSQL connection URL");
+  }
+
+  if (!["postgresql:", "postgres:"].includes(parsedUrl.protocol)) {
+    throw new Error("DATABASE_URL must use the postgresql:// or postgres:// protocol");
+  }
+}
+
+function resolveAuthJwtSecret(value: string | undefined, nodeEnv: string): string {
+  if (!value) {
+    if (isLocalEnvironment(nodeEnv)) {
+      return DEFAULT_AUTH_JWT_SECRET;
+    }
+
+    throw new Error("AUTH_JWT_SECRET is required outside local development and test environments");
+  }
+
+  if (!isLocalEnvironment(nodeEnv)) {
+    validateStrongAuthJwtSecret(value);
+  }
+
+  return value;
+}
+
+function validateStrongAuthJwtSecret(secret: string): void {
+  if (secret.length < MIN_STRONG_SECRET_LENGTH) {
+    throw new Error(`AUTH_JWT_SECRET must be at least ${MIN_STRONG_SECRET_LENGTH} characters outside local environments`);
+  }
+
+  if (UNSAFE_AUTH_JWT_SECRETS.has(secret.toLowerCase())) {
+    throw new Error("AUTH_JWT_SECRET must not use the documented local default or placeholder values outside local environments");
+  }
+}
+
+export function getAppConfig(env: EnvironmentVariables = process.env): AppConfig {
+  const nodeEnv = readString("NODE_ENV", env) || DEFAULT_NODE_ENV;
+
   return {
-    nodeEnv: process.env.NODE_ENV || "development",
-    port: parsePort(process.env.PORT),
-    apiPrefix: normalizeApiPrefix(process.env.API_PREFIX),
-    corsOrigins: DEFAULT_CORS_ORIGINS,
-    databaseUrl: process.env.DATABASE_URL,
-    authJwtSecret: process.env.AUTH_JWT_SECRET
+    nodeEnv,
+    port: parsePort(readString("PORT", env)),
+    apiPrefix: normalizeApiPrefix(readString("API_PREFIX", env)),
+    corsOrigins: parseCorsOrigins(readString("CORS_ORIGINS", env)),
+    databaseUrl: resolveDatabaseUrl(readString("DATABASE_URL", env), nodeEnv),
+    authJwtSecret: resolveAuthJwtSecret(readString("AUTH_JWT_SECRET", env), nodeEnv)
   };
 }
