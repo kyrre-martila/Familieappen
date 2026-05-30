@@ -19,11 +19,26 @@ export interface FamilyMember {
   updatedAt: string;
 }
 
+export interface Task {
+  id: string;
+  familyId: string;
+  title: string;
+  description: string | null;
+  assignedFamilyMemberId: string | null;
+  createdByUserId: string | null;
+  completed: boolean;
+  completedAt: string | null;
+  completedByUserId: string | null;
+  dueDate: string | null;
+  createdAt: string;
+  updatedAt: string;
+}
+
 export interface FamilyDashboardResponse {
   family: Family;
   members: FamilyMember[];
   todayEvents: [];
-  todayTasks: [];
+  todayTasks: Task[];
   dinnerToday: null;
   shoppingSummary: {
     uncheckedCount: number;

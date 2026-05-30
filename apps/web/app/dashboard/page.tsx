@@ -206,10 +206,26 @@ export default function DashboardPage() {
             eyebrow="Tasks"
             title="What needs to be done?"
           />
-          <EmptyState
-            title="No tasks due today"
-            description="Assigned family tasks will appear here when task planning is connected."
-          />
+          {dashboard?.todayTasks.length ? (
+            <ul className="task-list" aria-label="Today tasks">
+              {dashboard.todayTasks.map((task) => (
+                <li className={task.completed ? "task-list__item task-list__item--completed" : "task-list__item"} key={task.id}>
+                  <span className="task-list__status" aria-hidden="true">
+                    {task.completed ? "☑" : "☐"}
+                  </span>
+                  <div className="task-list__content">
+                    <p className="task-list__title">{task.title}</p>
+                    <p className="task-list__owner">{formatTaskAssignee(task.assignedFamilyMemberId, dashboard.members)}</p>
+                  </div>
+                </li>
+              ))}
+            </ul>
+          ) : (
+            <EmptyState title="No tasks today" description="Add quick family tasks when someone needs to remember something." />
+          )}
+          <Link className="button button--secondary" href="/tasks">
+            Open tasks
+          </Link>
         </Card>
 
         <Card className="dashboard-card dashboard-card--wishlist" tone="accent">
@@ -281,6 +297,15 @@ function formatRole(role: string): string {
   return role.charAt(0) + role.slice(1).toLowerCase();
 }
 
+function formatTaskAssignee(assignedFamilyMemberId: string | null, members: FamilyDashboardResponse["members"]): string {
+  if (!assignedFamilyMemberId) {
+    return "Anyone";
+  }
+
+  return members.find((member) => member.id === assignedFamilyMemberId)?.displayName ?? "Family task";
+}
+
 function formatShoppingSummary(uncheckedCount: number): string {
   return `${uncheckedCount} item${uncheckedCount === 1 ? "" : "s"} remaining`;
 }
+
