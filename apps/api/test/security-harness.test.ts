@@ -1,14 +1,14 @@
 import "reflect-metadata";
 import { strict as assert } from "node:assert";
 import { createHmac } from "node:crypto";
-import { INestApplication, NotFoundException } from "@nestjs/common";
+import { HttpStatus, INestApplication, NotFoundException } from "@nestjs/common";
 import { Test } from "@nestjs/testing";
 import { AuthController } from "../src/auth/auth.controller";
 import { AuthService } from "../src/auth/auth.service";
 import { AuthGuard } from "../src/auth/guards/auth.guard";
 import { CalendarController } from "../src/calendar/calendar.controller";
 import { CalendarService } from "../src/calendar/calendar.service";
-import { HttpExceptionFilter } from "../src/common";
+import { API_ERROR_CODES, ApiException, HttpExceptionFilter } from "../src/common";
 import { ConfigService } from "../src/config";
 import { FamiliesController } from "../src/families/families.controller";
 import { FamiliesService } from "../src/families/families.service";
@@ -105,7 +105,15 @@ class IsolationFixtures {
   }
 
   requireMembership(userId: string, familyId: string | undefined): void {
-    if (!familyId || !this.familiesByUser.get(userId)?.has(familyId)) {
+    if (!familyId) {
+      throw new ApiException(
+        HttpStatus.BAD_REQUEST,
+        API_ERROR_CODES.FAMILY_MISSING_CONTEXT,
+        "X-Family-Id header is required"
+      );
+    }
+
+    if (!this.familiesByUser.get(userId)?.has(familyId)) {
       throw new NotFoundException("Family was not found");
     }
   }
@@ -279,6 +287,15 @@ function assertStatus(response: HttpResponse, expectedStatus: number, label: str
   assert.equal(response.status, expectedStatus, `${label}: ${JSON.stringify(response.body)}`);
 }
 
+function assertErrorCode(response: HttpResponse, expectedStatus: number, expectedCode: string, label: string): void {
+  assertStatus(response, expectedStatus, label);
+  const error = response.body.error as Record<string, unknown> | undefined;
+  assert(error && typeof error === "object", `${label}: ${JSON.stringify(response.body)}`);
+  assert.equal(error.code, expectedCode, `${label}: ${JSON.stringify(response.body)}`);
+  assert.equal(typeof error.message, "string", `${label}: ${JSON.stringify(response.body)}`);
+  assert(!("data" in response.body), `${label}: ${JSON.stringify(response.body)}`);
+}
+
 function getData(body: Record<string, unknown>): Record<string, unknown> {
   assert(body.data && typeof body.data === "object");
   return body.data as Record<string, unknown>;
@@ -331,23 +348,23 @@ async function run(): Promise<void> {
     });
     assertStatus(invalidPassword, 401, "invalid password is rejected");
 
-    assertStatus(await request("GET", "/shopping", { familyId: "family-alpha" }), 401, "missing bearer token is rejected");
-    assertStatus(await request("GET", "/shopping", { token: "not-a-jwt", familyId: "family-alpha" }), 401, "malformed token is rejected");
+    assertErrorCode(await request("GET", "/shopping", { familyId: "family-alpha" }), 401, API_ERROR_CODES.AUTH_REQUIRES_AUTH, "missing bearer token is rejected");
+    assertErrorCode(await request("GET", "/shopping", { token: "not-a-jwt", familyId: "family-alpha" }), 401, API_ERROR_CODES.AUTH_INVALID_TOKEN, "malformed token is rejected");
     assertStatus(await request("GET", "/shopping", {
       token: createJwt({ sub: alpha.userId, email: "alpha@example.com", iat: 1, exp: 4_102_444_800 }, "wrong-secret"),
       familyId: "family-alpha"
     }), 401, "invalid signature is rejected");
-    assertStatus(await request("GET", "/shopping", {
+    assertErrorCode(await request("GET", "/shopping", {
       token: createJwt({ sub: alpha.userId, email: "alpha@example.com", iat: 1, exp: 2 }),
       familyId: "family-alpha"
-    }), 401, "expired token is rejected");
+    }), 401, API_ERROR_CODES.AUTH_EXPIRED_TOKEN, "expired token is rejected");
     assertStatus(await request("GET", "/families/family-alpha/dashboard"), 401, "protected dashboard denies unauthenticated access");
 
     assertStatus(await request("GET", "/families/family-beta/dashboard", { token: alpha.token }), 404, "user cannot read another family's dashboard");
     assertStatus(await request("GET", "/shopping", { token: alpha.token, familyId: "family-beta" }), 404, "wrong X-Family-Id cannot read another family's shopping list");
     assertStatus(await request("PATCH", "/shopping/items/shopping-beta-item", { token: alpha.token, familyId: "family-alpha" }), 404, "foreign shopping item cannot be mutated with own family header");
     assertStatus(await request("PATCH", "/shopping/items/shopping-alpha-item", { token: beta.token, familyId: "family-beta" }), 404, "mixed user family and foreign shopping item is rejected");
-    assertStatus(await request("GET", "/shopping", { token: alpha.token }), 404, "missing family context is rejected");
+    assertErrorCode(await request("GET", "/shopping", { token: alpha.token }), 400, API_ERROR_CODES.FAMILY_MISSING_CONTEXT, "missing family context is rejected");
 
     assertStatus(await request("GET", "/wishlists", { token: alpha.token, familyId: "family-beta" }), 404, "user cannot access another family's wishlist list");
     assertStatus(await request("GET", "/wishlists/wishlist-beta", { token: alpha.token, familyId: "family-alpha" }), 404, "foreign wishlist id cannot be read with own family header");
@@ -356,7 +373,7 @@ async function run(): Promise<void> {
     assertStatus(await request("PATCH", "/calendar/events/calendar-beta-event", { token: alpha.token, familyId: "family-alpha", body: { title: "Nope" } }), 404, "foreign calendar event cannot be mutated");
 
     assertStatus(await request("GET", "/public/wishlists/share-alpha-token"), 200, "valid public wishlist token returns shared wishlist");
-    assertStatus(await request("GET", "/public/wishlists/invalid-share-token"), 404, "invalid public wishlist token is rejected");
+    assertErrorCode(await request("GET", "/public/wishlists/invalid-share-token"), 404, API_ERROR_CODES.WISHLIST_INVALID_SHARE_TOKEN, "invalid public wishlist token is rejected");
     assertStatus(await request("POST", "/public/wishlists/share-alpha-token/items/wishlist-beta-item/reserve", { body: { reservedByName: "Guest" } }), 404, "public token cannot reserve another wishlist's item");
     assertStatus(await request("POST", "/public/wishlists/share-alpha-token/items/wishlist-alpha-item/reserve", { body: { reservedByName: "Guest" } }), 201, "public reserve works for matching shared item");
     assertStatus(await request("POST", "/public/wishlists/share-alpha-token/items/wishlist-beta-item/mark-purchased", { body: { reservedByName: "Guest" } }), 404, "public token cannot mark another wishlist's item purchased");

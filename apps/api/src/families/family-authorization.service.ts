@@ -1,4 +1,5 @@
-import { ForbiddenException, Injectable, NotFoundException } from "@nestjs/common";
+import { ForbiddenException, HttpStatus, Injectable, NotFoundException } from "@nestjs/common";
+import { API_ERROR_CODES, ApiException } from "../common";
 import { PrismaService } from "../prisma";
 import { FamilyMemberRoleDto } from "./dto/family.dto";
 
@@ -17,6 +18,14 @@ export class FamilyAuthorizationService {
   constructor(private readonly prisma: PrismaService) {}
 
   async requireFamilyMember(userId: string, familyId: string): Promise<FamilyMemberRecord> {
+    if (!familyId) {
+      throw new ApiException(
+        HttpStatus.BAD_REQUEST,
+        API_ERROR_CODES.FAMILY_MISSING_CONTEXT,
+        "X-Family-Id header is required"
+      );
+    }
+
     const membership = await this.prisma.client.familyMember.findFirst({
       where: {
         familyId,

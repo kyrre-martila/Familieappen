@@ -57,6 +57,10 @@ interface ApiEnvelope<TData> {
 
 interface ApiErrorBody {
   message?: string;
+  error?: {
+    code?: string;
+    message?: string;
+  };
 }
 
 export class ApiError extends Error {
@@ -442,7 +446,7 @@ async function getErrorMessage(response: Response): Promise<string> {
   try {
     const body = (await response.json()) as ApiErrorBody;
 
-    return body.message || "Something went wrong. Please try again.";
+    return body.error?.message || body.message || "Something went wrong. Please try again.";
   } catch {
     return "Something went wrong. Please try again.";
   }
