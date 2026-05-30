@@ -1,7 +1,14 @@
 import { Body, Controller, Delete, Get, Param, Post, Req, UseGuards } from "@nestjs/common";
 import { AuthGuard } from "../auth/guards/auth.guard";
 import { ApiResponse, createApiResponse } from "../common";
-import { AddFamilyMemberRequestDto, CreateFamilyRequestDto, FamilyDetailsDto, FamilyMemberDto, FamilyWithMembershipDto } from "./dto/family.dto";
+import { FamilyDashboardDto } from "./dto/dashboard.dto";
+import {
+  AddFamilyMemberRequestDto,
+  CreateFamilyRequestDto,
+  FamilyDetailsDto,
+  FamilyMemberDto,
+  FamilyWithMembershipDto
+} from "./dto/family.dto";
 import { FamiliesService } from "./families.service";
 
 type AuthenticatedRequest = {
@@ -27,6 +34,14 @@ export class FamiliesController {
   @Get()
   async listFamilies(@Req() request: AuthenticatedRequest): Promise<ApiResponse<FamilyWithMembershipDto[]>> {
     return createApiResponse(await this.familiesService.listUserFamilies(request.user.id));
+  }
+
+  @Get(":familyId/dashboard")
+  async getFamilyDashboard(
+    @Req() request: AuthenticatedRequest,
+    @Param("familyId") familyId: string
+  ): Promise<ApiResponse<FamilyDashboardDto>> {
+    return createApiResponse(await this.familiesService.getFamilyDashboard(request.user.id, familyId));
   }
 
   @Get(":familyId")

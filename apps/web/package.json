@@ -10,6 +10,7 @@
     "typecheck": "tsc -p tsconfig.json --noEmit"
   },
   "dependencies": {
+    "@familieappen/shared": "workspace:*",
     "@familieappen/ui": "workspace:*",
     "next": "^16.2.6",
     "react": "19.1.0",
