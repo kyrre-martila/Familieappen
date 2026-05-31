@@ -2031,6 +2031,15 @@ select {
   padding-right: var(--space-xs);
 }
 
+.login-field__helper {
+  max-width: 32rem;
+  margin: calc(var(--space-xs) * -0.15) 0 0;
+  color: #707070;
+  font-size: clamp(0.95rem, 0.88rem + 0.32vw, 1.08rem);
+  font-weight: 500;
+  line-height: 1.5;
+}
+
 .login-field__toggle {
   display: inline-grid;
   width: 2.5rem;
@@ -2047,6 +2056,39 @@ select {
 .login-field__toggle:focus-visible {
   outline: 3px solid color-mix(in srgb, #2c5d3b 24%, transparent);
   outline-offset: 2px;
+}
+
+.register-form__terms {
+  display: flex;
+  align-items: center;
+  gap: var(--space-xs);
+  color: #242424;
+  font-size: clamp(0.98rem, 0.91rem + 0.34vw, 1.1rem);
+  font-weight: 500;
+  line-height: 1.35;
+}
+
+.register-form__terms input {
+  width: 1.55rem;
+  height: 1.55rem;
+  flex: 0 0 auto;
+  margin: 0;
+  accent-color: #244732;
+  cursor: pointer;
+}
+
+.register-form__terms a {
+  color: #244732;
+  font-weight: 800;
+  text-decoration: underline;
+  text-underline-offset: 0.14em;
+}
+
+.login-screen .register-form .form-message--error {
+  width: 100%;
+  border-color: color-mix(in srgb, #9a6a1e 36%, #ded8cf);
+  background: color-mix(in srgb, #f6dfb5 24%, #fffaf4);
+  color: #244732;
 }
 
 .login-screen__forgot-link {
@@ -2125,7 +2167,9 @@ select {
 
 .login-screen__forgot-link:focus-visible,
 .login-screen__back-link:focus-visible,
-.login-screen__register a:focus-visible {
+.login-screen__register a:focus-visible,
+.register-form__terms a:focus-visible,
+.register-form__terms input:focus-visible {
   border-radius: var(--radius-s);
   outline: 3px solid color-mix(in srgb, #2c5d3b 24%, transparent);
   outline-offset: 4px;
