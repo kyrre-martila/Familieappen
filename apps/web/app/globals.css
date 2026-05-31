@@ -2207,3 +2207,222 @@ select {
 .app-shell--immersive .app-shell__content:has(.login-screen) {
   width: 100%;
 }
+
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  clip-path: inset(50%);
+}
+
+.onboarding-profile-screen {
+  place-items: start center;
+  padding-top: max(var(--space-xl), env(safe-area-inset-top));
+}
+
+.onboarding-profile-screen__back {
+  position: absolute;
+  top: max(var(--space-l), env(safe-area-inset-top));
+  left: max(var(--gutter), env(safe-area-inset-left));
+  z-index: 1;
+  display: inline-flex;
+  align-items: center;
+  gap: calc(var(--space-xs) * 0.75);
+  border-radius: var(--radius-pill);
+  color: #1f5a3a;
+  font-size: clamp(1rem, 0.93rem + 0.34vw, 1.18rem);
+  font-weight: 780;
+}
+
+.onboarding-profile-screen__back svg {
+  width: 1.85rem;
+  height: 1.85rem;
+  stroke: currentColor;
+  stroke-width: 2.3;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+.onboarding-profile-screen__back:focus-visible {
+  outline: 3px solid color-mix(in srgb, #2c5d3b 24%, transparent);
+  outline-offset: 4px;
+}
+
+.onboarding-profile-screen__content {
+  width: min(100%, 34rem);
+  gap: clamp(var(--space-m), 3.5vw, var(--space-l));
+  padding-top: clamp(4.5rem, 10svh, 6.5rem);
+}
+
+.onboarding-profile-screen__logo {
+  width: min(13rem, 45vw);
+}
+
+.onboarding-profile-screen__header {
+  gap: 0;
+}
+
+.onboarding-profile-screen .login-screen__title {
+  font-size: clamp(2.25rem, 1.5rem + 7.2vw, 3.4rem);
+}
+
+.onboarding-profile-form {
+  width: 100%;
+}
+
+.onboarding-profile-form__photo-field {
+  display: grid;
+  justify-items: center;
+  gap: var(--space-s);
+  margin-block: calc(var(--space-xs) * -0.25) var(--space-s);
+}
+
+.onboarding-profile-form__avatar {
+  position: relative;
+  display: grid;
+  width: clamp(8.8rem, 38vw, 11rem);
+  aspect-ratio: 1;
+  place-items: center;
+  border: 1.5px solid #ded8cf;
+  border-radius: 50%;
+  background: color-mix(in srgb, #ffffff 48%, transparent);
+  color: #8fa090;
+  box-shadow: inset 0 1px 0 color-mix(in srgb, #ffffff 80%, transparent);
+}
+
+.onboarding-profile-form__avatar-image {
+  width: 100%;
+  height: 100%;
+  border-radius: inherit;
+  object-fit: cover;
+}
+
+.onboarding-profile-form__avatar-placeholder {
+  width: 76%;
+  height: 76%;
+}
+
+.onboarding-profile-form__upload-button {
+  position: absolute;
+  right: 0;
+  bottom: 0.55rem;
+  display: grid;
+  width: clamp(3.25rem, 13vw, 4.3rem);
+  aspect-ratio: 1;
+  place-items: center;
+  border: 2px solid color-mix(in srgb, #fffaf4 88%, transparent);
+  border-radius: 50%;
+  padding: 0;
+  background: linear-gradient(135deg, #286239, #17472d);
+  color: #ffffff;
+  cursor: pointer;
+  box-shadow: 0 0.65rem 1.3rem color-mix(in srgb, #1f4d2f 22%, transparent);
+}
+
+.onboarding-profile-form__upload-button svg {
+  width: 58%;
+  height: 58%;
+  stroke: currentColor;
+  stroke-width: 1.8;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+.onboarding-profile-form__upload-button:focus-within,
+.onboarding-profile-form__upload-button:focus-visible,
+.onboarding-profile-form__photo-label:focus-visible {
+  outline: 3px solid color-mix(in srgb, #2c5d3b 24%, transparent);
+  outline-offset: 4px;
+}
+
+.onboarding-profile-form__photo-label {
+  border: 0;
+  padding: 0;
+  background: transparent;
+  color: #1f5a3a;
+  cursor: pointer;
+  font-size: clamp(1rem, 0.94rem + 0.32vw, 1.15rem);
+  font-weight: 760;
+}
+
+.onboarding-profile-form__phone-control {
+  gap: clamp(0.75rem, 2.4vw, 1rem);
+}
+
+.onboarding-profile-form__country-code {
+  flex: 0 0 auto;
+  min-width: 4.35rem;
+  border: 0;
+  outline: 0;
+  background: transparent;
+  color: #1f1f1f;
+  cursor: pointer;
+  font-size: clamp(1rem, 0.94rem + 0.32vw, 1.15rem);
+  font-weight: 700;
+}
+
+.onboarding-profile-form__divider {
+  width: 1px;
+  height: 2.2rem;
+  flex: 0 0 auto;
+  background: #ded8cf;
+}
+
+.onboarding-profile-form__date-control {
+  position: relative;
+}
+
+.onboarding-profile-form__date-input {
+  position: relative;
+  z-index: 1;
+  color: transparent;
+  color-scheme: light;
+}
+
+.onboarding-profile-form__date-input:valid,
+.onboarding-profile-form__date-input:focus {
+  color: #1f1f1f;
+}
+
+.onboarding-profile-form__date-input::-webkit-calendar-picker-indicator {
+  cursor: pointer;
+  opacity: 0;
+}
+
+.onboarding-profile-form__date-placeholder {
+  position: absolute;
+  left: clamp(4rem, 3.5rem + 2.7vw, 4.65rem);
+  z-index: 0;
+  color: #a0a0a0;
+  font-size: clamp(1rem, 0.94rem + 0.32vw, 1.15rem);
+  font-weight: 500;
+  pointer-events: none;
+}
+
+.onboarding-profile-form__date-icon {
+  margin-left: auto;
+}
+
+.onboarding-profile-screen .form-message--error {
+  width: 100%;
+  border-color: color-mix(in srgb, #9a6a1e 36%, #ded8cf);
+  background: color-mix(in srgb, #f6dfb5 24%, #fffaf4);
+  color: #244732;
+}
+
+@media (max-width: 32rem) {
+  .onboarding-profile-screen__back span {
+    display: none;
+  }
+
+  .onboarding-profile-screen__content {
+    padding-top: clamp(3.75rem, 8svh, 5rem);
+  }
+
+  .onboarding-profile-form__country-code {
+    min-width: 3.8rem;
+  }
+}
