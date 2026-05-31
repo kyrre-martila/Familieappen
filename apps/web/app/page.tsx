@@ -37,11 +37,6 @@ export default function SplashPage() {
       <div className="splash-screen__brand" aria-label="Familieappen">
         <img
           alt=""
-          className="splash-screen__icon"
-          src="/assets/brand/familieappen-icon.svg"
-        />
-        <img
-          alt=""
           className="splash-screen__logo"
           src="/assets/brand/familieappen-logo.svg"
         />
