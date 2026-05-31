@@ -1,3 +1,5 @@
+import { getAccessToken } from "./session";
+
 import type {
   CalendarEvent,
   Family,
@@ -48,8 +50,6 @@ export interface FamilyWithMembership {
 }
 
 const API_BASE_URL = (process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:4000/api").replace(/\/$/, "");
-const ACCESS_TOKEN_KEY = "familieappen.accessToken";
-const ACTIVE_FAMILY_ID_KEY = "familieappen.activeFamilyId";
 
 interface ApiEnvelope<TData> {
   data: TData;
@@ -66,51 +66,11 @@ interface ApiErrorBody {
 export class ApiError extends Error {
   constructor(
     message: string,
-    public readonly status: number
+    public readonly status: number,
+    public readonly code?: string
   ) {
     super(message);
   }
-}
-
-export function getAccessToken(): string | null {
-  if (typeof window === "undefined") {
-    return null;
-  }
-
-  return window.localStorage.getItem(ACCESS_TOKEN_KEY);
-}
-
-export function saveAuthSession(auth: AuthResponse): void {
-  window.localStorage.setItem(ACCESS_TOKEN_KEY, auth.tokens.accessToken);
-}
-
-export function getActiveFamilyId(): string | null {
-  if (typeof window === "undefined") {
-    return null;
-  }
-
-  return window.localStorage.getItem(ACTIVE_FAMILY_ID_KEY);
-}
-
-export function setActiveFamilyId(familyId: string): void {
-  window.localStorage.setItem(ACTIVE_FAMILY_ID_KEY, familyId);
-}
-
-export function clearActiveFamilyId(): void {
-  if (typeof window === "undefined") {
-    return;
-  }
-
-  window.localStorage.removeItem(ACTIVE_FAMILY_ID_KEY);
-}
-
-export function clearAuthSession(): void {
-  if (typeof window === "undefined") {
-    return;
-  }
-
-  window.localStorage.removeItem(ACCESS_TOKEN_KEY);
-  window.localStorage.removeItem(ACTIVE_FAMILY_ID_KEY);
 }
 
 export async function register(input: { name: string; email: string; password: string }): Promise<AuthResponse> {
@@ -434,7 +394,7 @@ async function apiRequest<TData>(
   });
 
   if (!response.ok) {
-    throw new ApiError(await getErrorMessage(response), response.status);
+    throw new ApiError(...(await getErrorDetails(response)));
   }
 
   const envelope = (await response.json()) as ApiEnvelope<TData>;
@@ -442,12 +402,31 @@ async function apiRequest<TData>(
   return envelope.data;
 }
 
-async function getErrorMessage(response: Response): Promise<string> {
+async function getErrorDetails(response: Response): Promise<[message: string, status: number, code?: string]> {
   try {
     const body = (await response.json()) as ApiErrorBody;
+    const code = body.error?.code;
+    const fallbackMessage = getDefaultErrorMessage(code);
 
-    return body.error?.message || body.message || "Something went wrong. Please try again.";
+    return [body.error?.message || body.message || fallbackMessage, response.status, code];
   } catch {
-    return "Something went wrong. Please try again.";
+    return ["Something went wrong. Please try again.", response.status];
+  }
+}
+
+function getDefaultErrorMessage(code?: string): string {
+  switch (code) {
+    case "auth.requires_auth":
+    case "auth.invalid_token":
+    case "auth.expired_token":
+      return "Your session has expired. Please sign in again.";
+    case "family.missing_context":
+      return "Choose a family before continuing.";
+    case "family.access_denied":
+      return "That family could not be loaded for your account.";
+    case "validation.invalid_input":
+      return "Please check the form and try again.";
+    default:
+      return "Something went wrong. Please try again.";
   }
 }

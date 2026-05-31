@@ -3,22 +3,18 @@
 import { FormEvent, useEffect, useMemo, useState, type ChangeEvent } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { Badge, Button, Card, EmptyState, PageContainer, SectionHeader } from "../../components/ui";
+import { Badge, Button, Card, EmptyState, ErrorState, LoadingState, PageContainer, SectionHeader } from "../../components/ui";
 import {
   ApiError,
   FamilyWithMembership,
   ShoppingList,
   addShoppingItem,
-  clearActiveFamilyId,
-  clearAuthSession,
   deleteShoppingItem,
-  getAccessToken,
-  getActiveFamilyId,
   getShoppingList,
-  listFamilies,
-  setActiveFamilyId,
   toggleShoppingItem
 } from "../../lib/api";
+import { chooseActiveFamily, getUserFacingApiMessage, handleMissingOrInvalidAuth, loadAvailableFamilies, requireAuth } from "../../lib/auth-family";
+import { clearActiveFamilyId } from "../../lib/session";
 
 type ShoppingStatus = "loading" | "ready" | "unauthorized" | "no-family" | "error";
 
@@ -35,9 +31,7 @@ export default function ShoppingPage() {
   const [isAdding, setIsAdding] = useState(false);
 
   useEffect(() => {
-    if (!getAccessToken()) {
-      clearAuthSession();
-      router.replace("/login");
+    if (!requireAuth(router)) {
       return;
     }
 
@@ -56,10 +50,15 @@ export default function ShoppingPage() {
     setMessage("Loading shopping list…");
 
     try {
-      const userFamilies = await listFamilies();
-      setFamilies(userFamilies);
+      const familyContext = await loadAvailableFamilies();
 
-      if (userFamilies.length === 0) {
+      if (familyContext.status === "unauthenticated") {
+        router.replace("/login");
+        return;
+      }
+
+      if (familyContext.status === "no-family") {
+        setFamilies([]);
         clearActiveFamilyId();
         setActiveFamilyIdState(null);
         setShoppingList(null);
@@ -68,11 +67,9 @@ export default function ShoppingPage() {
         return;
       }
 
-      const storedFamilyId = getActiveFamilyId();
-      const nextFamily = userFamilies.find((family) => family.family.id === storedFamilyId) ?? userFamilies[0];
-      setActiveFamilyId(nextFamily.family.id);
-      setActiveFamilyIdState(nextFamily.family.id);
-      await loadShoppingList(nextFamily.family.id);
+      setFamilies(familyContext.families);
+      setActiveFamilyIdState(familyContext.activeFamilyId);
+      await loadShoppingList(familyContext.activeFamilyId);
     } catch (error) {
       handleLoadError(error);
     }
@@ -99,7 +96,7 @@ export default function ShoppingPage() {
 
   async function handleFamilyChange(event: ChangeEvent<HTMLSelectElement>) {
     const familyId = event.target.value;
-    setActiveFamilyId(familyId);
+    chooseActiveFamily(familyId);
     setActiveFamilyIdState(familyId);
     await loadShoppingList(familyId);
   }
@@ -184,10 +181,9 @@ export default function ShoppingPage() {
 
   function handleLoadError(error: unknown) {
     if (error instanceof ApiError && error.status === 401) {
-      clearAuthSession();
+      handleMissingOrInvalidAuth(error, router);
       setStatus("unauthorized");
-      setMessage("Your session has expired. Please sign in again.");
-      router.replace("/login");
+      setMessage(getUserFacingApiMessage(error, "Your session has expired. Please sign in again."));
       return;
     }
 
@@ -206,10 +202,9 @@ export default function ShoppingPage() {
 
   function handleActionError(error: unknown, fallbackMessage: string) {
     if (error instanceof ApiError && error.status === 401) {
-      clearAuthSession();
+      handleMissingOrInvalidAuth(error, router);
       setStatus("unauthorized");
-      setMessage("Your session has expired. Please sign in again.");
-      router.replace("/login");
+      setMessage(getUserFacingApiMessage(error, "Your session has expired. Please sign in again."));
       return;
     }
 
@@ -220,7 +215,7 @@ export default function ShoppingPage() {
       return;
     }
 
-    setMessage(error instanceof ApiError ? error.message : fallbackMessage);
+    setMessage(getUserFacingApiMessage(error, fallbackMessage));
   }
 
   return (
@@ -296,7 +291,7 @@ export default function ShoppingPage() {
           {message && status === "ready" ? <p className="shopping-card__message">{message}</p> : null}
 
           {status === "loading" ? (
-            <EmptyState title="Loading shopping list" description="Fetching the latest family items." />
+            <LoadingState title="Loading shopping list" description="Fetching the latest family items." />
           ) : null}
 
           {status === "ready" && shoppingList && shoppingList.items.length === 0 ? (
@@ -372,7 +367,7 @@ function ShoppingStatusCard({
 
   return (
     <div className="shopping-status">
-      <EmptyState title="Shopping could not load" description={message} />
+      <ErrorState title="Shopping could not load" description={message} />
       <Button variant="primary" onClick={onRetry}>
         Try again
       </Button>

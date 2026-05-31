@@ -4,18 +4,9 @@ import { useEffect, useState, type ChangeEvent } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { Badge, Button, Card, EmptyState, PageContainer, SectionHeader } from "../../components/ui";
-import {
-  ApiError,
-  FamilyDashboardResponse,
-  FamilyWithMembership,
-  clearActiveFamilyId,
-  clearAuthSession,
-  getAccessToken,
-  getActiveFamilyId,
-  getFamilyDashboard,
-  listFamilies,
-  setActiveFamilyId
-} from "../../lib/api";
+import { ApiError, FamilyDashboardResponse, FamilyWithMembership, getFamilyDashboard } from "../../lib/api";
+import { chooseActiveFamily, getUserFacingApiMessage, handleMissingOrInvalidAuth, loadAvailableFamilies, requireAuth } from "../../lib/auth-family";
+import { clearActiveFamilyId } from "../../lib/session";
 
 type DashboardStatus = "loading" | "ready" | "unauthorized" | "no-family" | "error";
 
@@ -28,8 +19,7 @@ export default function DashboardPage() {
   const [message, setMessage] = useState("Loading your family dashboard…");
 
   useEffect(() => {
-    if (!getAccessToken()) {
-      router.replace("/login");
+    if (!requireAuth(router)) {
       return;
     }
 
@@ -41,11 +31,15 @@ export default function DashboardPage() {
     setMessage("Loading your family dashboard…");
 
     try {
-      const userFamilies = await listFamilies();
-      setFamilies(userFamilies);
+      const familyContext = await loadAvailableFamilies(preferredFamilyId);
 
-      if (userFamilies.length === 0) {
-        clearActiveFamilyId();
+      if (familyContext.status === "unauthenticated") {
+        router.replace("/login");
+        return;
+      }
+
+      if (familyContext.status === "no-family") {
+        setFamilies([]);
         setDashboard(null);
         setActiveFamilyIdState(null);
         setStatus("no-family");
@@ -54,24 +48,19 @@ export default function DashboardPage() {
         return;
       }
 
-      const storedFamilyId = preferredFamilyId ?? getActiveFamilyId();
-      const storedFamily = userFamilies.find((family) => family.family.id === storedFamilyId);
-      const nextFamilyId = storedFamily?.family.id ?? userFamilies[0].family.id;
-
-      setActiveFamilyId(nextFamilyId);
-      setActiveFamilyIdState(nextFamilyId);
+      setFamilies(familyContext.families);
+      setActiveFamilyIdState(familyContext.activeFamilyId);
+      const nextFamilyId = familyContext.activeFamilyId;
 
       const dashboardData = await getFamilyDashboard(nextFamilyId);
       setDashboard(dashboardData);
       setStatus("ready");
       setMessage("Family dashboard ready.");
     } catch (error) {
-      if (error instanceof ApiError && error.status === 401) {
-        clearAuthSession();
+      if (handleMissingOrInvalidAuth(error, router)) {
         setDashboard(null);
         setStatus("unauthorized");
-        setMessage("Your session has expired. Please sign in again.");
-        router.replace("/login");
+        setMessage(getUserFacingApiMessage(error, "Your session has expired. Please sign in again."));
         return;
       }
 
@@ -92,7 +81,7 @@ export default function DashboardPage() {
 
   async function handleFamilyChange(event: ChangeEvent<HTMLSelectElement>) {
     const familyId = event.target.value;
-    setActiveFamilyId(familyId);
+    chooseActiveFamily(familyId);
     setActiveFamilyIdState(familyId);
     await loadDashboard(familyId);
   }

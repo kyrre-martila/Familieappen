@@ -3,7 +3,9 @@
 import type { FormEvent } from "react";
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import { createFamily, setActiveFamilyId } from "../lib/api";
+import { createFamily } from "../lib/api";
+import { getUserFacingApiMessage } from "../lib/auth-family";
+import { setActiveFamilyId } from "../lib/session";
 import { Button } from "./ui";
 
 export function CreateFamilyForm() {
@@ -24,7 +26,7 @@ export function CreateFamilyForm() {
       setActiveFamilyId(details.family.id);
       router.push("/onboarding/add-members");
     } catch (submitError) {
-      setError(submitError instanceof Error ? submitError.message : "Could not create family. Please try again.");
+      setError(getUserFacingApiMessage(submitError, "Could not create family. Please try again."));
     } finally {
       setIsSubmitting(false);
     }

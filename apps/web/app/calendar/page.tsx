@@ -3,24 +3,19 @@
 import { useEffect, useMemo, useState, type ChangeEvent, type FormEvent } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { Badge, Button, Card, EmptyState, PageContainer, SectionHeader } from "../../components/ui";
+import { Badge, Button, Card, EmptyState, ErrorState, LoadingState, PageContainer, SectionHeader } from "../../components/ui";
 import {
-  ApiError,
   CalendarEvent,
   FamilyMember,
   FamilyWithMembership,
   addCalendarEvent,
-  clearActiveFamilyId,
-  clearAuthSession,
   deleteCalendarEvent,
-  getAccessToken,
-  getActiveFamilyId,
   getCalendarEvents,
   getFamily,
-  listFamilies,
-  setActiveFamilyId,
   updateCalendarEvent
 } from "../../lib/api";
+import { chooseActiveFamily, getUserFacingApiMessage, handleMissingOrInvalidAuth, loadAvailableFamilies, requireAuth } from "../../lib/auth-family";
+import { clearActiveFamilyId } from "../../lib/session";
 
 type CalendarStatus = "loading" | "ready" | "unauthorized" | "no-family" | "error";
 
@@ -58,8 +53,7 @@ export default function CalendarPage() {
   const [isSaving, setIsSaving] = useState(false);
 
   useEffect(() => {
-    if (!getAccessToken()) {
-      router.replace("/login");
+    if (!requireAuth(router)) {
       return;
     }
 
@@ -71,10 +65,15 @@ export default function CalendarPage() {
     setMessage("Loading calendar…");
 
     try {
-      const userFamilies = await listFamilies();
-      setFamilies(userFamilies);
+      const familyContext = await loadAvailableFamilies(preferredFamilyId);
 
-      if (userFamilies.length === 0) {
+      if (familyContext.status === "unauthenticated") {
+        router.replace("/login");
+        return;
+      }
+
+      if (familyContext.status === "no-family") {
+        setFamilies([]);
         clearActiveFamilyId();
         setActiveFamilyIdState(null);
         setMembers([]);
@@ -85,12 +84,10 @@ export default function CalendarPage() {
         return;
       }
 
-      const storedFamilyId = preferredFamilyId ?? getActiveFamilyId();
-      const storedFamily = userFamilies.find((family) => family.family.id === storedFamilyId);
-      const nextFamilyId = storedFamily?.family.id ?? userFamilies[0].family.id;
+      const nextFamilyId = familyContext.activeFamilyId;
       const { from, to } = getCalendarRange(rangeDays);
 
-      setActiveFamilyId(nextFamilyId);
+      setFamilies(familyContext.families);
       setActiveFamilyIdState(nextFamilyId);
 
       const [familyDetails, calendarEvents] = await Promise.all([
@@ -103,11 +100,9 @@ export default function CalendarPage() {
       setStatus("ready");
       setMessage("Calendar ready.");
     } catch (error) {
-      if (error instanceof ApiError && error.status === 401) {
-        clearAuthSession();
+      if (handleMissingOrInvalidAuth(error, router)) {
         setStatus("unauthorized");
-        setMessage("Your session has expired. Please sign in again.");
-        router.replace("/login");
+        setMessage(getUserFacingApiMessage(error, "Your session has expired. Please sign in again."));
         return;
       }
 
@@ -118,7 +113,7 @@ export default function CalendarPage() {
 
   async function handleFamilyChange(event: ChangeEvent<HTMLSelectElement>) {
     const familyId = event.target.value;
-    setActiveFamilyId(familyId);
+    chooseActiveFamily(familyId);
     setActiveFamilyIdState(familyId);
     clearForm();
     await loadCalendar(familyId);
@@ -185,7 +180,7 @@ export default function CalendarPage() {
       await loadCalendar(activeFamilyId);
     } catch (error) {
       setStatus("error");
-      setMessage(error instanceof Error ? error.message : "Could not save the event. Please try again.");
+      setMessage(getUserFacingApiMessage(error, "Could not save the event. Please try again."));
     } finally {
       setIsSaving(false);
     }
@@ -220,7 +215,7 @@ export default function CalendarPage() {
       await loadCalendar(activeFamilyId);
     } catch (error) {
       setStatus("error");
-      setMessage(error instanceof Error ? error.message : "Could not delete the event. Please try again.");
+      setMessage(getUserFacingApiMessage(error, "Could not delete the event. Please try again."));
     } finally {
       setIsSaving(false);
     }
@@ -402,7 +397,7 @@ function CalendarStatusCard({ message, status, onRetry }: { message: string; sta
   if (status === "loading") {
     return (
       <Card className="calendar-status" tone="default">
-        <EmptyState title="Loading calendar" description={message} />
+        <LoadingState title="Loading calendar" description={message} />
       </Card>
     );
   }
@@ -431,7 +426,7 @@ function CalendarStatusCard({ message, status, onRetry }: { message: string; sta
 
   return (
     <Card className="calendar-status" tone="default">
-      <EmptyState title="Calendar could not load" description={message} />
+      <ErrorState title="Calendar could not load" description={message} />
       <Button variant="primary" onClick={onRetry}>
         Try again
       </Button>
