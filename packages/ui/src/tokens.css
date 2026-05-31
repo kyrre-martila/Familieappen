@@ -1,4 +1,6 @@
 :root {
+  --font-primary: "Plus Jakarta Sans", sans-serif;
+
   --space-xs: clamp(0.25rem, 0.22rem + 0.15vw, 0.35rem);
   --space-s: clamp(0.5rem, 0.45rem + 0.25vw, 0.7rem);
   --space-m: clamp(1rem, 0.9rem + 0.5vw, 1.25rem);
