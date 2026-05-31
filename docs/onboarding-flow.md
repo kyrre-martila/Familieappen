@@ -174,6 +174,23 @@ Cases:
 - Auto approved → app recommendation screen → dashboard.
 - Approval required → pending approval.
 
+### App Recommendation Screen
+
+Route: `/onboarding/app-recommendation`
+
+The app recommendation screen is the final onboarding step before dashboard access. It encourages users to download the native app while still allowing them to continue in the browser.
+
+Required actions:
+
+- App Store link.
+- Google Play link.
+- Continue in browser.
+
+Next:
+
+- Continue in browser → dashboard.
+- Approved invitation/account/family creation flows must pass through this screen before dashboard.
+
 ### Pending Approval State
 
 The pending approval state is shown when a user has requested access to a family but has not yet been approved.
@@ -197,7 +214,7 @@ Banner text:
 
 Approval result:
 
-- Approved → dashboard.
+- Approved → app recommendation screen → dashboard.
 - Rejected → retry code or create family.
 
 ### Existing User Invited While Already in Family

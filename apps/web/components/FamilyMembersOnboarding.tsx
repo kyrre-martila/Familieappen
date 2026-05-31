@@ -8,6 +8,7 @@ import {
   type OnboardingFamilyInvite,
   type OnboardingInviteRole,
 } from "../lib/onboarding-state";
+import { getOnboardingCompletionRoute } from "../lib/onboarding-completion";
 import { Button } from "./ui";
 
 const roleOptions: Array<{ role: OnboardingInviteRole; description: string; icon: ReactNode }> = [
@@ -125,7 +126,7 @@ export function FamilyMembersOnboarding() {
       <div className="family-members-feedback" aria-live="polite">{copyMessage}</div>
       <p className="family-members-helper">Du kan alltid invitere flere senere.</p>
 
-      <Button className="family-members-continue" onClick={() => router.push("/dashboard")} variant="primary">
+      <Button className="family-members-continue" onClick={() => router.push(getOnboardingCompletionRoute())} variant="primary">
         Gå videre
       </Button>
 

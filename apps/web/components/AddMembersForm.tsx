@@ -10,6 +10,7 @@ import {
   removeFamilyMember
 } from "../lib/api";
 import { getUserFacingApiMessage, handleMissingOrInvalidAuth, loadAvailableFamilies } from "../lib/auth-family";
+import { getOnboardingCompletionRoute } from "../lib/onboarding-completion";
 import { Button } from "./ui";
 
 type RoleOption = ManualFamilyMemberRole;
@@ -156,7 +157,7 @@ export function AddMembersForm() {
         ))}
       </ul>
 
-      <Button disabled={isLoading || !familyId} onClick={() => router.push("/dashboard")} variant="primary">Continue</Button>
+      <Button disabled={isLoading || !familyId} onClick={() => router.push(getOnboardingCompletionRoute())} variant="primary">Continue</Button>
     </div>
   );
 }
