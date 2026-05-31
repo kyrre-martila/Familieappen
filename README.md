@@ -105,4 +105,5 @@ Expected response:
 ## Documentation
 
 - [Development Plan](docs/DEVELOPMENT_PLAN.md)
+- [Onboarding Flow](docs/onboarding-flow.md) — source of truth for approved pre-dashboard onboarding UX and states.
 - [AI Guide](docs/AI_GUIDE.md)

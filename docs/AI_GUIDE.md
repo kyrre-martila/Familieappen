@@ -6,8 +6,9 @@ Follow this guide together with:
 
 - `README.md`
 - `docs/DEVELOPMENT_PLAN.md`
+- `docs/onboarding-flow.md` for the approved pre-dashboard onboarding source of truth
 
-Do not introduce features, architecture or complexity outside the agreed plan without explicit approval.
+Do not introduce features, architecture or complexity outside the agreed plan without explicit approval. For onboarding work, do not invent, redesign or simplify flows beyond `docs/onboarding-flow.md`.
 
 ## Product understanding
 
