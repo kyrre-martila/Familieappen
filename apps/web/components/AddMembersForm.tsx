@@ -5,13 +5,11 @@ import { useRouter } from "next/navigation";
 import {
   addFamilyMember,
   FamilyMember,
-  getActiveFamilyId,
   getFamily,
-  listFamilies,
   ManualFamilyMemberRole,
-  removeFamilyMember,
-  setActiveFamilyId
+  removeFamilyMember
 } from "../lib/api";
+import { getUserFacingApiMessage, handleMissingOrInvalidAuth, loadAvailableFamilies } from "../lib/auth-family";
 import { Button } from "./ui";
 
 type RoleOption = ManualFamilyMemberRole;
@@ -33,23 +31,19 @@ export function AddMembersForm() {
       setError(null);
 
       try {
-        let activeFamilyId = getActiveFamilyId();
+        const familyContext = await loadAvailableFamilies();
 
-        if (!activeFamilyId) {
-          const families = await listFamilies();
-          activeFamilyId = families[0]?.family.id ?? null;
-
-          if (activeFamilyId) {
-            setActiveFamilyId(activeFamilyId);
-          }
+        if (familyContext.status === "unauthenticated") {
+          router.push("/login");
+          return;
         }
 
-        if (!activeFamilyId) {
+        if (familyContext.status === "no-family") {
           router.push("/onboarding/create-family");
           return;
         }
 
-        const details = await getFamily(activeFamilyId);
+        const details = await getFamily(familyContext.activeFamilyId);
 
         if (isMounted) {
           setFamilyId(details.family.id);
@@ -57,7 +51,11 @@ export function AddMembersForm() {
         }
       } catch (loadError) {
         if (isMounted) {
-          setError(loadError instanceof Error ? loadError.message : "Could not load family members.");
+          if (handleMissingOrInvalidAuth(loadError, router)) {
+            setError(getUserFacingApiMessage(loadError, "Your session has expired. Please sign in again."));
+          } else {
+            setError(getUserFacingApiMessage(loadError, "Could not load family members."));
+          }
         }
       } finally {
         if (isMounted) {
@@ -89,7 +87,7 @@ export function AddMembersForm() {
       setName("");
       setRole("CHILD");
     } catch (addError) {
-      setError(addError instanceof Error ? addError.message : "Could not add family member.");
+      setError(getUserFacingApiMessage(addError, "Could not add family member."));
     } finally {
       setIsAdding(false);
     }
@@ -106,7 +104,7 @@ export function AddMembersForm() {
       await removeFamilyMember(familyId, memberId);
       setMembers((currentMembers) => currentMembers.filter((member) => member.id !== memberId));
     } catch (removeError) {
-      setError(removeError instanceof Error ? removeError.message : "Could not remove family member.");
+      setError(getUserFacingApiMessage(removeError, "Could not remove family member."));
     }
   }
 

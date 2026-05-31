@@ -1043,3 +1043,43 @@ The standard API error-code registry now includes:
 ### Recommended next Run 1.5 prompt
 
 Run 1.5 Prompt 6 should focus on replacing message-based error-code inference in the most important API branches with explicit `ApiException` usage, starting with auth, family authorization, wishlist sharing, and cross-family resource lookups. If Prisma engines and PostgreSQL are available, it should also convert the contract/security harnesses into real Prisma-backed e2e tests while preserving the existing no-Prisma fallback tests.
+
+## Run 1.5 Prompt 6 result
+
+### Frontend auth/family cleanup completed
+
+- Audited frontend token and active-family usage across login, register, onboarding, dashboard, tasks, shopping, meals, calendar, wishlists, and shared wishlist flows.
+- Centralised browser storage access for the bearer access token and active family id in `apps/web/lib/session.ts` while intentionally keeping the existing localStorage-based architecture.
+- Added `apps/web/lib/auth-family.ts` as a small shared helper layer for requiring auth, loading available families, choosing the active family, clearing invalid auth, and mapping common API error codes to simple user-facing messages.
+- Updated dashboard, tasks, shopping, meals, calendar, wishlists, and add-members onboarding to use the shared family bootstrap path instead of each page independently listing families and picking the active family.
+- Kept login, register, create-family onboarding, dashboard loading, feature-page active-family usage, and unauthenticated redirects on the same routes as before.
+
+### Helpers, hooks, and components added
+
+- Added session helpers for access-token read/write/remove, auth-session save/clear, and active-family read/write/remove.
+- Added lightweight auth/family helpers: `requireAuth`, `loadAvailableFamilies`, `chooseActiveFamily`, `handleMissingOrInvalidAuth`, and `getUserFacingApiMessage`.
+- Added shared `LoadingState` and `ErrorState` UI helpers that wrap the existing `EmptyState` styling so loading/error states can be standardised without redesigning the UI.
+- Extended the frontend `ApiError` with the API `error.code` field so frontend callers can react to Run 1.5 Prompt 5's stable API error contract.
+
+### Behaviour intentionally left unchanged
+
+- Bearer-token auth and localStorage remain unchanged; no cookie or refresh-token migration was introduced.
+- `X-Family-Id` remains the family context mechanism for feature API requests.
+- Existing route conventions and redirect destinations were preserved.
+- The UI was not redesigned; existing cards, forms, labels, and empty-state copy were preserved except for small loading/error helper reuse.
+- Shared public wishlist pages were not moved behind auth/family helpers because they intentionally use unauthenticated public endpoints.
+
+### Remaining frontend risks
+
+- The frontend still depends on localStorage and therefore remains vulnerable to the same browser-storage/XSS considerations as before; cookie/session hardening should be handled as a later auth architecture change.
+- Some page-level action handlers still maintain local status/message state because centralising all feature mutations would be a larger Run 2 refactor.
+- Active-family state is still stored globally in localStorage, so multi-tab family switching can affect another tab's next feature load.
+- The frontend now consumes API error codes, but coverage is still manual through typecheck/build rather than UI integration tests.
+
+### Final Run 1.5 completion note
+
+Run 1.5 is complete. The stabilisation pass now covers the database baseline, API configuration and auth validation, family-isolation/security harnesses, API response/error contracts, and the final frontend auth/family/loading/error cleanup needed before feature expansion.
+
+### Recommended first Run 2 focus
+
+Run 2 Prompt 1 should start with one narrow user-facing feature slice and add end-to-end coverage around it before expanding scope. The recommended first slice is a Prisma-backed, UI-visible family dashboard/tasks flow that verifies login, active-family selection, `X-Family-Id` propagation, empty/loading/error states, and cross-family rejection in one maintained test path.

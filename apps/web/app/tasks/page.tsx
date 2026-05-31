@@ -3,7 +3,7 @@
 import { FormEvent, useEffect, useMemo, useState, type ChangeEvent } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { Badge, Button, Card, EmptyState, PageContainer, SectionHeader } from "../../components/ui";
+import { Badge, Button, Card, EmptyState, ErrorState, LoadingState, PageContainer, SectionHeader } from "../../components/ui";
 import {
   ApiError,
   FamilyDetails,
@@ -11,17 +11,13 @@ import {
   FamilyWithMembership,
   Task,
   addTask,
-  clearActiveFamilyId,
-  clearAuthSession,
   deleteTask,
-  getAccessToken,
-  getActiveFamilyId,
   getFamily,
   getTasks,
-  listFamilies,
-  setActiveFamilyId,
   toggleTask
 } from "../../lib/api";
+import { chooseActiveFamily, getUserFacingApiMessage, handleMissingOrInvalidAuth, loadAvailableFamilies, requireAuth } from "../../lib/auth-family";
+import { clearActiveFamilyId } from "../../lib/session";
 
 type TasksStatus = "loading" | "ready" | "unauthorized" | "no-family" | "error";
 
@@ -41,9 +37,7 @@ export default function TasksPage() {
   const [isAdding, setIsAdding] = useState(false);
 
   useEffect(() => {
-    if (!getAccessToken()) {
-      clearAuthSession();
-      router.replace("/login");
+    if (!requireAuth(router)) {
       return;
     }
 
@@ -59,10 +53,15 @@ export default function TasksPage() {
     setMessage("Loading tasks…");
 
     try {
-      const userFamilies = await listFamilies();
-      setFamilies(userFamilies);
+      const familyContext = await loadAvailableFamilies();
 
-      if (userFamilies.length === 0) {
+      if (familyContext.status === "unauthenticated") {
+        router.replace("/login");
+        return;
+      }
+
+      if (familyContext.status === "no-family") {
+        setFamilies([]);
         clearActiveFamilyId();
         setActiveFamilyIdState(null);
         setFamilyDetails(null);
@@ -72,11 +71,9 @@ export default function TasksPage() {
         return;
       }
 
-      const storedFamilyId = getActiveFamilyId();
-      const nextFamily = userFamilies.find((family) => family.family.id === storedFamilyId) ?? userFamilies[0];
-      setActiveFamilyId(nextFamily.family.id);
-      setActiveFamilyIdState(nextFamily.family.id);
-      await loadTasks(nextFamily.family.id);
+      setFamilies(familyContext.families);
+      setActiveFamilyIdState(familyContext.activeFamilyId);
+      await loadTasks(familyContext.activeFamilyId);
     } catch (error) {
       handleLoadError(error);
     }
@@ -105,7 +102,7 @@ export default function TasksPage() {
 
   async function handleFamilyChange(event: ChangeEvent<HTMLSelectElement>) {
     const familyId = event.target.value;
-    setActiveFamilyId(familyId);
+    chooseActiveFamily(familyId);
     setActiveFamilyIdState(familyId);
     setAssignedFamilyMemberId("");
     await loadTasks(familyId);
@@ -181,10 +178,9 @@ export default function TasksPage() {
 
   function handleLoadError(error: unknown) {
     if (error instanceof ApiError && error.status === 401) {
-      clearAuthSession();
+      handleMissingOrInvalidAuth(error, router);
       setStatus("unauthorized");
-      setMessage("Your session has expired. Please sign in again.");
-      router.replace("/login");
+      setMessage(getUserFacingApiMessage(error, "Your session has expired. Please sign in again."));
       return;
     }
 
@@ -204,10 +200,9 @@ export default function TasksPage() {
 
   function handleActionError(error: unknown, fallbackMessage: string) {
     if (error instanceof ApiError && error.status === 401) {
-      clearAuthSession();
+      handleMissingOrInvalidAuth(error, router);
       setStatus("unauthorized");
-      setMessage("Your session has expired. Please sign in again.");
-      router.replace("/login");
+      setMessage(getUserFacingApiMessage(error, "Your session has expired. Please sign in again."));
       return;
     }
 
@@ -218,7 +213,7 @@ export default function TasksPage() {
       return;
     }
 
-    setMessage(error instanceof ApiError ? error.message : fallbackMessage);
+    setMessage(getUserFacingApiMessage(error, fallbackMessage));
   }
 
   return (
@@ -310,7 +305,7 @@ export default function TasksPage() {
 
           {message && status === "ready" ? <p className="tasks-card__message">{message}</p> : null}
 
-          {status === "loading" ? <EmptyState title="Loading tasks" description="Fetching the latest family tasks." /> : null}
+          {status === "loading" ? <LoadingState title="Loading tasks" description="Fetching the latest family tasks." /> : null}
 
           {status === "ready" && tasks.length === 0 ? (
             <EmptyState title="No tasks today" description="Add a quick task when someone needs to remember something." />
@@ -386,7 +381,7 @@ function TasksStatusCard({
 
   return (
     <div className="tasks-status">
-      <EmptyState title="Tasks could not load" description={message} />
+      <ErrorState title="Tasks could not load" description={message} />
       <Button variant="primary" onClick={onRetry}>
         Try again
       </Button>

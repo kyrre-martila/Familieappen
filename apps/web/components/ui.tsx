@@ -55,6 +55,14 @@ export function EmptyState({ description, title }: EmptyStateProps) {
   );
 }
 
+export function LoadingState({ description, title = "Loading" }: Partial<EmptyStateProps> & Pick<EmptyStateProps, "description">) {
+  return <EmptyState title={title} description={description} />;
+}
+
+export function ErrorState({ description, title = "Something went wrong" }: Partial<EmptyStateProps> & Pick<EmptyStateProps, "description">) {
+  return <EmptyState title={title} description={description} />;
+}
+
 interface BadgeProps {
   children: ReactNode;
   tone?: "neutral" | "primary" | "accent" | "success" | "warning";

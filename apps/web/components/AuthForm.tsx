@@ -3,7 +3,9 @@
 import type { FormEvent, ReactNode } from "react";
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import { login, register, saveAuthSession } from "../lib/api";
+import { login, register } from "../lib/api";
+import { getUserFacingApiMessage } from "../lib/auth-family";
+import { saveAuthSession } from "../lib/session";
 import { Button } from "./ui";
 
 interface AuthFormProps {
@@ -55,7 +57,7 @@ export function AuthForm({ children, mode, submitLabel, submitTo }: AuthFormProp
 
       router.push(submitTo);
     } catch (submitError) {
-      setError(submitError instanceof Error ? submitError.message : "Something went wrong. Please try again.");
+      setError(getUserFacingApiMessage(submitError, "Something went wrong. Please try again."));
     } finally {
       setIsSubmitting(false);
     }

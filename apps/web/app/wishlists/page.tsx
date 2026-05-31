@@ -4,22 +4,19 @@ import { useEffect, useMemo, useState, type FormEvent } from "react";
 import { useRouter } from "next/navigation";
 import { Badge, Button, Card, EmptyState, PageContainer, SectionHeader } from "../../components/ui";
 import {
-  ApiError,
   FamilyMember,
   Wishlist,
   WishlistSummary,
   addWishlistItem,
-  clearAuthSession,
   createWishlist,
   createWishlistShare,
-  getAccessToken,
-  getActiveFamilyId,
   getFamily,
   getWishlist,
   getWishlists,
   markWishlistItemPurchased,
   reserveWishlistItem
 } from "../../lib/api";
+import { getUserFacingApiMessage, handleMissingOrInvalidAuth, loadAvailableFamilies, requireAuth } from "../../lib/auth-family";
 
 type WishlistsStatus = "loading" | "ready" | "missing-family" | "unauthorized" | "error";
 
@@ -40,22 +37,41 @@ export default function WishlistsPage() {
   const [itemDescription, setItemDescription] = useState("");
 
   useEffect(() => {
-    if (!getAccessToken()) {
-      router.replace("/login");
+    if (!requireAuth(router)) {
       return;
     }
 
-    const activeFamilyId = getActiveFamilyId();
-
-    if (!activeFamilyId) {
-      setStatus("missing-family");
-      setMessage("Choose or create a family before using wishlists.");
-      return;
-    }
-
-    setFamilyId(activeFamilyId);
-    void loadWishlists(activeFamilyId);
+    void bootstrapWishlists();
   }, [router]);
+
+  async function bootstrapWishlists() {
+    try {
+      const familyContext = await loadAvailableFamilies();
+
+      if (familyContext.status === "unauthenticated") {
+        router.replace("/login");
+        return;
+      }
+
+      if (familyContext.status === "no-family") {
+        setStatus("missing-family");
+        setMessage("Choose or create a family before using wishlists.");
+        return;
+      }
+
+      setFamilyId(familyContext.activeFamilyId);
+      await loadWishlists(familyContext.activeFamilyId);
+    } catch (error) {
+      if (handleMissingOrInvalidAuth(error, router)) {
+        setStatus("unauthorized");
+        setMessage(getUserFacingApiMessage(error, "Your session has expired. Please sign in again."));
+        return;
+      }
+
+      setStatus("error");
+      setMessage("Wishlists could not load right now. Please try again.");
+    }
+  }
 
   const activeOwner = useMemo(() => {
     return members.find((member) => member.id === activeWishlist?.ownerFamilyMemberId) ?? null;
@@ -87,11 +103,9 @@ export default function WishlistsPage() {
       setStatus("ready");
       setMessage("Wishlists ready.");
     } catch (error) {
-      if (error instanceof ApiError && error.status === 401) {
-        clearAuthSession();
+      if (handleMissingOrInvalidAuth(error, router)) {
         setStatus("unauthorized");
-        setMessage("Your session has expired. Please sign in again.");
-        router.replace("/login");
+        setMessage(getUserFacingApiMessage(error, "Your session has expired. Please sign in again."));
         return;
       }
 
