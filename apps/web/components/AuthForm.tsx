@@ -13,9 +13,10 @@ interface AuthFormProps {
   mode?: "login" | "register";
   submitLabel: string;
   submitTo: string;
+  submittingLabel?: string;
 }
 
-export function AuthForm({ children, mode, submitLabel, submitTo }: AuthFormProps) {
+export function AuthForm({ children, mode, submitLabel, submitTo, submittingLabel = "Please wait…" }: AuthFormProps) {
   const router = useRouter();
   const [error, setError] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -68,7 +69,7 @@ export function AuthForm({ children, mode, submitLabel, submitTo }: AuthFormProp
       {children}
       {error ? <p className="form-message form-message--error" role="alert">{error}</p> : null}
       <Button disabled={isSubmitting} type="submit" variant="primary">
-        {isSubmitting ? "Please wait…" : submitLabel}
+        {isSubmitting ? submittingLabel : submitLabel}
       </Button>
     </form>
   );
