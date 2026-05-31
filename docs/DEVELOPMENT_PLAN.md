@@ -114,6 +114,10 @@ Do not add these until the project intentionally reaches that phase:
 - Expo/mobile expansion
 - Large component library
 
+## Product documentation sources
+
+- `docs/onboarding-flow.md` is the source of truth for the approved pre-dashboard onboarding UX, routes, states and dashboard access rules.
+
 ## Build order
 
 1. Keep the repository foundation clean and runnable.
