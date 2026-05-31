@@ -11,7 +11,7 @@ export function MailIcon() {
   );
 }
 
-function LockIcon() {
+export function LockIcon() {
   return (
     <svg aria-hidden="true" className="login-field__icon" fill="none" viewBox="0 0 24 24">
       <path d="M6.75 10.25h10.5v8H6.75z" />
@@ -21,7 +21,7 @@ function LockIcon() {
   );
 }
 
-function EyeIcon({ isVisible }: { isVisible: boolean }) {
+export function EyeIcon({ isVisible }: { isVisible: boolean }) {
   return (
     <svg aria-hidden="true" className="login-field__toggle-icon" fill="none" viewBox="0 0 24 24">
       <path d="M3.75 12s2.75-5.25 8.25-5.25S20.25 12 20.25 12 17.5 17.25 12 17.25 3.75 12 3.75 12Z" />
@@ -31,9 +31,56 @@ function EyeIcon({ isVisible }: { isVisible: boolean }) {
   );
 }
 
-export function LoginFormFields() {
+interface PasswordFieldProps {
+  autoComplete: "current-password" | "new-password";
+  helperText?: string;
+  id: string;
+  label: string;
+  name: string;
+  placeholder: string;
+  visibilityLabel?: string;
+}
+
+export function PasswordField({
+  autoComplete,
+  helperText,
+  id,
+  label,
+  name,
+  placeholder,
+  visibilityLabel = "passord",
+}: PasswordFieldProps) {
   const [isPasswordVisible, setIsPasswordVisible] = useState(false);
 
+  return (
+    <div className="login-field">
+      <label className="login-field__label" htmlFor={id}>{label}</label>
+      <div className="login-field__control">
+        <LockIcon />
+        <input
+          className="login-field__input login-field__input--password"
+          id={id}
+          name={name}
+          type={isPasswordVisible ? "text" : "password"}
+          autoComplete={autoComplete}
+          placeholder={placeholder}
+          required
+        />
+        <button
+          aria-label={isPasswordVisible ? `Skjul ${visibilityLabel}` : `Vis ${visibilityLabel}`}
+          className="login-field__toggle"
+          onClick={() => setIsPasswordVisible((current) => !current)}
+          type="button"
+        >
+          <EyeIcon isVisible={isPasswordVisible} />
+        </button>
+      </div>
+      {helperText ? <p className="login-field__helper">{helperText}</p> : null}
+    </div>
+  );
+}
+
+export function LoginFormFields() {
   return (
     <>
       <div className="login-field">
@@ -52,29 +99,13 @@ export function LoginFormFields() {
         </div>
       </div>
 
-      <div className="login-field">
-        <label className="login-field__label" htmlFor="login-password">Passord</label>
-        <div className="login-field__control">
-          <LockIcon />
-          <input
-            className="login-field__input login-field__input--password"
-            id="login-password"
-            name="password"
-            type={isPasswordVisible ? "text" : "password"}
-            autoComplete="current-password"
-            placeholder="Skriv inn passordet ditt"
-            required
-          />
-          <button
-            aria-label={isPasswordVisible ? "Skjul passord" : "Vis passord"}
-            className="login-field__toggle"
-            onClick={() => setIsPasswordVisible((current) => !current)}
-            type="button"
-          >
-            <EyeIcon isVisible={isPasswordVisible} />
-          </button>
-        </div>
-      </div>
+      <PasswordField
+        autoComplete="current-password"
+        id="login-password"
+        label="Passord"
+        name="password"
+        placeholder="Skriv inn passordet ditt"
+      />
     </>
   );
 }
