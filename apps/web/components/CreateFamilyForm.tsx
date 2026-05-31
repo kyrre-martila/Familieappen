@@ -1,47 +1,74 @@
 "use client";
 
 import type { FormEvent } from "react";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
-import { createFamily } from "../lib/api";
-import { getUserFacingApiMessage } from "../lib/auth-family";
-import { setActiveFamilyId } from "../lib/session";
+import { getOnboardingFamilyState, saveOnboardingFamilyState } from "../lib/onboarding-state";
 import { Button } from "./ui";
 
 export function CreateFamilyForm() {
   const router = useRouter();
   const [error, setError] = useState<string | null>(null);
-  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [familyName, setFamilyName] = useState("");
 
-  async function handleSubmit(event: FormEvent<HTMLFormElement>) {
-    event.preventDefault();
-    setError(null);
-    setIsSubmitting(true);
+  useEffect(() => {
+    const savedFamily = getOnboardingFamilyState();
 
-    const formData = new FormData(event.currentTarget);
-    const name = formData.get("familyName");
-
-    try {
-      const details = await createFamily({ name: typeof name === "string" ? name : "" });
-      setActiveFamilyId(details.family.id);
-      router.push("/onboarding/add-members");
-    } catch (submitError) {
-      setError(getUserFacingApiMessage(submitError, "Could not create family. Please try again."));
-    } finally {
-      setIsSubmitting(false);
+    if (savedFamily?.family.name) {
+      setFamilyName(savedFamily.family.name);
     }
+  }, []);
+
+  function handleSubmit(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    const trimmedFamilyName = familyName.trim();
+
+    if (!trimmedFamilyName) {
+      setError("Skriv inn et familienavn.");
+      return;
+    }
+
+    setError(null);
+    saveOnboardingFamilyState(trimmedFamilyName);
+    router.push("/onboarding/family-members");
   }
 
   return (
-    <form className="auth-form" onSubmit={handleSubmit}>
-      <label className="form-field">
-        <span className="form-field__label">Family name</span>
-        <input className="form-field__input" name="familyName" type="text" placeholder="The Hansen Family" required />
-      </label>
+    <form className="auth-form onboarding-create-family-form" noValidate onSubmit={handleSubmit}>
+      <div className="login-field">
+        <label className="login-field__label" htmlFor="family-name">
+          Familienavn <span className="onboarding-create-family-form__required" aria-hidden="true">*</span>
+        </label>
+        <div className="login-field__control">
+          <HomeIcon />
+          <input
+            autoComplete="organization"
+            className="login-field__input"
+            id="family-name"
+            name="familyName"
+            onChange={(event) => setFamilyName(event.target.value)}
+            placeholder="F.eks. Familien Hansen"
+            required
+            type="text"
+            value={familyName}
+          />
+        </div>
+        <p className="login-field__helper">Du kan endre dette senere.</p>
+      </div>
+
       {error ? <p className="form-message form-message--error" role="alert">{error}</p> : null}
-      <Button disabled={isSubmitting} type="submit" variant="primary">
-        {isSubmitting ? "Creating…" : "Continue"}
-      </Button>
+
+      <Button type="submit" variant="primary">Opprett familie</Button>
     </form>
+  );
+}
+
+function HomeIcon() {
+  return (
+    <svg aria-hidden="true" className="login-field__icon" fill="none" viewBox="0 0 24 24">
+      <path d="M4.75 10.75 12 4.5l7.25 6.25" />
+      <path d="M6.75 9.5v9.75h10.5V9.5" />
+      <path d="M10 19.25v-5.5h4v5.5" />
+    </svg>
   );
 }
