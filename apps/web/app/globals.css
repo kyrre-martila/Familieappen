@@ -2059,6 +2059,15 @@ select {
   text-underline-offset: 0.14em;
 }
 
+.login-screen__back-link {
+  justify-self: center;
+  color: #244732;
+  font-size: clamp(0.98rem, 0.92rem + 0.3vw, 1.1rem);
+  font-weight: 750;
+  text-decoration: underline;
+  text-underline-offset: 0.14em;
+}
+
 .login-screen .auth-form .button--primary {
   width: 100%;
   min-height: clamp(4.6rem, 4.05rem + 2.5vw, 5.45rem);
@@ -2115,6 +2124,7 @@ select {
 }
 
 .login-screen__forgot-link:focus-visible,
+.login-screen__back-link:focus-visible,
 .login-screen__register a:focus-visible {
   border-radius: var(--radius-s);
   outline: 3px solid color-mix(in srgb, #2c5d3b 24%, transparent);

@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 
-function MailIcon() {
+export function MailIcon() {
   return (
     <svg aria-hidden="true" className="login-field__icon" fill="none" viewBox="0 0 24 24">
       <path d="M4.75 6.75h14.5v10.5H4.75z" />
