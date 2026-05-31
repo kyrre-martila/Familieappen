@@ -2603,3 +2603,86 @@ select {
     width: clamp(6.2rem, 30vw, 7.4rem);
   }
 }
+
+.onboarding-create-family-screen {
+  place-items: start center;
+  padding-top: max(var(--space-xl), env(safe-area-inset-top));
+}
+
+.onboarding-create-family-screen__back {
+  position: absolute;
+  top: max(var(--space-l), env(safe-area-inset-top));
+  left: max(var(--gutter), env(safe-area-inset-left));
+  z-index: 1;
+  display: inline-grid;
+  width: clamp(4.6rem, 15vw, 5.45rem);
+  aspect-ratio: 1;
+  place-items: center;
+  border-radius: 50%;
+  background: color-mix(in srgb, #ffffff 88%, transparent);
+  color: #1f1f1f;
+  box-shadow: 0 1rem 2.25rem color-mix(in srgb, #3b2f1e 9%, transparent);
+}
+
+.onboarding-create-family-screen__back svg {
+  width: 42%;
+  height: 42%;
+  stroke: currentColor;
+  stroke-width: 2.5;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+.onboarding-create-family-screen__back:focus-visible {
+  outline: 3px solid color-mix(in srgb, #2c5d3b 24%, transparent);
+  outline-offset: 4px;
+}
+
+.onboarding-create-family-screen__content {
+  width: min(100%, 34rem);
+  gap: clamp(var(--space-l), 4.8vw, var(--space-xl));
+  padding-top: clamp(5.6rem, 13svh, 9rem);
+}
+
+.onboarding-create-family-screen__logo {
+  width: min(15rem, 54vw);
+}
+
+.onboarding-create-family-screen__header {
+  max-width: 38rem;
+  gap: var(--space-s);
+}
+
+.onboarding-create-family-screen .login-screen__title {
+  font-size: clamp(2.7rem, 1.5rem + 6.5vw, 4.1rem);
+}
+
+.onboarding-create-family-screen .login-screen__subtitle {
+  max-width: 31rem;
+  justify-self: center;
+}
+
+.onboarding-create-family-form {
+  width: 100%;
+}
+
+.onboarding-create-family-form__required {
+  color: #e15a3d;
+}
+
+.onboarding-create-family-screen .form-message--error {
+  width: 100%;
+  border-color: color-mix(in srgb, #9a6a1e 36%, #ded8cf);
+  background: color-mix(in srgb, #f6dfb5 24%, #fffaf4);
+  color: #244732;
+}
+
+@media (max-width: 32rem) {
+  .onboarding-create-family-screen__content {
+    padding-top: clamp(4.8rem, 10svh, 6rem);
+  }
+
+  .onboarding-create-family-screen .login-screen__title {
+    font-size: clamp(2.5rem, 1.58rem + 7.6vw, 3.3rem);
+  }
+}
