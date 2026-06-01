@@ -3143,230 +3143,17 @@ select {
 }
 
 .app-preview-illustration {
-  position: relative;
   display: grid;
+  width: min(100%, 34rem);
+  place-items: center;
+  padding-block: clamp(var(--space-s), 2.6vw, var(--space-m));
+}
+
+.app-preview-illustration__image {
+  display: block;
   width: min(100%, 32rem);
-  min-height: clamp(21rem, 72vw, 31rem);
-  place-items: center;
-  isolation: isolate;
-}
-
-.app-preview-illustration__blob {
-  position: absolute;
-  inset: 12% 5% 6%;
-  z-index: -2;
-  border-radius: 38% 46% 44% 35% / 34% 38% 44% 47%;
-  background:
-    radial-gradient(circle at 30% 22%, color-mix(in srgb, #ffffff 66%, transparent), transparent 28%),
-    color-mix(in srgb, var(--color-success-soft) 76%, #fffaf4);
-  box-shadow: inset 0 -1.5rem 4rem color-mix(in srgb, #9fb88f 12%, transparent);
-}
-
-.app-preview-phone {
-  position: relative;
-  display: grid;
-  width: clamp(13.6rem, 50vw, 20rem);
-  min-height: clamp(19rem, 68vw, 28rem);
-  gap: clamp(0.7rem, 2.4vw, 1.05rem);
-  align-content: start;
-  border: clamp(0.42rem, 1.4vw, 0.6rem) solid #172025;
-  border-radius: clamp(2rem, 6vw, 2.85rem);
-  padding: clamp(2.8rem, 8vw, 4rem) clamp(0.8rem, 2.6vw, 1.15rem) clamp(1rem, 3vw, 1.4rem);
-  background: linear-gradient(160deg, #ffffff 0%, #fffdf9 58%, #f6f1e9 100%);
-  box-shadow:
-    0 1.7rem 3.2rem color-mix(in srgb, #10281f 18%, transparent),
-    inset 0 0 0 1px color-mix(in srgb, #ffffff 80%, transparent);
-  transform: rotate(5deg) translateY(0.3rem);
-}
-
-.app-preview-phone__notch {
-  position: absolute;
-  top: 0.52rem;
-  left: 50%;
-  width: 42%;
-  height: clamp(1.05rem, 3.5vw, 1.55rem);
-  border-radius: 0 0 var(--radius-m) var(--radius-m);
-  background: #172025;
-  transform: translateX(-50%);
-}
-
-.app-preview-phone__brand {
-  margin: 0;
-  color: #00723f;
-  font-size: clamp(0.9rem, 2.8vw, 1.35rem);
-  font-weight: 850;
-  letter-spacing: -0.04em;
-}
-
-.app-preview-phone__cards {
-  display: grid;
-  gap: clamp(0.6rem, 2vw, 0.85rem);
-}
-
-.app-preview-card {
-  display: grid;
-  grid-template-columns: auto minmax(0, 1fr);
-  align-items: center;
-  gap: clamp(0.5rem, 1.7vw, 0.8rem);
-  border: 1px solid color-mix(in srgb, #ded8cf 72%, transparent);
-  border-radius: clamp(0.65rem, 2vw, 0.95rem);
-  padding: clamp(0.65rem, 2.3vw, 0.95rem);
-  background: color-mix(in srgb, #ffffff 88%, transparent);
-  box-shadow: 0 0.55rem 1.2rem color-mix(in srgb, #10281f 8%, transparent);
-}
-
-.app-preview-card__icon {
-  display: grid;
-  width: clamp(1.8rem, 5.5vw, 2.35rem);
-  aspect-ratio: 1;
-  place-items: center;
-  border-radius: 0.6rem;
-  background: #eef5f0;
-  color: #00723f;
-}
-
-.app-preview-card__icon svg,
-.app-preview-notification svg {
-  width: 72%;
-  height: 72%;
-  stroke: currentColor;
-  stroke-width: 1.9;
-  stroke-linecap: round;
-  stroke-linejoin: round;
-}
-
-.app-preview-card__copy {
-  display: grid;
-  min-width: 0;
-  gap: 0.08rem;
-  color: #1d292d;
-  font-size: clamp(0.72rem, 2.3vw, 1rem);
-  line-height: 1.25;
-}
-
-.app-preview-card__copy strong {
-  font-weight: 850;
-}
-
-.app-preview-card__copy span,
-.app-preview-card__copy small {
-  color: #34424a;
-  font-weight: 650;
-}
-
-.app-preview-illustration__cup {
-  position: absolute;
-  bottom: 12%;
-  left: 5%;
-  width: clamp(4.4rem, 16vw, 6.4rem);
-  height: clamp(4.1rem, 14vw, 5.9rem);
-  border-radius: 0 0 1.4rem 1.4rem;
-  background: linear-gradient(180deg, #8daa77, #73935f);
-  box-shadow: inset 0 0.65rem 0 color-mix(in srgb, #183f2a 30%, transparent);
-}
-
-.app-preview-illustration__cup::after {
-  position: absolute;
-  top: 1.1rem;
-  left: -1.25rem;
-  width: 1.7rem;
-  height: 2.4rem;
-  border: 0.42rem solid #7f9f69;
-  border-right: 0;
-  border-radius: 1.4rem 0 0 1.4rem;
-  content: "";
-}
-
-.app-preview-illustration__cup span {
-  position: absolute;
-  inset: auto 15% -0.55rem;
-  height: 0.55rem;
-  border-radius: 50%;
-  background: color-mix(in srgb, #10281f 10%, transparent);
-  filter: blur(0.12rem);
-}
-
-.app-preview-illustration__branch {
-  position: absolute;
-  z-index: -1;
-  width: 0.35rem;
-  height: clamp(5rem, 18vw, 7.5rem);
-  border-radius: var(--radius-pill);
-  background: color-mix(in srgb, #8aa978 58%, transparent);
-  transform-origin: bottom center;
-}
-
-.app-preview-illustration__branch--left {
-  bottom: 18%;
-  left: 17%;
-  transform: rotate(-28deg);
-}
-
-.app-preview-illustration__branch--right {
-  right: 11%;
-  bottom: 16%;
-  transform: rotate(32deg);
-}
-
-.app-preview-illustration__branch i {
-  position: absolute;
-  width: 1.15rem;
-  height: 2.15rem;
-  border-radius: 100% 0 100% 0;
-  background: color-mix(in srgb, #8aa978 58%, transparent);
-}
-
-.app-preview-illustration__branch i:nth-child(1) {
-  top: 12%;
-  left: -1rem;
-  transform: rotate(-32deg);
-}
-
-.app-preview-illustration__branch i:nth-child(2) {
-  top: 34%;
-  right: -1rem;
-  transform: rotate(34deg) scale(0.9);
-}
-
-.app-preview-illustration__branch i:nth-child(3) {
-  top: 58%;
-  left: -1rem;
-  transform: rotate(-28deg) scale(0.82);
-}
-
-.app-preview-illustration__branch i:nth-child(4) {
-  top: 74%;
-  right: -0.9rem;
-  transform: rotate(32deg) scale(0.72);
-}
-
-.app-preview-notification {
-  position: absolute;
-  top: 21%;
-  right: 12%;
-  display: grid;
-  width: clamp(4.6rem, 16vw, 6.2rem);
-  aspect-ratio: 1;
-  place-items: center;
-  border-radius: 50%;
-  background: color-mix(in srgb, #ffffff 94%, transparent);
-  color: #6f8f7a;
-  box-shadow: 0 1rem 2rem color-mix(in srgb, #10281f 14%, transparent);
-}
-
-.app-preview-notification span {
-  position: absolute;
-  top: 12%;
-  right: 10%;
-  display: grid;
-  width: 1.85rem;
-  aspect-ratio: 1;
-  place-items: center;
-  border-radius: 50%;
-  background: #ec3b31;
-  color: #ffffff;
-  font-size: 0.95rem;
-  font-weight: 850;
+  height: auto;
+  object-fit: contain;
 }
 
 .app-recommendation-actions {
@@ -3464,7 +3251,7 @@ select {
 
 @media (max-width: 32rem) {
   .app-recommendation-screen {
-    padding-inline: 1.25rem;
+    padding-inline: var(--space-m);
   }
 
   .app-recommendation-screen__content {
@@ -3472,10 +3259,6 @@ select {
   }
 
   .app-preview-illustration {
-    margin-block: calc(var(--space-xs) * -1) calc(var(--space-xs) * -0.5);
-  }
-
-  .app-preview-notification {
-    right: 7%;
+    padding-block: var(--space-xs) var(--space-s);
   }
 }
