@@ -3,6 +3,7 @@
 import { useEffect, useMemo, useState, type FormEvent } from "react";
 import { useRouter } from "next/navigation";
 import { LockedFeatureState } from "../../components/PendingAccess";
+import { useFamilyAccess } from "../../components/ProtectedFamilyRoute";
 import { Badge, Button, Card, EmptyState, PageContainer, SectionHeader } from "../../components/ui";
 import {
   FamilyMember,
@@ -17,7 +18,7 @@ import {
   markWishlistItemPurchased,
   reserveWishlistItem
 } from "../../lib/api";
-import { getUserFacingApiMessage, handleMissingOrInvalidAuth, loadAvailableFamilies, requireAuth } from "../../lib/auth-family";
+import { getUserFacingApiMessage, handleMissingOrInvalidAuth } from "../../lib/auth-family";
 
 type WishlistsStatus = "loading" | "ready" | "pending" | "missing-family" | "unauthorized" | "error";
 
@@ -37,47 +38,17 @@ export default function WishlistsPage() {
   const [itemProductUrl, setItemProductUrl] = useState("");
   const [itemDescription, setItemDescription] = useState("");
 
+  const familyAccess = useFamilyAccess();
+  const approvedFamilyContext = familyAccess.status === "approved" ? familyAccess.familyContext : null;
+
   useEffect(() => {
-    if (!requireAuth(router)) {
+    if (!approvedFamilyContext) {
       return;
     }
 
-    void bootstrapWishlists();
-  }, [router]);
-
-  async function bootstrapWishlists() {
-    try {
-      const familyContext = await loadAvailableFamilies();
-
-      if (familyContext.status === "unauthenticated") {
-        router.replace("/login");
-        return;
-      }
-
-      if (familyContext.status === "no-family") {
-        setStatus("missing-family");
-        setMessage("Choose or create a family before using wishlists.");
-        return;
-      }
-
-      if (familyContext.status === "pending") {
-        setStatus("pending");
-        setMessage("Du venter på godkjenning for å bli med i familien.");
-        return;
-      }
-      setFamilyId(familyContext.activeFamilyId);
-      await loadWishlists(familyContext.activeFamilyId);
-    } catch (error) {
-      if (handleMissingOrInvalidAuth(error, router)) {
-        setStatus("unauthorized");
-        setMessage(getUserFacingApiMessage(error, "Your session has expired. Please sign in again."));
-        return;
-      }
-
-      setStatus("error");
-      setMessage("Wishlists could not load right now. Please try again.");
-    }
-  }
+    setFamilyId(approvedFamilyContext.activeFamilyId);
+    void loadWishlists(approvedFamilyContext.activeFamilyId);
+  }, [approvedFamilyContext?.activeFamilyId, approvedFamilyContext]);
 
   const activeOwner = useMemo(() => {
     return members.find((member) => member.id === activeWishlist?.ownerFamilyMemberId) ?? null;
@@ -195,8 +166,18 @@ export default function WishlistsPage() {
     setShareUrl(`${origin}${share.shareUrl}`);
   }
 
-  if (status === "pending") {
+  if (familyAccess.status === "pending") {
     return <LockedFeatureState />;
+  }
+
+  if (familyAccess.status !== "approved") {
+    return (
+      <PageContainer>
+        <Card tone="default">
+          <EmptyState title="Sjekker familietilgang" description="Vent litt mens vi bekrefter familietilknytningen din." />
+        </Card>
+      </PageContainer>
+    );
   }
 
   if (status !== "ready") {
@@ -235,11 +216,11 @@ export default function WishlistsPage() {
             </label>
             <label className="field">
               <span className="field__label">Title</span>
-              <input className="field__input" value={wishlistTitle} onChange={(event) => setWishlistTitle(event.target.value)} placeholder="Birthday wishes" required />
+              <input className="field__input" value={wishlistTitle} onChange={(event) => setWishlistTitle(event.target.value)} placeholder="Bursdagsønsker" required />
             </label>
             <label className="field">
               <span className="field__label">Description</span>
-              <textarea className="field__input" value={wishlistDescription} onChange={(event) => setWishlistDescription(event.target.value)} placeholder="Optional note" />
+              <textarea className="field__input" value={wishlistDescription} onChange={(event) => setWishlistDescription(event.target.value)} placeholder="Valgfri beskrivelse" />
             </label>
             <Button variant="primary" type="submit">Create wishlist</Button>
           </form>
@@ -287,15 +268,15 @@ export default function WishlistsPage() {
             <form className="wishlist-item-form" onSubmit={handleAddItem}>
               <label className="field">
                 <span className="field__label">Wish</span>
-                <input className="field__input" value={itemTitle} onChange={(event) => setItemTitle(event.target.value)} placeholder="LEGO set, book, bike helmet…" required />
+                <input className="field__input" value={itemTitle} onChange={(event) => setItemTitle(event.target.value)} placeholder="LEGO-sett, bok, sykkelhjelm…" required />
               </label>
               <label className="field">
                 <span className="field__label">Product link</span>
-                <input className="field__input" type="url" value={itemProductUrl} onChange={(event) => setItemProductUrl(event.target.value)} placeholder="https://example.com/gift" />
+                <input className="field__input" type="url" value={itemProductUrl} onChange={(event) => setItemProductUrl(event.target.value)} placeholder="https://nettbutikk.no/produkt" />
               </label>
               <label className="field field--wide">
                 <span className="field__label">Description</span>
-                <input className="field__input" value={itemDescription} onChange={(event) => setItemDescription(event.target.value)} placeholder="Size, color, or helpful notes" />
+                <input className="field__input" value={itemDescription} onChange={(event) => setItemDescription(event.target.value)} placeholder="Størrelse, farge eller andre detaljer" />
               </label>
               <Button variant="primary" type="submit">Add item</Button>
             </form>

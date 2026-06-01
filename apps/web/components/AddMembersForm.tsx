@@ -58,9 +58,9 @@ export function AddMembersForm() {
       } catch (loadError) {
         if (isMounted) {
           if (handleMissingOrInvalidAuth(loadError, router)) {
-            setError(getUserFacingApiMessage(loadError, "Your session has expired. Please sign in again."));
+            setError(getUserFacingApiMessage(loadError, "Økten er utløpt. Logg inn på nytt."));
           } else {
-            setError(getUserFacingApiMessage(loadError, "Could not load family members."));
+            setError(getUserFacingApiMessage(loadError, "Kunne ikke laste familiemedlemmer."));
           }
         }
       } finally {
@@ -93,7 +93,7 @@ export function AddMembersForm() {
       setName("");
       setRole("CHILD");
     } catch (addError) {
-      setError(getUserFacingApiMessage(addError, "Could not add family member."));
+      setError(getUserFacingApiMessage(addError, "Kunne ikke legge til familiemedlem."));
     } finally {
       setIsAdding(false);
     }
@@ -110,42 +110,42 @@ export function AddMembersForm() {
       await removeFamilyMember(familyId, memberId);
       setMembers((currentMembers) => currentMembers.filter((member) => member.id !== memberId));
     } catch (removeError) {
-      setError(getUserFacingApiMessage(removeError, "Could not remove family member."));
+      setError(getUserFacingApiMessage(removeError, "Kunne ikke fjerne familiemedlem."));
     }
   }
 
   return (
     <div className="members-form">
-      {isLoading ? <p className="form-message">Loading family members…</p> : null}
+      {isLoading ? <p className="form-message">Laster familiemedlemmer…</p> : null}
       {error ? <p className="form-message form-message--error" role="alert">{error}</p> : null}
 
       <div className="members-form__fields">
         <label className="form-field">
-          <span className="form-field__label">Name</span>
+          <span className="form-field__label">Navn</span>
           <input
             className="form-field__input"
             name="memberName"
             onChange={(event) => setName(event.target.value)}
-            placeholder="Name"
+            placeholder="Navn"
             type="text"
             value={name}
           />
         </label>
         <label className="form-field">
-          <span className="form-field__label">Role</span>
+          <span className="form-field__label">Rolle</span>
           <select className="form-field__input" name="memberRole" onChange={(event) => setRole(event.target.value as RoleOption)} value={role}>
-            <option value="PARENT">Parent</option>
-            <option value="CHILD">Child</option>
-            <option value="GUEST">Guest</option>
+            <option value="PARENT">Forelder</option>
+            <option value="CHILD">Barn</option>
+            <option value="GUEST">Gjest</option>
           </select>
         </label>
       </div>
 
       <Button disabled={isAdding || isLoading || !familyId} onClick={addMember} variant="secondary">
-        {isAdding ? "Adding…" : "Add member"}
+        {isAdding ? "Legger til…" : "Legg til medlem"}
       </Button>
 
-      <ul className="member-list" aria-label="Family members">
+      <ul className="member-list" aria-label="Familiemedlemmer">
         {members.map((member) => (
           <li className="member-list__item" key={member.id}>
             <span className="member-list__name">{member.displayName}</span>
@@ -156,17 +156,28 @@ export function AddMembersForm() {
               onClick={() => void removeMember(member.id)}
               type="button"
             >
-              {member.role === "OWNER" ? "Owner" : "Remove"}
+              {member.role === "OWNER" ? "Eier" : "Fjern"}
             </button>
           </li>
         ))}
       </ul>
 
-      <Button disabled={isLoading || !familyId} onClick={() => router.push(getOnboardingCompletionRoute())} variant="primary">Continue</Button>
+      <Button disabled={isLoading || !familyId} onClick={() => router.push(getOnboardingCompletionRoute())} variant="primary">Fortsett</Button>
     </div>
   );
 }
 
 function formatRole(role: string): string {
-  return role.charAt(0) + role.slice(1).toLowerCase();
+  switch (role) {
+    case "OWNER":
+      return "Eier";
+    case "PARENT":
+      return "Forelder";
+    case "CHILD":
+      return "Barn";
+    case "GUEST":
+      return "Gjest";
+    default:
+      return role;
+  }
 }
