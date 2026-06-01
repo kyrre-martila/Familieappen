@@ -53,7 +53,7 @@ States:
 
 - Successful login with approved family membership → dashboard.
 - Successful login without family membership → family start screen.
-- Successful login with pending family approval → pending approval screen.
+- Successful login with pending family approval → app shell with pending approval banner and limited access.
 - Forgot password → forgot password flow.
 - Register → `/register`.
 
@@ -154,7 +154,7 @@ The privacy-first family preview may only show:
 Next:
 
 - Send request.
-- Pending approval.
+- App shell with pending approval banner.
 
 ### Invitation Link Flow
 
@@ -191,31 +191,40 @@ Next:
 - Continue in browser → dashboard.
 - Approved invitation/account/family creation flows must pass through this screen before dashboard.
 
-### Pending Approval State
+### Pending Approval App-Shell State
 
-The pending approval state is shown when a user has requested access to a family but has not yet been approved.
+The pending approval state is shown inside the app shell when a user has requested access to a family but has not yet been approved. Pending users should not be redirected back into onboarding.
 
 Allowed while pending:
 
+- App navigation and app shell.
 - Profile.
-- Create family.
-- Join family.
+- Menu.
+- Settings.
 - Logout.
+- Family management entry points such as retrying a family code or creating a family.
 
 Blocked while pending:
 
+- Real dashboard content.
 - Shopping lists.
 - Calendar.
 - Tasks.
+- Dinner planning.
+- Wishlists.
 
-Banner text:
+Home banner text:
 
-> Request sent to family
+> Forespørsel sendt til familien
+
+Locked feature text:
+
+> Venter på godkjenning
 
 Approval result:
 
-- Approved → app recommendation screen → dashboard.
-- Rejected → retry code or create family.
+- Approved → full app access becomes available automatically.
+- Rejected → rejected flow is handled separately later.
 
 ### Existing User Invited While Already in Family
 

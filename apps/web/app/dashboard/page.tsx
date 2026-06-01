@@ -3,12 +3,13 @@
 import { useEffect, useState, type ChangeEvent } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
+import { PendingDashboard } from "../../components/PendingAccess";
 import { Badge, Button, Card, EmptyState, PageContainer, SectionHeader } from "../../components/ui";
 import { ApiError, FamilyDashboardResponse, FamilyWithMembership, getFamilyDashboard } from "../../lib/api";
 import { chooseActiveFamily, getUserFacingApiMessage, handleMissingOrInvalidAuth, loadAvailableFamilies, requireAuth } from "../../lib/auth-family";
 import { clearActiveFamilyId } from "../../lib/session";
 
-type DashboardStatus = "loading" | "ready" | "unauthorized" | "no-family" | "error";
+type DashboardStatus = "loading" | "ready" | "pending" | "unauthorized" | "no-family" | "error";
 
 export default function DashboardPage() {
   const router = useRouter();
@@ -45,6 +46,15 @@ export default function DashboardPage() {
         setStatus("no-family");
         setMessage("Create a family to start using the dashboard.");
         router.replace("/onboarding/create-family");
+        return;
+      }
+
+      if (familyContext.status === "pending") {
+        setFamilies(familyContext.families);
+        setDashboard(null);
+        setActiveFamilyIdState(familyContext.activeFamilyId);
+        setStatus("pending");
+        setMessage("Du venter på godkjenning for å bli med i familien.");
         return;
       }
 
@@ -90,6 +100,10 @@ export default function DashboardPage() {
   const memberCount = dashboard?.members.length ?? 0;
   const isLoading = status === "loading";
   const hasMultipleFamilies = families.length > 1;
+
+  if (status === "pending") {
+    return <PendingDashboard />;
+  }
 
   return (
     <PageContainer tone="dashboard">

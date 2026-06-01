@@ -3,6 +3,7 @@
 import { FormEvent, useEffect, useMemo, useState, type ChangeEvent } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
+import { LockedFeatureState } from "../../components/PendingAccess";
 import { Badge, Button, Card, EmptyState, ErrorState, LoadingState, PageContainer, SectionHeader } from "../../components/ui";
 import {
   ApiError,
@@ -16,7 +17,7 @@ import {
 import { chooseActiveFamily, getUserFacingApiMessage, handleMissingOrInvalidAuth, loadAvailableFamilies, requireAuth } from "../../lib/auth-family";
 import { clearActiveFamilyId } from "../../lib/session";
 
-type ShoppingStatus = "loading" | "ready" | "unauthorized" | "no-family" | "error";
+type ShoppingStatus = "loading" | "ready" | "pending" | "unauthorized" | "no-family" | "error";
 
 export default function ShoppingPage() {
   const router = useRouter();
@@ -67,6 +68,11 @@ export default function ShoppingPage() {
         return;
       }
 
+      if (familyContext.status === "pending") {
+        setStatus("pending");
+        setMessage("Du venter på godkjenning for å bli med i familien.");
+        return;
+      }
       setFamilies(familyContext.families);
       setActiveFamilyIdState(familyContext.activeFamilyId);
       await loadShoppingList(familyContext.activeFamilyId);
@@ -216,6 +222,10 @@ export default function ShoppingPage() {
     }
 
     setMessage(getUserFacingApiMessage(error, fallbackMessage));
+  }
+
+  if (status === "pending") {
+    return <LockedFeatureState />;
   }
 
   return (

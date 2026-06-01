@@ -2,6 +2,7 @@
 
 import { useEffect, useMemo, useState, type FormEvent } from "react";
 import { useRouter } from "next/navigation";
+import { LockedFeatureState } from "../../components/PendingAccess";
 import { Badge, Button, Card, EmptyState, PageContainer, SectionHeader } from "../../components/ui";
 import {
   FamilyMember,
@@ -18,7 +19,7 @@ import {
 } from "../../lib/api";
 import { getUserFacingApiMessage, handleMissingOrInvalidAuth, loadAvailableFamilies, requireAuth } from "../../lib/auth-family";
 
-type WishlistsStatus = "loading" | "ready" | "missing-family" | "unauthorized" | "error";
+type WishlistsStatus = "loading" | "ready" | "pending" | "missing-family" | "unauthorized" | "error";
 
 export default function WishlistsPage() {
   const router = useRouter();
@@ -59,6 +60,11 @@ export default function WishlistsPage() {
         return;
       }
 
+      if (familyContext.status === "pending") {
+        setStatus("pending");
+        setMessage("Du venter på godkjenning for å bli med i familien.");
+        return;
+      }
       setFamilyId(familyContext.activeFamilyId);
       await loadWishlists(familyContext.activeFamilyId);
     } catch (error) {
@@ -187,6 +193,10 @@ export default function WishlistsPage() {
     const share = await createWishlistShare(familyId, activeWishlist.id);
     const origin = typeof window === "undefined" ? "" : window.location.origin;
     setShareUrl(`${origin}${share.shareUrl}`);
+  }
+
+  if (status === "pending") {
+    return <LockedFeatureState />;
   }
 
   if (status !== "ready") {
