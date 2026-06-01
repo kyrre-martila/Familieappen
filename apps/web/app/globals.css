@@ -3602,3 +3602,235 @@ select {
 .app-shell--immersive .app-shell__content:has(.invitation-landing) {
   width: 100%;
 }
+
+.invitation-switch {
+  position: relative;
+  isolation: isolate;
+  display: grid;
+  width: min(100%, 100vw);
+  min-height: 100vh;
+  min-height: 100svh;
+  grid-template-rows: auto minmax(0, 1fr);
+  overflow: hidden;
+  padding: max(clamp(1.75rem, 5svh, 3rem), env(safe-area-inset-top)) var(--gutter)
+    max(clamp(1.75rem, 5svh, 3rem), env(safe-area-inset-bottom));
+  background:
+    radial-gradient(circle at 88% 2%, color-mix(in srgb, #f6dfb5 36%, transparent), transparent 18rem),
+    linear-gradient(180deg, #fffaf4 0%, #fffdf9 52%, #f7ead9 100%);
+  color: #183f2a;
+}
+
+.invitation-switch__light {
+  top: -6.5rem;
+  right: -7rem;
+  opacity: 0.58;
+}
+
+.invitation-switch__plants {
+  bottom: -7.5rem;
+  left: -9rem;
+  opacity: 0.62;
+}
+
+.invitation-switch__header,
+.invitation-switch__content {
+  width: min(100%, 42rem);
+  margin-inline: auto;
+}
+
+.invitation-switch__header {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.invitation-switch__logo {
+  display: block;
+  width: clamp(11.25rem, 46vw, 15rem);
+  height: auto;
+  filter: drop-shadow(0 1rem 2rem rgb(24 63 42 / 0.08));
+}
+
+.invitation-switch__content {
+  display: grid;
+  align-content: center;
+  padding-block: clamp(var(--space-l), 6svh, var(--space-xl)) 0;
+}
+
+.invitation-switch__card {
+  display: grid;
+  justify-items: center;
+  gap: clamp(var(--space-m), 3svh, var(--space-l));
+  border: 1px solid color-mix(in srgb, #ded8cf 72%, transparent);
+  border-radius: clamp(1.5rem, 6vw, 2.15rem);
+  padding: clamp(var(--space-l), 7vw, calc(var(--space-xl) * 1.18));
+  background: color-mix(in srgb, #fffdf9 88%, transparent);
+  box-shadow:
+    0 1.3rem 3rem rgb(24 63 42 / 0.1),
+    inset 0 1px 0 rgb(255 255 255 / 0.88);
+  text-align: center;
+  backdrop-filter: blur(18px);
+}
+
+.invitation-switch__icon {
+  display: grid;
+  width: clamp(4.5rem, 18vw, 5.9rem);
+  height: clamp(4.5rem, 18vw, 5.9rem);
+  place-items: center;
+  border-radius: 1.65rem;
+  background: color-mix(in srgb, #e7f1e8 82%, #ffffff);
+  color: #285a37;
+  box-shadow: inset 0 0 0 1px color-mix(in srgb, #285a37 12%, transparent);
+}
+
+.invitation-switch__icon svg {
+  width: 72%;
+  height: 72%;
+  stroke: currentColor;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  stroke-width: 2.4;
+}
+
+.invitation-switch__copy {
+  display: grid;
+  gap: var(--space-s);
+}
+
+.invitation-switch__title,
+.invitation-switch__description,
+.invitation-switch__invite-note {
+  margin: 0;
+}
+
+.invitation-switch__title {
+  color: #183f2a;
+  font-size: clamp(2.25rem, 9vw, 3.7rem);
+  font-weight: 850;
+  line-height: 1.03;
+  letter-spacing: -0.06em;
+}
+
+.invitation-switch__description {
+  color: #707070;
+  font-size: clamp(1.02rem, 3.1vw, 1.25rem);
+  font-weight: 560;
+  line-height: 1.55;
+}
+
+.invitation-switch__invite-note {
+  display: grid;
+  width: 100%;
+  gap: calc(var(--space-xs) * 0.5);
+  border: 1px solid color-mix(in srgb, #285a37 12%, #ded8cf);
+  border-radius: 1.1rem;
+  padding: var(--space-m);
+  background: color-mix(in srgb, #f7ead9 42%, #ffffff);
+  color: #5d655f;
+  font-size: clamp(0.98rem, 2.7vw, 1.08rem);
+  font-weight: 650;
+}
+
+.invitation-switch__invite-note strong {
+  color: #006b40;
+  font-size: clamp(1.28rem, 4.5vw, 1.65rem);
+  font-weight: 850;
+  letter-spacing: -0.04em;
+}
+
+.invitation-switch__actions {
+  display: grid;
+  width: 100%;
+  gap: var(--space-s);
+}
+
+.invitation-switch__button,
+.invitation-switch__back {
+  display: inline-flex;
+  min-height: clamp(3.85rem, 11vw, 4.65rem);
+  width: 100%;
+  align-items: center;
+  justify-content: center;
+  border: 1.5px solid transparent;
+  border-radius: 1rem;
+  cursor: pointer;
+  font-size: clamp(1.05rem, 3vw, 1.22rem);
+  font-weight: 850;
+  transition:
+    border-color 160ms ease,
+    box-shadow 160ms ease,
+    transform 160ms ease,
+    background 160ms ease;
+}
+
+.invitation-switch__button--primary {
+  background: linear-gradient(135deg, #285a37, #1f4d2f);
+  color: #ffffff;
+  box-shadow: 0 1rem 2rem color-mix(in srgb, #1f4d2f 16%, transparent);
+}
+
+.invitation-switch__button--secondary {
+  border-color: color-mix(in srgb, #285a37 28%, #ded8cf);
+  background: color-mix(in srgb, #ffffff 68%, transparent);
+  color: #244732;
+}
+
+.invitation-switch__back {
+  min-height: auto;
+  padding: var(--space-xs) var(--space-s);
+  background: transparent;
+  color: #244732;
+  text-decoration: underline;
+  text-underline-offset: 0.16em;
+}
+
+.invitation-switch__button:hover,
+.invitation-switch__back:hover {
+  transform: translateY(-1px);
+}
+
+.invitation-switch__button:active,
+.invitation-switch__back:active {
+  transform: translateY(1px) scale(0.995);
+}
+
+.invitation-switch__button:focus-visible,
+.invitation-switch__back:focus-visible {
+  outline: 3px solid color-mix(in srgb, #2c5d3b 24%, transparent);
+  outline-offset: 4px;
+}
+
+@media (max-width: 30rem) {
+  .invitation-switch {
+    overflow-y: auto;
+  }
+
+  .invitation-switch__content {
+    align-content: start;
+  }
+}
+
+@media (min-width: 48rem) {
+  .invitation-switch {
+    padding-inline: clamp(4rem, 8vw, 6rem);
+  }
+
+  .invitation-switch__light {
+    top: -8rem;
+    right: -1rem;
+  }
+
+  .invitation-switch__plants {
+    bottom: -8.5rem;
+    left: -5.5rem;
+  }
+}
+
+.app-shell--immersive .app-shell__main:has(.invitation-switch) {
+  align-items: stretch;
+  padding: 0;
+}
+
+.app-shell--immersive .app-shell__content:has(.invitation-switch) {
+  width: 100%;
+}

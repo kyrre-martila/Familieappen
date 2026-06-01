@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
+import { listFamilies } from "../../../lib/api";
 import { getAccessToken } from "../../../lib/session";
 import { saveInvitationContext } from "../../../lib/invitation-context";
 
@@ -25,29 +26,46 @@ export function InvitationLandingActions({ familyName, inviterName, token }: Inv
     });
   }, [familyName, inviterName, token]);
 
-  const continueAuthenticatedInvitation = useCallback(() => {
-    preserveInvitationContext(true);
-    router.replace(`/onboarding/join-family?invite=${encodeURIComponent(token)}`);
+  const routeAuthenticatedInvitation = useCallback(async (continueWithoutFamily = false) => {
+    try {
+      const families = await listFamilies();
+
+      if (families.length > 0) {
+        preserveInvitationContext(false);
+        router.replace(`/invite/${encodeURIComponent(token)}/already-in-family`);
+        return;
+      }
+    } catch {
+      // TODO: Replace this fallback with a backend-verified invitation eligibility check.
+      // If the family lookup is unavailable, keep the existing invite resume path without
+      // changing active family client-side.
+    }
+
+    if (continueWithoutFamily) {
+      preserveInvitationContext(true);
+      router.replace(`/onboarding/join-family?invite=${encodeURIComponent(token)}`);
+    }
   }, [preserveInvitationContext, router, token]);
 
   useEffect(() => {
-    if (searchParams.get("continue") === "1" && getAccessToken()) {
-      continueAuthenticatedInvitation();
-    }
-    // TODO: Replace this client-side continuation with a backend-verified invite resume flow.
-  }, [continueAuthenticatedInvitation, searchParams]);
-
-  function handleAcceptInvitation() {
-    preserveInvitationContext(true);
-
-    // TODO: Replace this with the real invitation acceptance endpoint.
-    // Authenticated users should join the invited family automatically, while
-    // unauthenticated users should return here after auth with this context intact.
-    if (getAccessToken()) {
-      continueAuthenticatedInvitation();
+    if (!getAccessToken()) {
       return;
     }
 
+    void routeAuthenticatedInvitation(searchParams.get("continue") === "1");
+    // TODO: Replace this client-side continuation with a backend-verified invite resume flow.
+  }, [routeAuthenticatedInvitation, searchParams]);
+
+  function handleAcceptInvitation() {
+    // TODO: Replace this with the real invitation acceptance endpoint.
+    // Authenticated users should only continue automatically when they have no active family;
+    // users who already belong to a family must explicitly choose to switch first.
+    if (getAccessToken()) {
+      void routeAuthenticatedInvitation(true);
+      return;
+    }
+
+    preserveInvitationContext(true);
     router.push(`/login?next=${encodeURIComponent(`/invite/${token}?continue=1`)}`);
   }
 
