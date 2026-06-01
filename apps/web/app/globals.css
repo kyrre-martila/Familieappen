@@ -3344,29 +3344,6 @@ select {
   backdrop-filter: blur(18px);
 }
 
-.join-family-found-card__icon,
-.join-family-found-card__lock {
-  display: grid;
-  place-items: center;
-  border-radius: var(--radius-pill);
-  background: color-mix(in srgb, var(--color-success-soft) 78%, var(--color-surface));
-  color: var(--color-primary);
-}
-
-.join-family-found-card__icon {
-  width: clamp(5.4rem, 19vw, 7rem);
-  aspect-ratio: 1;
-}
-
-.join-family-found-card__icon svg {
-  width: 54%;
-  height: 54%;
-  stroke: currentColor;
-  stroke-width: 3.6;
-  stroke-linecap: round;
-  stroke-linejoin: round;
-}
-
 .join-family-found-card h2 {
   margin: 0;
   color: var(--color-text);
@@ -3383,34 +3360,14 @@ select {
   background: color-mix(in srgb, var(--color-primary-soft) 72%, var(--color-border));
 }
 
-.join-family-found-card__approval {
-  display: grid;
-  grid-template-columns: auto minmax(0, 1fr);
-  align-items: center;
-  gap: var(--space-m);
-  width: 100%;
-}
-
-.join-family-found-card__lock {
-  width: clamp(4.2rem, 15vw, 5.1rem);
-  aspect-ratio: 1;
-}
-
-.join-family-found-card__lock svg {
-  width: 48%;
-  height: 48%;
-  stroke: currentColor;
-  stroke-width: 3.2;
-  stroke-linecap: round;
-  stroke-linejoin: round;
-}
-
-.join-family-found-card__approval p {
+.join-family-found-card p {
+  max-width: 25rem;
   margin: 0;
   color: color-mix(in srgb, var(--color-text) 74%, var(--color-muted));
   font-size: clamp(1rem, 0.94rem + 0.48vw, 1.25rem);
   font-weight: 700;
   line-height: 1.45;
+  text-align: center;
 }
 
 .join-family-found__actions {
@@ -3455,11 +3412,5 @@ select {
 
   .join-family-found__illustration {
     width: min(82vw, 21rem);
-  }
-
-  .join-family-found-card__approval {
-    grid-template-columns: minmax(0, 1fr);
-    justify-items: center;
-    text-align: center;
   }
 }

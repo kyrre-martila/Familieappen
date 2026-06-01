@@ -76,17 +76,9 @@ export function JoinFamilyCodeForm() {
         </div>
 
         <article className="join-family-found-card" aria-labelledby="join-family-found-card-title">
-          <span className="join-family-found-card__icon" aria-hidden="true">
-            <FamilyIcon />
-          </span>
           <h2 id="join-family-found-card-title">Familie funnet</h2>
           <span className="join-family-found-card__divider" aria-hidden="true" />
-          <div className="join-family-found-card__approval">
-            <span className="join-family-found-card__lock" aria-hidden="true">
-              <LockIcon />
-            </span>
-            <p>Administrator må godkjenne forespørselen din før du får tilgang.</p>
-          </div>
+          <p>Administrator må godkjenne forespørselen din før du får tilgang.</p>
         </article>
 
         <div className="join-family-found__actions">
@@ -134,32 +126,11 @@ export function JoinFamilyCodeForm() {
   );
 }
 
-function FamilyIcon() {
-  return (
-    <svg fill="none" viewBox="0 0 48 48">
-      <path d="M17 21.5a6.5 6.5 0 1 0 0-13 6.5 6.5 0 0 0 0 13Z" />
-      <path d="M31 22.5a5.5 5.5 0 1 0 0-11 5.5 5.5 0 0 0 0 11Z" />
-      <path d="M7.5 39.5v-3.2c0-5.4 4.3-9.8 9.5-9.8s9.5 4.4 9.5 9.8v3.2" />
-      <path d="M25.5 29.5a8.3 8.3 0 0 1 5.5-2c5.2 0 9.5 4.4 9.5 9.8v2.2" />
-    </svg>
-  );
-}
-
 function KeyIcon() {
   return (
     <svg aria-hidden="true" className="login-field__icon" fill="none" viewBox="0 0 24 24">
       <path d="M15 9.5a4.5 4.5 0 1 0-1.6 3.43L21 20.5V17h-3.5v-3.5h-3.1A4.47 4.47 0 0 0 15 9.5Z" />
       <path d="M7.5 9.5h.01" />
-    </svg>
-  );
-}
-
-function LockIcon() {
-  return (
-    <svg fill="none" viewBox="0 0 48 48">
-      <path d="M15 21v-5.5a9 9 0 0 1 18 0V21" />
-      <path d="M12 21h24v18H12z" />
-      <path d="M24 28v4" />
     </svg>
   );
 }
