@@ -3,13 +3,17 @@
 import type { FormEvent } from "react";
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
+import { createFamily } from "../lib/api";
+import { getUserFacingApiMessage } from "../lib/auth-family";
 import { getOnboardingFamilyState, saveOnboardingFamilyState } from "../lib/onboarding-state";
+import { setActiveFamilyId } from "../lib/session";
 import { Button } from "./ui";
 
 export function CreateFamilyForm() {
   const router = useRouter();
   const [error, setError] = useState<string | null>(null);
   const [familyName, setFamilyName] = useState("");
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
   useEffect(() => {
     const savedFamily = getOnboardingFamilyState();
@@ -19,7 +23,7 @@ export function CreateFamilyForm() {
     }
   }, []);
 
-  function handleSubmit(event: FormEvent<HTMLFormElement>) {
+  async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     const trimmedFamilyName = familyName.trim();
 
@@ -29,8 +33,18 @@ export function CreateFamilyForm() {
     }
 
     setError(null);
-    saveOnboardingFamilyState(trimmedFamilyName);
-    router.push("/onboarding/family-members");
+    setIsSubmitting(true);
+
+    try {
+      const family = await createFamily({ name: trimmedFamilyName });
+      setActiveFamilyId(family.family.id);
+      saveOnboardingFamilyState(trimmedFamilyName);
+      router.push("/onboarding/family-members");
+    } catch (createError) {
+      setError(getUserFacingApiMessage(createError, "Kunne ikke opprette familien akkurat nå. Prøv igjen."));
+    } finally {
+      setIsSubmitting(false);
+    }
   }
 
   return (
@@ -58,7 +72,7 @@ export function CreateFamilyForm() {
 
       {error ? <p className="form-message form-message--error" role="alert">{error}</p> : null}
 
-      <Button type="submit" variant="primary">Opprett familie</Button>
+      <Button disabled={isSubmitting} type="submit" variant="primary">{isSubmitting ? "Oppretter familie…" : "Opprett familie"}</Button>
     </form>
   );
 }
