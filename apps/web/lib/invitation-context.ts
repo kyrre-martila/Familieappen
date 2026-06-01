@@ -110,6 +110,10 @@ export function getInvitationResumeRoute(): string | null {
     return null;
   }
 
+  if (context.status === "pending-approval") {
+    return INVITATION_ROUTES.pendingApproval(context.token);
+  }
+
   if (context.status === "accepted" || context.status === "switch-requested") {
     return INVITATION_ROUTES.accepted(context.token);
   }

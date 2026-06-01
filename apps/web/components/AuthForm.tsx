@@ -5,6 +5,7 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { login, register } from "../lib/api";
 import { getUserFacingApiMessage } from "../lib/auth-family";
+import { routeAfterAuthentication } from "../lib/onboarding-access";
 import { saveAuthSession } from "../lib/session";
 import { Button } from "./ui";
 
@@ -56,7 +57,7 @@ export function AuthForm({ children, mode, submitLabel, submitTo, submittingLabe
         saveAuthSession(auth);
       }
 
-      router.push(getSafeRedirectPath(submitTo));
+      await routeAfterAuthentication(router, submitTo);
     } catch (submitError) {
       setError(getUserFacingApiMessage(submitError, "Something went wrong. Please try again."));
     } finally {
@@ -79,18 +80,4 @@ function getFormString(formData: FormData, fieldName: string): string {
   const value = formData.get(fieldName);
 
   return typeof value === "string" ? value : "";
-}
-
-function getSafeRedirectPath(fallbackPath: string): string {
-  if (typeof window === "undefined") {
-    return fallbackPath;
-  }
-
-  const redirectPath = new URLSearchParams(window.location.search).get("next");
-
-  if (!redirectPath || !redirectPath.startsWith("/") || redirectPath.startsWith("//")) {
-    return fallbackPath;
-  }
-
-  return redirectPath;
 }

@@ -1,9 +1,12 @@
 import Image from "next/image";
+import { OnboardingRouteGuard } from "../../../components/OnboardingRouteGuard";
 import { AppRecommendationActions } from "./AppRecommendationActions";
 
 export default function AppRecommendationPage() {
   return (
-    <section className="login-screen app-recommendation-screen" aria-labelledby="app-recommendation-title">
+    <>
+      <OnboardingRouteGuard mode="app-recommendation" />
+      <section className="login-screen app-recommendation-screen" aria-labelledby="app-recommendation-title">
       <Image
         alt=""
         aria-hidden="true"
@@ -41,6 +44,7 @@ export default function AppRecommendationPage() {
         <AppRecommendationActions />
       </div>
     </section>
+    </>
   );
 }
 

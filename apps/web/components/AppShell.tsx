@@ -2,6 +2,7 @@
 
 import { usePathname } from "next/navigation";
 import { BottomNavigation, SidebarNavigation } from "./Navigation";
+import { OnboardingRouteGuard } from "./OnboardingRouteGuard";
 
 const immersiveRoutes = [
   "/",
@@ -33,6 +34,7 @@ export function AppShell({
 
   return (
     <div className={shellClassName}>
+      {!isImmersive ? <OnboardingRouteGuard mode="approved-family" /> : null}
       {!isImmersive ? (
         <aside className="app-shell__sidebar">
           <div className="brand" aria-label="FamilieAppen">

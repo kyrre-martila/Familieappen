@@ -45,7 +45,7 @@ export default function DashboardPage() {
         setActiveFamilyIdState(null);
         setStatus("no-family");
         setMessage("Create a family to start using the dashboard.");
-        router.replace("/onboarding/create-family");
+        router.replace("/onboarding/family-start");
         return;
       }
 
