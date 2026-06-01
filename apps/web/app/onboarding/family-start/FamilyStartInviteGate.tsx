@@ -2,14 +2,17 @@
 
 import { useEffect } from "react";
 import { useRouter } from "next/navigation";
+import { getInvitationResumeRoute } from "../../../lib/invitation-context";
 
 export function FamilyStartInviteGate() {
   const router = useRouter();
 
   useEffect(() => {
-    // TODO: Check for pending invite token/session and auto-skip this screen if invite exists.
-    // When invite detection is available, continue into the invitation flow instead of showing choices.
-    void router;
+    const resumeRoute = getInvitationResumeRoute();
+
+    if (resumeRoute) {
+      router.replace(resumeRoute);
+    }
   }, [router]);
 
   return null;

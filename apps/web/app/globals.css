@@ -3834,3 +3834,177 @@ select {
 .app-shell--immersive .app-shell__content:has(.invitation-switch) {
   width: 100%;
 }
+
+.invitation-status {
+  position: relative;
+  isolation: isolate;
+  display: grid;
+  width: min(100%, 100vw);
+  min-height: 100vh;
+  min-height: 100svh;
+  place-items: center;
+  overflow: hidden;
+  padding: max(clamp(1.75rem, 5svh, 3rem), env(safe-area-inset-top)) var(--gutter)
+    max(clamp(1.75rem, 5svh, 3rem), env(safe-area-inset-bottom));
+  background:
+    radial-gradient(circle at 88% 2%, color-mix(in srgb, #f6dfb5 36%, transparent), transparent 18rem),
+    linear-gradient(180deg, #fffaf4 0%, #fffdf9 52%, #f7ead9 100%);
+  color: #183f2a;
+}
+
+.invitation-status__light {
+  top: -6.5rem;
+  right: -7rem;
+  opacity: 0.58;
+}
+
+.invitation-status__plants {
+  bottom: -7.5rem;
+  left: -9rem;
+  opacity: 0.62;
+}
+
+.invitation-status__logo {
+  position: absolute;
+  top: max(clamp(1.75rem, 5svh, 3rem), env(safe-area-inset-top));
+  left: 50%;
+  z-index: 1;
+  display: block;
+  width: clamp(11.25rem, 46vw, 15rem);
+  height: auto;
+  transform: translateX(-50%);
+  filter: drop-shadow(0 1rem 2rem rgb(24 63 42 / 0.08));
+}
+
+.invitation-status__card {
+  z-index: 1;
+  display: grid;
+  width: min(100%, 42rem);
+  justify-items: center;
+  gap: clamp(var(--space-m), 3svh, var(--space-l));
+  border: 1px solid color-mix(in srgb, #ded8cf 72%, transparent);
+  border-radius: clamp(1.5rem, 6vw, 2.15rem);
+  padding: clamp(var(--space-l), 7vw, calc(var(--space-xl) * 1.18));
+  background: color-mix(in srgb, #fffdf9 88%, transparent);
+  box-shadow:
+    0 1.3rem 3rem rgb(24 63 42 / 0.1),
+    inset 0 1px 0 rgb(255 255 255 / 0.88);
+  text-align: center;
+  backdrop-filter: blur(18px);
+}
+
+.invitation-status__icon,
+.invitation-status__spinner {
+  display: grid;
+  width: clamp(4.5rem, 18vw, 5.9rem);
+  height: clamp(4.5rem, 18vw, 5.9rem);
+  place-items: center;
+  border-radius: 1.65rem;
+  background: color-mix(in srgb, #e7f1e8 82%, #ffffff);
+  color: #285a37;
+  box-shadow: inset 0 0 0 1px color-mix(in srgb, #285a37 12%, transparent);
+  font-size: clamp(2rem, 9vw, 3.1rem);
+  font-weight: 850;
+}
+
+.invitation-status__spinner::before {
+  width: 2.1rem;
+  height: 2.1rem;
+  border: 0.25rem solid color-mix(in srgb, #285a37 20%, transparent);
+  border-top-color: #285a37;
+  border-radius: 999px;
+  content: "";
+  animation: invitation-status-spin 900ms linear infinite;
+}
+
+.invitation-status__title,
+.invitation-status__description {
+  margin: 0;
+}
+
+.invitation-status__title {
+  color: #183f2a;
+  font-size: clamp(2.25rem, 9vw, 3.7rem);
+  font-weight: 850;
+  line-height: 1.03;
+  letter-spacing: -0.06em;
+}
+
+.invitation-status__description {
+  color: #707070;
+  font-size: clamp(1.02rem, 3.1vw, 1.25rem);
+  font-weight: 560;
+  line-height: 1.55;
+}
+
+.invitation-status__actions {
+  display: grid;
+  width: 100%;
+  gap: var(--space-s);
+}
+
+.invitation-status__button {
+  display: inline-flex;
+  min-height: clamp(3.85rem, 11vw, 4.65rem);
+  width: 100%;
+  align-items: center;
+  justify-content: center;
+  border: 1.5px solid transparent;
+  border-radius: 1rem;
+  cursor: pointer;
+  font-size: clamp(1.05rem, 3vw, 1.22rem);
+  font-weight: 850;
+  transition:
+    border-color 160ms ease,
+    box-shadow 160ms ease,
+    transform 160ms ease,
+    background 160ms ease;
+}
+
+.invitation-status__button--primary {
+  background: linear-gradient(135deg, #285a37, #1f4d2f);
+  color: #ffffff;
+  box-shadow: 0 1rem 2rem color-mix(in srgb, #1f4d2f 16%, transparent);
+}
+
+.invitation-status__button--danger {
+  border-color: color-mix(in srgb, #b93b3b 34%, #ded8cf);
+  background: color-mix(in srgb, #ffffff 68%, transparent);
+  color: #9d2e2e;
+}
+
+.invitation-status__button:hover {
+  transform: translateY(-1px);
+}
+
+.invitation-status__button:active {
+  transform: translateY(1px) scale(0.995);
+}
+
+.invitation-status__button:focus-visible {
+  outline: 3px solid color-mix(in srgb, #2c5d3b 24%, transparent);
+  outline-offset: 4px;
+}
+
+@keyframes invitation-status-spin {
+  to {
+    transform: rotate(1turn);
+  }
+}
+
+@media (max-width: 30rem) {
+  .invitation-status {
+    overflow-y: auto;
+    place-items: start center;
+    padding-top: max(7.75rem, env(safe-area-inset-top));
+  }
+}
+
+.app-shell--immersive .app-shell__main:has(.invitation-status) {
+  align-items: stretch;
+  padding: 0;
+}
+
+.app-shell--immersive .app-shell__content:has(.invitation-status) {
+  width: 100%;
+}
