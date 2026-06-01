@@ -3,6 +3,7 @@
 import { useEffect, useMemo, useState, type ChangeEvent, type FormEvent } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
+import { LockedFeatureState } from "../../components/PendingAccess";
 import { Badge, Button, Card, EmptyState, ErrorState, LoadingState, PageContainer, SectionHeader } from "../../components/ui";
 import {
   CalendarEvent,
@@ -17,7 +18,7 @@ import {
 import { chooseActiveFamily, getUserFacingApiMessage, handleMissingOrInvalidAuth, loadAvailableFamilies, requireAuth } from "../../lib/auth-family";
 import { clearActiveFamilyId } from "../../lib/session";
 
-type CalendarStatus = "loading" | "ready" | "unauthorized" | "no-family" | "error";
+type CalendarStatus = "loading" | "ready" | "pending" | "unauthorized" | "no-family" | "error";
 
 type EventFormState = {
   title: string;
@@ -81,6 +82,12 @@ export default function CalendarPage() {
         setStatus("no-family");
         setMessage("Create a family before adding calendar events.");
         router.replace("/onboarding/create-family");
+        return;
+      }
+
+      if (familyContext.status === "pending") {
+        setStatus("pending");
+        setMessage("Du venter på godkjenning for å bli med i familien.");
         return;
       }
 
@@ -230,6 +237,10 @@ export default function CalendarPage() {
   const upcomingEvents = useMemo(() => events.filter((event) => !isTodayEvent(event)), [events]);
   const activeFamilyName = families.find((family) => family.family.id === activeFamilyId)?.family.name ?? "Family calendar";
   const isLoading = status === "loading";
+
+  if (status === "pending") {
+    return <LockedFeatureState />;
+  }
 
   return (
     <PageContainer>

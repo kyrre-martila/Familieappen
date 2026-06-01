@@ -44,6 +44,11 @@ export function AddMembersForm() {
           return;
         }
 
+        if (familyContext.status === "pending") {
+          setError("Du venter på godkjenning før du kan administrere familiemedlemmer.");
+          return;
+        }
+
         const details = await getFamily(familyContext.activeFamilyId);
 
         if (isMounted) {

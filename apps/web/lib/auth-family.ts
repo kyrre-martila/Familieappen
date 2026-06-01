@@ -3,14 +3,20 @@ import { ApiError, type FamilyWithMembership, listFamilies } from "./api";
 import {
   clearActiveFamilyId,
   clearAuthSession,
+  clearPendingFamilyRequest,
   getAccessToken,
   getActiveFamilyId,
-  setActiveFamilyId
+  getPendingFamilyRequest,
+  setActiveFamilyId,
+  type PendingFamilyRequest
 } from "./session";
 
+export type FamilyMembershipStatus = "approved" | "pending" | "rejected";
+
 export type FamilyBootstrapResult =
-  | { status: "unauthenticated"; families: []; activeFamilyId: null }
-  | { status: "no-family"; families: []; activeFamilyId: null }
+  | { status: "unauthenticated"; families: []; activeFamilyId: null; pendingRequest: null }
+  | { status: "no-family"; families: []; activeFamilyId: null; pendingRequest: null }
+  | { status: "pending"; families: FamilyWithMembership[]; activeFamilyId: string | null; pendingRequest: PendingFamilyRequest | null }
   | { status: "ready"; families: FamilyWithMembership[]; activeFamilyId: string };
 
 const AUTH_ERROR_CODES = new Set(["auth.requires_auth", "auth.invalid_token", "auth.expired_token"]);
@@ -28,20 +34,38 @@ export function requireAuth(router: AppRouterInstance, redirectTo = "/login"): b
 export async function loadAvailableFamilies(preferredFamilyId?: string | null): Promise<FamilyBootstrapResult> {
   if (!getAccessToken()) {
     clearAuthSession();
-    return { status: "unauthenticated", families: [], activeFamilyId: null };
+    return { status: "unauthenticated", families: [], activeFamilyId: null, pendingRequest: null };
   }
 
   const families = await listFamilies();
+  const pendingRequest = getPendingFamilyRequest();
 
   if (families.length === 0) {
     clearActiveFamilyId();
-    return { status: "no-family", families: [], activeFamilyId: null };
+
+    if (pendingRequest) {
+      return { status: "pending", families: [], activeFamilyId: null, pendingRequest };
+    }
+
+    return { status: "no-family", families: [], activeFamilyId: null, pendingRequest: null };
   }
 
   const requestedFamilyId = preferredFamilyId ?? getActiveFamilyId();
   const activeFamily = families.find((family) => family.family.id === requestedFamilyId) ?? families[0];
+  const membershipStatus = getFamilyMembershipStatus(activeFamily);
 
   setActiveFamilyId(activeFamily.family.id);
+
+  if (membershipStatus !== "approved") {
+    return {
+      status: "pending",
+      families,
+      activeFamilyId: activeFamily.family.id,
+      pendingRequest
+    };
+  }
+
+  clearPendingFamilyRequest();
 
   return { status: "ready", families, activeFamilyId: activeFamily.family.id };
 }
@@ -49,6 +73,21 @@ export async function loadAvailableFamilies(preferredFamilyId?: string | null): 
 export function chooseActiveFamily(familyId: string): string {
   setActiveFamilyId(familyId);
   return familyId;
+}
+
+export function isPendingFamilyAccess(familyContext: FamilyBootstrapResult): familyContext is Extract<FamilyBootstrapResult, { status: "pending" }> {
+  return familyContext.status === "pending";
+}
+
+export function getFamilyMembershipStatus(family: FamilyWithMembership): FamilyMembershipStatus {
+  const membership = family.membership as FamilyWithMembership["membership"] & {
+    familyMembershipStatus?: unknown;
+    membershipStatus?: unknown;
+    status?: unknown;
+  };
+  const status = membership.familyMembershipStatus ?? membership.membershipStatus ?? membership.status;
+
+  return status === "pending" || status === "rejected" ? status : "approved";
 }
 
 export function isAuthError(error: unknown): boolean {

@@ -5,6 +5,7 @@ import { FormEvent, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import { Button } from "../../../components/ui";
 import { getOnboardingFamilyState } from "../../../lib/onboarding-state";
+import { savePendingFamilyRequest } from "../../../lib/session";
 
 type JoinFamilyState = "entry" | "found";
 
@@ -53,7 +54,8 @@ export function JoinFamilyCodeForm() {
   }
 
   function sendJoinRequest() {
-    router.push("/onboarding/app-recommendation");
+    savePendingFamilyRequest(normalizedCode);
+    router.push("/dashboard");
   }
 
   if (screenState === "found") {

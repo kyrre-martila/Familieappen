@@ -4008,3 +4008,178 @@ select {
 .app-shell--immersive .app-shell__content:has(.invitation-status) {
   width: 100%;
 }
+
+.pending-home {
+  display: grid;
+  gap: clamp(1.8rem, 5vw, 3.25rem);
+  min-height: calc(100vh - var(--space-l) - var(--section-gap) - 6rem);
+  padding-top: max(env(safe-area-inset-top), var(--space-xs));
+}
+
+.pending-home__topbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--content-gap);
+}
+
+.pending-home__brand {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-s);
+  color: var(--color-primary-strong);
+  font-weight: 850;
+}
+
+.pending-home__logo {
+  display: grid;
+  width: clamp(2.7rem, 12vw, 3.6rem);
+  aspect-ratio: 1;
+  place-items: center;
+  border-radius: 0.8rem;
+  background: linear-gradient(145deg, #159060, var(--color-primary-strong));
+  color: var(--color-surface);
+  font-size: var(--text-heading);
+  line-height: 1;
+  box-shadow: 0 0.9rem 1.8rem color-mix(in srgb, var(--color-primary) 22%, transparent);
+}
+
+.pending-home__brand-name {
+  font-size: clamp(1.35rem, 5.6vw, 1.85rem);
+  letter-spacing: -0.055em;
+}
+
+.pending-home__profile {
+  display: grid;
+  width: clamp(3.4rem, 13vw, 4.4rem);
+  aspect-ratio: 1;
+  place-items: center;
+  border-radius: var(--radius-pill);
+  background: color-mix(in srgb, var(--color-primary-soft) 44%, var(--color-surface));
+  color: var(--color-primary-strong);
+  font-size: clamp(1.15rem, 4vw, 1.55rem);
+  font-weight: 850;
+}
+
+.pending-approval-card {
+  display: grid;
+  grid-template-columns: minmax(4.5rem, 0.34fr) minmax(0, 1fr);
+  gap: clamp(1rem, 4vw, 2.2rem);
+  align-items: center;
+  border-radius: clamp(1.35rem, 5vw, 2rem);
+  padding: clamp(1.4rem, 5vw, 2.35rem);
+  background:
+    radial-gradient(circle at 18% 40%, color-mix(in srgb, #ffffff 42%, transparent), transparent 8rem),
+    linear-gradient(105deg, #fde2e2 0%, #fff0f0 54%, #fbe0e0 100%);
+  box-shadow: 0 1.2rem 3.5rem color-mix(in srgb, #8f101c 10%, transparent);
+}
+
+.pending-approval-card__icon {
+  display: grid;
+  width: clamp(5.5rem, 20vw, 8.3rem);
+  aspect-ratio: 1;
+  place-items: center;
+  justify-self: center;
+  border-radius: var(--radius-pill);
+  background: color-mix(in srgb, #f5bfc1 40%, transparent);
+  color: #b20e1e;
+}
+
+.pending-approval-card__icon svg {
+  width: 42%;
+  height: 42%;
+}
+
+.pending-approval-card__copy {
+  display: grid;
+  gap: clamp(0.7rem, 2.7vw, 1.2rem);
+}
+
+.pending-approval-card__title {
+  margin: 0;
+  color: #8f101c;
+  font-size: clamp(1.55rem, 5.4vw, 2.4rem);
+  line-height: 1.12;
+  letter-spacing: -0.045em;
+}
+
+.pending-approval-card__body {
+  max-width: 33rem;
+  margin: 0;
+  color: #303946;
+  font-size: clamp(1rem, 3.6vw, 1.42rem);
+  line-height: 1.55;
+  font-weight: 650;
+}
+
+.pending-approval-card__body--secondary {
+  font-weight: 520;
+}
+
+.locked-feature-card {
+  max-width: 34rem;
+  justify-items: center;
+  margin: min(12vh, 6rem) auto 0;
+  padding: var(--space-l);
+  text-align: center;
+}
+
+.locked-feature-card__icon {
+  display: grid;
+  width: 4.5rem;
+  aspect-ratio: 1;
+  place-items: center;
+  border-radius: var(--radius-pill);
+  background: var(--color-primary-soft);
+  color: var(--color-primary-strong);
+}
+
+.locked-feature-card__icon svg {
+  width: 58%;
+  height: 58%;
+}
+
+.locked-feature-card__copy {
+  display: grid;
+  gap: var(--space-s);
+}
+
+.locked-feature-card__title,
+.locked-feature-card__body {
+  margin: 0;
+}
+
+.locked-feature-card__title {
+  color: var(--color-text);
+  font-size: var(--text-heading);
+  letter-spacing: -0.035em;
+}
+
+.locked-feature-card__body {
+  color: var(--color-muted);
+}
+
+.locked-feature-card__button {
+  min-width: 7rem;
+}
+
+@media (max-width: 36rem) {
+  .pending-approval-card {
+    grid-template-columns: minmax(4.2rem, 0.55fr) minmax(0, 1fr);
+  }
+
+  .pending-home {
+    min-height: calc(100vh - 10rem);
+  }
+}
+
+@media (max-width: 24rem) {
+  .pending-approval-card {
+    grid-template-columns: 1fr;
+    text-align: center;
+  }
+
+  .pending-approval-card__body {
+    margin-inline: auto;
+  }
+}

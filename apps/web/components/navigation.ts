@@ -1,5 +1,5 @@
 export const navigationItems = [
-  { href: "/", label: "Home", shortLabel: "Home", icon: "⌂" },
+  { href: "/dashboard", label: "Home", shortLabel: "Home", icon: "⌂" },
   { href: "/calendar", label: "Calendar", shortLabel: "Cal", icon: "◷" },
   { href: "/meals", label: "Dinner", shortLabel: "Food", icon: "◐" },
   { href: "/shopping", label: "Shopping", shortLabel: "Shop", icon: "□" },

@@ -3,6 +3,7 @@
 import { FormEvent, useEffect, useMemo, useState, type ChangeEvent } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
+import { LockedFeatureState } from "../../components/PendingAccess";
 import { Badge, Button, Card, EmptyState, ErrorState, LoadingState, PageContainer, SectionHeader } from "../../components/ui";
 import {
   ApiError,
@@ -19,7 +20,7 @@ import {
 import { chooseActiveFamily, getUserFacingApiMessage, handleMissingOrInvalidAuth, loadAvailableFamilies, requireAuth } from "../../lib/auth-family";
 import { clearActiveFamilyId } from "../../lib/session";
 
-type TasksStatus = "loading" | "ready" | "unauthorized" | "no-family" | "error";
+type TasksStatus = "loading" | "ready" | "pending" | "unauthorized" | "no-family" | "error";
 
 export default function TasksPage() {
   const router = useRouter();
@@ -71,6 +72,11 @@ export default function TasksPage() {
         return;
       }
 
+      if (familyContext.status === "pending") {
+        setStatus("pending");
+        setMessage("Du venter på godkjenning for å bli med i familien.");
+        return;
+      }
       setFamilies(familyContext.families);
       setActiveFamilyIdState(familyContext.activeFamilyId);
       await loadTasks(familyContext.activeFamilyId);
@@ -214,6 +220,10 @@ export default function TasksPage() {
     }
 
     setMessage(getUserFacingApiMessage(error, fallbackMessage));
+  }
+
+  if (status === "pending") {
+    return <LockedFeatureState />;
   }
 
   return (
