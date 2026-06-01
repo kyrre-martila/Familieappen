@@ -212,3 +212,30 @@ Gaps before production deep links:
 ## 12. Final recommendation
 
 **Ready for Run 3 after P0 fixes**
+
+## P0 follow-up: route/access-control fixes
+
+Date: 2026-06-01
+
+Status: **Ready for Run 3** after the P0 follow-up changes below.
+
+What changed:
+
+- Centralized app-shell and protected-family route decisions in `apps/web/lib/onboarding-access.ts` through a single route-access resolver and route mode selection. The resolver now owns unauthenticated, no-family, pending, approved, app-recommendation, invitation-continuation, dashboard pending-shell, and protected-family route decisions.
+- Simplified `apps/web/components/OnboardingRouteGuard.tsx` so it delegates route decisions to the shared access resolver instead of rebuilding dashboard/protected/app-recommendation branches locally.
+- Updated `apps/web/components/AppShell.tsx` to use the shared app-shell route mode, preventing app-shell route drift while preserving pending users inside the shell.
+- Refactored `apps/web/app/dashboard/page.tsx` to bootstrap through the shared dashboard-entry resolver before loading dashboard data, removing the conflicting local unauthenticated/no-family redirect tree.
+- Added `apps/web/components/ProtectedFamilyRoute.tsx` with `useFamilyAccess` and `ProtectedFamilyRoute` so Run 3 screens can declare approved family access without rebuilding auth/family/pending logic per page.
+- Wrapped `apps/web/app/settings/page.tsx` in `ProtectedFamilyRoute`, so pending users now see the same locked treatment as protected feature routes instead of unrestricted settings placeholder content.
+
+Files touched:
+
+- `apps/web/lib/onboarding-access.ts`
+- `apps/web/components/OnboardingRouteGuard.tsx`
+- `apps/web/components/AppShell.tsx`
+- `apps/web/components/ProtectedFamilyRoute.tsx`
+- `apps/web/app/dashboard/page.tsx`
+- `apps/web/app/settings/page.tsx`
+- `docs/reviews/review-run2.md`
+
+Final recommendation: **Ready for Run 3**. The P0 route/access-control blockers are addressed, while P1/P2 prototype and cleanup items remain intentionally deferred.

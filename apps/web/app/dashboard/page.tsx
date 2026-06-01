@@ -6,7 +6,8 @@ import { useRouter } from "next/navigation";
 import { PendingDashboard } from "../../components/PendingAccess";
 import { Badge, Button, Card, EmptyState, PageContainer, SectionHeader } from "../../components/ui";
 import { ApiError, FamilyDashboardResponse, FamilyWithMembership, getFamilyDashboard } from "../../lib/api";
-import { chooseActiveFamily, getUserFacingApiMessage, handleMissingOrInvalidAuth, loadAvailableFamilies, requireAuth } from "../../lib/auth-family";
+import { chooseActiveFamily, getUserFacingApiMessage, handleMissingOrInvalidAuth } from "../../lib/auth-family";
+import { redirectIfNeeded, resolveDashboardEntry } from "../../lib/onboarding-access";
 import { clearActiveFamilyId } from "../../lib/session";
 
 type DashboardStatus = "loading" | "ready" | "pending" | "unauthorized" | "no-family" | "error";
@@ -20,10 +21,6 @@ export default function DashboardPage() {
   const [message, setMessage] = useState("Loading your family dashboard…");
 
   useEffect(() => {
-    if (!requireAuth(router)) {
-      return;
-    }
-
     void loadDashboard();
   }, [router]);
 
@@ -32,22 +29,14 @@ export default function DashboardPage() {
     setMessage("Loading your family dashboard…");
 
     try {
-      const familyContext = await loadAvailableFamilies(preferredFamilyId);
+      const decision = await resolveDashboardEntry(undefined, preferredFamilyId);
 
-      if (familyContext.status === "unauthenticated") {
-        router.replace("/login");
+      if (decision.action === "redirect") {
+        redirectIfNeeded(router, decision);
         return;
       }
 
-      if (familyContext.status === "no-family") {
-        setFamilies([]);
-        setDashboard(null);
-        setActiveFamilyIdState(null);
-        setStatus("no-family");
-        setMessage("Create a family to start using the dashboard.");
-        router.replace("/onboarding/family-start");
-        return;
-      }
+      const familyContext = decision.familyContext;
 
       if (familyContext.status === "pending") {
         setFamilies(familyContext.families);
@@ -55,6 +44,15 @@ export default function DashboardPage() {
         setActiveFamilyIdState(familyContext.activeFamilyId);
         setStatus("pending");
         setMessage("Du venter på godkjenning for å bli med i familien.");
+        return;
+      }
+
+      if (familyContext.status !== "ready") {
+        setFamilies([]);
+        setDashboard(null);
+        setActiveFamilyIdState(null);
+        setStatus("error");
+        setMessage("Could not confirm family access. Please try again.");
         return;
       }
 

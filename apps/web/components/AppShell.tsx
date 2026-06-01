@@ -34,7 +34,7 @@ export function AppShell({
 
   return (
     <div className={shellClassName}>
-      {!isImmersive ? <OnboardingRouteGuard mode="approved-family" /> : null}
+      {!isImmersive ? <OnboardingRouteGuard mode="app-shell" /> : null}
       {!isImmersive ? (
         <aside className="app-shell__sidebar">
           <div className="brand" aria-label="FamilieAppen">
