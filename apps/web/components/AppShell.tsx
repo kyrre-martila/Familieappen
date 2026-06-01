@@ -8,6 +8,7 @@ const immersiveRoutes = [
   "/login",
   "/register",
   "/forgot-password",
+  "/invite",
   "/onboarding",
 ];
 

@@ -56,7 +56,7 @@ export function AuthForm({ children, mode, submitLabel, submitTo, submittingLabe
         saveAuthSession(auth);
       }
 
-      router.push(submitTo);
+      router.push(getSafeRedirectPath(submitTo));
     } catch (submitError) {
       setError(getUserFacingApiMessage(submitError, "Something went wrong. Please try again."));
     } finally {
@@ -79,4 +79,18 @@ function getFormString(formData: FormData, fieldName: string): string {
   const value = formData.get(fieldName);
 
   return typeof value === "string" ? value : "";
+}
+
+function getSafeRedirectPath(fallbackPath: string): string {
+  if (typeof window === "undefined") {
+    return fallbackPath;
+  }
+
+  const redirectPath = new URLSearchParams(window.location.search).get("next");
+
+  if (!redirectPath || !redirectPath.startsWith("/") || redirectPath.startsWith("//")) {
+    return fallbackPath;
+  }
+
+  return redirectPath;
 }

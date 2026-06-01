@@ -3414,3 +3414,191 @@ select {
     width: min(82vw, 21rem);
   }
 }
+
+.invitation-landing {
+  display: grid;
+  width: min(100%, 100vw);
+  min-height: 100svh;
+  grid-template-rows: auto minmax(0, 1fr) auto;
+  overflow: hidden;
+  padding: max(clamp(2.2rem, 6svh, 3.8rem), env(safe-area-inset-top)) var(--gutter)
+    max(clamp(1.7rem, 4svh, 3rem), env(safe-area-inset-bottom));
+  background:
+    radial-gradient(circle at 50% 7%, color-mix(in srgb, var(--color-surface) 92%, transparent), transparent 18rem),
+    linear-gradient(180deg, #fffdf9 0%, var(--color-surface) 48%, #fffdf9 100%);
+  color: color-mix(in srgb, var(--color-primary-strong) 44%, #001a16);
+}
+
+.invitation-landing__header,
+.invitation-landing__content,
+.invitation-landing__actions {
+  width: min(100%, 64rem);
+  margin-inline: auto;
+}
+
+.invitation-landing__header {
+  display: flex;
+  align-items: center;
+  justify-content: flex-start;
+}
+
+.invitation-landing__logo {
+  display: block;
+  width: clamp(11.6rem, 34vw, 15rem);
+  height: auto;
+}
+
+.invitation-landing__content {
+  display: grid;
+  align-content: center;
+  justify-items: center;
+  gap: clamp(var(--space-m), 2.2svh, var(--space-l));
+  padding-block: clamp(var(--space-l), 4.5svh, var(--space-xl)) clamp(var(--space-m), 2.8svh, var(--space-l));
+  text-align: center;
+}
+
+.invitation-landing__invite-illustration {
+  display: block;
+  width: clamp(7.4rem, 27vw, 10rem);
+  height: auto;
+  object-fit: contain;
+  object-position: center;
+}
+
+.invitation-landing__copy {
+  display: grid;
+  max-width: 47rem;
+  justify-items: center;
+  gap: clamp(var(--space-xs), 1.25svh, var(--space-s));
+}
+
+.invitation-landing__title,
+.invitation-landing__inviter,
+.invitation-landing__family-name,
+.invitation-landing__description {
+  margin: 0;
+}
+
+.invitation-landing__title {
+  color: #001f1f;
+  font-size: clamp(2.7rem, 9vw, 4.5rem);
+  font-weight: 850;
+  line-height: 1.03;
+  letter-spacing: -0.06em;
+}
+
+.invitation-landing__inviter {
+  color: color-mix(in srgb, var(--color-text) 70%, var(--color-muted));
+  font-size: clamp(1.15rem, 3.4vw, 1.7rem);
+  font-weight: 760;
+  line-height: 1.35;
+}
+
+.invitation-landing__family-name {
+  color: #006b40;
+  font-size: clamp(2rem, 6.5vw, 3.4rem);
+  font-weight: 850;
+  line-height: 1.08;
+  letter-spacing: -0.055em;
+}
+
+.invitation-landing__description {
+  max-width: 44rem;
+  color: color-mix(in srgb, var(--color-text) 72%, var(--color-muted));
+  font-size: clamp(1.05rem, 3.2vw, 1.55rem);
+  font-weight: 700;
+  line-height: 1.55;
+}
+
+.invitation-landing__family-illustration {
+  display: block;
+  width: min(100%, clamp(23rem, 72vw, 42rem));
+  height: auto;
+  margin-top: clamp(var(--space-xs), 1.3svh, var(--space-s));
+  object-fit: contain;
+  object-position: center;
+}
+
+.invitation-landing__actions {
+  display: grid;
+  gap: clamp(var(--space-m), 2svh, var(--space-l));
+  padding-top: clamp(var(--space-m), 2.4svh, var(--space-l));
+}
+
+.invitation-landing__button {
+  display: inline-flex;
+  min-height: clamp(4.6rem, 10vw, 5.6rem);
+  width: 100%;
+  align-items: center;
+  justify-content: center;
+  border: 1.5px solid transparent;
+  border-radius: clamp(1.05rem, 3vw, 1.35rem);
+  cursor: pointer;
+  font-size: clamp(1.15rem, 3.3vw, 1.55rem);
+  font-weight: 850;
+  letter-spacing: -0.025em;
+  transition:
+    border-color 160ms ease,
+    box-shadow 160ms ease,
+    transform 160ms ease,
+    background 160ms ease;
+}
+
+.invitation-landing__button--primary {
+  background: linear-gradient(135deg, #007548 0%, #005f3a 100%);
+  color: var(--color-surface);
+  box-shadow: 0 1rem 2.2rem color-mix(in srgb, #005f3a 18%, transparent);
+}
+
+.invitation-landing__button--secondary {
+  border-color: color-mix(in srgb, var(--color-muted) 22%, transparent);
+  background: color-mix(in srgb, var(--color-surface) 78%, transparent);
+  color: color-mix(in srgb, var(--color-text) 75%, var(--color-muted));
+  box-shadow: inset 0 1px 0 color-mix(in srgb, var(--color-surface) 94%, transparent);
+}
+
+.invitation-landing__button:hover {
+  transform: translateY(-1px);
+}
+
+.invitation-landing__button:active {
+  transform: translateY(1px) scale(0.995);
+}
+
+.invitation-landing__button:focus-visible {
+  outline: 3px solid color-mix(in srgb, var(--color-primary) 24%, transparent);
+  outline-offset: 4px;
+}
+
+@media (max-width: 30rem) {
+  .invitation-landing {
+    overflow-y: auto;
+  }
+
+  .invitation-landing__content {
+    align-content: start;
+  }
+
+  .invitation-landing__family-illustration {
+    width: min(100%, 25rem);
+  }
+}
+
+@media (min-width: 48rem) {
+  .invitation-landing {
+    padding-inline: clamp(4rem, 8vw, 6rem);
+  }
+
+  .invitation-landing__actions {
+    width: min(100%, 58rem);
+  }
+}
+
+.app-shell--immersive .app-shell__main:has(.invitation-landing) {
+  align-items: stretch;
+  padding: 0;
+}
+
+.app-shell--immersive .app-shell__content:has(.invitation-landing) {
+  width: 100%;
+}
