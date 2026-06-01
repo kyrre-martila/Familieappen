@@ -4,8 +4,8 @@ import { useRouter } from "next/navigation";
 import type { ChangeEvent, FormEvent } from "react";
 import { useEffect, useRef, useState } from "react";
 import { Button } from "../../../components/ui";
-
-const ONBOARDING_PROFILE_STORAGE_KEY = "familieappen:onboarding-profile";
+import { getInvitationResumeRoute } from "../../../lib/invitation-context";
+import { ONBOARDING_PROFILE_STORAGE_KEY } from "../../../lib/invitation-flow";
 
 const NORWAY_COUNTRY_CODE = "+47";
 
@@ -104,7 +104,7 @@ export function ProfileOnboardingForm() {
       }),
     );
 
-    router.push("/onboarding/family-start");
+    router.push(getInvitationResumeRoute() ?? "/onboarding/family-start");
   }
 
   return (

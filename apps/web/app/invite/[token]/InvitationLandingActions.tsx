@@ -4,7 +4,13 @@ import { useCallback, useEffect } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { listFamilies } from "../../../lib/api";
 import { getAccessToken } from "../../../lib/session";
-import { saveInvitationContext } from "../../../lib/invitation-context";
+import {
+  buildInvitationSourcePath,
+  INVITATION_ROUTES,
+  markInvitationAccepted,
+  saveInvitationContext,
+} from "../../../lib/invitation-context";
+import { getInvitationPostAuthRoute } from "../../../lib/invitation-flow";
 
 interface InvitationLandingActionsProps {
   familyName: string;
@@ -15,24 +21,30 @@ interface InvitationLandingActionsProps {
 export function InvitationLandingActions({ familyName, inviterName, token }: InvitationLandingActionsProps) {
   const router = useRouter();
   const searchParams = useSearchParams();
+  const requiresApproval = searchParams.get("approval") === "required";
 
-  const preserveInvitationContext = useCallback((accepted = false) => {
+  const invitationIdentity = useCallback(() => ({
+    familyName,
+    inviterName,
+    requiresApproval,
+    sourcePath: buildInvitationSourcePath(token),
+    token,
+  }), [familyName, inviterName, requiresApproval, token]);
+
+  const preserveInvitationContext = useCallback(() => {
     return saveInvitationContext({
-      acceptedAt: accepted ? new Date().toISOString() : undefined,
-      familyName,
-      inviterName,
-      sourcePath: `/invite/${encodeURIComponent(token)}`,
-      token,
+      ...invitationIdentity(),
+      status: "landing",
     });
-  }, [familyName, inviterName, token]);
+  }, [invitationIdentity]);
 
-  const routeAuthenticatedInvitation = useCallback(async (continueWithoutFamily = false) => {
+  const routeAuthenticatedInvitation = useCallback(async (continueInvitation = false) => {
     try {
       const families = await listFamilies();
 
       if (families.length > 0) {
-        preserveInvitationContext(false);
-        router.replace(`/invite/${encodeURIComponent(token)}/already-in-family`);
+        preserveInvitationContext();
+        router.replace(INVITATION_ROUTES.alreadyInFamily(token));
         return;
       }
     } catch {
@@ -41,38 +53,36 @@ export function InvitationLandingActions({ familyName, inviterName, token }: Inv
       // changing active family client-side.
     }
 
-    if (continueWithoutFamily) {
-      preserveInvitationContext(true);
-      router.replace(`/onboarding/join-family?invite=${encodeURIComponent(token)}`);
+    if (continueInvitation) {
+      markInvitationAccepted(invitationIdentity());
+      router.replace(getInvitationPostAuthRoute());
     }
-  }, [preserveInvitationContext, router, token]);
+  }, [invitationIdentity, preserveInvitationContext, router, token]);
 
   useEffect(() => {
+    preserveInvitationContext();
+
     if (!getAccessToken()) {
       return;
     }
 
     void routeAuthenticatedInvitation(searchParams.get("continue") === "1");
     // TODO: Replace this client-side continuation with a backend-verified invite resume flow.
-  }, [routeAuthenticatedInvitation, searchParams]);
+  }, [preserveInvitationContext, routeAuthenticatedInvitation, searchParams]);
 
   function handleAcceptInvitation() {
-    // TODO: Replace this with the real invitation acceptance endpoint.
-    // Authenticated users should only continue automatically when they have no active family;
-    // users who already belong to a family must explicitly choose to switch first.
     if (getAccessToken()) {
       void routeAuthenticatedInvitation(true);
       return;
     }
 
-    preserveInvitationContext(true);
-    router.push(`/login?next=${encodeURIComponent(`/invite/${token}?continue=1`)}`);
+    markInvitationAccepted(invitationIdentity());
+    router.push(`/login?next=${encodeURIComponent(`${INVITATION_ROUTES.landing(token)}?continue=1`)}`);
   }
 
   function handleDeclineInvitation() {
-    preserveInvitationContext(false);
-    // TODO: Add a decline confirmation flow and call the backend decline endpoint.
-    router.push("/onboarding/family-start");
+    preserveInvitationContext();
+    router.push(INVITATION_ROUTES.decline(token));
   }
 
   return (

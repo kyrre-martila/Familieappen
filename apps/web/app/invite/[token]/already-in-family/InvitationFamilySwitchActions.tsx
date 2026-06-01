@@ -2,7 +2,12 @@
 
 import { useCallback } from "react";
 import { useRouter } from "next/navigation";
-import { saveInvitationContext } from "../../../../lib/invitation-context";
+import {
+  buildInvitationSourcePath,
+  INVITATION_ROUTES,
+  markInvitationAccepted,
+  saveInvitationContext,
+} from "../../../../lib/invitation-context";
 
 interface InvitationFamilySwitchActionsProps {
   familyName: string;
@@ -13,29 +18,27 @@ interface InvitationFamilySwitchActionsProps {
 export function InvitationFamilySwitchActions({ familyName, inviterName, token }: InvitationFamilySwitchActionsProps) {
   const router = useRouter();
 
-  const preserveInvitationContext = useCallback((accepted = false) => {
-    return saveInvitationContext({
-      acceptedAt: accepted ? new Date().toISOString() : undefined,
-      familyName,
-      inviterName,
-      sourcePath: `/invite/${encodeURIComponent(token)}`,
-      token,
-    });
-  }, [familyName, inviterName, token]);
+  const invitationIdentity = useCallback(() => ({
+    familyName,
+    inviterName,
+    sourcePath: buildInvitationSourcePath(token),
+    token,
+  }), [familyName, inviterName, token]);
 
   function handleSwitchFamily() {
-    preserveInvitationContext(true);
+    markInvitationAccepted(invitationIdentity(), "switch-requested");
 
-    // TODO: Replace this placeholder route with a backend-confirmed invitation switch endpoint.
+    // TODO: Replace this continuation with a backend-confirmed invitation switch endpoint.
     // The current account must only switch families after this explicit user action.
-    router.push(`/onboarding/join-family?invite=${encodeURIComponent(token)}&switch=1`);
+    router.push(INVITATION_ROUTES.accepted(token));
   }
 
   function handleDeclineInvitation() {
-    preserveInvitationContext(false);
-
-    // TODO: Route to a dedicated decline confirmation flow and call the backend decline endpoint.
-    router.push("/onboarding/family-start");
+    saveInvitationContext({
+      ...invitationIdentity(),
+      status: "landing",
+    });
+    router.push(INVITATION_ROUTES.decline(token));
   }
 
   function handleGoBack() {
