@@ -40,4 +40,8 @@
   --color-warning-soft: #fff0d8;
   --color-border: #eadfce;
   --color-border-strong: #dccdb8;
+
+  --shadow-soft: 0 var(--space-s) var(--space-l) color-mix(in srgb, var(--color-text) 8%, transparent);
+  --shadow-floating: 0 var(--space-m) var(--space-xl) color-mix(in srgb, var(--color-primary-strong) 24%, transparent);
+  --shadow-sheet: 0 calc(var(--space-l) * -1) var(--space-xl) color-mix(in srgb, var(--color-text) 14%, transparent);
 }

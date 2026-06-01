@@ -2,7 +2,7 @@ import type { Metadata, Viewport } from "next";
 import { tokens } from "@familieappen/ui";
 import "@familieappen/ui/tokens.css";
 import "./globals.css";
-import { AppShell } from "../components/AppShell";
+import { RootAppFrame } from "../components/AppShell";
 
 export const metadata: Metadata = {
   title: "FamilieAppen",
@@ -19,7 +19,7 @@ export default function RootLayout({ children }: Readonly<{ children: React.Reac
   return (
     <html lang="en">
       <body>
-        <AppShell>{children}</AppShell>
+        <RootAppFrame>{children}</RootAppFrame>
       </body>
     </html>
   );
