@@ -66,7 +66,7 @@ export default function SharedWishlistPage({ params }: { params: Promise<{ token
         <SectionHeader eyebrow="Optional" title="Your name" />
         <label className="field">
           <span className="field__label">Name for coordination</span>
-          <input className="field__input" value={reservedByName} onChange={(event) => setReservedByName(event.target.value)} placeholder="Grandma, Uncle Alex…" />
+          <input className="field__input" value={reservedByName} onChange={(event) => setReservedByName(event.target.value)} placeholder="Bestemor, onkel Per…" />
         </label>
         <p className="card-note">This name is stored for coordination, but it is not shown in the family wishlist view.</p>
       </Card>

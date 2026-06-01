@@ -4,6 +4,7 @@ import { FormEvent, useEffect, useMemo, useState, type ChangeEvent } from "react
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { LockedFeatureState } from "../../components/PendingAccess";
+import { useFamilyAccess } from "../../components/ProtectedFamilyRoute";
 import { Badge, Button, Card, EmptyState, ErrorState, LoadingState, PageContainer, SectionHeader } from "../../components/ui";
 import {
   ApiError,
@@ -14,7 +15,7 @@ import {
   getShoppingList,
   toggleShoppingItem
 } from "../../lib/api";
-import { chooseActiveFamily, getUserFacingApiMessage, handleMissingOrInvalidAuth, loadAvailableFamilies, requireAuth } from "../../lib/auth-family";
+import { chooseActiveFamily, getUserFacingApiMessage, handleMissingOrInvalidAuth } from "../../lib/auth-family";
 import { clearActiveFamilyId } from "../../lib/session";
 
 type ShoppingStatus = "loading" | "ready" | "pending" | "unauthorized" | "no-family" | "error";
@@ -31,13 +32,18 @@ export default function ShoppingPage() {
   const [pendingItemId, setPendingItemId] = useState<string | null>(null);
   const [isAdding, setIsAdding] = useState(false);
 
+  const familyAccess = useFamilyAccess();
+  const approvedFamilyContext = familyAccess.status === "approved" ? familyAccess.familyContext : null;
+
   useEffect(() => {
-    if (!requireAuth(router)) {
+    if (!approvedFamilyContext) {
       return;
     }
 
-    void bootstrapShopping();
-  }, [router]);
+    setFamilies(approvedFamilyContext.families);
+    setActiveFamilyIdState(approvedFamilyContext.activeFamilyId);
+    void loadShoppingList(approvedFamilyContext.activeFamilyId);
+  }, [approvedFamilyContext?.activeFamilyId, approvedFamilyContext]);
 
   const uncheckedCount = useMemo(
     () => shoppingList?.items.filter((item) => !item.checked).length ?? 0,
@@ -45,41 +51,6 @@ export default function ShoppingPage() {
   );
   const totalItems = shoppingList?.items.length ?? 0;
   const hasMultipleFamilies = families.length > 1;
-
-  async function bootstrapShopping() {
-    setStatus("loading");
-    setMessage("Loading shopping list…");
-
-    try {
-      const familyContext = await loadAvailableFamilies();
-
-      if (familyContext.status === "unauthenticated") {
-        router.replace("/login");
-        return;
-      }
-
-      if (familyContext.status === "no-family") {
-        setFamilies([]);
-        clearActiveFamilyId();
-        setActiveFamilyIdState(null);
-        setShoppingList(null);
-        setStatus("no-family");
-        setMessage("Create a family before using the shared shopping list.");
-        return;
-      }
-
-      if (familyContext.status === "pending") {
-        setStatus("pending");
-        setMessage("Du venter på godkjenning for å bli med i familien.");
-        return;
-      }
-      setFamilies(familyContext.families);
-      setActiveFamilyIdState(familyContext.activeFamilyId);
-      await loadShoppingList(familyContext.activeFamilyId);
-    } catch (error) {
-      handleLoadError(error);
-    }
-  }
 
   async function loadShoppingList(familyId = activeFamilyId) {
     if (!familyId) {
@@ -224,8 +195,18 @@ export default function ShoppingPage() {
     setMessage(getUserFacingApiMessage(error, fallbackMessage));
   }
 
-  if (status === "pending") {
+  if (familyAccess.status === "pending") {
     return <LockedFeatureState />;
+  }
+
+  if (familyAccess.status !== "approved") {
+    return (
+      <PageContainer>
+        <Card tone="default">
+          <EmptyState title="Sjekker familietilgang" description="Vent litt mens vi bekrefter familietilknytningen din." />
+        </Card>
+      </PageContainer>
+    );
   }
 
   return (
@@ -265,9 +246,9 @@ export default function ShoppingPage() {
           />
 
           {status === "unauthorized" ? (
-            <ShoppingStatusCard message={message} status={status} onRetry={bootstrapShopping} />
+            <ShoppingStatusCard message={message} status={status} onRetry={() => loadShoppingList()} />
           ) : null}
-          {status === "no-family" ? <ShoppingStatusCard message={message} status={status} onRetry={bootstrapShopping} /> : null}
+          {status === "no-family" ? <ShoppingStatusCard message={message} status={status} onRetry={() => loadShoppingList()} /> : null}
           {status === "error" ? <ShoppingStatusCard message={message} status={status} onRetry={() => loadShoppingList()} /> : null}
 
           {status !== "unauthorized" && status !== "no-family" ? (
@@ -278,7 +259,7 @@ export default function ShoppingPage() {
                   className="shopping-form__input"
                   maxLength={120}
                   onChange={(event) => setLabel(event.target.value)}
-                  placeholder="Milk"
+                  placeholder="Melk"
                   value={label}
                 />
               </label>
@@ -288,7 +269,7 @@ export default function ShoppingPage() {
                   className="shopping-form__input"
                   maxLength={60}
                   onChange={(event) => setQuantity(event.target.value)}
-                  placeholder="2 liters"
+                  placeholder="2 liter"
                   value={quantity}
                 />
               </label>

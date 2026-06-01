@@ -4,6 +4,7 @@ import { FormEvent, useEffect, useMemo, useState, type ChangeEvent } from "react
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { LockedFeatureState } from "../../components/PendingAccess";
+import { useFamilyAccess } from "../../components/ProtectedFamilyRoute";
 import { Badge, Button, Card, EmptyState, ErrorState, LoadingState, PageContainer, SectionHeader } from "../../components/ui";
 import {
   ApiError,
@@ -15,7 +16,7 @@ import {
   getMealPlan,
   updateMealPlanDay
 } from "../../lib/api";
-import { chooseActiveFamily, getUserFacingApiMessage, handleMissingOrInvalidAuth, loadAvailableFamilies, requireAuth } from "../../lib/auth-family";
+import { chooseActiveFamily, getUserFacingApiMessage, handleMissingOrInvalidAuth } from "../../lib/auth-family";
 import { clearActiveFamilyId } from "../../lib/session";
 
 type MealsStatus = "loading" | "ready" | "pending" | "unauthorized" | "no-family" | "error";
@@ -35,13 +36,18 @@ export default function MealsPage() {
   const [pendingDayId, setPendingDayId] = useState<string | null>(null);
   const [isSaving, setIsSaving] = useState(false);
 
+  const familyAccess = useFamilyAccess();
+  const approvedFamilyContext = familyAccess.status === "approved" ? familyAccess.familyContext : null;
+
   useEffect(() => {
-    if (!requireAuth(router)) {
+    if (!approvedFamilyContext) {
       return;
     }
 
-    void bootstrapMeals();
-  }, [router]);
+    setFamilies(approvedFamilyContext.families);
+    setActiveFamilyIdState(approvedFamilyContext.activeFamilyId);
+    void loadMeals(approvedFamilyContext.activeFamilyId);
+  }, [approvedFamilyContext?.activeFamilyId, approvedFamilyContext]);
 
   const visibleDays = useMemo(() => {
     const days = mealPlan?.days ?? [];
@@ -51,41 +57,6 @@ export default function MealsPage() {
   const plannedDays = visibleDays.length;
   const hasMultipleFamilies = families.length > 1;
   const formTitle = editingDayId ? "Edit dinner" : "Add dinner";
-
-  async function bootstrapMeals() {
-    setStatus("loading");
-    setMessage("Loading meal plan…");
-
-    try {
-      const familyContext = await loadAvailableFamilies();
-
-      if (familyContext.status === "unauthenticated") {
-        router.replace("/login");
-        return;
-      }
-
-      if (familyContext.status === "no-family") {
-        setFamilies([]);
-        clearActiveFamilyId();
-        setActiveFamilyIdState(null);
-        setMealPlan(null);
-        setStatus("no-family");
-        setMessage("Create a family before planning dinners.");
-        return;
-      }
-
-      if (familyContext.status === "pending") {
-        setStatus("pending");
-        setMessage("Du venter på godkjenning for å bli med i familien.");
-        return;
-      }
-      setFamilies(familyContext.families);
-      setActiveFamilyIdState(familyContext.activeFamilyId);
-      await loadMeals(familyContext.activeFamilyId);
-    } catch (error) {
-      handleLoadError(error);
-    }
-  }
 
   async function loadMeals(familyId = activeFamilyId) {
     if (!familyId) {
@@ -255,8 +226,18 @@ export default function MealsPage() {
     setMessage(getUserFacingApiMessage(error, fallbackMessage));
   }
 
-  if (status === "pending") {
+  if (familyAccess.status === "pending") {
     return <LockedFeatureState />;
+  }
+
+  if (familyAccess.status !== "approved") {
+    return (
+      <PageContainer>
+        <Card tone="default">
+          <EmptyState title="Sjekker familietilgang" description="Vent litt mens vi bekrefter familietilknytningen din." />
+        </Card>
+      </PageContainer>
+    );
   }
 
   return (
@@ -284,7 +265,7 @@ export default function MealsPage() {
           ) : null}
         </div>
 
-        {status !== "ready" && status !== "loading" ? <MealsStatusCard message={message} onRetry={() => bootstrapMeals()} status={status} /> : null}
+        {status !== "ready" && status !== "loading" ? <MealsStatusCard message={message} onRetry={() => loadMeals()} status={status} /> : null}
 
         <div className="meals-layout">
           <Card className="meals-card" tone="warm">
@@ -311,7 +292,7 @@ export default function MealsPage() {
                     className="meals-form__input"
                     maxLength={500}
                     onChange={(event) => setNotes(event.target.value)}
-                    placeholder="Optional note"
+                    placeholder="Valgfri merknad"
                     value={notes}
                   />
                 </label>

@@ -239,3 +239,17 @@ Files touched:
 - `docs/reviews/review-run2.md`
 
 Final recommendation: **Ready for Run 3**. The P0 route/access-control blockers are addressed, while P1/P2 prototype and cleanup items remain intentionally deferred.
+
+## Run 2.5 stabilization
+
+Date: 2026-06-01
+
+Status: **Ready for Run 3** after the stabilization checks below.
+
+What changed:
+
+- Feature page guard adoption was completed for `apps/web/app/calendar/page.tsx`, `apps/web/app/shopping/page.tsx`, `apps/web/app/tasks/page.tsx`, `apps/web/app/meals/page.tsx`, and `apps/web/app/wishlists/page.tsx`. These pages now use `useFamilyAccess` from the shared protected-family access module instead of duplicating `requireAuth` + `loadAvailableFamilies` bootstrap branches. Page-specific loading still only handles approved-family feature data.
+- Pending route leaks are closed for `/settings`, `/calendar`, `/shopping`, `/tasks`, `/meals`, and `/wishlists`. `/settings` remains wrapped in `ProtectedFamilyRoute`; feature pages render `LockedFeatureState` for pending access and avoid rendering feature content until shared access resolves approved membership.
+- Founder-demo placeholders were localized in shopping, calendar, wishlists, shared wishlist helper identity, meals notes, and add-members labels/placeholders.
+
+Final recommendation: **Proceed to Run 3**. The Run 2.5 access-control stabilization and Norwegian placeholder polish are complete; remaining known Run 2 P1/P2 items can stay queued unless Run 3 depends on them directly.

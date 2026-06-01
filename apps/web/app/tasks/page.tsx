@@ -4,6 +4,7 @@ import { FormEvent, useEffect, useMemo, useState, type ChangeEvent } from "react
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { LockedFeatureState } from "../../components/PendingAccess";
+import { useFamilyAccess } from "../../components/ProtectedFamilyRoute";
 import { Badge, Button, Card, EmptyState, ErrorState, LoadingState, PageContainer, SectionHeader } from "../../components/ui";
 import {
   ApiError,
@@ -17,7 +18,7 @@ import {
   getTasks,
   toggleTask
 } from "../../lib/api";
-import { chooseActiveFamily, getUserFacingApiMessage, handleMissingOrInvalidAuth, loadAvailableFamilies, requireAuth } from "../../lib/auth-family";
+import { chooseActiveFamily, getUserFacingApiMessage, handleMissingOrInvalidAuth } from "../../lib/auth-family";
 import { clearActiveFamilyId } from "../../lib/session";
 
 type TasksStatus = "loading" | "ready" | "pending" | "unauthorized" | "no-family" | "error";
@@ -37,53 +38,22 @@ export default function TasksPage() {
   const [pendingTaskId, setPendingTaskId] = useState<string | null>(null);
   const [isAdding, setIsAdding] = useState(false);
 
+  const familyAccess = useFamilyAccess();
+  const approvedFamilyContext = familyAccess.status === "approved" ? familyAccess.familyContext : null;
+
   useEffect(() => {
-    if (!requireAuth(router)) {
+    if (!approvedFamilyContext) {
       return;
     }
 
-    void bootstrapTasks();
-  }, [router]);
+    setFamilies(approvedFamilyContext.families);
+    setActiveFamilyIdState(approvedFamilyContext.activeFamilyId);
+    void loadTasks(approvedFamilyContext.activeFamilyId);
+  }, [approvedFamilyContext?.activeFamilyId, approvedFamilyContext]);
 
   const incompleteCount = useMemo(() => tasks.filter((task) => !task.completed).length, [tasks]);
   const hasMultipleFamilies = families.length > 1;
   const members = familyDetails?.members ?? [];
-
-  async function bootstrapTasks() {
-    setStatus("loading");
-    setMessage("Loading tasks…");
-
-    try {
-      const familyContext = await loadAvailableFamilies();
-
-      if (familyContext.status === "unauthenticated") {
-        router.replace("/login");
-        return;
-      }
-
-      if (familyContext.status === "no-family") {
-        setFamilies([]);
-        clearActiveFamilyId();
-        setActiveFamilyIdState(null);
-        setFamilyDetails(null);
-        setTasks([]);
-        setStatus("no-family");
-        setMessage("Create a family before adding shared tasks.");
-        return;
-      }
-
-      if (familyContext.status === "pending") {
-        setStatus("pending");
-        setMessage("Du venter på godkjenning for å bli med i familien.");
-        return;
-      }
-      setFamilies(familyContext.families);
-      setActiveFamilyIdState(familyContext.activeFamilyId);
-      await loadTasks(familyContext.activeFamilyId);
-    } catch (error) {
-      handleLoadError(error);
-    }
-  }
 
   async function loadTasks(familyId = activeFamilyId) {
     if (!familyId) {
@@ -222,8 +192,18 @@ export default function TasksPage() {
     setMessage(getUserFacingApiMessage(error, fallbackMessage));
   }
 
-  if (status === "pending") {
+  if (familyAccess.status === "pending") {
     return <LockedFeatureState />;
+  }
+
+  if (familyAccess.status !== "approved") {
+    return (
+      <PageContainer>
+        <Card tone="default">
+          <EmptyState title="Sjekker familietilgang" description="Vent litt mens vi bekrefter familietilknytningen din." />
+        </Card>
+      </PageContainer>
+    );
   }
 
   return (
@@ -262,8 +242,8 @@ export default function TasksPage() {
             title={formatTaskCount(incompleteCount)}
           />
 
-          {status === "unauthorized" ? <TasksStatusCard message={message} status={status} onRetry={bootstrapTasks} /> : null}
-          {status === "no-family" ? <TasksStatusCard message={message} status={status} onRetry={bootstrapTasks} /> : null}
+          {status === "unauthorized" ? <TasksStatusCard message={message} status={status} onRetry={() => loadTasks()} /> : null}
+          {status === "no-family" ? <TasksStatusCard message={message} status={status} onRetry={() => loadTasks()} /> : null}
           {status === "error" ? <TasksStatusCard message={message} status={status} onRetry={() => loadTasks()} /> : null}
 
           {status !== "unauthorized" && status !== "no-family" ? (

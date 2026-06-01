@@ -4,6 +4,7 @@ import { useEffect, useMemo, useState, type ChangeEvent, type FormEvent } from "
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { LockedFeatureState } from "../../components/PendingAccess";
+import { useFamilyAccess } from "../../components/ProtectedFamilyRoute";
 import { Badge, Button, Card, EmptyState, ErrorState, LoadingState, PageContainer, SectionHeader } from "../../components/ui";
 import {
   CalendarEvent,
@@ -15,8 +16,7 @@ import {
   getFamily,
   updateCalendarEvent
 } from "../../lib/api";
-import { chooseActiveFamily, getUserFacingApiMessage, handleMissingOrInvalidAuth, loadAvailableFamilies, requireAuth } from "../../lib/auth-family";
-import { clearActiveFamilyId } from "../../lib/session";
+import { chooseActiveFamily, getUserFacingApiMessage, handleMissingOrInvalidAuth } from "../../lib/auth-family";
 
 type CalendarStatus = "loading" | "ready" | "pending" | "unauthorized" | "no-family" | "error";
 
@@ -53,53 +53,35 @@ export default function CalendarPage() {
   const [editingEventId, setEditingEventId] = useState<string | null>(null);
   const [isSaving, setIsSaving] = useState(false);
 
+  const familyAccess = useFamilyAccess();
+  const approvedFamilyContext = familyAccess.status === "approved" ? familyAccess.familyContext : null;
+
   useEffect(() => {
-    if (!requireAuth(router)) {
+    if (!approvedFamilyContext) {
       return;
     }
 
-    void loadCalendar();
-  }, [router, rangeDays]);
+    setFamilies(approvedFamilyContext.families);
+    setActiveFamilyIdState(approvedFamilyContext.activeFamilyId);
+    void loadCalendar(approvedFamilyContext.activeFamilyId);
+  }, [approvedFamilyContext?.activeFamilyId, approvedFamilyContext, rangeDays]);
 
-  async function loadCalendar(preferredFamilyId?: string) {
+  async function loadCalendar(familyId = activeFamilyId) {
+    if (!familyId) {
+      setStatus("no-family");
+      setMessage("Choose a family before opening the calendar.");
+      return;
+    }
+
     setStatus("loading");
     setMessage("Loading calendar…");
 
     try {
-      const familyContext = await loadAvailableFamilies(preferredFamilyId);
-
-      if (familyContext.status === "unauthenticated") {
-        router.replace("/login");
-        return;
-      }
-
-      if (familyContext.status === "no-family") {
-        setFamilies([]);
-        clearActiveFamilyId();
-        setActiveFamilyIdState(null);
-        setMembers([]);
-        setEvents([]);
-        setStatus("no-family");
-        setMessage("Create a family before adding calendar events.");
-        router.replace("/onboarding/create-family");
-        return;
-      }
-
-      if (familyContext.status === "pending") {
-        setStatus("pending");
-        setMessage("Du venter på godkjenning for å bli med i familien.");
-        return;
-      }
-
-      const nextFamilyId = familyContext.activeFamilyId;
       const { from, to } = getCalendarRange(rangeDays);
 
-      setFamilies(familyContext.families);
-      setActiveFamilyIdState(nextFamilyId);
-
       const [familyDetails, calendarEvents] = await Promise.all([
-        getFamily(nextFamilyId),
-        getCalendarEvents(nextFamilyId, { from: from.toISOString(), to: to.toISOString() })
+        getFamily(familyId),
+        getCalendarEvents(familyId, { from: from.toISOString(), to: to.toISOString() })
       ]);
 
       setMembers(familyDetails.members);
@@ -238,8 +220,18 @@ export default function CalendarPage() {
   const activeFamilyName = families.find((family) => family.family.id === activeFamilyId)?.family.name ?? "Family calendar";
   const isLoading = status === "loading";
 
-  if (status === "pending") {
+  if (familyAccess.status === "pending") {
     return <LockedFeatureState />;
+  }
+
+  if (familyAccess.status !== "approved") {
+    return (
+      <PageContainer>
+        <Card tone="default">
+          <EmptyState title="Sjekker familietilgang" description="Vent litt mens vi bekrefter familietilknytningen din." />
+        </Card>
+      </PageContainer>
+    );
   }
 
   return (
@@ -290,7 +282,7 @@ export default function CalendarPage() {
                 className="calendar-form__input"
                 maxLength={120}
                 onChange={(event) => updateField("title", event.target.value)}
-                placeholder="Football practice"
+                placeholder="Fotballtrening"
                 required
                 value={form.title}
               />
@@ -302,7 +294,7 @@ export default function CalendarPage() {
                 className="calendar-form__input"
                 maxLength={160}
                 onChange={(event) => updateField("location", event.target.value)}
-                placeholder="Sports hall"
+                placeholder="Sporthallen"
                 value={form.location}
               />
             </label>
@@ -313,7 +305,7 @@ export default function CalendarPage() {
                 className="calendar-form__input calendar-form__input--textarea"
                 maxLength={500}
                 onChange={(event) => updateField("description", event.target.value)}
-                placeholder="Bring water bottle and shin guards"
+                placeholder="Ta med vannflaske og leggskinn"
                 rows={3}
                 value={form.description}
               />
