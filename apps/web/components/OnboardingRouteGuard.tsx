@@ -2,10 +2,10 @@
 
 import { useEffect } from "react";
 import { usePathname, useRouter } from "next/navigation";
-import { ONBOARDING_ROUTES, isProtectedFamilyRoute, redirectIfNeeded, resolveAppRecommendationRoute, resolveOnboardingRoute, resolveProtectedFamilyRoute } from "../lib/onboarding-access";
+import { getRouteAccessMode, redirectIfNeeded, resolveRouteAccess, type RouteAccessMode } from "../lib/onboarding-access";
 
 interface OnboardingRouteGuardProps {
-  mode?: "approved-family" | "app-recommendation";
+  mode?: RouteAccessMode;
 }
 
 export function OnboardingRouteGuard({ mode }: OnboardingRouteGuardProps) {
@@ -16,15 +16,15 @@ export function OnboardingRouteGuard({ mode }: OnboardingRouteGuardProps) {
     let isActive = true;
 
     async function guardRoute() {
-      const decision = mode === "app-recommendation"
-        ? await resolveAppRecommendationRoute(pathname)
-        : pathname === ONBOARDING_ROUTES.dashboard
-          ? await resolveOnboardingRoute({ currentPath: pathname, requestedPath: pathname })
-          : mode === "approved-family" || isProtectedFamilyRoute(pathname)
-            ? await resolveProtectedFamilyRoute(pathname)
-            : null;
+      const accessMode = getRouteAccessMode(pathname, mode);
 
-      if (isActive && decision) {
+      if (!accessMode) {
+        return;
+      }
+
+      const decision = await resolveRouteAccess({ currentPath: pathname, requestedPath: pathname, mode: accessMode });
+
+      if (isActive) {
         redirectIfNeeded(router, decision);
       }
     }
