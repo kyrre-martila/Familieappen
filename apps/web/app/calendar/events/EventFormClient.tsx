@@ -126,6 +126,11 @@ export function CalendarEventFormClient({ mode, event = null }: CalendarEventFor
       </header>
 
       <form className="event-form" onSubmit={(eventSubmit) => { eventSubmit.preventDefault(); handleSave(); }}>
+        {event?.isImported ? (
+          <section className="event-form-card event-form-source-note" role="note" aria-label="Importert hendelse">
+            <p>Dette er en importert ICS-hendelse. Den eksterne kalenderen er fortsatt sannhet for tittel, tid og sted; FamilieAppen-lagring er lokal/mock i denne MVP-en.</p>
+          </section>
+        ) : null}
         <section className="event-form-card event-form-card--title" aria-label="Tittel og ikon">
           <div className="event-form-field event-form-field--title">
             <label className="event-form-label" htmlFor="event-title">Tittel</label>

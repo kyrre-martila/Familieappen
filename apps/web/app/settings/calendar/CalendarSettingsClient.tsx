@@ -22,7 +22,7 @@ interface CalendarPreferences {
 type CalendarImportDraft = Omit<CalendarImportSource, "id" | "lastSyncedAt">;
 
 const initialPreferences: CalendarPreferences = {
-  defaultView: "month",
+  defaultView: "day",
   weekStartsOn: "monday",
   showWeekNumbers: true,
   defaultReminder: "15m",
@@ -241,13 +241,17 @@ export function CalendarSettingsClient() {
     setCopyStatus("idle");
     setExportFeed((current) => ({
       ...current,
-      isEnabled: true,
       token,
       privateUrl: createMockPrivateUrl(token),
     }));
   }
 
   async function copyExportLink() {
+    if (!exportFeed.isEnabled || typeof navigator === "undefined" || !navigator.clipboard) {
+      setCopyStatus("failed");
+      return;
+    }
+
     try {
       await navigator.clipboard.writeText(exportFeed.privateUrl);
       setCopyStatus("copied");

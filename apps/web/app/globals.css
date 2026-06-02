@@ -4797,19 +4797,51 @@ select {
   flex: 0 0 auto;
 }
 
+.calendar-title-actions {
+  display: flex;
+  min-width: 0;
+  align-items: center;
+  gap: var(--space-xs);
+}
+
 .calendar-view-switcher {
   display: inline-flex;
   align-items: center;
-  gap: var(--space-xs);
+  gap: calc(var(--space-xs) * 0.5);
   border: 1px solid var(--color-border);
-  border-radius: var(--radius-m);
-  padding: var(--space-s) var(--space-m);
+  border-radius: var(--radius-pill);
+  padding: calc(var(--space-xs) * 0.5);
   background: var(--color-surface);
   color: var(--color-primary-strong);
-  cursor: pointer;
-  font-size: var(--text-body);
-  font-weight: 850;
   box-shadow: 0 var(--space-xs) var(--space-s) color-mix(in srgb, var(--color-text) 5%, transparent);
+}
+
+.calendar-view-switcher__option,
+.calendar-title-action {
+  display: inline-flex;
+  min-height: calc(var(--space-xl) + var(--space-xs));
+  align-items: center;
+  justify-content: center;
+  gap: calc(var(--space-xs) * 0.75);
+  border: 0;
+  border-radius: var(--radius-pill);
+  padding: var(--space-xs) var(--space-s);
+  background: transparent;
+  color: var(--color-primary-strong);
+  cursor: pointer;
+  font-size: var(--text-small);
+  font-weight: 850;
+  white-space: nowrap;
+}
+
+.calendar-view-switcher__option--selected,
+.calendar-title-action {
+  background: var(--color-primary-soft);
+}
+
+.calendar-title-action--icon {
+  width: calc(var(--space-xl) + var(--space-xs));
+  padding-inline: 0;
 }
 
 .calendar-date-strip {
@@ -5254,8 +5286,17 @@ select {
     align-items: end;
   }
 
+  .calendar-title-actions {
+    flex-wrap: wrap;
+    justify-content: flex-end;
+  }
+
   .calendar-view-switcher {
-    padding: var(--space-s);
+    order: 3;
+  }
+
+  .calendar-view-switcher__option {
+    padding-inline: calc(var(--space-xs) * 1.25);
   }
 
   .calendar-date-strip {
@@ -5810,6 +5851,19 @@ select {
   margin: 0 auto;
   gap: var(--space-m);
   padding: var(--space-s) var(--gutter) calc(var(--space-xl) + env(safe-area-inset-bottom));
+}
+
+
+.event-form-source-note {
+  border-color: color-mix(in srgb, var(--color-primary) 28%, var(--color-border));
+  background: color-mix(in srgb, var(--color-primary-soft) 48%, var(--color-surface));
+}
+
+.event-form-source-note p {
+  margin: 0;
+  color: var(--color-primary-strong);
+  font-size: var(--text-small);
+  font-weight: 760;
 }
 
 .event-form-card {
