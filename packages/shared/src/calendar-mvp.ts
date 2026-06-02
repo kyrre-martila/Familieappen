@@ -49,3 +49,16 @@ export interface FamilyMember {
 }
 
 export type CalendarViewMode = "day" | "month" | "list";
+
+export type CalendarImportSyncFrequency = "automatic" | "daily" | "weekly" | "manual";
+
+export interface CalendarImportSource {
+  id: string;
+  name: string;
+  icsUrl: string;
+  defaultParticipantId: string;
+  defaultIcon: CalendarEventIcon;
+  syncFrequency: CalendarImportSyncFrequency;
+  lastSyncedAt: string | null;
+  isActive: boolean;
+}

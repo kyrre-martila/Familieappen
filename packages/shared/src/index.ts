@@ -193,6 +193,8 @@ export type {
   CalendarEventRecurrence as CalendarMvpEventRecurrence,
   CalendarEventReminder as CalendarMvpEventReminder,
   CalendarEventSource as CalendarMvpEventSource,
+  CalendarImportSource,
+  CalendarImportSyncFrequency,
   CalendarViewMode,
   FamilyMember as CalendarMvpFamilyMember,
   MealSummary,
