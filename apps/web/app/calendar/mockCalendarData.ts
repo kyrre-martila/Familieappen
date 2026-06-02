@@ -23,7 +23,17 @@ export const reminders: ReminderSummary[] = [
   { id: "kontingent", date: "2025-06-03", title: "Betal kontingent", icon: "sport", participantIds: ["even-olai"] },
   { id: "bibliotek", date: "2025-06-03", title: "Levere bøker", icon: "school", participantIds: ["alma"] },
   { id: "tannlege-husk", date: "2025-06-04", title: "Husk tannlegekort", icon: "health", participantIds: ["alma"] },
-  { id: "pass", date: "2025-06-06", title: "Pakk pass", icon: "travel", participantIds: [] }
+  { id: "pass", date: "2025-06-06", title: "Pakk pass", icon: "travel", participantIds: [] },
+  { id: "bursdagsgave", date: "2025-06-06", title: "Bursdagsgave Emma", icon: "gift", participantIds: ["fiona"] },
+  { id: "kakedugnad", date: "2025-06-06", title: "Kakedugnad", icon: "birthday", participantIds: ["elisabeth"] },
+  { id: "svommebag", date: "2025-06-06", title: "Husk svømmebag", icon: "backpack", participantIds: ["even-olai"] },
+  { id: "regntoy", date: "2025-06-06", title: "Ta med regntøy", icon: "travel", participantIds: ["alma"] },
+  { id: "bibliotek-fiona", date: "2025-06-06", title: "Bibliotekbok Fiona", icon: "school", participantIds: ["fiona"] },
+  { id: "gymbag", date: "2025-06-06", title: "Gymbag", icon: "backpack", participantIds: ["alma"] },
+  { id: "kontingent-rg", date: "2025-06-06", title: "Betal RG-kontingent", icon: "sport", participantIds: ["fiona"] },
+  { id: "matpakke", date: "2025-06-06", title: "Ekstra matpakke", icon: "meal", participantIds: ["even-olai"] },
+  { id: "legetime", date: "2025-06-06", title: "Ta med helsekort", icon: "health", participantIds: ["alma"] },
+  { id: "grillspyd", date: "2025-06-06", title: "Kjøp grillspyd", icon: "flame", participantIds: [] }
 ];
 
 export const calendarEvents: CalendarMvpEvent[] = [
