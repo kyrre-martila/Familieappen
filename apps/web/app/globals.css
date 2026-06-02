@@ -6739,3 +6739,123 @@ select {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 }
+
+.calendar-export-card,
+.calendar-export-card__intro,
+.calendar-export-url,
+.calendar-export-url__actions,
+.calendar-export-card__actions {
+  display: grid;
+  gap: var(--content-gap);
+}
+
+.calendar-export-card__intro {
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  align-items: start;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-m);
+  padding: var(--space-m);
+  background: color-mix(in srgb, var(--color-surface) 82%, transparent);
+}
+
+.calendar-export-card__intro h3 {
+  margin: 0;
+  color: var(--color-text);
+  font-size: var(--text-heading);
+  line-height: 1.18;
+  letter-spacing: -0.035em;
+}
+
+.calendar-export-card__intro p,
+.calendar-export-card__mock-copy,
+.calendar-export-url__status,
+.calendar-export-warning p {
+  margin: var(--space-xs) 0 0;
+  color: var(--color-muted);
+  font-size: var(--text-small);
+}
+
+.calendar-export-card__mock-copy {
+  color: var(--color-primary-strong);
+  font-weight: 800;
+}
+
+.calendar-export-url,
+.calendar-export-warning {
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-m);
+  padding: var(--space-m);
+}
+
+.calendar-export-url {
+  background: var(--color-background-soft);
+}
+
+.calendar-export-url code {
+  display: block;
+  overflow-wrap: anywhere;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-m);
+  padding: var(--space-s) var(--space-m);
+  background: var(--color-surface);
+  color: var(--color-primary-strong);
+  font-size: var(--text-small);
+  font-weight: 850;
+}
+
+.calendar-export-url__actions,
+.calendar-export-card__actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-s);
+}
+
+.calendar-export-url__actions .button,
+.calendar-export-card__actions .button {
+  min-height: calc(var(--space-xl) + var(--space-xs));
+}
+
+.calendar-export-url__status {
+  color: var(--color-success);
+  font-weight: 850;
+}
+
+.calendar-export-url__status--error {
+  color: var(--color-warning);
+}
+
+.calendar-export-warning {
+  display: flex;
+  align-items: start;
+  gap: var(--space-s);
+  background: var(--color-surface-warm);
+}
+
+.calendar-export-warning svg {
+  flex: 0 0 auto;
+  color: var(--color-warning);
+}
+
+.segmented-control--export {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+
+@media (max-width: 36rem) {
+  .calendar-export-card__intro {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .calendar-export-url__actions .button,
+  .calendar-export-card__actions .button {
+    width: 100%;
+  }
+
+  .segmented-control--export {
+    grid-template-columns: minmax(0, 1fr);
+    border-radius: var(--radius-m);
+  }
+
+  .segmented-control--export .segmented-control__option span {
+    border-radius: var(--radius-m);
+  }
+}

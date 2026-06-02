@@ -52,6 +52,19 @@ export type CalendarViewMode = "day" | "month" | "list";
 
 export type CalendarImportSyncFrequency = "automatic" | "daily" | "weekly" | "manual";
 
+export type CalendarExportScope = "family" | "mine" | "selectedParticipant";
+
+export interface CalendarExportFeed {
+  isEnabled: boolean;
+  privateUrl: string;
+  token: string;
+  includeEvents: boolean;
+  includeMeals: boolean;
+  includeReminders: boolean;
+  scope: CalendarExportScope;
+  selectedParticipantId: string | null;
+}
+
 export interface CalendarImportSource {
   id: string;
   name: string;

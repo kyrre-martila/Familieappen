@@ -1,8 +1,8 @@
 "use client";
 
 import { useMemo, useState, type FormEvent } from "react";
-import { CalendarClock, CircleHelp, Link as LinkIcon, Plus, RefreshCw, Trash2 } from "lucide-react";
-import type { CalendarImportSource, CalendarMvpEventIcon, CalendarViewMode } from "@familieappen/shared";
+import { CalendarClock, CircleHelp, Copy, Link as LinkIcon, Plus, RefreshCw, ShieldAlert, Trash2 } from "lucide-react";
+import type { CalendarExportFeed, CalendarExportScope, CalendarImportSource, CalendarMvpEventIcon, CalendarViewMode } from "@familieappen/shared";
 
 import { familyMembers } from "../../calendar/mockCalendarData";
 import { Badge, Button, Card, PageContainer, SectionHeader } from "../../../components/ui";
@@ -27,6 +27,29 @@ const initialPreferences: CalendarPreferences = {
   showWeekNumbers: true,
   defaultReminder: "15m",
 };
+
+const createMockExportToken = () => `mock-${Math.random().toString(36).slice(2, 10)}-${Date.now().toString(36)}`;
+
+function createMockPrivateUrl(token: string) {
+  // TODO: Replace this mock URL with a backend ICS feed endpoint that uses an unguessable token.
+  // The future feed endpoint should not require login because many calendar clients do not support authenticated ICS feeds.
+  return `https://familieappen.no/calendar/feed/${token}.ics`;
+}
+
+function createInitialExportFeed(): CalendarExportFeed {
+  const token = "PRIVATE-TOKEN";
+
+  return {
+    isEnabled: false,
+    privateUrl: createMockPrivateUrl(token),
+    token,
+    includeEvents: true,
+    includeMeals: true,
+    includeReminders: true,
+    scope: "family",
+    selectedParticipantId: "fiona",
+  };
+}
 
 const initialImportSources: CalendarImportSource[] = [
   {
@@ -80,6 +103,12 @@ const syncFrequencyOptions = [
   { value: "manual", label: "Manuelt" },
 ] satisfies { value: SyncFrequency; label: string }[];
 
+const exportScopeOptions = [
+  { value: "family", label: "Hele familien" },
+  { value: "mine", label: "Kun mine hendelser" },
+  { value: "selectedParticipant", label: "Valgt familiemedlem" },
+] satisfies { value: CalendarExportScope; label: string }[];
+
 function getParticipantName(participantId: string) {
   return familyMembers.find((member) => member.id === participantId)?.name ?? "Ikke valgt";
 }
@@ -106,6 +135,8 @@ function createImportId(name: string) {
 export function CalendarSettingsClient() {
   const [preferences, setPreferences] = useState<CalendarPreferences>(initialPreferences);
   const [imports, setImports] = useState<CalendarImportSource[]>(initialImportSources);
+  const [exportFeed, setExportFeed] = useState<CalendarExportFeed>(() => createInitialExportFeed());
+  const [copyStatus, setCopyStatus] = useState<"idle" | "copied" | "failed">("idle");
   const [draft, setDraft] = useState<CalendarImportDraft>(emptyImportDraft);
   const [editingImportId, setEditingImportId] = useState<string | null>(null);
   const [isFormOpen, setIsFormOpen] = useState(false);
@@ -199,6 +230,32 @@ export function CalendarSettingsClient() {
     }
   }
 
+  function updateExportFeed(updates: Partial<CalendarExportFeed>) {
+    setCopyStatus("idle");
+    setExportFeed((current) => ({ ...current, ...updates }));
+  }
+
+  function regenerateExportLink() {
+    const token = createMockExportToken();
+
+    setCopyStatus("idle");
+    setExportFeed((current) => ({
+      ...current,
+      isEnabled: true,
+      token,
+      privateUrl: createMockPrivateUrl(token),
+    }));
+  }
+
+  async function copyExportLink() {
+    try {
+      await navigator.clipboard.writeText(exportFeed.privateUrl);
+      setCopyStatus("copied");
+    } catch {
+      setCopyStatus("failed");
+    }
+  }
+
   return (
     <PageContainer>
       <PageHeader
@@ -274,6 +331,119 @@ export function CalendarSettingsClient() {
               ))}
             </select>
           </label>
+        </Card>
+      </section>
+
+      <section className="calendar-settings-section" aria-labelledby="calendar-export-title">
+        <SectionHeader eyebrow="ICS" title="Eksporter kalender" />
+        <Card className="calendar-export-card">
+          <div className="calendar-export-card__intro">
+            <div className="calendar-import-intro__icon" aria-hidden="true"><LinkIcon size={24} /></div>
+            <div>
+              <h3 id="calendar-export-title">Privat kalenderabonnement</h3>
+              <p>Lag en privat kalenderlenke som kan abonneres på i Apple Kalender, Google Kalender eller Outlook.</p>
+              <p className="calendar-export-card__mock-copy">Dette er en lokal/mock forhåndsvisning. Produksjonsklar ICS-feed og ekte synkronisering er ikke aktivert ennå.</p>
+            </div>
+            <Badge tone={exportFeed.isEnabled ? "success" : "neutral"}>{exportFeed.isEnabled ? "Aktiv" : "Inaktiv"}</Badge>
+          </div>
+
+          <label className="settings-toggle-row" htmlFor="calendar-export-enabled">
+            <span>
+              <span className="settings-label">Aktiver kalenderabonnement</span>
+              <span className="settings-help">Gjør den private mock-lenken synlig for kalenderklienter når backend senere kobles på.</span>
+            </span>
+            <input
+              id="calendar-export-enabled"
+              className="settings-toggle"
+              type="checkbox"
+              checked={exportFeed.isEnabled}
+              onChange={(event) => updateExportFeed({ isEnabled: event.target.checked })}
+            />
+          </label>
+
+          <div className="calendar-export-url" aria-label="Privat kalenderlenke">
+            <div>
+              <span className="settings-label">Privat kalenderlenke</span>
+              <span className="settings-help">URL-en må behandles som privat og deles bare med kalenderklienter/personer du stoler på.</span>
+            </div>
+            <code>{exportFeed.privateUrl}</code>
+            <div className="calendar-export-url__actions">
+              <Button variant="secondary" onClick={copyExportLink} disabled={!exportFeed.isEnabled}>
+                <Copy aria-hidden="true" size={18} /> Kopier lenke
+              </Button>
+              <Button variant="secondary" onClick={regenerateExportLink}>
+                <RefreshCw aria-hidden="true" size={18} /> Regenerer lenke
+              </Button>
+            </div>
+            {copyStatus === "copied" ? <p className="calendar-export-url__status">Lenken er kopiert.</p> : null}
+            {copyStatus === "failed" ? <p className="calendar-export-url__status calendar-export-url__status--error">Kunne ikke kopiere automatisk. Marker og kopier lenken manuelt.</p> : null}
+          </div>
+
+          <div className="calendar-export-warning" role="note">
+            <ShieldAlert aria-hidden="true" size={20} />
+            <p>Alle som har lenken kan se kalenderinnholdet du deler. Regenerer lenken hvis den har blitt delt med feil person.</p>
+          </div>
+
+          <div className="settings-fieldset" role="group" aria-labelledby="calendar-export-content-label">
+            <div className="settings-fieldset__header">
+              <span className="settings-label" id="calendar-export-content-label">Innhold i eksporten</span>
+              <span className="settings-help">Velg hva den fremtidige ICS-feeden skal inkludere.</span>
+            </div>
+            <label className="settings-toggle-row" htmlFor="export-include-events">
+              <span className="settings-label">Kalenderhendelser</span>
+              <input id="export-include-events" className="settings-toggle" type="checkbox" checked={exportFeed.includeEvents} onChange={(event) => updateExportFeed({ includeEvents: event.target.checked })} />
+            </label>
+            <label className="settings-toggle-row" htmlFor="export-include-meals">
+              <span className="settings-label">Inkluder middager</span>
+              <input id="export-include-meals" className="settings-toggle" type="checkbox" checked={exportFeed.includeMeals} onChange={(event) => updateExportFeed({ includeMeals: event.target.checked })} />
+            </label>
+            <label className="settings-toggle-row" htmlFor="export-include-reminders">
+              <span className="settings-label">Inkluder husk/oppgaver</span>
+              <input id="export-include-reminders" className="settings-toggle" type="checkbox" checked={exportFeed.includeReminders} onChange={(event) => updateExportFeed({ includeReminders: event.target.checked })} />
+            </label>
+          </div>
+
+          <div className="settings-fieldset" role="group" aria-labelledby="calendar-export-scope-label">
+            <div className="settings-fieldset__header">
+              <span className="settings-label" id="calendar-export-scope-label">Hvem kalenderen gjelder</span>
+              <span className="settings-help">Avgrens hvilke hendelser den private lenken skal kunne vise.</span>
+            </div>
+            <div className="segmented-control segmented-control--export" role="radiogroup" aria-labelledby="calendar-export-scope-label">
+              {exportScopeOptions.map((option) => (
+                <label className="segmented-control__option" key={option.value}>
+                  <input
+                    type="radio"
+                    name="calendarExportScope"
+                    value={option.value}
+                    checked={exportFeed.scope === option.value}
+                    onChange={() => updateExportFeed({ scope: option.value })}
+                  />
+                  <span>{option.label}</span>
+                </label>
+              ))}
+            </div>
+            {exportFeed.scope === "selectedParticipant" ? (
+              <label className="settings-select-row" htmlFor="export-selected-participant">
+                <span>
+                  <span className="settings-label">Valgt familiemedlem</span>
+                  <span className="settings-help">Bare innhold knyttet til dette familiemedlemmet tas med.</span>
+                </span>
+                <select
+                  id="export-selected-participant"
+                  value={exportFeed.selectedParticipantId ?? ""}
+                  onChange={(event) => updateExportFeed({ selectedParticipantId: event.target.value })}
+                >
+                  {familyMembers.map((member) => (
+                    <option key={member.id} value={member.id}>{member.name}</option>
+                  ))}
+                </select>
+              </label>
+            ) : null}
+          </div>
+
+          <div className="calendar-export-card__actions">
+            <Button variant="ghost" onClick={() => updateExportFeed({ isEnabled: false })} disabled={!exportFeed.isEnabled}>Deaktiver eksport</Button>
+          </div>
         </Card>
       </section>
 
