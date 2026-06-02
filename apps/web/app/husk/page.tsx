@@ -2,18 +2,28 @@
 
 import { useMemo, useState } from "react";
 import {
-  Bell,
+  Backpack,
+  BookOpen,
+  Briefcase,
+  Cake,
+  Car,
   ClipboardList,
+  Gift,
   GraduationCap,
   Search,
+  Shirt,
   SlidersHorizontal,
+  Stethoscope,
+  Tent,
+  Utensils,
 } from "lucide-react";
+import type { LucideIcon } from "lucide-react";
 
 import { AppShell } from "../../components/AppShell";
 import { LockedFeatureState } from "../../components/PendingAccess";
 import { useFamilyAccess } from "../../components/ProtectedFamilyRoute";
 import { Card, EmptyState, PageContainer } from "../../components/ui";
-import { huskMockData, type HuskTab } from "./mockHuskData";
+import { huskMockData, type HuskFamilyMember, type HuskReminder, type HuskReminderGroup, type HuskReminderIcon, type HuskTab } from "./mockHuskData";
 
 const tabs = [
   { value: "husk", label: "Husk" },
@@ -26,6 +36,28 @@ const titleByTab = {
   lister: "Lister",
   skoleuka: "Skoleuka",
 } satisfies Record<HuskTab, string>;
+
+const reminderGroupLabels = {
+  today: "I dag",
+  tomorrow: "I morgen",
+  week: "Denne uka",
+  later: "Senere",
+} satisfies Record<HuskReminderGroup, string>;
+
+const reminderGroupOrder: HuskReminderGroup[] = ["today", "tomorrow", "week", "later"];
+
+const reminderIcons = {
+  backpack: Backpack,
+  book: BookOpen,
+  cake: Cake,
+  car: Car,
+  gift: Gift,
+  grill: Utensils,
+  passport: Briefcase,
+  shirt: Shirt,
+  summer: Tent,
+  tooth: Stethoscope,
+} satisfies Record<HuskReminderIcon, LucideIcon>;
 
 function normalizeSearch(value: string) {
   return value.trim().toLocaleLowerCase("nb-NO");
@@ -65,7 +97,7 @@ function HuskToolbar({ query, onQueryChange }: { query: string; onQueryChange: (
         <input
           className="husk-search__input"
           onChange={(event) => onQueryChange(event.target.value)}
-          placeholder="Søk i husk, lister og skoleuka"
+          placeholder="Søk i husk"
           type="search"
           value={query}
         />
@@ -78,6 +110,40 @@ function HuskToolbar({ query, onQueryChange }: { query: string; onQueryChange: (
   );
 }
 
+function ReminderAvatars({ members }: { members: HuskFamilyMember[] }) {
+  return (
+    <span className="husk-reminder-card__avatars" aria-label={members.map((member) => member.name).join(", ")}>
+      {members.map((member) => (
+        <span className={`husk-avatar husk-avatar--${member.tone}`} key={member.id} aria-hidden="true">
+          {member.initials}
+        </span>
+      ))}
+    </span>
+  );
+}
+
+function HuskReminderCard({ reminder }: { reminder: HuskReminder }) {
+  const Icon = reminderIcons[reminder.icon];
+  const members = reminder.memberIds
+    .map((memberId) => huskMockData.familyMembers.find((member) => member.id === memberId))
+    .filter((member): member is HuskFamilyMember => Boolean(member));
+
+  return (
+    <button className={`husk-reminder-card husk-reminder-card--${reminder.tone}`} type="button">
+      <span className="husk-reminder-card__icon" aria-hidden="true">
+        <Icon size={23} strokeWidth={2.25} />
+      </span>
+      <span className="husk-reminder-card__content">
+        <span className="husk-reminder-card__title">{reminder.title}</span>
+        <span className="husk-reminder-card__meta">
+          {reminder.scopeText} <span aria-hidden="true">•</span> {reminder.dateLabel}
+        </span>
+      </span>
+      <ReminderAvatars members={members} />
+    </button>
+  );
+}
+
 function HuskReminders({ query }: { query: string }) {
   const normalizedQuery = normalizeSearch(query);
   const reminders = huskMockData.reminders.filter((reminder) => {
@@ -85,29 +151,37 @@ function HuskReminders({ query }: { query: string }) {
       return true;
     }
 
-    return [reminder.title, reminder.note, reminder.dueLabel, reminder.audience].some((value) =>
+    return [reminder.title, reminder.scopeText, reminder.dateLabel].some((value) =>
       value.toLocaleLowerCase("nb-NO").includes(normalizedQuery),
     );
   });
 
+  const groupedReminders = reminderGroupOrder
+    .map((group) => ({
+      group,
+      reminders: reminders.filter((reminder) => reminder.group === group),
+    }))
+    .filter(({ reminders: groupReminders }) => groupReminders.length > 0);
+
   return (
-    <section className="husk-panel" id="husk-panel-husk" role="tabpanel" aria-labelledby="husk-tab-husk husk-reminders-title">
-      <div className="husk-section-heading">
-        <p className="husk-section-heading__eyebrow">Passive påminnelser</p>
-        <h2 className="husk-section-heading__title" id="husk-reminders-title">Kommende husk</h2>
-      </div>
-      <div className="husk-card-list">
-        {reminders.map((reminder) => (
-          <article className={`husk-reminder-card husk-reminder-card--${reminder.tone}`} key={reminder.id}>
-            <span className="husk-reminder-card__icon" aria-hidden="true">
-              <Bell size={21} strokeWidth={2.4} />
-            </span>
-            <span className="husk-reminder-card__content">
-              <span className="husk-reminder-card__title">{reminder.title}</span>
-              <span className="husk-reminder-card__note">{reminder.note}</span>
-              <span className="husk-reminder-card__meta">{reminder.dueLabel} · {reminder.audience}</span>
-            </span>
-          </article>
+    <section className="husk-panel" id="husk-panel-husk" role="tabpanel" aria-labelledby="husk-tab-husk">
+      <div className="husk-reminder-groups">
+        {groupedReminders.map(({ group, reminders: groupReminders }) => (
+          <section className="husk-reminder-group" key={group} aria-labelledby={`husk-reminder-group-${group}`}>
+            <div className="husk-reminder-group__heading">
+              <h2 className="husk-reminder-group__title" id={`husk-reminder-group-${group}`}>
+                {reminderGroupLabels[group]}
+              </h2>
+              <span className={`husk-reminder-group__count husk-reminder-group__count--${group}`} aria-label={`${groupReminders.length} påminnelser`}>
+                {groupReminders.length}
+              </span>
+            </div>
+            <div className="husk-card-list">
+              {groupReminders.map((reminder) => (
+                <HuskReminderCard key={reminder.id} reminder={reminder} />
+              ))}
+            </div>
+          </section>
         ))}
       </div>
     </section>
