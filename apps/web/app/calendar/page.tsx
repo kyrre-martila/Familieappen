@@ -6,10 +6,11 @@ import {
   Backpack,
   CalendarCheck,
   Cake,
+  CalendarPlus,
   Check,
-  ChevronDown,
   ChevronLeft,
   ChevronRight,
+  Settings,
   Dumbbell,
   Flame,
   Gift,
@@ -356,10 +357,10 @@ function getFamilyMembers(participantIds: string[]) {
 
 function ViewSwitcher({
   selectedView,
-  onToggleView,
+  onSelectView,
 }: {
   selectedView: CalendarViewMode;
-  onToggleView: () => void;
+  onSelectView: (view: CalendarViewMode) => void;
 }) {
   const labelByView = {
     day: "Dag",
@@ -367,17 +368,32 @@ function ViewSwitcher({
     month: "Måned",
   } satisfies Record<CalendarViewMode, string>;
 
+  const viewOrder = ["day", "month", "list"] satisfies CalendarViewMode[];
+
   return (
-    <button
+    <div
       className="calendar-view-switcher"
-      type="button"
-      aria-haspopup="menu"
-      aria-label={`Velg kalendervisning. ${labelByView[selectedView]}visning er valgt.`}
-      onClick={onToggleView}
+      role="radiogroup"
+      aria-label="Velg kalendervisning"
     >
-      <span>{labelByView[selectedView]}</span>
-      <ChevronDown aria-hidden="true" size={20} strokeWidth={2.4} />
-    </button>
+      {viewOrder.map((view) => {
+        const isSelected = selectedView === view;
+
+        return (
+          <button
+            className={`calendar-view-switcher__option${isSelected ? " calendar-view-switcher__option--selected" : ""}`}
+            type="button"
+            role="radio"
+            aria-checked={isSelected}
+            aria-label={`${labelByView[view]}visning${isSelected ? ", valgt" : ""}`}
+            key={view}
+            onClick={() => onSelectView(view)}
+          >
+            {labelByView[view]}
+          </button>
+        );
+      })}
+    </div>
   );
 }
 
@@ -1147,14 +1163,6 @@ export default function CalendarPage() {
     parseDateString(mockToday),
   );
 
-  function toggleCalendarView() {
-    const viewOrder = ["day", "month", "list"] satisfies CalendarViewMode[];
-    setSelectedView(
-      (currentView) =>
-        viewOrder[(viewOrder.indexOf(currentView) + 1) % viewOrder.length],
-    );
-  }
-
   function handleChangeMonth(direction: "previous" | "next") {
     setVisibleMonth(
       (currentMonth) =>
@@ -1195,10 +1203,19 @@ export default function CalendarPage() {
     <AppShell
       title="Kalender"
       titleAction={
-        <ViewSwitcher
-          selectedView={selectedView}
-          onToggleView={toggleCalendarView}
-        />
+        <div className="calendar-title-actions" aria-label="Kalenderhandlinger">
+          <ViewSwitcher
+            selectedView={selectedView}
+            onSelectView={setSelectedView}
+          />
+          <Link className="calendar-title-action" href="/calendar/events/new" aria-label="Opprett ny kalenderhendelse">
+            <CalendarPlus aria-hidden="true" size={20} strokeWidth={2.4} />
+            <span>Ny</span>
+          </Link>
+          <Link className="calendar-title-action calendar-title-action--icon" href="/settings/calendar" aria-label="Åpne kalenderinnstillinger">
+            <Settings aria-hidden="true" size={20} strokeWidth={2.4} />
+          </Link>
+        </div>
       }
     >
       <PageContainer>
