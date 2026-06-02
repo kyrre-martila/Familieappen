@@ -1,12 +1,35 @@
 export type HuskTab = "husk" | "lister" | "skoleuka";
 
+export type HuskReminderGroup = "today" | "tomorrow" | "week" | "later";
+
+export type HuskReminderIcon =
+  | "backpack"
+  | "book"
+  | "cake"
+  | "car"
+  | "gift"
+  | "grill"
+  | "passport"
+  | "shirt"
+  | "summer"
+  | "tooth";
+
+export interface HuskFamilyMember {
+  id: string;
+  name: string;
+  initials: string;
+  tone: "blue" | "green" | "orange" | "pink" | "purple";
+}
+
 export interface HuskReminder {
   id: string;
   title: string;
-  note: string;
-  dueLabel: string;
-  audience: string;
-  tone: "blue" | "green" | "orange" | "purple";
+  scopeText: string;
+  dateLabel: string;
+  group: HuskReminderGroup;
+  icon: HuskReminderIcon;
+  tone: "blue" | "green" | "orange" | "pink" | "purple" | "yellow";
+  memberIds: string[];
 }
 
 export interface HuskListItem {
@@ -35,36 +58,109 @@ export interface HuskSchoolDayPlan {
 }
 
 export interface HuskMockData {
+  familyMembers: HuskFamilyMember[];
   reminders: HuskReminder[];
   listGroups: HuskListGroup[];
   schoolWeek: HuskSchoolDayPlan[];
 }
 
 export const huskMockData: HuskMockData = {
+  familyMembers: [
+    { id: "elisabeth", name: "Elisabeth", initials: "EL", tone: "pink" },
+    { id: "fiona", name: "Fiona", initials: "FI", tone: "orange" },
+    { id: "alma", name: "Alma", initials: "AL", tone: "purple" },
+    { id: "even-olai", name: "Even-Olai", initials: "EO", tone: "blue" },
+  ],
   reminders: [
     {
-      id: "reminder-gymbag",
-      title: "Gymbag til tirsdag",
-      note: "Legg frem gymsko og ren treningstrøye etter middag.",
-      dueLabel: "I kveld",
-      audience: "Emil",
-      tone: "green",
+      id: "reminder-gymtoy",
+      title: "Gymtøy",
+      scopeText: "Fiona",
+      dateLabel: "I dag",
+      group: "today",
+      icon: "shirt",
+      tone: "yellow",
+      memberIds: ["fiona"],
     },
     {
-      id: "reminder-library",
-      title: "Bibliotekbok i sekken",
-      note: "Boken ligger på kjøkkenbenken og skal leveres før helgen.",
-      dueLabel: "Fredag",
-      audience: "Alle barna",
+      id: "reminder-library-book",
+      title: "Bibliotekbok",
+      scopeText: "Fiona",
+      dateLabel: "I dag",
+      group: "today",
+      icon: "book",
       tone: "blue",
+      memberIds: ["fiona"],
     },
     {
-      id: "reminder-trip",
-      title: "Svar på turmelding",
-      note: "Skolen trenger bekreftelse på bålmat og transport.",
-      dueLabel: "Innen 12:00",
-      audience: "Foresatte",
+      id: "reminder-grill-food",
+      title: "Ta med grillmat",
+      scopeText: "Alma",
+      dateLabel: "I dag",
+      group: "today",
+      icon: "backpack",
+      tone: "pink",
+      memberIds: ["alma"],
+    },
+    {
+      id: "reminder-emma-gift",
+      title: "Kjøp gave til Emma",
+      scopeText: "Hele familien",
+      dateLabel: "I morgen",
+      group: "tomorrow",
+      icon: "gift",
       tone: "orange",
+      memberIds: ["elisabeth", "even-olai", "fiona", "alma"],
+    },
+    {
+      id: "reminder-dentist",
+      title: "Tannlege",
+      scopeText: "Even-Olai",
+      dateLabel: "I morgen",
+      group: "tomorrow",
+      icon: "tooth",
+      tone: "green",
+      memberIds: ["even-olai"],
+    },
+    {
+      id: "reminder-workshop",
+      title: "Bestille verkstedtime",
+      scopeText: "Elisabeth",
+      dateLabel: "Tirsdag 10. juni",
+      group: "week",
+      icon: "car",
+      tone: "green",
+      memberIds: ["elisabeth"],
+    },
+    {
+      id: "reminder-passports",
+      title: "Husk pass",
+      scopeText: "Hele familien",
+      dateLabel: "Lørdag 14. juni",
+      group: "week",
+      icon: "passport",
+      tone: "purple",
+      memberIds: ["elisabeth", "even-olai", "fiona", "alma"],
+    },
+    {
+      id: "reminder-birthday-even-olai",
+      title: "Bursdag Even-Olai",
+      scopeText: "Even-Olai",
+      dateLabel: "Mandag 16. juni",
+      group: "later",
+      icon: "cake",
+      tone: "pink",
+      memberIds: ["even-olai"],
+    },
+    {
+      id: "reminder-summer-holiday",
+      title: "Planlegg sommerferie",
+      scopeText: "Hele familien",
+      dateLabel: "Uke 26",
+      group: "later",
+      icon: "summer",
+      tone: "blue",
+      memberIds: ["elisabeth", "even-olai", "fiona", "alma"],
     },
   ],
   listGroups: [
