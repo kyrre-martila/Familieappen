@@ -27,7 +27,7 @@ export function RootAppFrame({ children }: Readonly<{ children: React.ReactNode 
   );
 }
 
-export function AppShell({ children, title }: Readonly<{ children: React.ReactNode; title: string }>) {
+export function AppShell({ children, title, titleAction }: Readonly<{ children: React.ReactNode; title: string; titleAction?: React.ReactNode }>) {
   return (
     <div className="app-shell">
       <header className="app-shell__header" aria-label="Felles toppfelt">
@@ -43,6 +43,7 @@ export function AppShell({ children, title }: Readonly<{ children: React.ReactNo
       </header>
       <div className="app-shell__title-row">
         <h1 className="app-shell__title">{title}</h1>
+        {titleAction ? <div className="app-shell__title-action">{titleAction}</div> : null}
       </div>
       <div className="app-shell__content">{children}</div>
     </div>

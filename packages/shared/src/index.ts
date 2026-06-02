@@ -186,3 +186,15 @@ export interface FamilyMemberSummary {
   displayName: string;
   role: FamilyMemberRole;
 }
+
+export type {
+  CalendarEvent as CalendarMvpEvent,
+  CalendarEventIcon as CalendarMvpEventIcon,
+  CalendarEventRecurrence as CalendarMvpEventRecurrence,
+  CalendarEventReminder as CalendarMvpEventReminder,
+  CalendarEventSource as CalendarMvpEventSource,
+  CalendarViewMode,
+  FamilyMember as CalendarMvpFamilyMember,
+  MealSummary,
+  ReminderSummary
+} from "./calendar-mvp.js";
