@@ -11,18 +11,23 @@ function isImmersiveRoute(pathname: string) {
   return immersiveRoutes.some((route) => pathname === route || pathname.startsWith(`${route}/`));
 }
 
+function isFocusRoute(pathname: string) {
+  return pathname.startsWith("/calendar/events/");
+}
+
 export function RootAppFrame({ children }: Readonly<{ children: React.ReactNode }>) {
   const pathname = usePathname();
   const isImmersive = isImmersiveRoute(pathname);
-  const shellClassName = ["root-app-frame", isImmersive ? "root-app-frame--immersive" : "", pathname === "/" ? "root-app-frame--splash" : ""]
+  const isFocus = isFocusRoute(pathname);
+  const shellClassName = ["root-app-frame", isImmersive ? "root-app-frame--immersive" : "", isFocus ? "root-app-frame--focus" : "", pathname === "/" ? "root-app-frame--splash" : ""]
     .filter(Boolean)
     .join(" ");
 
   return (
     <div className={shellClassName}>
-      {!isImmersive ? <OnboardingRouteGuard mode="app-shell" /> : null}
+      {!isImmersive && !isFocus ? <OnboardingRouteGuard mode="app-shell" /> : null}
       <main className="root-app-frame__main">{children}</main>
-      {!isImmersive ? <BottomNavigation /> : null}
+      {!isImmersive && !isFocus ? <BottomNavigation /> : null}
     </div>
   );
 }

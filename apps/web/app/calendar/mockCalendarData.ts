@@ -5,6 +5,7 @@ export const mockToday = "2025-06-03";
 export const familyMembers: CalendarMvpFamilyMember[] = [
   { id: "fiona", name: "Fiona", initials: "FI", avatarColor: "green" },
   { id: "even-olai", name: "Even-Olai", initials: "EO", avatarColor: "blue" },
+  { id: "kyrre", name: "Kyrre", initials: "KY", avatarColor: "green" },
   { id: "elisabeth", name: "Elisabeth", initials: "EK", avatarColor: "orange" },
   { id: "alma", name: "Alma", initials: "AL", avatarColor: "purple" }
 ];
@@ -61,9 +62,9 @@ export const calendarEvents: CalendarMvpEvent[] = [
     endTime: "19:30",
     allDay: false,
     location: "Bjørnevatn kunstgress",
-    description: null,
+    description: "Ta med leggskinn og drikkeflaske.",
     icon: "sport",
-    participantIds: ["even-olai"],
+    participantIds: ["even-olai", "kyrre"],
     source: "ics",
     isImported: true,
     reminder: { minutesBefore: 60, label: "1 time før" },

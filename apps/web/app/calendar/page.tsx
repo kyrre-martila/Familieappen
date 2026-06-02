@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { useMemo, useRef, useState } from "react";
 import {
   Backpack,
@@ -296,7 +297,7 @@ function EventCard({ event }: { event: CalendarMvpEvent }) {
   const tone = eventToneByIcon[event.icon];
 
   return (
-    <button className={`calendar-event-card calendar-event-card--${tone}`} type="button" aria-label={`${event.title}. ${event.location ?? "Ingen lokasjon"}.`}>
+    <Link className={`calendar-event-card calendar-event-card--${tone}`} href={`/calendar/events/${event.id}`} aria-label={`Åpne hendelse: ${event.title}. ${event.location ?? "Ingen lokasjon"}.`}>
       <EventTime event={event} />
       <span className="calendar-event-card__content">
         <span className="calendar-event-card__title">{event.title}</span>
@@ -306,7 +307,7 @@ function EventCard({ event }: { event: CalendarMvpEvent }) {
       <span className="calendar-event-card__icon" aria-hidden="true">
         <Icon size={38} strokeWidth={2.15} />
       </span>
-    </button>
+    </Link>
   );
 }
 
