@@ -13,6 +13,7 @@ import {
   Gift,
   GraduationCap,
   Plane,
+  SlidersHorizontal,
   Stethoscope,
   Utensils,
   Users,
@@ -28,6 +29,7 @@ import { calendarEvents, familyMembers, meals, mockToday, reminders } from "./mo
 
 const dayFormatter = new Intl.DateTimeFormat("nb-NO", { weekday: "short" });
 const selectedDateFormatter = new Intl.DateTimeFormat("nb-NO", { day: "numeric", month: "long", weekday: "long", year: "numeric" });
+const listDateFormatter = new Intl.DateTimeFormat("nb-NO", { day: "numeric", month: "long", weekday: "long" });
 const monthTitleFormatter = new Intl.DateTimeFormat("nb-NO", { month: "long", year: "numeric" });
 const monthDayLabelFormatter = new Intl.DateTimeFormat("nb-NO", { day: "numeric", month: "long" });
 const weekDayLabels = ["MAN", "TIR", "ONS", "TOR", "FRE", "LØR", "SØN"];
@@ -126,9 +128,36 @@ function buildDateStrip(startDate: string, length = 14) {
   });
 }
 
+function capitalizeDateLabel(label: string) {
+  return label.charAt(0).toUpperCase() + label.slice(1);
+}
+
 function formatSelectedDate(date: string) {
-  const formatted = selectedDateFormatter.format(parseDateString(date));
-  return formatted.charAt(0).toUpperCase() + formatted.slice(1);
+  return capitalizeDateLabel(selectedDateFormatter.format(parseDateString(date)));
+}
+
+function formatListDate(date: string) {
+  return capitalizeDateLabel(listDateFormatter.format(parseDateString(date)));
+}
+
+function buildListDayGroups() {
+  const dates = new Set<string>();
+
+  meals.forEach((meal) => dates.add(meal.date));
+  reminders.forEach((reminder) => dates.add(reminder.date));
+  calendarEvents.forEach((event) => dates.add(event.date));
+
+  return Array.from(dates)
+    .sort((firstDate, secondDate) => firstDate.localeCompare(secondDate))
+    .map((date) => ({
+      date,
+      events: calendarEvents
+        .filter((event) => event.date === date)
+        .sort((firstEvent, secondEvent) => (firstEvent.startTime ?? "00:00").localeCompare(secondEvent.startTime ?? "00:00")),
+      meal: meals.find((meal) => meal.date === date),
+      reminders: reminders.filter((reminder) => reminder.date === date)
+    }))
+    .filter((group) => group.meal || group.reminders.length > 0 || group.events.length > 0);
 }
 
 function getFamilyMembers(participantIds: string[]) {
@@ -384,6 +413,79 @@ function MonthView({
   );
 }
 
+function ReminderChip({ reminder }: { reminder: ReminderSummary }) {
+  const ReminderIcon = reminderIcons[reminder.icon];
+
+  return (
+    <button className="calendar-chip calendar-chip--reminder" type="button" aria-label={`Åpne husk: ${reminder.title}`}>
+      <ReminderIcon aria-hidden="true" size={22} strokeWidth={2.3} />
+      <span>{reminder.title}</span>
+    </button>
+  );
+}
+
+function ListView({ isFilterOpen, onToggleFilter }: { isFilterOpen: boolean; onToggleFilter: () => void }) {
+  const dayGroups = useMemo(() => buildListDayGroups(), []);
+
+  return (
+    <section className="calendar-list-view" aria-labelledby="calendar-list-title">
+      <div className="calendar-list-view__toolbar">
+        <h2 className="calendar-list-view__title" id="calendar-list-title">Familietidslinje</h2>
+        <button className="calendar-filter-button" type="button" aria-expanded={isFilterOpen} aria-controls="calendar-filter-placeholder" onClick={onToggleFilter}>
+          <SlidersHorizontal aria-hidden="true" size={20} strokeWidth={2.4} />
+          <span>Filter</span>
+        </button>
+      </div>
+
+      {isFilterOpen ? (
+        <div className="calendar-filter-placeholder" id="calendar-filter-placeholder" role="status">
+          Filter kommer senere: familiemedlem, ikon/kategori, kun middag, kun husk eller kun kalenderhendelser.
+        </div>
+      ) : null}
+
+      <div className="calendar-list-view__groups">
+        {dayGroups.map((group) => {
+          const visibleReminders = group.reminders.slice(0, 10);
+          const hiddenReminderCount = Math.max(0, group.reminders.length - visibleReminders.length);
+          const headingId = `calendar-list-${group.date}`;
+
+          return (
+            <section className="calendar-list-day" aria-labelledby={headingId} key={group.date}>
+              <div className="calendar-list-day__header">
+                <h3 className="calendar-list-day__title" id={headingId}>{formatListDate(group.date)}</h3>
+                {group.date === mockToday ? <span className="calendar-list-day__today">I dag</span> : null}
+              </div>
+
+              {group.meal || group.reminders.length > 0 ? (
+                <div className="calendar-list-day__chips" aria-label={`Middag og husk for ${formatListDate(group.date)}`}>
+                  {group.meal ? (
+                    <button className="calendar-chip calendar-chip--meal" type="button" aria-label={`Åpne middag for ${formatListDate(group.date)}: ${group.meal.title}`}>
+                      <Utensils aria-hidden="true" size={22} strokeWidth={2.3} />
+                      <span>{group.meal.title}</span>
+                    </button>
+                  ) : null}
+                  {visibleReminders.map((reminder) => <ReminderChip reminder={reminder} key={reminder.id} />)}
+                  {hiddenReminderCount > 0 ? (
+                    <button className="calendar-chip calendar-chip--more" type="button" aria-label={`Vis ${hiddenReminderCount} flere husk for ${formatListDate(group.date)}`}>
+                      +{hiddenReminderCount} flere
+                    </button>
+                  ) : null}
+                </div>
+              ) : null}
+
+              {group.events.length > 0 ? (
+                <div className="calendar-event-list calendar-list-day__events" aria-label={`Kalenderhendelser for ${formatListDate(group.date)}`}>
+                  {group.events.map((event) => <EventCard event={event} key={event.id} />)}
+                </div>
+              ) : null}
+            </section>
+          );
+        })}
+      </div>
+    </section>
+  );
+}
+
 function DayView({ selectedDate }: { selectedDate: string }) {
   const eventsForDate = calendarEvents.filter((event) => event.date === selectedDate);
 
@@ -403,9 +505,11 @@ export default function CalendarPage() {
   const [selectedView, setSelectedView] = useState<CalendarViewMode>("day");
   const [selectedDate, setSelectedDate] = useState(mockToday);
   const [visibleMonth, setVisibleMonth] = useState(() => parseDateString(mockToday));
+  const [isFilterOpen, setIsFilterOpen] = useState(false);
 
   function toggleCalendarView() {
-    setSelectedView((currentView) => (currentView === "month" ? "day" : "month"));
+    const viewOrder = ["day", "month", "list"] satisfies CalendarViewMode[];
+    setSelectedView((currentView) => viewOrder[(viewOrder.indexOf(currentView) + 1) % viewOrder.length]);
   }
 
   function handleChangeMonth(direction: "previous" | "next") {
@@ -451,6 +555,7 @@ export default function CalendarPage() {
             onSelectDate={handleMonthDateSelect}
           />
         ) : null}
+        {selectedView === "list" ? <ListView isFilterOpen={isFilterOpen} onToggleFilter={() => setIsFilterOpen((isOpen) => !isOpen)} /> : null}
       </PageContainer>
     </AppShell>
   );
