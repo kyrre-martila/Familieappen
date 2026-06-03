@@ -131,7 +131,6 @@ const personFilterOptions = [
 const defaultHuskFilters: HuskFilters = { person: "all", showPrevious: false };
 const defaultListFilters: ListFilters = { person: "all", showArchived: false };
 const huskTabStorageKey = "familieappen:husk:selected-tab";
-const schoolWeekStorageKey = "familieappen:husk:school-week-start";
 const schoolChildStorageKey = "familieappen:husk:school-child-id";
 const huskQueryStorageKey = "familieappen:husk:query";
 const huskFiltersStorageKey = "familieappen:husk:filters";
@@ -176,15 +175,6 @@ function readStoredJson<T>(storageKey: string, fallback: T): T {
   }
 }
 
-function readStoredSchoolWeekStart(fallback: number) {
-  if (typeof window === "undefined") {
-    return fallback;
-  }
-
-  const storedWeekStart = Number(window.sessionStorage.getItem(schoolWeekStorageKey));
-  return Number.isFinite(storedWeekStart) ? storedWeekStart : fallback;
-}
-
 const previousReminders: HuskReminder[] = [
   {
     id: "previous-gymtoy",
@@ -218,38 +208,6 @@ const previousReminders: HuskReminder[] = [
   },
 ];
 
-const archivedListGroups: HuskListGroup[] = [
-  {
-    id: "archived-christmas-2024",
-    title: "Jul 2024",
-    completedCount: 12,
-    totalCount: 12,
-    archived: true,
-    icon: "celebration",
-    tone: "purple",
-    memberIds: ["elisabeth", "kyrre", "alma", "even-olai", "fiona"],
-  },
-  {
-    id: "archived-winter-break-2025",
-    title: "Vinterferie 2025",
-    completedCount: 8,
-    totalCount: 8,
-    archived: true,
-    icon: "summer",
-    tone: "blue",
-    memberIds: ["elisabeth", "kyrre", "alma", "even-olai", "fiona"],
-  },
-  {
-    id: "archived-old-birthday-list",
-    title: "Gammel bursdagsliste",
-    completedCount: 6,
-    totalCount: 6,
-    archived: true,
-    icon: "birthday",
-    tone: "green",
-    memberIds: ["elisabeth", "even-olai"],
-  },
-];
 
 type SchoolCreateDraft = {
   weekday: HuskSchoolWeekday;
@@ -662,7 +620,7 @@ function HuskLists({ filters, query }: { filters: ListFilters; query: string }) 
     );
   });
   const activeListGroups = filterListGroups(huskMockData.listGroups.filter((group) => !group.archived));
-  const archivedLists = filters.showArchived ? filterListGroups(archivedListGroups) : [];
+  const archivedLists = filters.showArchived ? filterListGroups(huskMockData.listGroups.filter((group) => group.archived)) : [];
 
   return (
     <section className="husk-panel" id="husk-panel-lister" role="tabpanel" aria-labelledby="husk-tab-lister husk-lists-title">
@@ -791,13 +749,13 @@ function HuskSchoolCreateSheet({
               type="checkbox"
             />
             <span className="husk-school-repeat__box" aria-hidden="true">{draft.recurring ? <Check size={17} strokeWidth={3} /> : null}</span>
-            <span>Gjenta hver uke</span>
+            <span>Gjenta ukentlig</span>
           </label>
 
           {draft.recurring ? (
             <label className="husk-school-field">
-              <span>Sluttdato</span>
-              <input onChange={(event) => onChange({ ...draft, endDate: event.target.value })} type="date" value={draft.endDate} />
+              <span>Valgfri sluttdato</span>
+              <input aria-label="Valgfri sluttdato for ukentlig gjentakelse" onChange={(event) => onChange({ ...draft, endDate: event.target.value })} type="date" value={draft.endDate} />
             </label>
           ) : null}
         </div>
@@ -837,7 +795,7 @@ function HuskSchoolWeek({ shouldOpenPlanner }: { shouldOpenPlanner: boolean }) {
   const router = useRouter();
   const todayWeekStart = useMemo(() => getIsoWeekStart(new Date()), []);
   const todayWeekStartTime = todayWeekStart.getTime();
-  const [selectedWeekStartTime, setSelectedWeekStartTime] = useState(() => readStoredSchoolWeekStart(todayWeekStartTime));
+  const [selectedWeekStartTime, setSelectedWeekStartTime] = useState(todayWeekStartTime);
   const [selectedChildId, setSelectedChildId] = useState(() => readStoredValue(schoolChildStorageKey, schoolChildIds[0]));
   const [isEditing, setIsEditing] = useState(shouldOpenPlanner);
   const [createDraft, setCreateDraft] = useState<SchoolCreateDraft | null>(null);
@@ -849,10 +807,6 @@ function HuskSchoolWeek({ shouldOpenPlanner }: { shouldOpenPlanner: boolean }) {
       setIsEditing(true);
     }
   }, [shouldOpenPlanner]);
-
-  useEffect(() => {
-    window.sessionStorage.setItem(schoolWeekStorageKey, String(selectedWeekStartTime));
-  }, [selectedWeekStartTime]);
 
   useEffect(() => {
     window.sessionStorage.setItem(schoolChildStorageKey, selectedChildId);

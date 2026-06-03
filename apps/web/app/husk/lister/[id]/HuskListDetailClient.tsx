@@ -57,6 +57,7 @@ function ListItemRow({
   onToggle,
   onTitleChange,
   onDescriptionChange,
+  onDelete,
 }: {
   item: HuskListDetailItem;
   list: HuskListDetail;
@@ -64,6 +65,7 @@ function ListItemRow({
   onToggle: () => void;
   onTitleChange: (title: string) => void;
   onDescriptionChange: (description: string) => void;
+  onDelete: () => void;
 }) {
   const assignedMembers = getMembers(item.assignedMemberIds, list.familyMembers);
   const primaryAssignee = assignedMembers[0] ?? null;
@@ -76,7 +78,7 @@ function ListItemRow({
         </button>
         <div className="list-detail-editor" aria-label={`Rediger punkt: ${item.title}`}>
           <div className="list-detail-editor__topline">
-            <input className="list-detail-editor__title" aria-label="Tittel" value={item.title} onChange={(event) => onTitleChange(event.target.value)} />
+            <input className="list-detail-editor__title" aria-label="Tittel" value={item.title} onChange={(event) => onTitleChange(event.target.value)} placeholder="Punktets tittel" />
             <button className="list-detail-editor__collapse" type="button" onClick={onToggle} aria-label="Lukk redigering">
               <ChevronUp size={23} strokeWidth={2.5} />
             </button>
@@ -101,7 +103,7 @@ function ListItemRow({
               <X className="list-detail-date-like__clear" aria-hidden="true" size={20} strokeWidth={2.4} />
             </span>
           </label>
-          <button className="list-detail-delete" type="button">Slett punkt</button>
+          <button className="list-detail-delete" type="button" onClick={onDelete}>Slett punkt</button>
         </div>
       </article>
     );
@@ -136,11 +138,11 @@ export function HuskListDetailClient({ list }: { list: HuskListDetail }) {
   const [selectedSection, setSelectedSection] = useState<HuskListSection>(() => readStoredDetailValue(getDetailStorageKey(list.id, "section"), "active") as HuskListSection);
   const [expandedItemId, setExpandedItemId] = useState<string>(() => readStoredDetailValue(getDetailStorageKey(list.id, "expanded"), "kirke-bekreftet"));
   const [listItems, setListItems] = useState<HuskListDetailItem[]>(list.items);
+  const [showSavedBadge, setShowSavedBadge] = useState(false);
   const sectionItems = listItems.filter((item) => (selectedSection === "completed" ? item.completed : !item.completed));
   const completedCount = listItems.filter((item) => item.completed).length;
   const activeCount = listItems.length - completedCount;
   const progressPercent = list.totalCount > 0 ? Math.round((list.completedCount / list.totalCount) * 100) : 0;
-  const expandedItem = listItems.find((item) => item.id === expandedItemId);
 
   useEffect(() => {
     window.sessionStorage.setItem(getDetailStorageKey(list.id, "section"), selectedSection);
@@ -149,6 +151,15 @@ export function HuskListDetailClient({ list }: { list: HuskListDetail }) {
   useEffect(() => {
     window.sessionStorage.setItem(getDetailStorageKey(list.id, "expanded"), expandedItemId);
   }, [expandedItemId, list.id]);
+
+  useEffect(() => {
+    if (!showSavedBadge) {
+      return;
+    }
+
+    const timeout = window.setTimeout(() => setShowSavedBadge(false), 1300);
+    return () => window.clearTimeout(timeout);
+  }, [showSavedBadge]);
 
   useEffect(() => {
     const scrollElement = scrollRef.current;
@@ -168,8 +179,19 @@ export function HuskListDetailClient({ list }: { list: HuskListDetail }) {
     };
   }, [list.id]);
 
+  function showSaved() {
+    setShowSavedBadge(true);
+  }
+
   function updateMockItem(itemId: string, update: Partial<Pick<HuskListDetailItem, "title" | "description">>) {
     setListItems((currentItems) => currentItems.map((item) => (item.id === itemId ? { ...item, ...update } : item)));
+    showSaved();
+  }
+
+  function deleteMockItem(itemId: string) {
+    setListItems((currentItems) => currentItems.filter((item) => item.id !== itemId));
+    setExpandedItemId("");
+    showSaved();
   }
 
   if (familyAccess.status === "pending") {
@@ -199,7 +221,7 @@ export function HuskListDetailClient({ list }: { list: HuskListDetail }) {
           <div className="list-detail__headline">
             <div className="list-detail__title-row">
               <h1 className="list-detail__title" id="list-detail-title">{list.title}</h1>
-              {expandedItem ? (
+              {showSavedBadge ? (
                 <span className="list-detail__saved-badge" aria-live="polite">
                   <Check aria-hidden="true" size={17} strokeWidth={3} />
                   Lagret
@@ -253,6 +275,7 @@ export function HuskListDetailClient({ list }: { list: HuskListDetail }) {
               onToggle={() => setExpandedItemId((currentId) => (currentId === item.id ? "" : item.id))}
               onTitleChange={(title) => updateMockItem(item.id, { title })}
               onDescriptionChange={(description) => updateMockItem(item.id, { description })}
+              onDelete={() => deleteMockItem(item.id)}
             />
           ))}
         </section>

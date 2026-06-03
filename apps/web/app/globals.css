@@ -7604,10 +7604,11 @@ select {
   gap: calc(var(--space-xs) * 0.75);
   border-radius: var(--radius-pill);
   padding: var(--space-xs) var(--space-s);
-  background: color-mix(in srgb, var(--color-success) 14%, var(--color-surface));
-  color: var(--color-primary-strong);
+  background: color-mix(in srgb, var(--color-success) 8%, var(--color-surface));
+  color: color-mix(in srgb, var(--color-success) 72%, var(--color-text));
   font-size: var(--text-small);
-  font-weight: 850;
+  font-weight: 780;
+  opacity: 0.9;
 }
 
 .list-detail__scope {
@@ -7835,6 +7836,8 @@ select {
 .list-detail-editor__title {
   min-height: calc(var(--space-xl) + var(--space-s));
   padding: 0 var(--space-s);
+  background: color-mix(in srgb, var(--color-primary-soft) 20%, var(--color-surface));
+  box-shadow: inset 0 -2px 0 color-mix(in srgb, var(--color-primary) 24%, transparent);
   font-size: var(--text-heading);
   font-weight: 850;
   letter-spacing: -0.04em;
@@ -7881,13 +7884,14 @@ select {
 
 .list-detail-delete {
   justify-self: start;
-  border: 0;
-  padding: 0;
-  background: transparent;
-  color: #b4232f;
+  border: 1px solid color-mix(in srgb, #b4232f 14%, var(--color-border));
+  border-radius: var(--radius-pill);
+  padding: calc(var(--space-xs) * 0.85) var(--space-s);
+  background: color-mix(in srgb, #b4232f 4%, var(--color-surface));
+  color: color-mix(in srgb, #b4232f 70%, var(--color-text));
   cursor: pointer;
-  font-size: var(--text-label);
-  font-weight: 780;
+  font-size: var(--text-small);
+  font-weight: 760;
 }
 
 .list-detail__sticky-action {
@@ -7989,7 +7993,7 @@ select {
   gap: var(--space-s);
   margin-inline: calc(var(--gutter) * -1);
   overflow-x: auto;
-  padding: 0 var(--gutter) var(--space-xs);
+  padding: var(--space-xs) var(--gutter) var(--space-s);
   scroll-padding-inline: var(--gutter);
   scrollbar-width: none;
 }
@@ -8005,10 +8009,10 @@ select {
   min-height: calc(var(--space-2xl) + var(--space-s));
   place-items: center;
   gap: calc(var(--space-xs) * 0.35);
-  border: 1px solid transparent;
+  border: 1px solid color-mix(in srgb, var(--color-border) 74%, transparent);
   border-radius: var(--radius-l);
   padding: var(--space-s) var(--space-m);
-  background: transparent;
+  background: color-mix(in srgb, var(--color-surface) 94%, transparent);
   color: var(--color-muted);
   cursor: pointer;
   font: inherit;
@@ -8027,7 +8031,8 @@ select {
 }
 
 .husk-week-strip__option:not(.husk-week-strip__option--selected) small {
-  color: transparent;
+  color: currentColor;
+  opacity: 0.72;
 }
 
 .husk-week-strip__option::after {
@@ -8048,7 +8053,7 @@ select {
 
 .husk-week-strip__option--selected::after {
   background: var(--color-primary);
-  transform: translateY(calc(var(--space-m) + var(--space-xs)));
+  transform: translateY(calc(var(--space-xs) * 0.35));
 }
 
 .husk-school-child {
@@ -8111,7 +8116,11 @@ select {
   display: grid;
   grid-template-columns: minmax(0, 1fr);
   gap: var(--space-s);
+  border: 1px solid color-mix(in srgb, var(--color-border) 78%, transparent);
+  border-radius: var(--radius-l);
   padding: var(--space-m);
+  background: color-mix(in srgb, var(--color-surface) 96%, transparent);
+  box-shadow: 0 var(--space-xs) var(--space-m) color-mix(in srgb, var(--color-text) 4%, transparent);
 }
 
 .husk-school-day__header {

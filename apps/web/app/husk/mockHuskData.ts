@@ -299,7 +299,7 @@ export const huskListDetails: HuskListDetail[] = [
         title: "Kirke bekreftet",
         completed: false,
         assignedMemberIds: ["elisabeth"],
-        description: "Kirken er bekreftet for lørdag 24. mai kl. 11:00.",
+        description: "Kirken er bekreftet for lørdag 24. mai.",
         dueLabel: "24. mai 2025",
       },
       {
