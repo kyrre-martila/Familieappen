@@ -54,7 +54,7 @@ export function IconPickerClient() {
   return (
     <main className="icon-picker-screen" aria-labelledby="icon-picker-title">
       <header className="icon-picker-topbar">
-        <button className="icon-picker-topbar__back" type="button" onClick={() => router.push(returnTo)} aria-label="Tilbake til hendelsesskjema">
+        <button className="icon-picker-topbar__back" type="button" onClick={() => router.push(returnTo)} aria-label="Tilbake til skjema">
           <ChevronLeft aria-hidden="true" size={30} strokeWidth={2.8} />
         </button>
         <h1 id="icon-picker-title">Velg ikon</h1>
@@ -84,7 +84,7 @@ export function IconPickerClient() {
 
       <aside className="icon-picker-hint" aria-label="Tips om ikonvalg">
         <span className="icon-picker-hint__icon" aria-hidden="true"><Lightbulb size={24} /></span>
-        <p>Ikonet hjelper familien med å se hva hendelsen gjelder. Du kan endre det senere.</p>
+        <p>Ikonet hjelper familien med å se hva dette gjelder. Du kan endre det senere.</p>
       </aside>
     </main>
   );
