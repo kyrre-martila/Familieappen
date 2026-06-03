@@ -8,6 +8,7 @@ import {
   Suspense,
   useState,
   type DragEvent,
+  type FocusEvent,
   type RefObject,
 } from "react";
 import {
@@ -162,8 +163,14 @@ function MealsPageContent() {
   const [draggedOffset, setDraggedOffset] = useState<number | null>(null);
   const [activeDropOffset, setActiveDropOffset] = useState<number | null>(null);
   const [toastMessage, setToastMessage] = useState<string | null>(null);
+  const [undoMeal, setUndoMeal] = useState<{
+    offset: number;
+    meal: MockMeal;
+  } | null>(null);
   const [editingOffset, setEditingOffset] = useState<number | null>(null);
   const [inputValue, setInputValue] = useState("");
+  const editingOffsetRef = useRef<number | null>(null);
+  const inputValueRef = useRef("");
   const [mealsByOffset, setMealsByOffset] = useState(() => {
     const initialMeals = new Map<number, MockMeal>();
 
@@ -213,18 +220,21 @@ function MealsPageContent() {
     ? `Du har planlagt frem til ${formatReminderDate(today, futurePlannedOffsets[futurePlannedOffsets.length - 1])}.`
     : "";
   const hasFutureMeals = futurePlannedOffsets.length > 0;
+  const plannedMealCount = mealsByOffset.size;
   const previousMealSuggestions = useMemo(() => {
-    const seenMealIds = new Set<string>();
+    const seenMealTitles = new Set<string>();
 
     return Array.from(mealsByOffset.entries())
       .sort((a, b) => b[0] - a[0])
       .map(([, meal]) => meal)
       .filter((meal) => {
-        if (seenMealIds.has(meal.id)) {
+        const normalizedTitle = normalizeMealTitle(meal.title);
+
+        if (seenMealTitles.has(normalizedTitle)) {
           return false;
         }
 
-        seenMealIds.add(meal.id);
+        seenMealTitles.add(normalizedTitle);
         return true;
       });
   }, [mealsByOffset]);
@@ -236,7 +246,9 @@ function MealsPageContent() {
       ...mockMeals.filter(
         (meal) =>
           !previousMealSuggestions.some(
-            (previousMeal) => previousMeal.id === meal.id,
+            (previousMeal) =>
+              normalizeMealTitle(previousMeal.title) ===
+              normalizeMealTitle(meal.title),
           ),
       ),
     ];
@@ -255,6 +267,15 @@ function MealsPageContent() {
       })
       .slice(0, 5);
   }, [inputValue, previousMealSuggestions]);
+
+
+  useEffect(() => {
+    editingOffsetRef.current = editingOffset;
+  }, [editingOffset]);
+
+  useEffect(() => {
+    inputValueRef.current = inputValue;
+  }, [inputValue]);
 
   useEffect(() => {
     if (hasInitialScrollRef.current) {
@@ -327,7 +348,26 @@ function MealsPageContent() {
     }
   }, [mealsByOffset, searchParams, today]);
 
+  function commitOpenEditor() {
+    const currentEditingOffset = editingOffsetRef.current;
+    const currentInputValue = inputValueRef.current.trim();
+
+    if (currentEditingOffset === null) {
+      return false;
+    }
+
+    if (!currentInputValue) {
+      closeEditor();
+      return false;
+    }
+
+    saveMeal(currentEditingOffset, currentInputValue, { silent: true });
+    return true;
+  }
+
   function openEditor(offset: number, meal?: MockMeal | null) {
+    commitOpenEditor();
+    exitMoveMode();
     setStartOffset((currentOffset) => Math.min(currentOffset, offset));
     setEndOffset((currentOffset) => Math.max(currentOffset, offset));
     setEditingOffset(offset);
@@ -344,7 +384,11 @@ function MealsPageContent() {
     setInputValue("");
   }
 
-  function saveMeal(offset: number, title: string) {
+  function saveMeal(
+    offset: number,
+    title: string,
+    options: { silent?: boolean } = {},
+  ) {
     const trimmedTitle = title.trim();
 
     if (!trimmedTitle) {
@@ -358,24 +402,60 @@ function MealsPageContent() {
       return nextMeals;
     });
     closeEditor();
-    showToast("Middag lagret");
+
+    if (!options.silent) {
+      showToast("Middag lagret");
+    }
   }
 
   function deleteMeal(offset: number) {
+    const mealToDelete = mealsByOffset.get(offset);
+
+    if (!mealToDelete) {
+      closeEditor();
+      return;
+    }
+
     setMealsByOffset((currentMeals) => {
       const nextMeals = new Map(currentMeals);
       nextMeals.delete(offset);
       return nextMeals;
     });
+    setUndoMeal({ offset, meal: mealToDelete });
     closeEditor();
     showToast("Middag slettet");
   }
 
+  function undoDeleteMeal() {
+    if (!undoMeal) {
+      return;
+    }
+
+    setMealsByOffset((currentMeals) => {
+      const nextMeals = new Map(currentMeals);
+      nextMeals.set(undoMeal.offset, undoMeal.meal);
+      return nextMeals;
+    });
+    setUndoMeal(null);
+    showToast("Middag lagt tilbake");
+  }
+
   function showToast(message: string) {
+    if (message !== "Middag slettet") {
+      setUndoMeal(null);
+    }
+
     setToastMessage(message);
   }
 
   function enterMoveMode() {
+    const savedInlineMeal = commitOpenEditor();
+
+    if (plannedMealCount === 0 && !savedInlineMeal) {
+      showToast("Legg til en middag før du flytter");
+      return;
+    }
+
     setIsMoveMode(true);
   }
 
@@ -436,7 +516,7 @@ function MealsPageContent() {
     setDraggedOffset(null);
     setActiveDropOffset(null);
 
-    if (!Number.isFinite(sourceOffset) || sourceOffset === targetOffset) {
+    if (!Number.isInteger(sourceOffset) || sourceOffset === targetOffset) {
       return;
     }
 
@@ -558,6 +638,7 @@ function MealsPageContent() {
                   inputValue={inputValue}
                   onInputValueChange={setInputValue}
                   onCloseEditor={closeEditor}
+                  onCommitEditor={saveMeal}
                   todayRef={day.offset === 0 ? todayRef : undefined}
                 />
               ))}
@@ -589,10 +670,21 @@ function MealsPageContent() {
               ) : (
                 <ArrowUpDown aria-hidden="true" size={18} />
               )}
-              {isMoveMode ? "Ferdig" : "Flytt middager"}
+              {isMoveMode
+                ? "Ferdig"
+                : plannedMealCount === 0
+                  ? "Ingen middager å flytte"
+                  : "Flytt middager"}
             </button>
 
-            <MealMoveToast message={toastMessage} />
+            <MealMoveToast
+              message={toastMessage}
+              onUndo={
+                toastMessage === "Middag slettet" && undoMeal
+                  ? undoDeleteMeal
+                  : undefined
+              }
+            />
           </section>
         </PageContainer>
       </AppShell>
@@ -645,6 +737,7 @@ function MealTimelineDay({
   inputValue,
   onInputValueChange,
   onCloseEditor,
+  onCommitEditor,
   todayRef,
 }: {
   activeDropOffset: number | null;
@@ -666,6 +759,7 @@ function MealTimelineDay({
   inputValue: string;
   onInputValueChange: (value: string) => void;
   onCloseEditor: () => void;
+  onCommitEditor: (offset: number, title: string) => void;
   todayRef?: RefObject<HTMLElement | null>;
 }) {
   const isDropTarget =
@@ -709,6 +803,7 @@ function MealTimelineDay({
             suggestions={suggestions}
             onChange={onInputValueChange}
             onClose={onCloseEditor}
+            onCommit={onCommitEditor}
             onSave={onSaveMeal}
           />
         ) : meal ? (
@@ -801,7 +896,19 @@ function PlannedMealCard({
           <GripVertical aria-hidden="true" size={20} strokeWidth={2.4} />
         </span>
       ) : (
-        <span className="meal-card__menu-wrap">
+        <span
+          className="meal-card__menu-wrap"
+          onBlur={(event) => {
+            if (
+              !(
+                event.relatedTarget instanceof Node &&
+                event.currentTarget.contains(event.relatedTarget)
+              )
+            ) {
+              setIsMenuOpen(false);
+            }
+          }}
+        >
           <button
             className="meal-card__menu"
             type="button"
@@ -898,6 +1005,7 @@ function InlineMealEditor({
   suggestions,
   onChange,
   onClose,
+  onCommit,
   onSave,
 }: {
   offset: number;
@@ -905,12 +1013,33 @@ function InlineMealEditor({
   suggestions: MockMeal[];
   onChange: (value: string) => void;
   onClose: () => void;
+  onCommit: (offset: number, title: string) => void;
   onSave: (offset: number, title: string) => void;
 }) {
+  const editorRef = useRef<HTMLFormElement | null>(null);
+  const trimmedValue = value.trim();
+
+  function handleBlur(event: FocusEvent<HTMLFormElement>) {
+    const nextTarget = event.relatedTarget;
+
+    if (nextTarget instanceof Node && editorRef.current?.contains(nextTarget)) {
+      return;
+    }
+
+    if (trimmedValue) {
+      onCommit(offset, trimmedValue);
+      return;
+    }
+
+    onClose();
+  }
+
   return (
     <form
       className="meal-inline-editor"
       data-meal-editor={offset}
+      ref={editorRef}
+      onBlur={handleBlur}
       onSubmit={(event) => {
         event.preventDefault();
         onSave(offset, value);
@@ -919,6 +1048,7 @@ function InlineMealEditor({
       <div className="meal-inline-editor__input-row">
         <input
           autoFocus
+          enterKeyHint="done"
           value={value}
           onChange={(event) => onChange(event.target.value)}
           onKeyDown={(event) => {
@@ -936,34 +1066,45 @@ function InlineMealEditor({
           </button>
         ) : null}
       </div>
-      <div className="meal-suggestions" aria-label="Tidligere middager">
-        {suggestions.map((meal) => (
-          <button
-            className="meal-suggestions__row"
-            key={meal.id}
-            type="button"
-            onMouseDown={(event) => event.preventDefault()}
-            onClick={() => onSave(offset, meal.title)}
-          >
-            <span className="meal-suggestions__visual" aria-hidden="true">
-              {meal.icon}
-            </span>
-            <span>{meal.title}</span>
-          </button>
-        ))}
-        <button
-          className="meal-suggestions__all"
-          type="button"
-          onMouseDown={(event) => event.preventDefault()}
-        >
-          Se alle tidligere middager
+      <div className="meal-inline-editor__actions">
+        <button type="button" onClick={onClose}>
+          Avbryt
         </button>
+        <button type="submit" disabled={!trimmedValue}>
+          Lagre
+        </button>
+      </div>
+      <div className="meal-suggestions" aria-label="Tidligere middager">
+        {suggestions.length > 0 ? (
+          suggestions.map((meal) => (
+            <button
+              className="meal-suggestions__row"
+              key={normalizeMealTitle(meal.title)}
+              type="button"
+              onPointerDown={(event) => event.preventDefault()}
+              onClick={() => onSave(offset, meal.title)}
+            >
+              <span className="meal-suggestions__visual" aria-hidden="true">
+                {meal.icon}
+              </span>
+              <span>{meal.title}</span>
+            </button>
+          ))
+        ) : (
+          <p className="meal-suggestions__empty">Ingen treff ennå</p>
+        )}
       </div>
     </form>
   );
 }
 
-function MealMoveToast({ message }: { message: string | null }) {
+function MealMoveToast({
+  message,
+  onUndo,
+}: {
+  message: string | null;
+  onUndo?: () => void;
+}) {
   return (
     <div
       className={
@@ -973,7 +1114,12 @@ function MealMoveToast({ message }: { message: string | null }) {
       aria-live="polite"
       aria-atomic="true"
     >
-      {message}
+      <span>{message}</span>
+      {onUndo ? (
+        <button type="button" onClick={onUndo}>
+          Angre
+        </button>
+      ) : null}
     </div>
   );
 }
