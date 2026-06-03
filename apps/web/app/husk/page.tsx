@@ -15,10 +15,7 @@ import {
   ChevronLeft,
   ChevronRight,
   Gift,
-  GripHorizontal,
   Home,
-  Minus,
-  MoreHorizontal,
   Plus,
   RotateCcw,
   Search,
@@ -96,7 +93,7 @@ const schoolWeekdays = [
   { value: "friday", label: "Fredag", dayOffset: 4 },
 ] satisfies { value: HuskSchoolWeekday; label: string; dayOffset: number }[];
 
-const schoolQuickExamples = ["Gymtøy", "Bibliotekbok", "Ta med grillmat", "Mat og helse", "Kosedyrdag", "Fotballsko", "Matpakke", "Egendefinert"] as const;
+const schoolQuickExamples = ["Gymtøy", "Bibliotekbok", "Ta med grillmat", "Mat og helse", "Kosedyrdag", "Fotballsko", "Matpakke"] as const;
 
 const schoolIconOptions = [
   { value: "shirt", label: "Gymtøy" },
@@ -678,8 +675,8 @@ function HuskSchoolCreateSheet({
         <div className="husk-school-sheet__handle" aria-hidden="true" />
         <div className="husk-school-sheet__header">
           <div>
-            <p className="husk-school-sheet__eyebrow">Ny husk</p>
-            <h3 className="husk-school-sheet__title" id="husk-school-create-title">Legg til på skoleuka</h3>
+            <p className="husk-school-sheet__eyebrow">{childName} • {draft.dateLabel}</p>
+            <h3 className="husk-school-sheet__title" id="husk-school-create-title">Hva må huskes?</h3>
           </div>
           <button className="husk-school-sheet__close" type="button" aria-label="Lukk" onClick={onClose}>
             <X aria-hidden="true" size={18} strokeWidth={2.5} />
@@ -687,15 +684,6 @@ function HuskSchoolCreateSheet({
         </div>
 
         <div className="husk-school-sheet__content">
-          <div className="husk-school-locked">
-            <span>Person</span>
-            <strong>{childName}</strong>
-          </div>
-          <div className="husk-school-locked">
-            <span>Dag</span>
-            <strong>{draft.dateLabel}</strong>
-          </div>
-
           <label className="husk-school-field">
             <span>Tittel</span>
             <input
@@ -734,7 +722,7 @@ function HuskSchoolCreateSheet({
               <button
                 className="husk-school-quick__chip"
                 key={example}
-                onClick={() => onChange({ ...draft, title: example === "Egendefinert" ? "" : example })}
+                onClick={() => onChange({ ...draft, title: example })}
                 type="button"
               >
                 {example}
@@ -762,7 +750,7 @@ function HuskSchoolCreateSheet({
 
         <div className="husk-school-sheet__actions">
           <button className="husk-school-sheet__action husk-school-sheet__action--secondary" type="button" onClick={onClose}>Avbryt</button>
-          <button className="husk-school-sheet__action husk-school-sheet__action--primary" type="button" onClick={onSave}>Lagre</button>
+          <button className="husk-school-sheet__action husk-school-sheet__action--primary" type="button" onClick={onSave} disabled={!draft.title.trim()}>Lagre</button>
         </div>
       </section>
     </div>
@@ -882,12 +870,16 @@ function HuskSchoolWeek({ shouldOpenPlanner }: { shouldOpenPlanner: boolean }) {
       dateLabel: `${weekday.label} ${formatSchoolDate(date)}`,
       title: "",
       icon: "shirt",
-      recurring: false,
+      recurring: true,
       endDate: "",
     });
   }
 
   function saveCreateDraft() {
+    if (!createDraft?.title.trim()) {
+      return;
+    }
+
     setCreateDraft(null);
     showSaved();
   }
@@ -964,7 +956,6 @@ function HuskSchoolWeek({ shouldOpenPlanner }: { shouldOpenPlanner: boolean }) {
           return (
             <article className="husk-school-day" key={weekday.value}>
               <header className="husk-school-day__header">
-                {isEditing ? <GripHorizontal className="husk-school-day__drag" aria-hidden="true" size={19} strokeWidth={2.1} /> : null}
                 <span className="husk-school-day__date-icon" aria-hidden="true">
                   <CalendarDays size={19} strokeWidth={2.3} />
                 </span>
@@ -984,7 +975,6 @@ function HuskSchoolWeek({ shouldOpenPlanner }: { shouldOpenPlanner: boolean }) {
                     const Icon = reminderIcons[item.icon];
                     const content = (
                       <>
-                        {isEditing ? <Minus className="husk-school-item__remove" aria-hidden="true" size={16} strokeWidth={3} /> : null}
                         <span className="husk-school-item__icon" aria-hidden="true">
                           <Icon size={20} strokeWidth={2.35} />
                         </span>
@@ -992,7 +982,7 @@ function HuskSchoolWeek({ shouldOpenPlanner }: { shouldOpenPlanner: boolean }) {
                           <span>{item.title}</span>
                           {isEditing ? <small><RotateCcw size={12} strokeWidth={2.4} /> Hver uke til 20. juni 2026</small> : null}
                         </span>
-                        {isEditing ? <MoreHorizontal className="husk-school-item__more" aria-hidden="true" size={18} strokeWidth={2.5} /> : null}
+                        {isEditing ? <span className="husk-school-item__edit-label">Endre</span> : null}
                       </>
                     );
 
@@ -1013,7 +1003,7 @@ function HuskSchoolWeek({ shouldOpenPlanner }: { shouldOpenPlanner: boolean }) {
         })}
       </div>
 
-      {isEditing ? <p className="husk-school__tip">Tips: Dra for å organisere. Trykk på et punkt for å redigere.</p> : null}
+      {isEditing ? <p className="husk-school__tip">Trykk + på riktig dag for å legge til. Trykk på et punkt for å endre gjentakelse.</p> : null}
 
       {createDraft && selectedChild ? (
         <HuskSchoolCreateSheet childName={selectedChild.name} draft={createDraft} onChange={setCreateDraft} onClose={() => setCreateDraft(null)} onSave={saveCreateDraft} />
