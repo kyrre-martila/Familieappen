@@ -1,13 +1,16 @@
 import { useMemo, useRef, useState } from "react";
 import {
   GestureResponderEvent,
+  Keyboard,
+  KeyboardAvoidingView,
   Modal,
+  Platform,
   Pressable,
   ScrollView,
   StyleSheet,
   Text,
   TextInput,
-  View
+  View,
 } from "react-native";
 import { tokens } from "@familieappen/ui";
 
@@ -17,6 +20,7 @@ type MealDay = {
   dateLabel: string;
   section?: string;
   meal?: string;
+  isPast?: boolean;
 };
 
 type EditingMeal = {
@@ -29,7 +33,7 @@ type ToastState = {
   onAction?: () => void;
 };
 
-const suggestedMeals = [
+const previousMeals = [
   "Taco",
   "Pizza",
   "Fiskegrateng",
@@ -37,19 +41,51 @@ const suggestedMeals = [
   "Lasagne",
   "Fiskekaker",
   "Kjøttsuppe",
-  "Hjemmelaget burger"
+  "Hjemmelaget burger",
 ];
 
+const fallbackMeals = ["Lasagne", "Kjøttsuppe", "Hjemmelaget burger"];
+
+const suggestedMeals = [...previousMeals, ...fallbackMeals];
+
 const initialMealPlan: MealDay[] = [
-  { id: "tue-3", weekday: "Tirsdag", dateLabel: "3. juni", section: "I dag", meal: "Taco" },
+  {
+    id: "mon-2",
+    weekday: "Mandag",
+    dateLabel: "2. juni",
+    meal: "Lasagne",
+    isPast: true,
+  },
+  {
+    id: "tue-3",
+    weekday: "Tirsdag",
+    dateLabel: "3. juni",
+    section: "I dag",
+    meal: "Taco",
+  },
   { id: "wed-4", weekday: "Onsdag", dateLabel: "4. juni" },
-  { id: "thu-5", weekday: "Torsdag", dateLabel: "5. juni", meal: "Fiskegrateng" },
+  {
+    id: "thu-5",
+    weekday: "Torsdag",
+    dateLabel: "5. juni",
+    meal: "Fiskegrateng",
+  },
   { id: "fri-6", weekday: "Fredag", dateLabel: "6. juni", meal: "Pizza" },
   { id: "sat-7", weekday: "Lørdag", dateLabel: "7. juni" },
   { id: "sun-8", weekday: "Søndag", dateLabel: "8. juni" },
-  { id: "mon-9", weekday: "Mandag", dateLabel: "9. juni", meal: "Pasta med kylling" },
-  { id: "tue-10", weekday: "Tirsdag", dateLabel: "10. juni", section: "Neste uke" },
-  { id: "wed-11", weekday: "Onsdag", dateLabel: "11. juni" }
+  {
+    id: "mon-9",
+    weekday: "Mandag",
+    dateLabel: "9. juni",
+    meal: "Pasta med kylling",
+  },
+  {
+    id: "tue-10",
+    weekday: "Tirsdag",
+    dateLabel: "10. juni",
+    section: "Neste uke",
+  },
+  { id: "wed-11", weekday: "Onsdag", dateLabel: "11. juni" },
 ];
 
 const mealVisuals: Record<string, string> = {
@@ -60,11 +96,39 @@ const mealVisuals: Record<string, string> = {
   lasagne: "🍲",
   fiskekaker: "🐟",
   kjøttsuppe: "🥣",
-  "hjemmelaget burger": "🍔"
+  "hjemmelaget burger": "🍔",
 };
 
 function getMealVisual(meal: string) {
   return mealVisuals[meal.toLowerCase()] ?? "🍽️";
+}
+
+function normalizeMeal(meal: string) {
+  return meal.trim().toLocaleLowerCase("nb-NO");
+}
+
+function getSuggestionMatches(query: string) {
+  const normalizedQuery = normalizeMeal(query);
+  const uniqueSuggestions = suggestedMeals.filter(
+    (meal, index, meals) =>
+      meals.findIndex(
+        (candidate) => normalizeMeal(candidate) === normalizeMeal(meal),
+      ) === index,
+  );
+
+  if (!normalizedQuery) {
+    return uniqueSuggestions.slice(0, 5);
+  }
+
+  return uniqueSuggestions
+    .filter((meal) => {
+      const normalizedMeal = normalizeMeal(meal);
+      return (
+        normalizedMeal.startsWith(normalizedQuery) ||
+        normalizedMeal.includes(normalizedQuery)
+      );
+    })
+    .slice(0, 5);
 }
 
 function stopPress(event: GestureResponderEvent) {
@@ -79,17 +143,18 @@ export default function MealsScreen() {
   const [toast, setToast] = useState<ToastState | null>(null);
   const toastTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
-  const visibleSuggestions = useMemo(() => {
-    const normalizedQuery = inputValue.trim().toLowerCase();
-
-    if (!normalizedQuery) {
-      return suggestedMeals.slice(0, 4);
-    }
-
-    return suggestedMeals
-      .filter((meal) => meal.toLowerCase().includes(normalizedQuery))
-      .slice(0, 5);
-  }, [inputValue]);
+  const visibleSuggestions = useMemo(
+    () => getSuggestionMatches(inputValue),
+    [inputValue],
+  );
+  const firstTodayOrFutureIndex = mealPlan.findIndex((day) => !day.isPast);
+  const futureMealDays = mealPlan
+    .slice(Math.max(firstTodayOrFutureIndex, 0))
+    .filter((day) => Boolean(day.meal));
+  const shouldShowReminder =
+    futureMealDays.length > 0 && futureMealDays.length <= 2;
+  const reminderEndDay = futureMealDays[futureMealDays.length - 1];
+  const hasFutureMeals = futureMealDays.length > 0;
 
   const showToast = (nextToast: ToastState) => {
     if (toastTimeoutRef.current) {
@@ -115,6 +180,7 @@ export default function MealsScreen() {
   const closeEditor = () => {
     setEditingMeal(null);
     setInputValue("");
+    Keyboard.dismiss();
   };
 
   const saveMeal = (meal: string) => {
@@ -130,13 +196,16 @@ export default function MealsScreen() {
     }
 
     setMealPlan((days) =>
-      days.map((day) => (day.id === editingMeal.dayId ? { ...day, meal: trimmedMeal } : day))
+      days.map((day) =>
+        day.id === editingMeal.dayId ? { ...day, meal: trimmedMeal } : day,
+      ),
     );
     closeEditor();
     showToast({ message: "Middag lagret" });
   };
 
   const handleOutsidePress = () => {
+    Keyboard.dismiss();
     if (!editingMeal) {
       return;
     }
@@ -157,107 +226,194 @@ export default function MealsScreen() {
 
     const deletedMeal = deletedDay.meal;
     setSelectedDayId(null);
-    setMealPlan((days) => days.map((day) => (day.id === dayId ? { ...day, meal: undefined } : day)));
+    setMealPlan((days) =>
+      days.map((day) => (day.id === dayId ? { ...day, meal: undefined } : day)),
+    );
     showToast({
       message: "Middag slettet",
       actionLabel: "Angre",
       onAction: () => {
         setMealPlan((days) =>
-          days.map((day) => (day.id === dayId ? { ...day, meal: deletedMeal } : day))
+          days.map((day) =>
+            day.id === dayId ? { ...day, meal: deletedMeal } : day,
+          ),
         );
         setToast(null);
-      }
+      },
     });
   };
 
-  const selectedDay = selectedDayId ? mealPlan.find((day) => day.id === selectedDayId) : undefined;
+  const selectedDay = selectedDayId
+    ? mealPlan.find((day) => day.id === selectedDayId)
+    : undefined;
+
+  const openFirstFutureMeal = () => {
+    const emptyDay = mealPlan.find((day) => !day.isPast && !day.meal);
+    openCreate(
+      emptyDay?.id ??
+        mealPlan[Math.max(firstTodayOrFutureIndex, 0)]?.id ??
+        mealPlan[0].id,
+    );
+  };
 
   return (
-    <Pressable style={styles.page} onPress={handleOutsidePress}>
-      <ScrollView contentContainerStyle={styles.scrollContent} keyboardShouldPersistTaps="handled">
-        <View style={styles.headerRow}>
-          <View style={styles.brandMark}>
-            <Text style={styles.brandIcon}>♧</Text>
+    <KeyboardAvoidingView
+      style={styles.page}
+      behavior={Platform.OS === "ios" ? "padding" : undefined}
+    >
+      <Pressable style={styles.page} onPress={handleOutsidePress}>
+        <ScrollView
+          contentContainerStyle={styles.scrollContent}
+          keyboardShouldPersistTaps="handled"
+          keyboardDismissMode="on-drag"
+        >
+          <View style={styles.headerRow}>
+            <View style={styles.brandMark}>
+              <Text style={styles.brandIcon}>♧</Text>
+            </View>
+            <Text style={styles.brandName}>FamilieAppen</Text>
           </View>
-          <Text style={styles.brandName}>FamilieAppen</Text>
-        </View>
 
-        <Text style={styles.title}>Måltidsplan</Text>
-        <Text style={styles.subtitle}>Planlegg middager for familien</Text>
+          <Text style={styles.title}>Måltidsplan</Text>
+          <Text style={styles.subtitle}>Planlegg middager for familien</Text>
 
-        <View style={styles.noticeCard}>
-          <Text style={styles.noticeIcon}>🔔</Text>
-          <View style={styles.noticeCopy}>
-            <Text style={styles.noticeTitle}>Snart tomt for middager</Text>
-            <Text style={styles.noticeText}>Du har planlagt frem til mandag 9. juni.</Text>
-            <Text style={styles.noticeText}>Planlegg neste uke i god tid.</Text>
-          </View>
-          <Text style={styles.noticeChevron}>›</Text>
-        </View>
-
-        <View style={styles.timeline}>
-          {mealPlan.map((day) => (
-            <View key={day.id}>
-              {day.section ? <Text style={styles.sectionLabel}>{day.section}</Text> : null}
-              <View style={styles.dayRow}>
-                <View style={styles.dateColumn}>
-                  <View style={[styles.timelineDot, day.section === "I dag" && styles.activeTimelineDot]} />
-                  <View style={styles.timelineLine} />
-                  <Text style={styles.weekday}>{day.weekday}</Text>
-                  <Text style={styles.dateLabel}>{day.dateLabel}</Text>
-                </View>
-
-                <View style={styles.cardColumn}>
-                  {editingMeal?.dayId === day.id ? (
-                    <InlineMealEditor
-                      value={inputValue}
-                      suggestions={visibleSuggestions}
-                      onChangeText={setInputValue}
-                      onSubmit={() => saveMeal(inputValue)}
-                      onSelectSuggestion={(meal) => saveMeal(meal)}
-                    />
-                  ) : day.meal ? (
-                    <MealCard meal={day.meal} onMenuPress={() => setSelectedDayId(day.id)} />
-                  ) : (
-                    <EmptyMealCard onPress={() => openCreate(day.id)} />
-                  )}
-                </View>
+          {shouldShowReminder && reminderEndDay ? (
+            <View style={styles.noticeCard}>
+              <Text style={styles.noticeIcon}>🍽️</Text>
+              <View style={styles.noticeCopy}>
+                <Text style={styles.noticeTitle}>
+                  Snart tomt for middager 🍽️
+                </Text>
+                <Text style={styles.noticeText}>
+                  Du har planlagt frem til{" "}
+                  {reminderEndDay.weekday.toLocaleLowerCase("nb-NO")}.
+                </Text>
               </View>
             </View>
-          ))}
-        </View>
-      </ScrollView>
+          ) : null}
 
-      {toast ? <Toast toast={toast} /> : null}
+          {!hasFutureMeals ? (
+            <View style={styles.emptyState}>
+              <Text style={styles.emptyStateIcon}>🍽️</Text>
+              <View style={styles.emptyStateCopy}>
+                <Text style={styles.emptyStateTitle}>
+                  Ingen middager planlagt
+                </Text>
+                <Text style={styles.emptyStateText}>
+                  Legg inn noen middager for å gjøre hverdagen enklere.
+                </Text>
+              </View>
+              <Pressable
+                style={styles.emptyStateButton}
+                onPress={openFirstFutureMeal}
+              >
+                <Text style={styles.emptyStateButtonText}>
+                  + Legg til første middag
+                </Text>
+              </Pressable>
+            </View>
+          ) : null}
 
-      <Modal visible={Boolean(selectedDay)} transparent animationType="slide" onRequestClose={() => setSelectedDayId(null)}>
-        <Pressable style={styles.sheetBackdrop} onPress={() => setSelectedDayId(null)}>
-          <Pressable style={styles.bottomSheet} onPress={() => undefined}>
-            <View style={styles.sheetHandle} />
-            <Pressable
-              style={styles.sheetAction}
-              onPress={() => selectedDay?.meal && openEdit(selectedDay.id, selectedDay.meal)}
-            >
-              <Text style={styles.sheetIcon}>✎</Text>
-              <Text style={styles.sheetActionText}>Rediger</Text>
-            </Pressable>
-            <Pressable style={styles.sheetAction} onPress={() => selectedDay && deleteMeal(selectedDay.id)}>
-              <Text style={styles.deleteIcon}>⌫</Text>
-              <Text style={styles.deleteActionText}>Slett middag</Text>
-            </Pressable>
-            <Pressable style={styles.cancelAction} onPress={() => setSelectedDayId(null)}>
-              <Text style={styles.cancelActionText}>Avbryt</Text>
+          <View style={styles.timeline}>
+            {mealPlan.map((day) => (
+              <View key={day.id}>
+                {day.section ? (
+                  <Text style={styles.sectionLabel}>{day.section}</Text>
+                ) : null}
+                <View style={[styles.dayRow, day.isPast && styles.pastDayRow]}>
+                  <View style={styles.dateColumn}>
+                    <View
+                      style={[
+                        styles.timelineDot,
+                        day.section === "I dag" && styles.activeTimelineDot,
+                      ]}
+                    />
+                    <View style={styles.timelineLine} />
+                    <Text style={styles.weekday}>{day.weekday}</Text>
+                    <Text style={styles.dateLabel}>{day.dateLabel}</Text>
+                  </View>
+
+                  <View style={styles.cardColumn}>
+                    {editingMeal?.dayId === day.id ? (
+                      <InlineMealEditor
+                        value={inputValue}
+                        suggestions={visibleSuggestions}
+                        onChangeText={setInputValue}
+                        onSubmit={() => saveMeal(inputValue)}
+                        onSelectSuggestion={(meal) => saveMeal(meal)}
+                      />
+                    ) : day.meal ? (
+                      <MealCard
+                        meal={day.meal}
+                        isPast={Boolean(day.isPast)}
+                        onMenuPress={() => setSelectedDayId(day.id)}
+                      />
+                    ) : (
+                      <EmptyMealCard onPress={() => openCreate(day.id)} />
+                    )}
+                  </View>
+                </View>
+              </View>
+            ))}
+          </View>
+        </ScrollView>
+
+        {toast ? <Toast toast={toast} /> : null}
+
+        <Modal
+          visible={Boolean(selectedDay)}
+          transparent
+          animationType="slide"
+          onRequestClose={() => setSelectedDayId(null)}
+        >
+          <Pressable
+            style={styles.sheetBackdrop}
+            onPress={() => setSelectedDayId(null)}
+          >
+            <Pressable style={styles.bottomSheet} onPress={() => undefined}>
+              <View style={styles.sheetHandle} />
+              <Pressable
+                style={styles.sheetAction}
+                onPress={() =>
+                  selectedDay?.meal &&
+                  openEdit(selectedDay.id, selectedDay.meal)
+                }
+              >
+                <Text style={styles.sheetIcon}>✎</Text>
+                <Text style={styles.sheetActionText}>Rediger</Text>
+              </Pressable>
+              <Pressable
+                style={styles.sheetAction}
+                onPress={() => selectedDay && deleteMeal(selectedDay.id)}
+              >
+                <Text style={styles.deleteIcon}>⌫</Text>
+                <Text style={styles.deleteActionText}>Slett middag</Text>
+              </Pressable>
+              <Pressable
+                style={styles.cancelAction}
+                onPress={() => setSelectedDayId(null)}
+              >
+                <Text style={styles.cancelActionText}>Avbryt</Text>
+              </Pressable>
             </Pressable>
           </Pressable>
-        </Pressable>
-      </Modal>
-    </Pressable>
+        </Modal>
+      </Pressable>
+    </KeyboardAvoidingView>
   );
 }
 
-function MealCard({ meal, onMenuPress }: { meal: string; onMenuPress: () => void }) {
+function MealCard({
+  meal,
+  isPast,
+  onMenuPress,
+}: {
+  meal: string;
+  isPast: boolean;
+  onMenuPress: () => void;
+}) {
   return (
-    <View style={styles.mealCard}>
+    <View style={[styles.mealCard, isPast && styles.pastMealCard]}>
       <View style={styles.mealVisual}>
         <Text style={styles.mealVisualText}>{getMealVisual(meal)}</Text>
       </View>
@@ -297,7 +453,7 @@ function InlineMealEditor({
   suggestions,
   onChangeText,
   onSubmit,
-  onSelectSuggestion
+  onSelectSuggestion,
 }: {
   value: string;
   suggestions: string[];
@@ -343,7 +499,9 @@ function InlineMealEditor({
             }}
           >
             <View style={styles.suggestionVisual}>
-              <Text style={styles.suggestionVisualText}>{getMealVisual(meal)}</Text>
+              <Text style={styles.suggestionVisualText}>
+                {getMealVisual(meal)}
+              </Text>
             </View>
             <Text style={styles.suggestionText}>{meal}</Text>
           </Pressable>
@@ -378,17 +536,17 @@ function Toast({ toast }: { toast: ToastState }) {
 const styles = StyleSheet.create({
   page: {
     flex: 1,
-    backgroundColor: "#fbfaf8"
+    backgroundColor: "#fbfaf8",
   },
   scrollContent: {
     padding: tokens.layout.gutter,
-    paddingBottom: 112
+    paddingBottom: 112,
   },
   headerRow: {
     alignItems: "center",
     flexDirection: "row",
     gap: tokens.spacing.s,
-    marginBottom: tokens.spacing.m
+    marginBottom: tokens.spacing.m,
   },
   brandMark: {
     alignItems: "center",
@@ -397,27 +555,27 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     height: 28,
     justifyContent: "center",
-    width: 28
+    width: 28,
   },
   brandIcon: {
     color: tokens.colors.primary,
-    fontSize: 18
+    fontSize: 18,
   },
   brandName: {
     color: tokens.colors.primary,
     fontSize: tokens.textSizes.body,
-    fontWeight: "800"
+    fontWeight: "800",
   },
   title: {
     color: "#178044",
     fontSize: 38,
     fontWeight: "800",
-    letterSpacing: -0.5
+    letterSpacing: -0.5,
   },
   subtitle: {
     color: tokens.colors.muted,
     fontSize: tokens.textSizes.body,
-    marginTop: tokens.spacing.s
+    marginTop: tokens.spacing.s,
   },
   noticeCard: {
     alignItems: "center",
@@ -427,48 +585,93 @@ const styles = StyleSheet.create({
     gap: tokens.spacing.m,
     marginBottom: tokens.spacing.l,
     marginTop: tokens.spacing.l,
-    padding: tokens.spacing.l
+    padding: tokens.spacing.l,
   },
   noticeIcon: {
     color: "#178044",
-    fontSize: 25
+    fontSize: 25,
   },
   noticeCopy: {
     flex: 1,
-    gap: 3
+    gap: 3,
   },
   noticeTitle: {
     color: tokens.colors.text,
     fontSize: tokens.textSizes.body,
-    fontWeight: "800"
+    fontWeight: "800",
   },
   noticeText: {
     color: "#30343b",
     fontSize: tokens.textSizes.label,
-    lineHeight: 18
+    lineHeight: 18,
   },
   noticeChevron: {
     color: tokens.colors.muted,
-    fontSize: 30
+    fontSize: 30,
+  },
+  emptyState: {
+    alignItems: "center",
+    backgroundColor: "#f6f7f4",
+    borderColor: "#e8ece5",
+    borderRadius: 16,
+    borderWidth: 1,
+    flexDirection: "row",
+    gap: tokens.spacing.m,
+    marginBottom: tokens.spacing.l,
+    marginTop: tokens.spacing.l,
+    padding: tokens.spacing.m,
+  },
+  emptyStateIcon: {
+    fontSize: 24,
+  },
+  emptyStateCopy: {
+    flex: 1,
+    gap: 3,
+  },
+  emptyStateTitle: {
+    color: tokens.colors.text,
+    fontSize: tokens.textSizes.body,
+    fontWeight: "800",
+  },
+  emptyStateText: {
+    color: tokens.colors.muted,
+    fontSize: tokens.textSizes.label,
+    lineHeight: 18,
+  },
+  emptyStateButton: {
+    backgroundColor: tokens.colors.surface,
+    borderColor: "#dfe8df",
+    borderRadius: tokens.radius.pill,
+    borderWidth: 1,
+    paddingHorizontal: tokens.spacing.m,
+    paddingVertical: tokens.spacing.s,
+  },
+  emptyStateButtonText: {
+    color: "#178044",
+    fontSize: tokens.textSizes.label,
+    fontWeight: "800",
   },
   timeline: {
-    gap: tokens.spacing.s
+    gap: tokens.spacing.s,
   },
   sectionLabel: {
     color: "#178044",
     fontSize: tokens.textSizes.label,
     fontWeight: "800",
-    marginBottom: tokens.spacing.s
+    marginBottom: tokens.spacing.s,
   },
   dayRow: {
     flexDirection: "row",
-    minHeight: 76
+    minHeight: 76,
+  },
+  pastDayRow: {
+    opacity: 0.7,
   },
   dateColumn: {
     paddingLeft: 10,
     paddingRight: tokens.spacing.m,
     position: "relative",
-    width: 116
+    width: 116,
   },
   timelineDot: {
     backgroundColor: "#d9dde0",
@@ -478,10 +681,10 @@ const styles = StyleSheet.create({
     position: "absolute",
     top: 20,
     width: 9,
-    zIndex: 1
+    zIndex: 1,
   },
   activeTimelineDot: {
-    backgroundColor: "#178044"
+    backgroundColor: "#178044",
   },
   timelineLine: {
     backgroundColor: "#e4e6e8",
@@ -489,22 +692,22 @@ const styles = StyleSheet.create({
     left: 4,
     position: "absolute",
     top: 28,
-    width: 1
+    width: 1,
   },
   weekday: {
     color: tokens.colors.text,
     fontSize: tokens.textSizes.label,
     fontWeight: "800",
-    marginTop: 14
+    marginTop: 14,
   },
   dateLabel: {
     color: "#30343b",
     fontSize: tokens.textSizes.label,
-    marginTop: 4
+    marginTop: 4,
   },
   cardColumn: {
     flex: 1,
-    paddingBottom: tokens.spacing.s
+    paddingBottom: tokens.spacing.s,
   },
   mealCard: {
     alignItems: "center",
@@ -519,31 +722,35 @@ const styles = StyleSheet.create({
     shadowColor: "#15211a",
     shadowOffset: { width: 0, height: 5 },
     shadowOpacity: 0.04,
-    shadowRadius: 12
+    shadowRadius: 12,
+  },
+  pastMealCard: {
+    backgroundColor: "#f8f7f4",
+    shadowOpacity: 0.02,
   },
   mealVisual: {
     alignItems: "center",
-    backgroundColor: tokens.colors.surfaceWarm,
+    backgroundColor: "#f4f3ec",
     borderRadius: 10,
-    height: 50,
+    height: 46,
     justifyContent: "center",
-    width: 58
+    width: 52,
   },
   mealVisualText: {
-    fontSize: 31
+    fontSize: 26,
   },
   mealTitle: {
     color: tokens.colors.text,
     flex: 1,
     fontSize: tokens.textSizes.body,
-    fontWeight: "800"
+    fontWeight: "800",
   },
   menuDots: {
     color: "#20232a",
     fontSize: 20,
     fontWeight: "800",
     letterSpacing: 1,
-    padding: tokens.spacing.s
+    padding: tokens.spacing.s,
   },
   emptyCard: {
     alignItems: "center",
@@ -555,17 +762,17 @@ const styles = StyleSheet.create({
     gap: tokens.spacing.m,
     justifyContent: "center",
     minHeight: 64,
-    padding: tokens.spacing.m
+    padding: tokens.spacing.m,
   },
   emptyPlus: {
     color: "#178044",
     fontSize: 32,
-    lineHeight: 32
+    lineHeight: 32,
   },
   emptyText: {
     color: "#178044",
     fontSize: tokens.textSizes.label,
-    fontWeight: "800"
+    fontWeight: "800",
   },
   editorCard: {
     backgroundColor: tokens.colors.surface,
@@ -576,7 +783,7 @@ const styles = StyleSheet.create({
     shadowColor: "#15211a",
     shadowOffset: { width: 0, height: 6 },
     shadowOpacity: 0.05,
-    shadowRadius: 14
+    shadowRadius: 14,
   },
   inputRow: {
     alignItems: "center",
@@ -585,29 +792,29 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     flexDirection: "row",
     margin: tokens.spacing.s,
-    paddingHorizontal: tokens.spacing.s
+    paddingHorizontal: tokens.spacing.s,
   },
   input: {
     color: tokens.colors.text,
     flex: 1,
     fontSize: tokens.textSizes.body,
     minHeight: 42,
-    paddingVertical: tokens.spacing.s
+    paddingVertical: tokens.spacing.s,
   },
   clearInput: {
     color: "#31363f",
     fontSize: 25,
-    paddingHorizontal: tokens.spacing.s
+    paddingHorizontal: tokens.spacing.s,
   },
   suggestionList: {
-    paddingTop: tokens.spacing.xs
+    paddingTop: tokens.spacing.xs,
   },
   suggestionRow: {
     alignItems: "center",
     flexDirection: "row",
     gap: tokens.spacing.m,
     paddingHorizontal: tokens.spacing.m,
-    paddingVertical: tokens.spacing.s
+    paddingVertical: tokens.spacing.s,
   },
   suggestionVisual: {
     alignItems: "center",
@@ -615,16 +822,16 @@ const styles = StyleSheet.create({
     borderRadius: 7,
     height: 28,
     justifyContent: "center",
-    width: 28
+    width: 28,
   },
   suggestionVisualText: {
-    fontSize: 18
+    fontSize: 18,
   },
   suggestionText: {
     color: tokens.colors.text,
     flex: 1,
     fontSize: tokens.textSizes.label,
-    fontWeight: "700"
+    fontWeight: "700",
   },
   allMealsLink: {
     alignItems: "center",
@@ -633,22 +840,22 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     justifyContent: "center",
     marginTop: tokens.spacing.xs,
-    padding: tokens.spacing.m
+    padding: tokens.spacing.m,
   },
   allMealsText: {
     color: tokens.colors.text,
     fontSize: tokens.textSizes.label,
-    fontWeight: "700"
+    fontWeight: "700",
   },
   allMealsChevron: {
     color: tokens.colors.text,
     fontSize: 24,
-    marginLeft: tokens.spacing.m
+    marginLeft: tokens.spacing.m,
   },
   sheetBackdrop: {
     backgroundColor: "rgba(17, 24, 39, 0.45)",
     flex: 1,
-    justifyContent: "flex-end"
+    justifyContent: "flex-end",
   },
   bottomSheet: {
     backgroundColor: tokens.colors.surface,
@@ -656,7 +863,7 @@ const styles = StyleSheet.create({
     borderTopRightRadius: 24,
     gap: tokens.spacing.s,
     padding: tokens.spacing.m,
-    paddingBottom: tokens.spacing.xl
+    paddingBottom: tokens.spacing.xl,
   },
   sheetHandle: {
     alignSelf: "center",
@@ -664,7 +871,7 @@ const styles = StyleSheet.create({
     borderRadius: tokens.radius.pill,
     height: 4,
     marginBottom: tokens.spacing.s,
-    width: 48
+    width: 48,
   },
   sheetAction: {
     alignItems: "center",
@@ -674,25 +881,25 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     flexDirection: "row",
     gap: tokens.spacing.m,
-    padding: tokens.spacing.m
+    padding: tokens.spacing.m,
   },
   sheetIcon: {
     color: "#30343b",
-    fontSize: 20
+    fontSize: 20,
   },
   sheetActionText: {
     color: "#30343b",
     fontSize: tokens.textSizes.body,
-    fontWeight: "600"
+    fontWeight: "600",
   },
   deleteIcon: {
     color: "#c23934",
-    fontSize: 20
+    fontSize: 20,
   },
   deleteActionText: {
     color: "#c23934",
     fontSize: tokens.textSizes.body,
-    fontWeight: "700"
+    fontWeight: "700",
   },
   cancelAction: {
     alignItems: "center",
@@ -700,12 +907,12 @@ const styles = StyleSheet.create({
     borderColor: "#eef0ec",
     borderRadius: 12,
     borderWidth: 1,
-    padding: tokens.spacing.m
+    padding: tokens.spacing.m,
   },
   cancelActionText: {
     color: "#30343b",
     fontSize: tokens.textSizes.body,
-    fontWeight: "600"
+    fontWeight: "600",
   },
   toast: {
     alignItems: "center",
@@ -723,16 +930,16 @@ const styles = StyleSheet.create({
     shadowColor: "#15211a",
     shadowOffset: { width: 0, height: 8 },
     shadowOpacity: 0.08,
-    shadowRadius: 16
+    shadowRadius: 16,
   },
   toastText: {
     color: "#178044",
     fontSize: tokens.textSizes.label,
-    fontWeight: "800"
+    fontWeight: "800",
   },
   toastAction: {
     color: "#178044",
     fontSize: tokens.textSizes.label,
-    fontWeight: "900"
-  }
+    fontWeight: "900",
+  },
 });
