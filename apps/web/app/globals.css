@@ -9041,3 +9041,236 @@ select {
   border-radius: 999px;
   border: 1.5px dashed rgba(99, 102, 241, 0.35);
 }
+
+/* Run 3.3 Meal Planner foundation */
+.meal-planner {
+  display: grid;
+  gap: var(--space-l);
+}
+
+.meal-reminder {
+  grid-template-columns: auto minmax(0, 1fr);
+  align-items: center;
+  gap: var(--space-m);
+  border-color: color-mix(in srgb, var(--color-primary-soft) 72%, var(--color-border));
+  padding: var(--space-m);
+  background:
+    linear-gradient(
+      135deg,
+      color-mix(in srgb, var(--color-primary-soft) 45%, transparent),
+      transparent 72%
+    ),
+    var(--color-surface-warm);
+  box-shadow: var(--shadow-soft);
+}
+
+.meal-reminder__icon {
+  display: grid;
+  width: calc(var(--space-xl) + var(--space-xs));
+  height: calc(var(--space-xl) + var(--space-xs));
+  place-items: center;
+  border-radius: var(--radius-m);
+  background: color-mix(in srgb, var(--color-surface) 78%, transparent);
+  box-shadow: inset 0 0 0 1px var(--color-border);
+}
+
+.meal-reminder__copy {
+  display: grid;
+  gap: calc(var(--space-xs) * 0.5);
+}
+
+.meal-reminder__title,
+.meal-reminder__description,
+.meal-card__eyebrow,
+.meal-card__title {
+  margin: 0;
+}
+
+.meal-reminder__title {
+  color: var(--color-primary-strong);
+  font-weight: 850;
+  letter-spacing: -0.035em;
+}
+
+.meal-reminder__description {
+  color: var(--color-muted);
+  font-size: var(--text-small);
+}
+
+.meal-timeline {
+  position: relative;
+  display: grid;
+  gap: var(--space-m);
+}
+
+.meal-timeline::before {
+  content: "";
+  position: absolute;
+  top: var(--space-s);
+  bottom: var(--space-s);
+  left: calc(var(--space-s) + (var(--space-xs) * 0.5));
+  width: 1px;
+  background: linear-gradient(
+    transparent,
+    color-mix(in srgb, var(--color-primary-soft) 76%, var(--color-border)),
+    transparent
+  );
+}
+
+.meal-timeline__day {
+  position: relative;
+  display: grid;
+  grid-template-columns: calc(var(--space-l) + var(--space-s)) minmax(0, 1fr);
+  gap: var(--space-s);
+  align-items: start;
+}
+
+.meal-timeline__marker {
+  position: relative;
+  z-index: 1;
+  width: calc(var(--space-s) + var(--space-xs));
+  height: calc(var(--space-s) + var(--space-xs));
+  margin-top: calc(var(--space-xs) * 0.9);
+  margin-left: var(--space-s);
+  border: 2px solid var(--color-background);
+  border-radius: var(--radius-pill);
+  background: var(--color-primary);
+  box-shadow: 0 0 0 4px var(--color-primary-soft);
+}
+
+.meal-timeline__content {
+  display: grid;
+  gap: var(--space-xs);
+  min-width: 0;
+}
+
+.meal-timeline__heading {
+  margin: 0;
+  color: var(--color-muted);
+  font-size: var(--text-small);
+  font-weight: 850;
+  letter-spacing: -0.01em;
+}
+
+.meal-card {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  align-items: center;
+  gap: var(--space-m);
+  border: 1px solid var(--color-border);
+  border-radius: calc(var(--radius-l) - var(--space-xs));
+  padding: var(--space-s);
+  background: color-mix(in srgb, var(--color-surface) 94%, transparent);
+  box-shadow: var(--shadow-soft);
+}
+
+.meal-card__visual {
+  display: grid;
+  width: calc(var(--space-xl) + var(--space-m));
+  height: calc(var(--space-xl) + var(--space-m));
+  place-items: center;
+  border-radius: var(--radius-m);
+  background:
+    radial-gradient(
+      circle at 30% 25%,
+      color-mix(in srgb, var(--color-accent-soft) 76%, transparent),
+      transparent 62%
+    ),
+    var(--color-primary-soft);
+  color: var(--color-primary-strong);
+}
+
+.meal-card__copy {
+  display: grid;
+  gap: calc(var(--space-xs) * 0.35);
+  min-width: 0;
+}
+
+.meal-card__eyebrow {
+  color: var(--color-primary);
+  font-size: var(--text-small);
+  font-weight: 850;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+.meal-card__title {
+  overflow-wrap: anywhere;
+  color: var(--color-text);
+  font-size: var(--text-heading);
+  font-weight: 850;
+  letter-spacing: -0.045em;
+  line-height: 1.12;
+}
+
+.meal-card__menu,
+.meal-empty-cta,
+.meal-move-action {
+  border: 0;
+  background: transparent;
+  cursor: pointer;
+}
+
+.meal-card__menu {
+  display: grid;
+  width: calc(var(--space-xl) + var(--space-xs));
+  height: calc(var(--space-xl) + var(--space-xs));
+  place-items: center;
+  border-radius: var(--radius-pill);
+  color: var(--color-muted);
+}
+
+.meal-card__menu:hover,
+.meal-card__menu:focus-visible {
+  background: var(--color-background-soft);
+  color: var(--color-primary-strong);
+}
+
+.meal-empty-cta,
+.meal-move-action {
+  display: inline-flex;
+  width: fit-content;
+  align-items: center;
+  gap: var(--space-xs);
+  border-radius: var(--radius-pill);
+  color: var(--color-primary-strong);
+  font-size: var(--text-small);
+  font-weight: 820;
+}
+
+.meal-empty-cta {
+  margin-top: calc(var(--space-xs) * -0.2);
+  padding: var(--space-xs) var(--space-s);
+  color: color-mix(in srgb, var(--color-primary-strong) 82%, var(--color-muted));
+}
+
+.meal-empty-cta:hover,
+.meal-empty-cta:focus-visible {
+  background: var(--color-primary-soft);
+}
+
+.meal-move-action {
+  justify-self: center;
+  border: 1px solid var(--color-border);
+  padding: var(--space-s) var(--space-m);
+  background: color-mix(in srgb, var(--color-surface) 70%, transparent);
+  color: var(--color-muted);
+  box-shadow: none;
+}
+
+.meal-move-action:hover,
+.meal-move-action:focus-visible {
+  border-color: color-mix(in srgb, var(--color-primary-soft) 75%, var(--color-border));
+  color: var(--color-primary-strong);
+}
+
+@media (min-width: 42rem) {
+  .meal-planner {
+    max-width: calc(var(--page-width) * 0.62);
+    margin-inline: auto;
+  }
+
+  .meal-card {
+    padding: var(--space-m);
+  }
+}
