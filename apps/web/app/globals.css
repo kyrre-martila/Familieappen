@@ -5294,6 +5294,12 @@ select {
   font-size: var(--text-small);
   font-weight: 850;
   line-height: 1.2;
+  text-decoration: none;
+}
+
+a.calendar-chip,
+button.calendar-chip {
+  cursor: pointer;
 }
 
 .calendar-chip--meal {
@@ -9731,6 +9737,7 @@ select {
 }
 
 .meal-card {
+  position: relative;
   display: grid;
   grid-template-columns: auto minmax(0, 1fr) auto;
   align-items: center;
@@ -9748,6 +9755,19 @@ select {
     var(--color-surface);
   box-shadow: 0 var(--space-xs) var(--space-m)
     color-mix(in srgb, var(--color-text) 6%, transparent);
+}
+
+.meal-card__tap-target {
+  display: grid;
+  grid-column: span 2;
+  grid-template-columns: auto minmax(0, 1fr);
+  align-items: center;
+  gap: var(--space-s);
+  border: 0;
+  padding: 0;
+  background: transparent;
+  text-align: left;
+  cursor: pointer;
 }
 
 .meal-card--move-mode {
@@ -9839,6 +9859,43 @@ select {
   cursor: pointer;
 }
 
+.meal-card__menu-wrap {
+  position: relative;
+  display: grid;
+  place-items: center;
+}
+
+.meal-card__menu-popover {
+  position: absolute;
+  z-index: 2;
+  top: calc(100% + var(--space-xs));
+  right: 0;
+  display: grid;
+  min-width: 8rem;
+  overflow: hidden;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-m);
+  background: var(--color-surface);
+  box-shadow: 0 var(--space-s) var(--space-l)
+    color-mix(in srgb, var(--color-text) 12%, transparent);
+}
+
+.meal-card__menu-popover button {
+  border: 0;
+  padding: var(--space-s) var(--space-m);
+  background: transparent;
+  color: var(--color-text);
+  font: inherit;
+  font-size: var(--text-small);
+  font-weight: 800;
+  text-align: left;
+  cursor: pointer;
+}
+
+.meal-card__menu-popover button:hover {
+  background: var(--color-background-soft);
+}
+
 .meal-card__drag-handle {
   display: grid;
   width: calc(var(--space-xl) + var(--space-xs));
@@ -9853,7 +9910,9 @@ select {
   color: var(--meal-move-accent, var(--color-muted));
 }
 
+.meal-card__tap-target:focus-visible,
 .meal-card__menu:focus-visible,
+.meal-card__menu-popover button:focus-visible,
 .meal-empty-cta:focus-visible,
 .meal-empty-state button:focus-visible,
 .meal-inline-editor button:focus-visible,

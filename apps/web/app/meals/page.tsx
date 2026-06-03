@@ -1,9 +1,11 @@
 "use client";
 
+import { useSearchParams } from "next/navigation";
 import {
   useEffect,
   useMemo,
   useRef,
+  Suspense,
   useState,
   type DragEvent,
   type RefObject,
@@ -40,6 +42,16 @@ const futureDayFormatter = new Intl.DateTimeFormat("nb-NO", {
   weekday: "long",
 });
 
+function parseDateString(date: string) {
+  const [year, month, day] = date.split("-").map(Number);
+
+  if (!year || !month || !day) {
+    return null;
+  }
+
+  return new Date(year, month - 1, day, 12, 0, 0, 0);
+}
+
 function addDays(date: Date, days: number) {
   const nextDate = new Date(date);
   nextDate.setHours(12, 0, 0, 0);
@@ -51,6 +63,27 @@ function getToday() {
   const today = new Date();
   today.setHours(12, 0, 0, 0);
   return today;
+}
+
+function getDateOffset(fromDate: Date, targetDateString: string) {
+  const targetDate = parseDateString(targetDateString);
+
+  if (!targetDate) {
+    return null;
+  }
+
+  return Math.round((targetDate.getTime() - fromDate.getTime()) / 86400000);
+}
+
+function getInitialFocusOffset(today: Date, dateParam: string | null) {
+  return dateParam ? getDateOffset(today, dateParam) : null;
+}
+
+function getInitialOffsetRange(focusOffset: number | null) {
+  return {
+    start: Math.min(-initialPastDays, focusOffset ?? -initialPastDays),
+    end: Math.max(initialFutureDays, focusOffset ?? initialFutureDays),
+  };
 }
 
 function capitalize(value: string) {
@@ -112,9 +145,19 @@ function formatReminderDate(today: Date, latestOffset: number) {
   return dayFormatter.format(latestDate);
 }
 
-export default function MealsPage() {
-  const [startOffset, setStartOffset] = useState(-initialPastDays);
-  const [endOffset, setEndOffset] = useState(initialFutureDays);
+function MealsPageContent() {
+  const searchParams = useSearchParams();
+  const today = useMemo(() => getToday(), []);
+  const initialFocusOffset = useMemo(
+    () => getInitialFocusOffset(today, searchParams.get("date")),
+    [searchParams, today],
+  );
+  const initialOffsetRange = useMemo(
+    () => getInitialOffsetRange(initialFocusOffset),
+    [initialFocusOffset],
+  );
+  const [startOffset, setStartOffset] = useState(initialOffsetRange.start);
+  const [endOffset, setEndOffset] = useState(initialOffsetRange.end);
   const [isMoveMode, setIsMoveMode] = useState(false);
   const [draggedOffset, setDraggedOffset] = useState<number | null>(null);
   const [activeDropOffset, setActiveDropOffset] = useState<number | null>(null);
@@ -142,7 +185,7 @@ export default function MealsPage() {
   const bottomSentinelRef = useRef<HTMLDivElement | null>(null);
   const todayRef = useRef<HTMLElement | null>(null);
   const hasInitialScrollRef = useRef(false);
-  const today = useMemo(() => getToday(), []);
+  const handledRouteActionRef = useRef<string | null>(null);
 
   const days = useMemo(
     () =>
@@ -220,9 +263,16 @@ export default function MealsPage() {
 
     hasInitialScrollRef.current = true;
     window.requestAnimationFrame(() => {
+      if (initialFocusOffset !== null) {
+        document
+          .querySelector(`[data-meal-day="${initialFocusOffset}"]`)
+          ?.scrollIntoView({ block: "start" });
+        return;
+      }
+
       todayRef.current?.scrollIntoView({ block: "start" });
     });
-  }, []);
+  }, [initialFocusOffset]);
 
   useEffect(() => {
     if (!toastMessage) {
@@ -236,7 +286,50 @@ export default function MealsPage() {
     return () => window.clearTimeout(timeoutId);
   }, [toastMessage]);
 
+  useEffect(() => {
+    const createMode = searchParams.get("create") === "1";
+    const dateParam = searchParams.get("date");
+    const routeActionKey = `${dateParam ?? "today"}:${createMode ? "create" : "focus"}`;
+
+    if (handledRouteActionRef.current === routeActionKey) {
+      return;
+    }
+
+    handledRouteActionRef.current = routeActionKey;
+
+    if (createMode) {
+      const preferredOffset = dateParam ? getDateOffset(today, dateParam) : 0;
+      const startSearchOffset = preferredOffset ?? 0;
+      let firstEmptyOffset = startSearchOffset;
+
+      while (mealsByOffset.has(firstEmptyOffset)) {
+        firstEmptyOffset += 1;
+      }
+
+      openEditor(firstEmptyOffset, null);
+      return;
+    }
+
+    if (dateParam) {
+      const focusOffset = getDateOffset(today, dateParam);
+
+      if (focusOffset === null) {
+        return;
+      }
+
+      setStartOffset((currentOffset) => Math.min(currentOffset, focusOffset));
+      setEndOffset((currentOffset) => Math.max(currentOffset, focusOffset));
+      window.requestAnimationFrame(() => {
+        document
+          .querySelector(`[data-meal-day="${focusOffset}"]`)
+          ?.scrollIntoView({ block: "center", behavior: "smooth" });
+      });
+    }
+  }, [mealsByOffset, searchParams, today]);
+
   function openEditor(offset: number, meal?: MockMeal | null) {
+    setStartOffset((currentOffset) => Math.min(currentOffset, offset));
+    setEndOffset((currentOffset) => Math.max(currentOffset, offset));
     setEditingOffset(offset);
     setInputValue(meal?.title ?? "");
     window.requestAnimationFrame(() => {
@@ -266,6 +359,16 @@ export default function MealsPage() {
     });
     closeEditor();
     showToast("Middag lagret");
+  }
+
+  function deleteMeal(offset: number) {
+    setMealsByOffset((currentMeals) => {
+      const nextMeals = new Map(currentMeals);
+      nextMeals.delete(offset);
+      return nextMeals;
+    });
+    closeEditor();
+    showToast("Middag slettet");
   }
 
   function showToast(message: string) {
@@ -448,6 +551,7 @@ export default function MealsPage() {
                   onMealDragEnd={handleDragEnd}
                   onMealDragStart={handleMealDragStart}
                   onOpenEditor={openEditor}
+                  onDeleteMeal={deleteMeal}
                   onSaveMeal={saveMeal}
                   suggestions={visibleSuggestions}
                   editingOffset={editingOffset}
@@ -496,6 +600,14 @@ export default function MealsPage() {
   );
 }
 
+export default function MealsPage() {
+  return (
+    <Suspense fallback={null}>
+      <MealsPageContent />
+    </Suspense>
+  );
+}
+
 function ReminderCard({ reminderText }: { reminderText: string }) {
   return (
     <aside
@@ -526,6 +638,7 @@ function MealTimelineDay({
   onMealDragEnd,
   onMealDragStart,
   onOpenEditor,
+  onDeleteMeal,
   onSaveMeal,
   suggestions,
   editingOffset,
@@ -546,6 +659,7 @@ function MealTimelineDay({
   onMealDragEnd: () => void;
   onMealDragStart: (offset: number, event: DragEvent<HTMLDivElement>) => void;
   onOpenEditor: (offset: number, meal?: MockMeal | null) => void;
+  onDeleteMeal: (offset: number) => void;
   onSaveMeal: (offset: number, title: string) => void;
   suggestions: MockMeal[];
   editingOffset: number | null;
@@ -575,6 +689,7 @@ function MealTimelineDay({
       onDragOver={(event) => onDayDragOver(offset, event)}
       onDrop={(event) => onDayDrop(offset, event)}
       ref={todayRef}
+      data-meal-day={offset}
     >
       <div className="meal-day__rail" aria-hidden="true">
         <span
@@ -605,6 +720,7 @@ function MealTimelineDay({
             onDragEnd={onMealDragEnd}
             onDragStart={onMealDragStart}
             onOpenEditor={onOpenEditor}
+            onDeleteMeal={onDeleteMeal}
           />
         ) : (
           <EmptyMealCta
@@ -625,6 +741,7 @@ function PlannedMealCard({
   onDragEnd,
   onDragStart,
   onOpenEditor,
+  onDeleteMeal,
 }: {
   isDragging: boolean;
   isMoveMode: boolean;
@@ -633,6 +750,7 @@ function PlannedMealCard({
   onDragEnd: () => void;
   onDragStart: (offset: number, event: DragEvent<HTMLDivElement>) => void;
   onOpenEditor: (offset: number, meal: MockMeal) => void;
+  onDeleteMeal: (offset: number) => void;
 }) {
   const cardClassName = [
     "meal-card",
@@ -642,6 +760,19 @@ function PlannedMealCard({
     .filter(Boolean)
     .join(" ");
 
+  const [isMenuOpen, setIsMenuOpen] = useState(false);
+  const mealSummary = (
+    <>
+      <span className="meal-card__visual" aria-hidden="true">
+        <span>{meal.icon}</span>
+      </span>
+      <span className="meal-card__copy">
+        <span className="meal-card__eyebrow">Middag</span>
+        <span className="meal-card__title">{meal.title}</span>
+      </span>
+    </>
+  );
+
   return (
     <div
       className={cardClassName}
@@ -649,13 +780,18 @@ function PlannedMealCard({
       onDragEnd={onDragEnd}
       onDragStart={(event) => onDragStart(offset, event)}
     >
-      <span className="meal-card__visual" aria-hidden="true">
-        <span>{meal.icon}</span>
-      </span>
-      <div className="meal-card__copy">
-        <p className="meal-card__eyebrow">Middag</p>
-        <p className="meal-card__title">{meal.title}</p>
-      </div>
+      {isMoveMode ? (
+        mealSummary
+      ) : (
+        <button
+          className="meal-card__tap-target"
+          type="button"
+          aria-label={`Rediger ${meal.title}`}
+          onClick={() => onOpenEditor(offset, meal)}
+        >
+          {mealSummary}
+        </button>
+      )}
       {isMoveMode ? (
         <span
           className="meal-card__drag-handle"
@@ -665,14 +801,42 @@ function PlannedMealCard({
           <GripVertical aria-hidden="true" size={20} strokeWidth={2.4} />
         </span>
       ) : (
-        <button
-          className="meal-card__menu"
-          type="button"
-          aria-label={`Rediger ${meal.title}`}
-          onClick={() => onOpenEditor(offset, meal)}
-        >
-          <MoreHorizontal aria-hidden="true" size={20} />
-        </button>
+        <span className="meal-card__menu-wrap">
+          <button
+            className="meal-card__menu"
+            type="button"
+            aria-expanded={isMenuOpen}
+            aria-label={`Åpne meny for ${meal.title}`}
+            title="Rediger / Slett"
+            onClick={() => setIsMenuOpen((currentValue) => !currentValue)}
+          >
+            <MoreHorizontal aria-hidden="true" size={20} />
+          </button>
+          {isMenuOpen ? (
+            <span className="meal-card__menu-popover" role="menu">
+              <button
+                type="button"
+                role="menuitem"
+                onClick={() => {
+                  setIsMenuOpen(false);
+                  onOpenEditor(offset, meal);
+                }}
+              >
+                Rediger
+              </button>
+              <button
+                type="button"
+                role="menuitem"
+                onClick={() => {
+                  setIsMenuOpen(false);
+                  onDeleteMeal(offset);
+                }}
+              >
+                Slett
+              </button>
+            </span>
+          ) : null}
+        </span>
       )}
     </div>
   );

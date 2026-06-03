@@ -37,10 +37,10 @@ import { Card, EmptyState, PageContainer } from "../../components/ui";
 import {
   calendarEvents,
   familyMembers,
-  meals,
   mockToday,
   reminders,
 } from "./mockCalendarData";
+import { getMockMealSummariesFromStartDate } from "../meals/mockMealPlanData";
 
 const dayFormatter = new Intl.DateTimeFormat("nb-NO", { weekday: "short" });
 const selectedDateFormatter = new Intl.DateTimeFormat("nb-NO", {
@@ -63,6 +63,8 @@ const monthDayLabelFormatter = new Intl.DateTimeFormat("nb-NO", {
   month: "long",
 });
 const weekDayLabels = ["MAN", "TIR", "ONS", "TOR", "FRE", "LØR", "SØN"];
+const mealPlannerMeals: MealSummary[] =
+  getMockMealSummariesFromStartDate(mockToday);
 
 type CalendarContentTypeFilter = "all" | "events" | "reminders" | "meals";
 type CalendarCategoryFilter =
@@ -301,7 +303,7 @@ function buildListDayGroups(
 ): CalendarListDayGroup[] {
   const dates = new Set<string>();
 
-  meals.forEach((meal) => dates.add(meal.date));
+  mealPlannerMeals.forEach((meal) => dates.add(meal.date));
   reminders.forEach((reminder) => dates.add(reminder.date));
   calendarEvents.forEach((event) => dates.add(event.date));
 
@@ -323,7 +325,7 @@ function buildListDayGroups(
         : [];
       const meal =
         contentTypeAllows(filters, "meals") && filters.category === "all"
-          ? meals.find((item) => item.date === date)
+          ? mealPlannerMeals.find((item) => item.date === date)
           : undefined;
       const filteredReminders = contentTypeAllows(filters, "reminders")
         ? reminders
@@ -435,6 +437,7 @@ function DateStrip({
           const isSelected = date === selectedDate;
           const hasEvent =
             calendarEvents.some((event) => event.date === date) ||
+            mealPlannerMeals.some((meal) => meal.date === date) ||
             reminders.some((reminder) => reminder.date === date);
 
           return (
@@ -479,7 +482,7 @@ function DateStrip({
 }
 
 function SummaryChips({ selectedDate }: { selectedDate: string }) {
-  const meal = meals.find((item) => item.date === selectedDate);
+  const meal = mealPlannerMeals.find((item) => item.date === selectedDate);
   const visibleReminders = reminders.filter(
     (item) => item.date === selectedDate,
   );
@@ -499,10 +502,14 @@ function SummaryChips({ selectedDate }: { selectedDate: string }) {
       aria-label="Middag og påminnelser"
     >
       {meal ? (
-        <span className="calendar-chip calendar-chip--meal">
+        <Link
+          className="calendar-chip calendar-chip--meal"
+          href={`/meals?date=${selectedDate}`}
+          aria-label={`Åpne måltidsplan for ${formatSelectedDate(selectedDate)}: ${meal.title}`}
+        >
           <Utensils aria-hidden="true" size={22} strokeWidth={2.3} />
           <span>{meal.title}</span>
-        </span>
+        </Link>
       ) : null}
       {shownReminders.map((reminder) => {
         const ReminderIcon = reminderIcons[reminder.icon];
@@ -693,7 +700,9 @@ function MonthView({
               const eventCount = calendarEvents.filter(
                 (event) => event.date === date,
               ).length;
-              const hasMeal = meals.some((meal) => meal.date === date);
+              const hasMeal = mealPlannerMeals.some(
+                (meal) => meal.date === date,
+              );
               const hasReminder = reminders.some(
                 (reminder) => reminder.date === date,
               );
@@ -1068,10 +1077,10 @@ function ListView() {
                     aria-label={`Middag og husk for ${formatListDate(group.date)}`}
                   >
                     {group.meal ? (
-                      <button
+                      <Link
                         className="calendar-chip calendar-chip--meal"
-                        type="button"
-                        aria-label={`Åpne middag for ${formatListDate(group.date)}: ${group.meal.title}`}
+                        href={`/meals?date=${group.date}`}
+                        aria-label={`Åpne måltidsplan for ${formatListDate(group.date)}: ${group.meal.title}`}
                       >
                         <Utensils
                           aria-hidden="true"
@@ -1079,7 +1088,7 @@ function ListView() {
                           strokeWidth={2.3}
                         />
                         <span>{group.meal.title}</span>
-                      </button>
+                      </Link>
                     ) : null}
                     {visibleReminders.map((reminder) => (
                       <ReminderChip reminder={reminder} key={reminder.id} />
