@@ -418,7 +418,7 @@ function HuskReminderCard({ reminder }: { reminder: HuskReminder }) {
     .filter((member): member is HuskFamilyMember => Boolean(member));
 
   return (
-    <button className={`husk-reminder-card husk-reminder-card--${reminder.tone}`} type="button">
+    <Link className={`husk-reminder-card husk-reminder-card--${reminder.tone}`} href={`/husk/reminders/${reminder.id}/edit`} aria-label={`Rediger husk ${reminder.title}`}>
       <span className="husk-reminder-card__icon" aria-hidden="true">
         <Icon size={23} strokeWidth={2.25} />
       </span>
@@ -429,7 +429,7 @@ function HuskReminderCard({ reminder }: { reminder: HuskReminder }) {
         </span>
       </span>
       <ReminderAvatars members={members} />
-    </button>
+    </Link>
   );
 }
 

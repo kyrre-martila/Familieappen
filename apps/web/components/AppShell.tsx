@@ -12,7 +12,7 @@ function isImmersiveRoute(pathname: string) {
 }
 
 function isFocusRoute(pathname: string) {
-  return pathname.startsWith("/calendar/events/") || pathname.startsWith("/husk/lister/");
+  return pathname.startsWith("/calendar/events/") || pathname.startsWith("/husk/lister/") || pathname.startsWith("/husk/reminders/");
 }
 
 export function RootAppFrame({ children }: Readonly<{ children: React.ReactNode }>) {

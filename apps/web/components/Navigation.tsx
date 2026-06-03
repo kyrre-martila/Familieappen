@@ -115,13 +115,13 @@ function CreateBottomSheet({ isOpen, onClose }: { isOpen: boolean; onClose: () =
         <h2 className="create-sheet__title" id={titleId}>Opprett ny</h2>
         <div className="create-sheet__options">
           {createOptions.map((option) => (
-            <button className="create-sheet__option" key={option.label} type="button" onClick={onClose}>
+            <Link className="create-sheet__option" href={option.href} key={option.label} onClick={onClose}>
               <span className={`create-sheet__option-icon create-sheet__option-icon--${option.tone}`} aria-hidden="true">{option.emoji}</span>
               <span className="create-sheet__option-copy">
                 <span className="create-sheet__option-title">{option.label}</span>
                 <span className="create-sheet__option-description">{option.description}</span>
               </span>
-            </button>
+            </Link>
           ))}
         </div>
       </section>

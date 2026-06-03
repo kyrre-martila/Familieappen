@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { useState } from "react";
 import { CalendarDays, Check, ChevronDown, ChevronLeft, ChevronUp, Gift, GripVertical, MoreHorizontal, Users, X } from "lucide-react";
 import { useRouter } from "next/navigation";
@@ -146,9 +147,9 @@ export function HuskListDetailClient({ list }: { list: HuskListDetail }) {
         <button className="list-detail__icon-button" type="button" onClick={() => router.back()} aria-label="Gå tilbake til Lister">
           <ChevronLeft aria-hidden="true" size={30} strokeWidth={2.8} />
         </button>
-        <button className="list-detail__icon-button" type="button" aria-label="Flere valg for listen">
+        <Link className="list-detail__icon-button" href={`/husk/lister/${list.id}/edit`} aria-label="Rediger liste">
           <MoreHorizontal aria-hidden="true" size={30} strokeWidth={2.8} />
-        </button>
+        </Link>
       </div>
 
       <div className="list-detail__scroll">
