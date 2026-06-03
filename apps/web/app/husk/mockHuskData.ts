@@ -66,20 +66,25 @@ export interface HuskListDetail {
   items: HuskListDetailItem[];
 }
 
-export interface HuskSchoolDayPlan {
+export type HuskSchoolWeekday = "monday" | "tuesday" | "wednesday" | "thursday" | "friday";
+
+export interface HuskSchoolWeekItem {
   id: string;
-  dayLabel: string;
-  dateLabel: string;
-  focus: string;
-  packing: string[];
-  notes: string;
+  title: string;
+  icon: HuskReminderIcon;
+  tone: "blue" | "green" | "orange" | "purple" | "yellow";
+}
+
+export interface HuskSchoolWeekChildPlan {
+  childId: string;
+  days: Record<HuskSchoolWeekday, HuskSchoolWeekItem[]>;
 }
 
 export interface HuskMockData {
   familyMembers: HuskFamilyMember[];
   reminders: HuskReminder[];
   listGroups: HuskListGroup[];
-  schoolWeek: HuskSchoolDayPlan[];
+  schoolWeek: HuskSchoolWeekChildPlan[];
 }
 
 export const huskMockData: HuskMockData = {
@@ -236,28 +241,34 @@ export const huskMockData: HuskMockData = {
   ],
   schoolWeek: [
     {
-      id: "school-monday",
-      dayLabel: "Mandag",
-      dateLabel: "2. juni",
-      focus: "Lesing og svømming",
-      packing: ["Badetøy", "Lesemappe"],
-      notes: "Husk vått pose til svømmetøy.",
+      childId: "fiona",
+      days: {
+        monday: [],
+        tuesday: [{ id: "fiona-tuesday-gymtoy", title: "Gymtøy", icon: "shirt", tone: "purple" }],
+        wednesday: [{ id: "fiona-wednesday-library", title: "Bibliotekbok", icon: "book", tone: "blue" }],
+        thursday: [{ id: "fiona-thursday-grill", title: "Ta med grillmat", icon: "grill", tone: "orange" }],
+        friday: [],
+      },
     },
     {
-      id: "school-wednesday",
-      dayLabel: "Onsdag",
-      dateLabel: "4. juni",
-      focus: "Uteskole",
-      packing: ["Sitteunderlag", "Varm drikke", "Ekstra sokker"],
-      notes: "Oppmøte ved skogporten kl. 08:30.",
+      childId: "alma",
+      days: {
+        monday: [{ id: "alma-monday-reader", title: "Lesebok", icon: "book", tone: "blue" }],
+        tuesday: [],
+        wednesday: [{ id: "alma-wednesday-gymtoy", title: "Gymtøy", icon: "shirt", tone: "purple" }],
+        thursday: [],
+        friday: [{ id: "alma-friday-cuddly-toy", title: "Kosedyrdag", icon: "gift", tone: "orange" }],
+      },
     },
     {
-      id: "school-friday",
-      dayLabel: "Fredag",
-      dateLabel: "6. juni",
-      focus: "Innlevering og vennegruppe",
-      packing: ["Bibliotekbok", "Gymbag"],
-      notes: "Vennegruppen går hjem med Nora etter skolen.",
+      childId: "even-olai",
+      days: {
+        monday: [],
+        tuesday: [{ id: "even-tuesday-football", title: "Fotballsko", icon: "backpack", tone: "green" }],
+        wednesday: [],
+        thursday: [{ id: "even-thursday-food-health", title: "Mat og helse", icon: "grill", tone: "orange" }],
+        friday: [],
+      },
     },
   ],
 };
