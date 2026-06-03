@@ -1,7 +1,7 @@
 "use client";
 
-import { useEffect, useMemo, useRef, useState, type RefObject } from "react";
-import { ArrowUpDown, MoreHorizontal, Plus, Utensils } from "lucide-react";
+import { useEffect, useMemo, useRef, useState, type DragEvent, type RefObject } from "react";
+import { ArrowUpDown, Check, GripVertical, MoreHorizontal, Plus, Utensils } from "lucide-react";
 
 import { AppShell } from "../../components/AppShell";
 import { ProtectedFamilyRoute } from "../../components/ProtectedFamilyRoute";
@@ -60,6 +60,23 @@ function formatReminderDate(today: Date, latestOffset: number) {
 export default function MealsPage() {
   const [startOffset, setStartOffset] = useState(-initialPastDays);
   const [endOffset, setEndOffset] = useState(initialFutureDays);
+  const [isMoveMode, setIsMoveMode] = useState(false);
+  const [draggedOffset, setDraggedOffset] = useState<number | null>(null);
+  const [activeDropOffset, setActiveDropOffset] = useState<number | null>(null);
+  const [toastMessage, setToastMessage] = useState<string | null>(null);
+  const [mealsByOffset, setMealsByOffset] = useState(() => {
+    const initialMeals = new Map<number, MockMeal>();
+
+    for (let offset = -initialPastDays; offset <= initialFutureDays; offset += 1) {
+      const meal = getMockMealForOffset(offset);
+
+      if (meal) {
+        initialMeals.set(offset, meal);
+      }
+    }
+
+    return initialMeals;
+  });
   const topSentinelRef = useRef<HTMLDivElement | null>(null);
   const bottomSentinelRef = useRef<HTMLDivElement | null>(null);
   const todayRef = useRef<HTMLElement | null>(null);
@@ -73,10 +90,10 @@ export default function MealsPage() {
         return {
           date: addDays(today, offset),
           offset,
-          meal: getMockMealForOffset(offset),
+          meal: mealsByOffset.get(offset) ?? null,
         };
       }),
-    [endOffset, startOffset, today]
+    [endOffset, mealsByOffset, startOffset, today]
   );
 
   const reminderText = useMemo(() => {
@@ -94,6 +111,111 @@ export default function MealsPage() {
       todayRef.current?.scrollIntoView({ block: "start" });
     });
   }, []);
+
+  useEffect(() => {
+    if (!toastMessage) {
+      return;
+    }
+
+    const timeoutId = window.setTimeout(() => {
+      setToastMessage(null);
+    }, 2200);
+
+    return () => window.clearTimeout(timeoutId);
+  }, [toastMessage]);
+
+  function showToast(message: string) {
+    setToastMessage(message);
+  }
+
+  function enterMoveMode() {
+    setIsMoveMode(true);
+  }
+
+  function exitMoveMode() {
+    setIsMoveMode(false);
+    setDraggedOffset(null);
+    setActiveDropOffset(null);
+  }
+
+  function handleMoveAction() {
+    if (isMoveMode) {
+      exitMoveMode();
+      return;
+    }
+
+    enterMoveMode();
+  }
+
+  function handleMealDragStart(offset: number, event: DragEvent<HTMLDivElement>) {
+    if (!isMoveMode || !mealsByOffset.has(offset)) {
+      event.preventDefault();
+      return;
+    }
+
+    event.dataTransfer.effectAllowed = "move";
+    event.dataTransfer.setData("text/plain", String(offset));
+    setDraggedOffset(offset);
+  }
+
+  function handleDayDragOver(offset: number, event: DragEvent<HTMLElement>) {
+    if (!isMoveMode || draggedOffset === null || draggedOffset === offset) {
+      return;
+    }
+
+    event.preventDefault();
+    event.dataTransfer.dropEffect = "move";
+    setActiveDropOffset(offset);
+  }
+
+  function handleDayDragLeave(offset: number) {
+    setActiveDropOffset((currentOffset) => (currentOffset === offset ? null : currentOffset));
+  }
+
+  function handleDayDrop(targetOffset: number, event: DragEvent<HTMLElement>) {
+    if (!isMoveMode) {
+      return;
+    }
+
+    event.preventDefault();
+
+    const sourceOffset = Number(event.dataTransfer.getData("text/plain"));
+
+    setDraggedOffset(null);
+    setActiveDropOffset(null);
+
+    if (!Number.isFinite(sourceOffset) || sourceOffset === targetOffset) {
+      return;
+    }
+
+    const sourceMeal = mealsByOffset.get(sourceOffset);
+
+    if (!sourceMeal) {
+      return;
+    }
+
+    const targetMeal = mealsByOffset.get(targetOffset) ?? null;
+
+    setMealsByOffset((currentMeals) => {
+      const nextMeals = new Map(currentMeals);
+      nextMeals.set(targetOffset, sourceMeal);
+
+      if (targetMeal) {
+        nextMeals.set(sourceOffset, targetMeal);
+      } else {
+        nextMeals.delete(sourceOffset);
+      }
+
+      return nextMeals;
+    });
+
+    showToast(targetMeal ? "Middager byttet plass" : "Middag flyttet");
+  }
+
+  function handleDragEnd() {
+    setDraggedOffset(null);
+    setActiveDropOffset(null);
+  }
 
   useEffect(() => {
     const topSentinel = topSentinelRef.current;
@@ -132,7 +254,7 @@ export default function MealsPage() {
     <ProtectedFamilyRoute>
       <AppShell title="Måltidsplan">
         <PageContainer>
-          <section className="meal-planner" aria-labelledby="meal-planner-title">
+          <section className={isMoveMode ? "meal-planner meal-planner--move-mode" : "meal-planner"} aria-labelledby="meal-planner-title">
             <h2 className="sr-only" id="meal-planner-title">Måltidsplan</h2>
 
             <ReminderCard reminderText={reminderText} />
@@ -140,15 +262,36 @@ export default function MealsPage() {
             <div className="meal-timeline" aria-label="Middag fremover og bakover i tid">
               <div className="meal-timeline__sentinel" ref={topSentinelRef} aria-hidden="true" />
               {days.map((day) => (
-                <MealTimelineDay date={day.date} key={day.offset} meal={day.meal} offset={day.offset} todayRef={day.offset === 0 ? todayRef : undefined} />
+                <MealTimelineDay
+                  activeDropOffset={activeDropOffset}
+                  date={day.date}
+                  draggedOffset={draggedOffset}
+                  isMoveMode={isMoveMode}
+                  key={day.offset}
+                  meal={day.meal}
+                  offset={day.offset}
+                  onDayDragLeave={handleDayDragLeave}
+                  onDayDragOver={handleDayDragOver}
+                  onDayDrop={handleDayDrop}
+                  onMealDragEnd={handleDragEnd}
+                  onMealDragStart={handleMealDragStart}
+                  todayRef={day.offset === 0 ? todayRef : undefined}
+                />
               ))}
               <div className="meal-timeline__sentinel" ref={bottomSentinelRef} aria-hidden="true" />
             </div>
 
-            <button className="meal-planner__move-button" type="button" aria-label="Flytt middager kommer senere">
-              <ArrowUpDown aria-hidden="true" size={18} />
-              Flytt middager
+            <button
+              className={isMoveMode ? "meal-planner__move-button meal-planner__move-button--done" : "meal-planner__move-button"}
+              type="button"
+              aria-pressed={isMoveMode}
+              onClick={handleMoveAction}
+            >
+              {isMoveMode ? <Check aria-hidden="true" size={18} /> : <ArrowUpDown aria-hidden="true" size={18} />}
+              {isMoveMode ? "Ferdig" : "Flytt middager"}
             </button>
+
+            <MealMoveToast message={toastMessage} />
           </section>
         </PageContainer>
       </AppShell>
@@ -169,32 +312,90 @@ function ReminderCard({ reminderText }: { reminderText: string }) {
 }
 
 function MealTimelineDay({
+  activeDropOffset,
   date,
+  draggedOffset,
+  isMoveMode,
   meal,
   offset,
+  onDayDragLeave,
+  onDayDragOver,
+  onDayDrop,
+  onMealDragEnd,
+  onMealDragStart,
   todayRef,
 }: {
+  activeDropOffset: number | null;
   date: Date;
+  draggedOffset: number | null;
+  isMoveMode: boolean;
   meal: MockMeal | null;
   offset: number;
+  onDayDragLeave: (offset: number) => void;
+  onDayDragOver: (offset: number, event: DragEvent<HTMLElement>) => void;
+  onDayDrop: (offset: number, event: DragEvent<HTMLElement>) => void;
+  onMealDragEnd: () => void;
+  onMealDragStart: (offset: number, event: DragEvent<HTMLDivElement>) => void;
   todayRef?: RefObject<HTMLElement | null>;
 }) {
+  const isDropTarget = isMoveMode && activeDropOffset === offset && draggedOffset !== offset;
+  const dayClassName = ["meal-day", isMoveMode ? "meal-day--move-mode" : "", isDropTarget ? "meal-day--drop-target" : ""].filter(Boolean).join(" ");
+
   return (
-    <article className="meal-day" aria-label={formatTimelineDate(date, offset)} ref={todayRef}>
+    <article
+      className={dayClassName}
+      aria-label={formatTimelineDate(date, offset)}
+      onDragLeave={() => onDayDragLeave(offset)}
+      onDragOver={(event) => onDayDragOver(offset, event)}
+      onDrop={(event) => onDayDrop(offset, event)}
+      ref={todayRef}
+    >
       <div className="meal-day__rail" aria-hidden="true">
         <span className={offset === 0 ? "meal-day__dot meal-day__dot--today" : "meal-day__dot"} />
       </div>
       <div className="meal-day__content">
         <h3 className="meal-day__date">{formatTimelineDate(date, offset)}</h3>
-        {meal ? <PlannedMealCard meal={meal} /> : <EmptyMealCta />}
+        {meal ? (
+          <PlannedMealCard
+            isDragging={draggedOffset === offset}
+            isMoveMode={isMoveMode}
+            meal={meal}
+            offset={offset}
+            onDragEnd={onMealDragEnd}
+            onDragStart={onMealDragStart}
+          />
+        ) : (
+          <EmptyMealCta isMoveMode={isMoveMode} />
+        )}
       </div>
     </article>
   );
 }
 
-function PlannedMealCard({ meal }: { meal: MockMeal }) {
+function PlannedMealCard({
+  isDragging,
+  isMoveMode,
+  meal,
+  offset,
+  onDragEnd,
+  onDragStart,
+}: {
+  isDragging: boolean;
+  isMoveMode: boolean;
+  meal: MockMeal;
+  offset: number;
+  onDragEnd: () => void;
+  onDragStart: (offset: number, event: DragEvent<HTMLDivElement>) => void;
+}) {
+  const cardClassName = ["meal-card", isMoveMode ? "meal-card--move-mode" : "", isDragging ? "meal-card--dragging" : ""].filter(Boolean).join(" ");
+
   return (
-    <div className="meal-card">
+    <div
+      className={cardClassName}
+      draggable={isMoveMode}
+      onDragEnd={onDragEnd}
+      onDragStart={(event) => onDragStart(offset, event)}
+    >
       <span className="meal-card__visual" aria-hidden="true">
         <span>{meal.icon}</span>
       </span>
@@ -202,19 +403,41 @@ function PlannedMealCard({ meal }: { meal: MockMeal }) {
         <p className="meal-card__eyebrow">Middag</p>
         <p className="meal-card__title">{meal.title}</p>
       </div>
-      <button className="meal-card__menu" type="button" aria-label={`Flere valg for ${meal.title}`}>
-        <MoreHorizontal aria-hidden="true" size={20} />
-      </button>
+      {isMoveMode ? (
+        <span className="meal-card__drag-handle" aria-label={`Flytt ${meal.title}`} role="img">
+          <GripVertical aria-hidden="true" size={20} strokeWidth={2.4} />
+        </span>
+      ) : (
+        <button className="meal-card__menu" type="button" aria-label={`Flere valg for ${meal.title}`}>
+          <MoreHorizontal aria-hidden="true" size={20} />
+        </button>
+      )}
     </div>
   );
 }
 
-function EmptyMealCta() {
+function EmptyMealCta({ isMoveMode }: { isMoveMode: boolean }) {
+  if (isMoveMode) {
+    return (
+      <div className="meal-empty-drop" aria-label="Tom dag for flytting">
+        <span>Tom dag</span>
+      </div>
+    );
+  }
+
   return (
     <button className="meal-empty-cta" type="button" aria-label="Legg til middag kommer senere">
       <Plus aria-hidden="true" size={17} />
       <span>Legg til middag</span>
       <Utensils className="meal-empty-cta__hint" aria-hidden="true" size={16} />
     </button>
+  );
+}
+
+function MealMoveToast({ message }: { message: string | null }) {
+  return (
+    <div className={message ? "meal-move-toast meal-move-toast--visible" : "meal-move-toast"} role="status" aria-live="polite" aria-atomic="true">
+      {message}
+    </div>
   );
 }
