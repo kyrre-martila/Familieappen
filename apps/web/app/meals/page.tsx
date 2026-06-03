@@ -1,449 +1,220 @@
 "use client";
 
-import { FormEvent, useEffect, useMemo, useState, type ChangeEvent } from "react";
-import Link from "next/link";
-import { useRouter } from "next/navigation";
-import { LockedFeatureState } from "../../components/PendingAccess";
-import { useFamilyAccess } from "../../components/ProtectedFamilyRoute";
-import { Badge, Button, Card, EmptyState, ErrorState, LoadingState, PageContainer, SectionHeader } from "../../components/ui";
-import {
-  ApiError,
-  FamilyWithMembership,
-  MealPlan,
-  MealPlanDay,
-  addMealPlanDay,
-  deleteMealPlanDay,
-  getMealPlan,
-  updateMealPlanDay
-} from "../../lib/api";
-import { chooseActiveFamily, getUserFacingApiMessage, handleMissingOrInvalidAuth } from "../../lib/auth-family";
-import { clearActiveFamilyId } from "../../lib/session";
+import { useEffect, useMemo, useRef, useState, type RefObject } from "react";
+import { ArrowUpDown, MoreHorizontal, Plus, Utensils } from "lucide-react";
 
-type MealsStatus = "loading" | "ready" | "pending" | "unauthorized" | "no-family" | "error";
+import { AppShell } from "../../components/AppShell";
+import { ProtectedFamilyRoute } from "../../components/ProtectedFamilyRoute";
+import { PageContainer } from "../../components/ui";
+import { getLatestPlannedOffset, getMockMealForOffset, type MockMeal } from "./mockMealPlanData";
+
+const initialPastDays = 10;
+const initialFutureDays = 21;
+const loadChunkSize = 14;
+
+const dayFormatter = new Intl.DateTimeFormat("nb-NO", { weekday: "long", day: "numeric", month: "long" });
+const futureDayFormatter = new Intl.DateTimeFormat("nb-NO", { weekday: "long" });
+
+function addDays(date: Date, days: number) {
+  const nextDate = new Date(date);
+  nextDate.setHours(12, 0, 0, 0);
+  nextDate.setDate(nextDate.getDate() + days);
+  return nextDate;
+}
+
+function getToday() {
+  const today = new Date();
+  today.setHours(12, 0, 0, 0);
+  return today;
+}
+
+function capitalize(value: string) {
+  return value.length > 0 ? `${value.charAt(0).toLocaleUpperCase("nb-NO")}${value.slice(1)}` : value;
+}
+
+function formatTimelineDate(date: Date, offset: number) {
+  if (offset === 0) {
+    return `I dag · ${dayFormatter.format(date)}`;
+  }
+
+  if (offset === 1) {
+    return `I morgen · ${dayFormatter.format(date)}`;
+  }
+
+  return capitalize(dayFormatter.format(date));
+}
+
+function formatReminderDate(today: Date, latestOffset: number) {
+  const latestDate = addDays(today, latestOffset);
+  if (latestOffset <= 1) {
+    return latestOffset === 0 ? "i dag" : "i morgen";
+  }
+
+  if (latestOffset <= 7) {
+    return futureDayFormatter.format(latestDate);
+  }
+
+  return dayFormatter.format(latestDate);
+}
 
 export default function MealsPage() {
-  const router = useRouter();
-  const [mealPlan, setMealPlan] = useState<MealPlan | null>(null);
-  const [families, setFamilies] = useState<FamilyWithMembership[]>([]);
-  const [activeFamilyId, setActiveFamilyIdState] = useState<string | null>(null);
-  const [status, setStatus] = useState<MealsStatus>("loading");
-  const [message, setMessage] = useState("Loading meal plan…");
-  const [selectedMonth, setSelectedMonth] = useState(getMonthInputValue(new Date()));
-  const [date, setDate] = useState(getDateInputValue(new Date()));
-  const [mealName, setMealName] = useState("");
-  const [notes, setNotes] = useState("");
-  const [editingDayId, setEditingDayId] = useState<string | null>(null);
-  const [pendingDayId, setPendingDayId] = useState<string | null>(null);
-  const [isSaving, setIsSaving] = useState(false);
+  const [startOffset, setStartOffset] = useState(-initialPastDays);
+  const [endOffset, setEndOffset] = useState(initialFutureDays);
+  const topSentinelRef = useRef<HTMLDivElement | null>(null);
+  const bottomSentinelRef = useRef<HTMLDivElement | null>(null);
+  const todayRef = useRef<HTMLElement | null>(null);
+  const hasInitialScrollRef = useRef(false);
+  const today = useMemo(() => getToday(), []);
 
-  const familyAccess = useFamilyAccess();
-  const approvedFamilyContext = familyAccess.status === "approved" ? familyAccess.familyContext : null;
+  const days = useMemo(
+    () =>
+      Array.from({ length: endOffset - startOffset + 1 }, (_, index) => {
+        const offset = startOffset + index;
+        return {
+          date: addDays(today, offset),
+          offset,
+          meal: getMockMealForOffset(offset),
+        };
+      }),
+    [endOffset, startOffset, today]
+  );
+
+  const reminderText = useMemo(() => {
+    const latestOffset = getLatestPlannedOffset();
+    return `Du har planlagt frem til ${formatReminderDate(today, latestOffset)}`;
+  }, [today]);
 
   useEffect(() => {
-    if (!approvedFamilyContext) {
+    if (hasInitialScrollRef.current) {
       return;
     }
 
-    setFamilies(approvedFamilyContext.families);
-    setActiveFamilyIdState(approvedFamilyContext.activeFamilyId);
-    void loadMeals(approvedFamilyContext.activeFamilyId);
-  }, [approvedFamilyContext?.activeFamilyId, approvedFamilyContext]);
-
-  const visibleDays = useMemo(() => {
-    const days = mealPlan?.days ?? [];
-
-    return days.filter((day) => day.date.startsWith(selectedMonth)).sort(sortMealDays);
-  }, [mealPlan, selectedMonth]);
-  const plannedDays = visibleDays.length;
-  const hasMultipleFamilies = families.length > 1;
-  const formTitle = editingDayId ? "Edit dinner" : "Add dinner";
-
-  async function loadMeals(familyId = activeFamilyId) {
-    if (!familyId) {
-      setStatus("no-family");
-      setMessage("Choose a family before opening meals.");
-      return;
-    }
-
-    setStatus("loading");
-    setMessage("Loading meal plan…");
-
-    try {
-      const nextMealPlan = await getMealPlan(familyId);
-      setMealPlan(nextMealPlan);
-      setStatus("ready");
-      setMessage("");
-    } catch (error) {
-      handleLoadError(error);
-    }
-  }
-
-  async function handleFamilyChange(event: ChangeEvent<HTMLSelectElement>) {
-    const familyId = event.target.value;
-    chooseActiveFamily(familyId);
-    setActiveFamilyIdState(familyId);
-    clearForm();
-    await loadMeals(familyId);
-  }
-
-  async function handleSaveMeal(event: FormEvent<HTMLFormElement>) {
-    event.preventDefault();
-
-    const nextMealName = mealName.trim();
-    const nextNotes = notes.trim();
-
-    if (!activeFamilyId || !date || nextMealName.length === 0 || isSaving) {
-      return;
-    }
-
-    setIsSaving(true);
-    setMessage("");
-
-    try {
-      if (editingDayId) {
-        const updatedDay = await updateMealPlanDay(activeFamilyId, editingDayId, {
-          date,
-          mealName: nextMealName,
-          notes: nextNotes
-        });
-        upsertLocalDay(updatedDay);
-        setMessage("Dinner updated.");
-      } else {
-        const createdDay = await addMealPlanDay(activeFamilyId, {
-          date,
-          mealName: nextMealName,
-          notes: nextNotes
-        });
-        upsertLocalDay(createdDay);
-        setMessage("Dinner planned.");
-      }
-
-      clearForm();
-    } catch (error) {
-      handleActionError(error, "Could not save dinner. Please try again.");
-    } finally {
-      setIsSaving(false);
-    }
-  }
-
-  async function handleDeleteMeal(dayId: string) {
-    if (!activeFamilyId || pendingDayId) {
-      return;
-    }
-
-    setPendingDayId(dayId);
-    setMessage("");
-
-    try {
-      await deleteMealPlanDay(activeFamilyId, dayId);
-      setMealPlan((current) =>
-        current
-          ? {
-              ...current,
-              days: current.days.filter((day) => day.id !== dayId),
-              recentMeals: getRecentMeals(current.days.filter((day) => day.id !== dayId))
-            }
-          : current
-      );
-      if (editingDayId === dayId) {
-        clearForm();
-      }
-      setMessage("Dinner removed.");
-    } catch (error) {
-      handleActionError(error, "Could not delete dinner. Please try again.");
-    } finally {
-      setPendingDayId(null);
-    }
-  }
-
-  function handleEditMeal(day: MealPlanDay) {
-    setEditingDayId(day.id);
-    setDate(day.date);
-    setMealName(day.mealName);
-    setNotes(day.notes ?? "");
-    setMessage("");
-  }
-
-  function handleFavoriteClick(favoriteMealName: string) {
-    setMealName(favoriteMealName);
-    setMessage("");
-  }
-
-  function upsertLocalDay(day: MealPlanDay) {
-    setMealPlan((current) => {
-      if (!current) {
-        return current;
-      }
-
-      const nextDays = [day, ...current.days.filter((currentDay) => currentDay.id !== day.id && currentDay.date !== day.date)].sort(sortMealDays);
-
-      return {
-        ...current,
-        days: nextDays,
-        recentMeals: getRecentMeals(nextDays)
-      };
+    hasInitialScrollRef.current = true;
+    window.requestAnimationFrame(() => {
+      todayRef.current?.scrollIntoView({ block: "start" });
     });
-  }
+  }, []);
 
-  function clearForm() {
-    setEditingDayId(null);
-    setDate(getDateInputValue(new Date()));
-    setMealName("");
-    setNotes("");
-  }
+  useEffect(() => {
+    const topSentinel = topSentinelRef.current;
+    const bottomSentinel = bottomSentinelRef.current;
 
-  function handleLoadError(error: unknown) {
-    if (error instanceof ApiError && error.status === 401) {
-      handleMissingOrInvalidAuth(error, router);
-      setMealPlan(null);
-      setStatus("unauthorized");
-      setMessage(getUserFacingApiMessage(error, "Your session has expired. Please sign in again."));
+    if (!topSentinel || !bottomSentinel) {
       return;
     }
 
-    if (error instanceof ApiError && error.status === 404) {
-      clearActiveFamilyId();
-      setMealPlan(null);
-      setActiveFamilyIdState(null);
-      setStatus("error");
-      setMessage("That family could not be loaded for your account. Please choose another family.");
-      return;
-    }
+    const observer = new IntersectionObserver(
+      (entries) => {
+        entries.forEach((entry) => {
+          if (!entry.isIntersecting) {
+            return;
+          }
 
-    setMealPlan(null);
-    setStatus("error");
-    setMessage("Could not load meals right now. Please try again.");
-  }
+          if (entry.target === topSentinel) {
+            setStartOffset((current) => current - loadChunkSize);
+          }
 
-  function handleActionError(error: unknown, fallbackMessage: string) {
-    if (error instanceof ApiError && error.status === 401) {
-      handleMissingOrInvalidAuth(error, router);
-      setStatus("unauthorized");
-      setMessage(getUserFacingApiMessage(error, "Your session has expired. Please sign in again."));
-      return;
-    }
-
-    setMessage(getUserFacingApiMessage(error, fallbackMessage));
-  }
-
-  if (familyAccess.status === "pending") {
-    return <LockedFeatureState />;
-  }
-
-  if (familyAccess.status !== "approved") {
-    return (
-      <PageContainer>
-        <Card tone="default">
-          <EmptyState title="Sjekker familietilgang" description="Vent litt mens vi bekrefter familietilknytningen din." />
-        </Card>
-      </PageContainer>
+          if (entry.target === bottomSentinel) {
+            setEndOffset((current) => current + loadChunkSize);
+          }
+        });
+      },
+      { rootMargin: "320px 0px" }
     );
-  }
+
+    observer.observe(topSentinel);
+    observer.observe(bottomSentinel);
+
+    return () => observer.disconnect();
+  }, []);
 
   return (
-    <PageContainer>
-      <section className="meals-page" aria-labelledby="meals-title">
-        <div className="meals-page__header">
-          <div className="meals-page__copy">
-            <Badge tone="accent">Dinner planning</Badge>
-            <h1 id="meals-title" className="meals-page__title">
-              Meals
-            </h1>
-            <p className="meals-page__description">Plan simple text dinners for the current month. No recipes, no grocery automation.</p>
-          </div>
-          {hasMultipleFamilies ? (
-            <label className="family-switcher">
-              <span className="family-switcher__label">Active family</span>
-              <select className="family-switcher__select" value={activeFamilyId ?? ""} onChange={handleFamilyChange}>
-                {families.map((family) => (
-                  <option key={family.family.id} value={family.family.id}>
-                    {family.family.name}
-                  </option>
-                ))}
-              </select>
-            </label>
-          ) : null}
-        </div>
+    <ProtectedFamilyRoute>
+      <AppShell title="Måltidsplan">
+        <PageContainer>
+          <section className="meal-planner" aria-labelledby="meal-planner-title">
+            <h2 className="sr-only" id="meal-planner-title">Måltidsplan</h2>
 
-        {status !== "ready" && status !== "loading" ? <MealsStatusCard message={message} onRetry={() => loadMeals()} status={status} /> : null}
+            <ReminderCard reminderText={reminderText} />
 
-        <div className="meals-layout">
-          <Card className="meals-card" tone="warm">
-            <SectionHeader action={<Badge tone="neutral">{formTitle}</Badge>} eyebrow="Quick plan" title="What are we eating?" />
-            {status === "ready" ? (
-              <form className="meals-form" onSubmit={handleSaveMeal}>
-                <label className="meals-form__field">
-                  <span className="meals-form__label">Date</span>
-                  <input className="meals-form__input" onChange={(event) => setDate(event.target.value)} type="date" value={date} />
-                </label>
-                <label className="meals-form__field meals-form__field--meal">
-                  <span className="meals-form__label">Dinner</span>
-                  <input
-                    className="meals-form__input"
-                    maxLength={120}
-                    onChange={(event) => setMealName(event.target.value)}
-                    placeholder="Taco"
-                    value={mealName}
-                  />
-                </label>
-                <label className="meals-form__field meals-form__field--notes">
-                  <span className="meals-form__label">Notes</span>
-                  <input
-                    className="meals-form__input"
-                    maxLength={500}
-                    onChange={(event) => setNotes(event.target.value)}
-                    placeholder="Valgfri merknad"
-                    value={notes}
-                  />
-                </label>
-                <div className="meals-form__actions">
-                  {editingDayId ? (
-                    <Button disabled={isSaving} onClick={clearForm} variant="ghost">
-                      Cancel
-                    </Button>
-                  ) : null}
-                  <Button disabled={isSaving || mealName.trim().length === 0 || !date} type="submit" variant="primary">
-                    {editingDayId ? "Save dinner" : "+ Add dinner"}
-                  </Button>
-                </div>
-              </form>
-            ) : (
-              <EmptyState title="Loading meal form" description="Meal planning will be ready in a moment." />
-            )}
+            <div className="meal-timeline" aria-label="Middag fremover og bakover i tid">
+              <div className="meal-timeline__sentinel" ref={topSentinelRef} aria-hidden="true" />
+              {days.map((day) => (
+                <MealTimelineDay date={day.date} key={day.offset} meal={day.meal} offset={day.offset} todayRef={day.offset === 0 ? todayRef : undefined} />
+              ))}
+              <div className="meal-timeline__sentinel" ref={bottomSentinelRef} aria-hidden="true" />
+            </div>
 
-            {mealPlan?.recentMeals.length ? (
-              <div className="recent-meals" aria-label="Recent meals">
-                <p className="recent-meals__title">Recent meals</p>
-                <div className="recent-meals__list">
-                  {mealPlan.recentMeals.map((recentMeal) => (
-                    <button className="recent-meals__button" key={recentMeal} onClick={() => handleFavoriteClick(recentMeal)} type="button">
-                      {recentMeal}
-                    </button>
-                  ))}
-                </div>
-              </div>
-            ) : null}
-
-            {message && status === "ready" ? <p className="meals-card__message">{message}</p> : null}
-          </Card>
-
-          <Card className="meals-card" tone="soft">
-            <SectionHeader
-              action={<Badge tone="neutral">{plannedDays} planned</Badge>}
-              eyebrow="Month"
-              title={formatMonthTitle(selectedMonth)}
-            />
-            <label className="meals-month">
-              <span className="meals-month__label">Show month</span>
-              <input className="meals-form__input" onChange={(event) => setSelectedMonth(event.target.value)} type="month" value={selectedMonth} />
-            </label>
-
-            {status === "loading" ? <LoadingState title="Loading meals" description="Fetching the family dinner plan." /> : null}
-
-            {status === "ready" && visibleDays.length === 0 ? (
-              <EmptyState title="No dinners planned this month" description="Add a simple dinner like Taco, Pasta, or Frozen pizza." />
-            ) : null}
-
-            {status === "ready" && visibleDays.length > 0 ? (
-              <ul className="meals-list" aria-label="Monthly dinner plan">
-                {visibleDays.map((day) => (
-                  <li className="meals-list__item" key={day.id}>
-                    <div className="meals-list__date">
-                      <span className="meals-list__weekday">{formatWeekday(day.date)}</span>
-                      <span className="meals-list__day">{formatDay(day.date)}</span>
-                    </div>
-                    <div className="meals-list__content">
-                      <span className="meals-list__meal">{day.mealName}</span>
-                      {day.notes ? <span className="meals-list__notes">{day.notes}</span> : null}
-                    </div>
-                    <div className="meals-list__actions">
-                      <button className="meals-list__button" disabled={pendingDayId === day.id} onClick={() => handleEditMeal(day)} type="button">
-                        Edit
-                      </button>
-                      <button className="meals-list__button" disabled={pendingDayId === day.id} onClick={() => handleDeleteMeal(day.id)} type="button">
-                        Delete
-                      </button>
-                    </div>
-                  </li>
-                ))}
-              </ul>
-            ) : null}
-          </Card>
-        </div>
-      </section>
-    </PageContainer>
+            <button className="meal-planner__move-button" type="button" aria-label="Flytt middager kommer senere">
+              <ArrowUpDown aria-hidden="true" size={18} />
+              Flytt middager
+            </button>
+          </section>
+        </PageContainer>
+      </AppShell>
+    </ProtectedFamilyRoute>
   );
 }
 
-function MealsStatusCard({ message, onRetry, status }: { message: string; onRetry: () => void; status: MealsStatus }) {
-  if (status === "unauthorized") {
-    return (
-      <div className="meals-status">
-        <EmptyState title="Please sign in again" description={message} />
-        <Link className="button button--primary" href="/login">
-          Go to login
-        </Link>
-      </div>
-    );
-  }
-
-  if (status === "no-family") {
-    return (
-      <div className="meals-status">
-        <EmptyState title="Create your first family" description={message} />
-        <Link className="button button--primary" href="/onboarding/create-family">
-          Create family
-        </Link>
-      </div>
-    );
-  }
-
+function ReminderCard({ reminderText }: { reminderText: string }) {
   return (
-    <div className="meals-status">
-      <ErrorState title="Meals could not load" description={message} />
-      <Button variant="primary" onClick={onRetry}>
-        Try again
-      </Button>
+    <aside className="meal-reminder-card" aria-label="Påminnelse om måltidsplan">
+      <span className="meal-reminder-card__icon" aria-hidden="true">🍽️</span>
+      <div className="meal-reminder-card__copy">
+        <p className="meal-reminder-card__title">Snart tomt for middager</p>
+        <p className="meal-reminder-card__text">{reminderText}</p>
+      </div>
+    </aside>
+  );
+}
+
+function MealTimelineDay({
+  date,
+  meal,
+  offset,
+  todayRef,
+}: {
+  date: Date;
+  meal: MockMeal | null;
+  offset: number;
+  todayRef?: RefObject<HTMLElement | null>;
+}) {
+  return (
+    <article className="meal-day" aria-label={formatTimelineDate(date, offset)} ref={todayRef}>
+      <div className="meal-day__rail" aria-hidden="true">
+        <span className={offset === 0 ? "meal-day__dot meal-day__dot--today" : "meal-day__dot"} />
+      </div>
+      <div className="meal-day__content">
+        <h3 className="meal-day__date">{formatTimelineDate(date, offset)}</h3>
+        {meal ? <PlannedMealCard meal={meal} /> : <EmptyMealCta />}
+      </div>
+    </article>
+  );
+}
+
+function PlannedMealCard({ meal }: { meal: MockMeal }) {
+  return (
+    <div className="meal-card">
+      <span className="meal-card__visual" aria-hidden="true">
+        <span>{meal.icon}</span>
+      </span>
+      <div className="meal-card__copy">
+        <p className="meal-card__eyebrow">Middag</p>
+        <p className="meal-card__title">{meal.title}</p>
+      </div>
+      <button className="meal-card__menu" type="button" aria-label={`Flere valg for ${meal.title}`}>
+        <MoreHorizontal aria-hidden="true" size={20} />
+      </button>
     </div>
   );
 }
 
-function getDateInputValue(date: Date): string {
-  return date.toISOString().slice(0, 10);
-}
-
-function getMonthInputValue(date: Date): string {
-  return date.toISOString().slice(0, 7);
-}
-
-function formatMonthTitle(monthValue: string): string {
-  return new Date(`${monthValue}-01T00:00:00.000Z`).toLocaleDateString(undefined, { month: "long", year: "numeric", timeZone: "UTC" });
-}
-
-function formatWeekday(date: string): string {
-  return new Date(`${date}T00:00:00.000Z`).toLocaleDateString(undefined, { weekday: "short", timeZone: "UTC" });
-}
-
-function formatDay(date: string): string {
-  return new Date(`${date}T00:00:00.000Z`).toLocaleDateString(undefined, { day: "numeric", month: "short", timeZone: "UTC" });
-}
-
-function sortMealDays(first: MealPlanDay, second: MealPlanDay) {
-  return first.date.localeCompare(second.date);
-}
-
-function getRecentMeals(days: MealPlanDay[]): string[] {
-  const recentMeals: string[] = [];
-
-  for (const day of [...days].sort((first, second) => new Date(second.updatedAt).getTime() - new Date(first.updatedAt).getTime())) {
-    if (!recentMeals.includes(day.mealName)) {
-      recentMeals.push(day.mealName);
-    }
-
-    if (recentMeals.length >= 5) {
-      break;
-    }
-  }
-
-  return recentMeals;
+function EmptyMealCta() {
+  return (
+    <button className="meal-empty-cta" type="button" aria-label="Legg til middag kommer senere">
+      <Plus aria-hidden="true" size={17} />
+      <span>Legg til middag</span>
+      <Utensils className="meal-empty-cta__hint" aria-hidden="true" size={16} />
+    </button>
+  );
 }
