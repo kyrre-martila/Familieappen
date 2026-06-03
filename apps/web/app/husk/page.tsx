@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import {
   Backpack,
   BookOpen,
@@ -9,16 +9,23 @@ import {
   Cake,
   Car,
   CalendarDays,
+  Check,
   ChevronLeft,
   ChevronRight,
   Gift,
+  GripHorizontal,
   Home,
+  Minus,
+  MoreHorizontal,
+  Plus,
+  RotateCcw,
   Search,
   Shirt,
   SlidersHorizontal,
   Stethoscope,
   Tent,
   Utensils,
+  X,
 } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
 
@@ -86,6 +93,25 @@ const schoolWeekdays = [
   { value: "thursday", label: "Torsdag", dayOffset: 3 },
   { value: "friday", label: "Fredag", dayOffset: 4 },
 ] satisfies { value: HuskSchoolWeekday; label: string; dayOffset: number }[];
+
+const schoolQuickExamples = ["Gymtøy", "Bibliotekbok", "Ta med grillmat", "Mat og helse", "Kosedyrdag", "Fotballsko", "Matpakke", "Egendefinert"] as const;
+
+const schoolIconOptions = [
+  { value: "shirt", label: "Gymtøy" },
+  { value: "book", label: "Bok" },
+  { value: "grill", label: "Mat" },
+  { value: "backpack", label: "Sekk" },
+  { value: "gift", label: "Dag" },
+] satisfies { value: HuskReminderIcon; label: string }[];
+
+type SchoolCreateDraft = {
+  weekday: HuskSchoolWeekday;
+  dateLabel: string;
+  title: string;
+  icon: HuskReminderIcon;
+  recurring: boolean;
+  endDate: string;
+};
 
 const schoolChildIds = ["fiona", "alma", "even-olai"] as const;
 const oneDayInMs = 24 * 60 * 60 * 1000;
@@ -326,10 +352,156 @@ function HuskLists({ query }: { query: string }) {
   );
 }
 
+function HuskSchoolCreateSheet({
+  childName,
+  draft,
+  onChange,
+  onClose,
+  onSave,
+}: {
+  childName: string;
+  draft: SchoolCreateDraft;
+  onChange: (draft: SchoolCreateDraft) => void;
+  onClose: () => void;
+  onSave: () => void;
+}) {
+  return (
+    <div aria-hidden={!draft} className="husk-school-sheet husk-school-sheet--open">
+      <button className="husk-school-sheet__backdrop" type="button" aria-label="Lukk opprett husk" onClick={onClose} />
+      <section aria-labelledby="husk-school-create-title" aria-modal="true" className="husk-school-sheet__panel" role="dialog">
+        <div className="husk-school-sheet__handle" aria-hidden="true" />
+        <div className="husk-school-sheet__header">
+          <div>
+            <p className="husk-school-sheet__eyebrow">Ny husk</p>
+            <h3 className="husk-school-sheet__title" id="husk-school-create-title">Legg til på skoleuka</h3>
+          </div>
+          <button className="husk-school-sheet__close" type="button" aria-label="Lukk" onClick={onClose}>
+            <X aria-hidden="true" size={18} strokeWidth={2.5} />
+          </button>
+        </div>
+
+        <div className="husk-school-sheet__content">
+          <div className="husk-school-locked">
+            <span>Person</span>
+            <strong>{childName}</strong>
+          </div>
+          <div className="husk-school-locked">
+            <span>Dag</span>
+            <strong>{draft.dateLabel}</strong>
+          </div>
+
+          <label className="husk-school-field">
+            <span>Tittel</span>
+            <input
+              onChange={(event) => onChange({ ...draft, title: event.target.value })}
+              placeholder="Hva må huskes?"
+              type="text"
+              value={draft.title}
+            />
+          </label>
+
+          <div className="husk-school-field">
+            <span>Ikon</span>
+            <div className="husk-school-icon-grid">
+              {schoolIconOptions.map((option) => {
+                const Icon = reminderIcons[option.value];
+                const isSelected = draft.icon === option.value;
+
+                return (
+                  <button
+                    className={`husk-school-icon-option${isSelected ? " husk-school-icon-option--selected" : ""}`}
+                    key={option.value}
+                    onClick={() => onChange({ ...draft, icon: option.value })}
+                    type="button"
+                    aria-pressed={isSelected}
+                  >
+                    <Icon aria-hidden="true" size={19} strokeWidth={2.3} />
+                    <span>{option.label}</span>
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+
+          <div className="husk-school-quick" aria-label="Raske forslag">
+            {schoolQuickExamples.map((example) => (
+              <button
+                className="husk-school-quick__chip"
+                key={example}
+                onClick={() => onChange({ ...draft, title: example === "Egendefinert" ? "" : example })}
+                type="button"
+              >
+                {example}
+              </button>
+            ))}
+          </div>
+
+          <label className="husk-school-repeat">
+            <input
+              checked={draft.recurring}
+              onChange={(event) => onChange({ ...draft, recurring: event.target.checked })}
+              type="checkbox"
+            />
+            <span className="husk-school-repeat__box" aria-hidden="true">{draft.recurring ? <Check size={17} strokeWidth={3} /> : null}</span>
+            <span>Gjenta hver uke</span>
+          </label>
+
+          {draft.recurring ? (
+            <label className="husk-school-field">
+              <span>Sluttdato</span>
+              <input onChange={(event) => onChange({ ...draft, endDate: event.target.value })} type="date" value={draft.endDate} />
+            </label>
+          ) : null}
+        </div>
+
+        <div className="husk-school-sheet__actions">
+          <button className="husk-school-sheet__action husk-school-sheet__action--secondary" type="button" onClick={onClose}>Avbryt</button>
+          <button className="husk-school-sheet__action husk-school-sheet__action--primary" type="button" onClick={onSave}>Lagre</button>
+        </div>
+      </section>
+    </div>
+  );
+}
+
+function HuskSchoolRecurringChoiceSheet({ itemTitle, onClose, onChoose }: { itemTitle: string; onClose: () => void; onChoose: () => void }) {
+  return (
+    <div className="husk-school-sheet husk-school-sheet--open">
+      <button className="husk-school-sheet__backdrop" type="button" aria-label="Lukk valg for gjentakelse" onClick={onClose} />
+      <section aria-labelledby="husk-school-recurring-title" aria-modal="true" className="husk-school-sheet__panel husk-school-sheet__panel--choice" role="dialog">
+        <div className="husk-school-sheet__handle" aria-hidden="true" />
+        <div className="husk-school-choice__intro">
+          <span className="husk-school-choice__icon" aria-hidden="true"><RotateCcw size={20} strokeWidth={2.4} /></span>
+          <p>Dette er en gjentakende husk</p>
+          <h3 id="husk-school-recurring-title">Hva vil du endre?</h3>
+          <span>{itemTitle}</span>
+        </div>
+        <div className="husk-school-choice__options">
+          <button type="button" onClick={onChoose}>Kun denne gangen</button>
+          <button type="button" onClick={onChoose}>Hele serien</button>
+          <button type="button" onClick={onClose}>Avbryt</button>
+        </div>
+      </section>
+    </div>
+  );
+}
+
 function HuskSchoolWeek() {
   const todayWeekStart = useMemo(() => getIsoWeekStart(new Date()), []);
   const [selectedWeekStartTime, setSelectedWeekStartTime] = useState(() => todayWeekStart.getTime());
   const [selectedChildIndex, setSelectedChildIndex] = useState(0);
+  const [isEditing, setIsEditing] = useState(false);
+  const [createDraft, setCreateDraft] = useState<SchoolCreateDraft | null>(null);
+  const [recurringChoiceTitle, setRecurringChoiceTitle] = useState<string | null>(null);
+  const [showSavedBadge, setShowSavedBadge] = useState(false);
+
+  useEffect(() => {
+    if (!showSavedBadge) {
+      return;
+    }
+
+    const timeout = window.setTimeout(() => setShowSavedBadge(false), 1400);
+    return () => window.clearTimeout(timeout);
+  }, [showSavedBadge]);
 
   const weekOptions = useMemo(() => {
     return [-2, -1, 0, 1, 2].map((offset) => {
@@ -361,14 +533,44 @@ function HuskSchoolWeek() {
     setSelectedChildIndex((currentIndex) => (currentIndex + 1) % schoolChildren.length);
   }
 
+  function showSaved() {
+    setShowSavedBadge(true);
+  }
+
+  function openCreateSheet(weekday: (typeof schoolWeekdays)[number], date: Date) {
+    setCreateDraft({
+      weekday: weekday.value,
+      dateLabel: `${weekday.label} ${formatSchoolDate(date)}`,
+      title: "",
+      icon: "shirt",
+      recurring: false,
+      endDate: "",
+    });
+  }
+
+  function saveCreateDraft() {
+    setCreateDraft(null);
+    showSaved();
+  }
+
+  function chooseRecurringScope() {
+    setRecurringChoiceTitle(null);
+    showSaved();
+  }
+
   return (
-    <section className="husk-panel husk-school" id="husk-panel-skoleuka" role="tabpanel" aria-labelledby="husk-tab-skoleuka husk-school-title">
+    <section className={`husk-panel husk-school${isEditing ? " husk-school--editing" : ""}`} id="husk-panel-skoleuka" role="tabpanel" aria-labelledby="husk-tab-skoleuka husk-school-title">
       <div className="husk-school__topline">
         <div className="husk-section-heading">
           <p className="husk-section-heading__eyebrow">Skoleplan</p>
           <h2 className="husk-section-heading__title" id="husk-school-title">Skoleuka</h2>
         </div>
-        <button className="husk-school__edit-button" type="button">Rediger</button>
+        <div className="husk-school__actions">
+          {showSavedBadge ? <span className="husk-school__saved" role="status">Lagret</span> : null}
+          <button className={`husk-school__edit-button${isEditing ? " husk-school__edit-button--done" : ""}`} type="button" onClick={() => setIsEditing((current) => !current)}>
+            {isEditing ? "Ferdig" : "Rediger"}
+          </button>
+        </div>
       </div>
 
       <div className="husk-week-strip" aria-label="Velg uke">
@@ -419,6 +621,7 @@ function HuskSchoolWeek() {
           return (
             <article className="husk-school-day" key={weekday.value}>
               <header className="husk-school-day__header">
+                {isEditing ? <GripHorizontal className="husk-school-day__drag" aria-hidden="true" size={19} strokeWidth={2.1} /> : null}
                 <span className="husk-school-day__date-icon" aria-hidden="true">
                   <CalendarDays size={19} strokeWidth={2.3} />
                 </span>
@@ -426,19 +629,36 @@ function HuskSchoolWeek() {
                   <h3>{weekday.label}</h3>
                   <span>{formatSchoolDate(date)}</span>
                 </div>
+                {isEditing ? (
+                  <button className="husk-school-day__add" type="button" onClick={() => openCreateSheet(weekday, date)} aria-label={`Legg til husk på ${weekday.label}`}>
+                    <Plus aria-hidden="true" size={22} strokeWidth={2.35} />
+                  </button>
+                ) : null}
               </header>
               <div className="husk-school-day__items">
                 {items.length > 0 ? (
                   items.map((item) => {
                     const Icon = reminderIcons[item.icon];
-
-                    return (
-                      <div className={`husk-school-item husk-school-item--${item.tone}`} key={item.id}>
+                    const content = (
+                      <>
+                        {isEditing ? <Minus className="husk-school-item__remove" aria-hidden="true" size={16} strokeWidth={3} /> : null}
                         <span className="husk-school-item__icon" aria-hidden="true">
                           <Icon size={20} strokeWidth={2.35} />
                         </span>
-                        <span>{item.title}</span>
-                      </div>
+                        <span className="husk-school-item__copy">
+                          <span>{item.title}</span>
+                          {isEditing ? <small><RotateCcw size={12} strokeWidth={2.4} /> Hver uke til 20. juni 2026</small> : null}
+                        </span>
+                        {isEditing ? <MoreHorizontal className="husk-school-item__more" aria-hidden="true" size={18} strokeWidth={2.5} /> : null}
+                      </>
+                    );
+
+                    return isEditing ? (
+                      <button className={`husk-school-item husk-school-item--${item.tone} husk-school-item--editable`} key={item.id} type="button" onClick={() => setRecurringChoiceTitle(item.title)}>
+                        {content}
+                      </button>
+                    ) : (
+                      <div className={`husk-school-item husk-school-item--${item.tone}`} key={item.id}>{content}</div>
                     );
                   })
                 ) : (
@@ -449,6 +669,14 @@ function HuskSchoolWeek() {
           );
         })}
       </div>
+
+      {isEditing ? <p className="husk-school__tip">Tips: Dra for å organisere. Trykk på et punkt for å redigere.</p> : null}
+
+      {createDraft && selectedChild ? (
+        <HuskSchoolCreateSheet childName={selectedChild.name} draft={createDraft} onChange={setCreateDraft} onClose={() => setCreateDraft(null)} onSave={saveCreateDraft} />
+      ) : null}
+
+      {recurringChoiceTitle ? <HuskSchoolRecurringChoiceSheet itemTitle={recurringChoiceTitle} onClose={() => setRecurringChoiceTitle(null)} onChoose={chooseRecurringScope} /> : null}
     </section>
   );
 }
