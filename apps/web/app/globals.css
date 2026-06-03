@@ -8252,11 +8252,7 @@ select {
 
 .husk-school--editing .husk-school-day__header {
   display: grid;
-  grid-template-columns: auto auto minmax(0, 1fr) auto;
-}
-
-.husk-school-day__drag {
-  color: color-mix(in srgb, var(--color-muted) 78%, var(--color-surface));
+  grid-template-columns: auto minmax(0, 1fr) auto;
 }
 
 .husk-school-day__add {
@@ -8273,7 +8269,7 @@ select {
 
 .husk-school--editing .husk-school-day__items {
   display: grid;
-  padding-left: calc(var(--space-xl) + var(--space-m) + var(--space-xs));
+  padding-left: 0;
 }
 
 .husk-school-item--editable {
@@ -8285,15 +8281,6 @@ select {
   font: inherit;
 }
 
-.husk-school-item__remove {
-  width: calc(var(--space-l) + var(--space-xs));
-  height: calc(var(--space-l) + var(--space-xs));
-  flex: 0 0 auto;
-  border-radius: var(--radius-pill);
-  padding: calc(var(--space-xs) * 0.45);
-  background: #e14f4f;
-  color: white;
-}
 
 .husk-school-item__copy {
   display: grid;
@@ -8311,9 +8298,14 @@ select {
   font-weight: 730;
 }
 
-.husk-school-item__more {
+.husk-school-item__edit-label {
   margin-left: auto;
-  color: var(--color-muted);
+  border-radius: var(--radius-pill);
+  padding: calc(var(--space-xs) * 0.6) var(--space-s);
+  background: color-mix(in srgb, var(--color-primary-soft) 64%, var(--color-surface));
+  color: var(--color-primary-strong);
+  font-size: var(--text-small);
+  font-weight: 850;
 }
 
 .husk-school__tip {
@@ -8551,6 +8543,11 @@ select {
   border: 1px solid var(--color-border);
   background: var(--color-surface);
   color: var(--color-text);
+}
+
+.husk-school-sheet__action:disabled {
+  cursor: not-allowed;
+  opacity: 0.42;
 }
 
 .husk-school-sheet__action--primary {

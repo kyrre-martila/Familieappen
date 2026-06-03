@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useEffect, useRef, useState } from "react";
-import { CalendarDays, Check, ChevronDown, ChevronLeft, ChevronUp, Gift, GripVertical, MoreHorizontal, Users, X } from "lucide-react";
+import { CalendarDays, Check, ChevronDown, ChevronLeft, ChevronUp, Gift, MoreHorizontal, Plus, Users, X } from "lucide-react";
 import { useRouter } from "next/navigation";
 
 import { LockedFeatureState } from "../../../../components/PendingAccess";
@@ -114,7 +114,7 @@ function ListItemRow({
       <ListStatusIcon completed={item.completed} />
       <span className="list-detail-row__title">{item.title}</span>
       <AssignedAvatars members={assignedMembers} />
-      <GripVertical className="list-detail-row__handle" aria-hidden="true" size={22} strokeWidth={2.2} />
+      <ChevronDown className="list-detail-row__handle" aria-hidden="true" size={22} strokeWidth={2.4} />
     </button>
   );
 }
@@ -142,7 +142,8 @@ export function HuskListDetailClient({ list }: { list: HuskListDetail }) {
   const sectionItems = listItems.filter((item) => (selectedSection === "completed" ? item.completed : !item.completed));
   const completedCount = listItems.filter((item) => item.completed).length;
   const activeCount = listItems.length - completedCount;
-  const progressPercent = list.totalCount > 0 ? Math.round((list.completedCount / list.totalCount) * 100) : 0;
+  const totalCount = listItems.length;
+  const progressPercent = totalCount > 0 ? Math.round((completedCount / totalCount) * 100) : 0;
 
   useEffect(() => {
     window.sessionStorage.setItem(getDetailStorageKey(list.id, "section"), selectedSection);
@@ -194,6 +195,21 @@ export function HuskListDetailClient({ list }: { list: HuskListDetail }) {
     showSaved();
   }
 
+  function addMockItem() {
+    const nextItem: HuskListDetailItem = {
+      id: `mock-item-${Date.now()}`,
+      title: "Nytt punkt",
+      completed: false,
+      assignedMemberIds: [],
+      description: "",
+    };
+
+    setSelectedSection("active");
+    setListItems((currentItems) => [nextItem, ...currentItems]);
+    setExpandedItemId(nextItem.id);
+    showSaved();
+  }
+
   if (familyAccess.status === "pending") {
     return <LockedFeatureState />;
   }
@@ -234,7 +250,7 @@ export function HuskListDetailClient({ list }: { list: HuskListDetail }) {
             </p>
             <div className="list-detail__progress-row">
               <div className="list-detail__progress-copy">
-                <p>{list.completedCount} av {list.totalCount} fullført</p>
+                <p>{completedCount} av {totalCount} fullført</p>
                 <span className="list-detail__progress" aria-hidden="true">
                   <span className="list-detail__progress-fill" style={{ width: `${progressPercent}%` }} />
                 </span>
@@ -282,8 +298,8 @@ export function HuskListDetailClient({ list }: { list: HuskListDetail }) {
       </div>
 
       <div className="list-detail__sticky-action">
-        <button className="list-detail__add-button" type="button">
-          <span aria-hidden="true">+</span>
+        <button className="list-detail__add-button" type="button" onClick={addMockItem}>
+          <Plus aria-hidden="true" size={21} strokeWidth={2.5} />
           Legg til punkt
         </button>
       </div>
