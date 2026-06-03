@@ -9051,11 +9051,6 @@ select {
   align-items: start;
 }
 
-.meals-page--move .meals-timeline-card {
-  border-color: color-mix(in srgb, var(--color-primary) 20%, var(--color-border));
-  background: color-mix(in srgb, var(--color-primary-soft) 22%, var(--color-surface));
-}
-
 .meals-timeline-card {
   overflow: hidden;
 }
@@ -9115,16 +9110,6 @@ select {
 
 .meals-timeline__content {
   min-width: 0;
-  border-radius: var(--radius-l);
-}
-
-.meals-timeline__content--move {
-  transition: background 160ms ease, box-shadow 160ms ease;
-}
-
-.meals-timeline__content--drop-target {
-  background: color-mix(in srgb, var(--color-primary-soft) 32%, transparent);
-  box-shadow: 0 0 0 2px color-mix(in srgb, var(--color-primary) 18%, transparent);
 }
 
 .meal-plan-card,
@@ -9143,20 +9128,6 @@ select {
   gap: var(--space-s);
   align-items: center;
   padding: var(--space-s);
-}
-
-.meal-plan-card--move {
-  border-color: color-mix(in srgb, var(--color-primary) 24%, var(--color-border));
-  cursor: grab;
-  box-shadow: 0 12px 28px color-mix(in srgb, var(--color-primary-strong) 7%, transparent);
-}
-
-.meal-plan-card--move:active {
-  cursor: grabbing;
-}
-
-.meal-plan-card--dragging {
-  opacity: 0.66;
 }
 
 .meal-plan-card__visual {
@@ -9191,7 +9162,6 @@ select {
   letter-spacing: -0.04em;
 }
 
-.meal-plan-card__drag-handle,
 .meal-plan-card__menu {
   display: grid;
   place-items: center;
@@ -9201,18 +9171,10 @@ select {
   border-radius: 50%;
   background: transparent;
   color: var(--color-primary-strong);
-}
-
-.meal-plan-card__drag-handle {
-  color: color-mix(in srgb, var(--color-primary-strong) 72%, var(--color-muted));
-}
-
-.meal-plan-card__menu {
   cursor: pointer;
 }
 
 .meal-plan-card__menu:focus,
-.meals-move-action:focus,
 .meal-empty-card:focus,
 .meal-inline-editor__input:focus,
 .meal-suggestions__item:focus,
@@ -9234,16 +9196,6 @@ select {
   font-size: var(--text-body);
   font-weight: 850;
   text-align: left;
-}
-
-.meal-empty-card--move-slot {
-  cursor: default;
-  opacity: 0.86;
-}
-
-.meals-page--move .meal-empty-card {
-  border-style: dashed;
-  background: color-mix(in srgb, var(--color-surface) 82%, var(--color-primary-soft));
 }
 
 .meal-empty-card__plus {
@@ -9373,33 +9325,6 @@ select {
   text-align: center;
 }
 
-.meals-move-action {
-  position: fixed;
-  right: var(--space-m);
-  bottom: calc(var(--space-xl) * 2.45 + env(safe-area-inset-bottom));
-  left: var(--space-m);
-  z-index: 25;
-  display: inline-flex;
-  justify-content: center;
-  align-items: center;
-  width: min(calc(100% - (var(--space-m) * 2)), 24rem);
-  margin: 0 auto;
-  border: 1px solid color-mix(in srgb, var(--color-primary) 18%, var(--color-border));
-  border-radius: var(--radius-pill);
-  padding: var(--space-s) var(--space-l);
-  cursor: pointer;
-  background: color-mix(in srgb, var(--color-surface) 88%, var(--color-primary-soft));
-  color: var(--color-primary-strong);
-  box-shadow: 0 14px 36px color-mix(in srgb, var(--color-primary-strong) 10%, transparent);
-  font-size: var(--text-body);
-  font-weight: 900;
-}
-
-.meals-page--move .meals-move-action {
-  background: var(--color-primary);
-  color: var(--color-surface);
-}
-
 .meals-toast {
   position: fixed;
   right: var(--space-m);
@@ -9442,11 +9367,6 @@ select {
   .meal-plan-card,
   .meal-inline-editor {
     padding: var(--space-m);
-  }
-
-  .meals-move-action {
-    left: auto;
-    margin: 0;
   }
 
   .meals-toast {

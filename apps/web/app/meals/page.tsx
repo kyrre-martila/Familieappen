@@ -1,14 +1,7 @@
 "use client";
 
-import {
-  useEffect,
-  useMemo,
-  useRef,
-  useState,
-  type DragEvent,
-  type KeyboardEvent,
-} from "react";
-import { GripVertical, MoreHorizontal, Utensils } from "lucide-react";
+import { useEffect, useMemo, useRef, useState, type KeyboardEvent } from "react";
+import { MoreHorizontal, Utensils } from "lucide-react";
 import { Badge, Card, PageContainer, SectionHeader } from "../../components/ui";
 
 type MockMealDay = {
@@ -39,58 +32,23 @@ type ToastState = {
 
 const MOCK_TODAY = "2026-06-03";
 const TIMELINE_DAY_COUNT = 8;
-const PREVIOUS_MEALS = [
-  "Taco",
-  "Pizza",
-  "Fiskegrateng",
-  "Pasta med kylling",
-  "Lasagne",
-  "Fiskekaker",
-  "Kjøttsuppe",
-  "Hjemmelaget burger",
-];
+const PREVIOUS_MEALS = ["Taco", "Pizza", "Fiskegrateng", "Pasta med kylling", "Lasagne", "Fiskekaker", "Kjøttsuppe", "Hjemmelaget burger"];
 
 const INITIAL_MEAL_DAYS: MockMealDay[] = [
-  {
-    id: "meal-2026-06-03",
-    date: "2026-06-03",
-    mealName: "Taco",
-    updatedAt: "2026-06-02T17:30:00.000Z",
-  },
-  {
-    id: "meal-2026-06-05",
-    date: "2026-06-05",
-    mealName: "Fiskegrateng",
-    updatedAt: "2026-06-01T16:15:00.000Z",
-  },
-  {
-    id: "meal-2026-06-07",
-    date: "2026-06-07",
-    mealName: "Pasta med kylling",
-    updatedAt: "2026-05-31T15:45:00.000Z",
-  },
+  { id: "meal-2026-06-03", date: "2026-06-03", mealName: "Taco", updatedAt: "2026-06-02T17:30:00.000Z" },
+  { id: "meal-2026-06-05", date: "2026-06-05", mealName: "Fiskegrateng", updatedAt: "2026-06-01T16:15:00.000Z" },
+  { id: "meal-2026-06-07", date: "2026-06-07", mealName: "Pasta med kylling", updatedAt: "2026-05-31T15:45:00.000Z" }
 ];
 
 export default function MealsPage() {
   const [mealDays, setMealDays] = useState<MockMealDay[]>(INITIAL_MEAL_DAYS);
-  const [activeEditor, setActiveEditor] = useState<InlineEditorState | null>(
-    null,
-  );
+  const [activeEditor, setActiveEditor] = useState<InlineEditorState | null>(null);
   const [menuMeal, setMenuMeal] = useState<MockMealDay | null>(null);
   const [toast, setToast] = useState<ToastState | null>(null);
-  const [isMoveMode, setIsMoveMode] = useState(false);
-  const [draggingMealId, setDraggingMealId] = useState<string | null>(null);
-  const [dropTargetDate, setDropTargetDate] = useState<string | null>(null);
   const toastTimerRef = useRef<number | null>(null);
-  const timelineDays = useMemo(
-    () => buildTimeline(MOCK_TODAY, TIMELINE_DAY_COUNT, mealDays),
-    [mealDays],
-  );
+  const timelineDays = useMemo(() => buildTimeline(MOCK_TODAY, TIMELINE_DAY_COUNT, mealDays), [mealDays]);
   const plannedDays = mealDays.length;
-  const suggestionMeals = useMemo(
-    () => getSuggestionSource(mealDays),
-    [mealDays],
-  );
+  const suggestionMeals = useMemo(() => getSuggestionSource(mealDays), [mealDays]);
 
   useEffect(() => {
     return () => {
@@ -107,10 +65,7 @@ export default function MealsPage() {
       window.clearTimeout(toastTimerRef.current);
     }
 
-    toastTimerRef.current = window.setTimeout(
-      () => setToast(null),
-      nextToast.action ? 6500 : 2800,
-    );
+    toastTimerRef.current = window.setTimeout(() => setToast(null), nextToast.action ? 6500 : 2800);
   }
 
   function startCreate(date: string) {
@@ -134,24 +89,12 @@ export default function MealsPage() {
     const updatedAt = new Date().toISOString();
 
     setMealDays((currentDays) => {
-      const existingDay = editor.dayId
-        ? currentDays.find((meal) => meal.id === editor.dayId)
-        : currentDays.find((meal) => meal.date === editor.date);
+      const existingDay = editor.dayId ? currentDays.find((meal) => meal.id === editor.dayId) : currentDays.find((meal) => meal.date === editor.date);
       const savedMeal: MockMealDay = existingDay
         ? { ...existingDay, mealName, updatedAt }
-        : {
-            id: `mock-meal-${editor.date}-${Date.now()}`,
-            date: editor.date,
-            mealName,
-            updatedAt,
-          };
+        : { id: `mock-meal-${editor.date}-${Date.now()}`, date: editor.date, mealName, updatedAt };
 
-      return [
-        savedMeal,
-        ...currentDays.filter(
-          (meal) => meal.id !== savedMeal.id && meal.date !== savedMeal.date,
-        ),
-      ].sort(sortMealDays);
+      return [savedMeal, ...currentDays.filter((meal) => meal.id !== savedMeal.id && meal.date !== savedMeal.date)].sort(sortMealDays);
     });
 
     setActiveEditor(null);
@@ -166,185 +109,51 @@ export default function MealsPage() {
     setActiveEditor((current) => (current ? { ...current, value } : current));
   }
 
-  function enterMoveMode() {
-    setActiveEditor(null);
-    setMenuMeal(null);
-    setDraggingMealId(null);
-    setDropTargetDate(null);
-    setIsMoveMode(true);
-  }
-
-  function exitMoveMode() {
-    setDraggingMealId(null);
-    setDropTargetDate(null);
-    setIsMoveMode(false);
-  }
-
-  function handleMealDragStart(
-    event: DragEvent<HTMLElement>,
-    meal: MockMealDay,
-  ) {
-    if (!isMoveMode) {
-      event.preventDefault();
-      return;
-    }
-
-    setDraggingMealId(meal.id);
-    event.dataTransfer.effectAllowed = "move";
-    event.dataTransfer.setData("text/plain", meal.id);
-  }
-
-  function handleMealDragEnd() {
-    setDraggingMealId(null);
-    setDropTargetDate(null);
-  }
-
-  function handleMealDragOver(event: DragEvent<HTMLDivElement>, date: string) {
-    if (!isMoveMode || !draggingMealId) {
-      return;
-    }
-
-    event.preventDefault();
-    event.dataTransfer.dropEffect = "move";
-    setDropTargetDate(date);
-  }
-
-  function handleMealDragLeave(event: DragEvent<HTMLDivElement>, date: string) {
-    if (!event.currentTarget.contains(event.relatedTarget as Node | null)) {
-      setDropTargetDate((currentDate) =>
-        currentDate === date ? null : currentDate,
-      );
-    }
-  }
-
-  function handleMealDrop(
-    event: DragEvent<HTMLDivElement>,
-    targetDate: string,
-  ) {
-    if (!isMoveMode) {
-      return;
-    }
-
-    event.preventDefault();
-    const draggedMealId =
-      event.dataTransfer.getData("text/plain") || draggingMealId;
-
-    if (!draggedMealId) {
-      handleMealDragEnd();
-      return;
-    }
-
-    const sourceMeal = mealDays.find((meal) => meal.id === draggedMealId);
-
-    if (!sourceMeal || sourceMeal.date === targetDate) {
-      handleMealDragEnd();
-      return;
-    }
-
-    const targetMeal = mealDays.find((meal) => meal.date === targetDate);
-    const updatedAt = new Date().toISOString();
-
-    setMealDays((currentDays) =>
-      currentDays
-        .map((meal) => {
-          if (meal.id === sourceMeal.id) {
-            return { ...meal, date: targetDate, updatedAt };
-          }
-
-          if (targetMeal && meal.id === targetMeal.id) {
-            return { ...meal, date: sourceMeal.date, updatedAt };
-          }
-
-          return meal;
-        })
-        .sort(sortMealDays),
-    );
-
-    handleMealDragEnd();
-    showToast({
-      message: targetMeal ? "Middager byttet plass" : "Middag flyttet",
-    });
-  }
-
   function deleteMeal(meal: MockMealDay) {
     setMenuMeal(null);
     setActiveEditor((current) => (current?.dayId === meal.id ? null : current));
-    setMealDays((currentDays) =>
-      currentDays.filter((day) => day.id !== meal.id),
-    );
+    setMealDays((currentDays) => currentDays.filter((day) => day.id !== meal.id));
     showToast({
       action: {
         label: "Angre",
         onClick: () => {
-          setMealDays((currentDays) =>
-            [
-              meal,
-              ...currentDays.filter(
-                (day) => day.id !== meal.id && day.date !== meal.date,
-              ),
-            ].sort(sortMealDays),
-          );
+          setMealDays((currentDays) => [meal, ...currentDays.filter((day) => day.id !== meal.id && day.date !== meal.date)].sort(sortMealDays));
           setToast(null);
-        },
+        }
       },
-      message: "Middag slettet — Angre",
+      message: "Middag slettet — Angre"
     });
   }
 
   return (
     <PageContainer>
-      <section
-        className={`meals-page meals-page--inline${isMoveMode ? " meals-page--move" : ""}`}
-        aria-labelledby="meals-title"
-      >
+      <section className="meals-page meals-page--inline" aria-labelledby="meals-title">
         <div className="meals-page__header">
           <div className="meals-page__copy">
             <Badge tone="accent">Middagsplan</Badge>
             <h1 id="meals-title" className="meals-page__title">
               Planlegg middag
             </h1>
-            <p className="meals-page__description">
-              En rolig tidslinje for enkle middager. Skriv bare hva dere skal
-              spise.
-            </p>
+            <p className="meals-page__description">En rolig tidslinje for enkle middager. Skriv bare hva dere skal spise.</p>
           </div>
           <Badge tone="neutral">Mock/provider state</Badge>
         </div>
 
         <Card className="meals-card meals-timeline-card" tone="soft">
-          <SectionHeader
-            action={<Badge tone="success">{plannedDays} planlagt</Badge>}
-            eyebrow="Denne uken"
-            title="Middager"
-          />
+          <SectionHeader action={<Badge tone="success">{plannedDays} planlagt</Badge>} eyebrow="Denne uken" title="Middager" />
 
           <ul className="meals-timeline" aria-label="Middagstidslinje">
             {timelineDays.map((day) => {
-              const editor =
-                activeEditor?.date === day.date ? activeEditor : null;
+              const editor = activeEditor?.date === day.date ? activeEditor : null;
 
               return (
                 <li className="meals-timeline__item" key={day.date}>
-                  <div
-                    className="meals-timeline__date"
-                    aria-label={formatFullDate(day.date)}
-                  >
-                    <span className="meals-timeline__weekday">
-                      {formatWeekday(day.date)}
-                    </span>
-                    <span className="meals-timeline__day">
-                      {formatDayNumber(day.date)}
-                    </span>
+                  <div className="meals-timeline__date" aria-label={formatFullDate(day.date)}>
+                    <span className="meals-timeline__weekday">{formatWeekday(day.date)}</span>
+                    <span className="meals-timeline__day">{formatDayNumber(day.date)}</span>
                   </div>
 
-                  <div
-                    className={`meals-timeline__content${isMoveMode ? " meals-timeline__content--move" : ""}${dropTargetDate === day.date ? " meals-timeline__content--drop-target" : ""}`}
-                    onDragLeave={(event) =>
-                      handleMealDragLeave(event, day.date)
-                    }
-                    onDragOver={(event) => handleMealDragOver(event, day.date)}
-                    onDrop={(event) => handleMealDrop(event, day.date)}
-                  >
+                  <div className="meals-timeline__content">
                     {editor ? (
                       <InlineMealEditor
                         editor={editor}
@@ -354,28 +163,9 @@ export default function MealsPage() {
                         suggestions={suggestionMeals}
                       />
                     ) : day.meal ? (
-                      <MealCard
-                        isDragging={draggingMealId === day.meal.id}
-                        isMoveMode={isMoveMode}
-                        meal={day.meal}
-                        onDragEnd={handleMealDragEnd}
-                        onDragStart={handleMealDragStart}
-                        onOpenMenu={setMenuMeal}
-                      />
-                    ) : isMoveMode ? (
-                      <div
-                        className="meal-empty-card meal-empty-card--move-slot"
-                        aria-label={`Tom dag for ${formatFullDate(day.date)}`}
-                      >
-                        <span className="meal-empty-card__plus">+</span>
-                        <span>Slipp middag her</span>
-                      </div>
+                      <MealCard meal={day.meal} onOpenMenu={setMenuMeal} />
                     ) : (
-                      <button
-                        className="meal-empty-card"
-                        onClick={() => startCreate(day.date)}
-                        type="button"
-                      >
+                      <button className="meal-empty-card" onClick={() => startCreate(day.date)} type="button">
                         <span className="meal-empty-card__plus">+</span>
                         <span>Legg til middag</span>
                       </button>
@@ -387,65 +177,26 @@ export default function MealsPage() {
           </ul>
         </Card>
 
-        <button
-          className="meals-move-action"
-          onClick={isMoveMode ? exitMoveMode : enterMoveMode}
-          type="button"
-        >
-          {isMoveMode ? "Ferdig" : "↕ Flytt middager"}
-        </button>
-
         {toast ? (
           <div className="meals-toast" role="status">
             <span>{toast.message}</span>
             {toast.action ? (
-              <button
-                className="meals-toast__action"
-                onClick={toast.action.onClick}
-                type="button"
-              >
+              <button className="meals-toast__action" onClick={toast.action.onClick} type="button">
                 {toast.action.label}
               </button>
             ) : null}
           </div>
         ) : null}
 
-        {menuMeal ? (
-          <MealActionSheet
-            meal={menuMeal}
-            onClose={() => setMenuMeal(null)}
-            onDelete={deleteMeal}
-            onEdit={startEdit}
-          />
-        ) : null}
+        {menuMeal ? <MealActionSheet meal={menuMeal} onClose={() => setMenuMeal(null)} onDelete={deleteMeal} onEdit={startEdit} /> : null}
       </section>
     </PageContainer>
   );
 }
 
-function MealCard({
-  isDragging,
-  isMoveMode,
-  meal,
-  onDragEnd,
-  onDragStart,
-  onOpenMenu,
-}: {
-  isDragging: boolean;
-  isMoveMode: boolean;
-  meal: MockMealDay;
-  onDragEnd: () => void;
-  onDragStart: (event: DragEvent<HTMLElement>, meal: MockMealDay) => void;
-  onOpenMenu: (meal: MockMealDay) => void;
-}) {
+function MealCard({ meal, onOpenMenu }: { meal: MockMealDay; onOpenMenu: (meal: MockMealDay) => void }) {
   return (
-    <article
-      aria-grabbed={isMoveMode ? isDragging : undefined}
-      className={`meal-plan-card${isMoveMode ? " meal-plan-card--move" : ""}${isDragging ? " meal-plan-card--dragging" : ""}`}
-      draggable={isMoveMode}
-      onDragEnd={onDragEnd}
-      onDragStart={(event) => onDragStart(event, meal)}
-    >
+    <article className="meal-plan-card">
       <span className="meal-plan-card__visual" aria-hidden="true">
         <Utensils size={19} strokeWidth={2.4} />
       </span>
@@ -453,24 +204,9 @@ function MealCard({
         <p className="meal-plan-card__label">Middag</p>
         <h2 className="meal-plan-card__title">{meal.mealName}</h2>
       </div>
-      {isMoveMode ? (
-        <span
-          className="meal-plan-card__drag-handle"
-          aria-label={`Flytt ${meal.mealName}`}
-          role="img"
-        >
-          <GripVertical size={22} strokeWidth={2.35} />
-        </span>
-      ) : (
-        <button
-          className="meal-plan-card__menu"
-          onClick={() => onOpenMenu(meal)}
-          type="button"
-          aria-label={`Åpne meny for ${meal.mealName}`}
-        >
-          <MoreHorizontal size={21} strokeWidth={2.5} />
-        </button>
-      )}
+      <button className="meal-plan-card__menu" onClick={() => onOpenMenu(meal)} type="button" aria-label={`Åpne meny for ${meal.mealName}`}>
+        <MoreHorizontal size={21} strokeWidth={2.5} />
+      </button>
     </article>
   );
 }
@@ -480,7 +216,7 @@ function InlineMealEditor({
   onCancel,
   onChange,
   onSave,
-  suggestions,
+  suggestions
 }: {
   editor: InlineEditorState;
   onCancel: () => void;
@@ -551,11 +287,7 @@ function InlineMealEditor({
             {suggestion}
           </button>
         ))}
-        <button
-          className="meal-suggestions__all"
-          onMouseDown={(event) => event.preventDefault()}
-          type="button"
-        >
+        <button className="meal-suggestions__all" onMouseDown={(event) => event.preventDefault()} type="button">
           Se alle tidligere middager
         </button>
       </div>
@@ -567,7 +299,7 @@ function MealActionSheet({
   meal,
   onClose,
   onDelete,
-  onEdit,
+  onEdit
 }: {
   meal: MockMealDay;
   onClose: () => void;
@@ -576,33 +308,16 @@ function MealActionSheet({
 }) {
   return (
     <div className="meal-sheet" role="presentation" onClick={onClose}>
-      <div
-        className="meal-sheet__panel"
-        role="dialog"
-        aria-label={`Valg for ${meal.mealName}`}
-        onClick={(event) => event.stopPropagation()}
-      >
+      <div className="meal-sheet__panel" role="dialog" aria-label={`Valg for ${meal.mealName}`} onClick={(event) => event.stopPropagation()}>
         <div className="meal-sheet__handle" aria-hidden="true" />
         <p className="meal-sheet__title">{meal.mealName}</p>
-        <button
-          className="meal-sheet__button"
-          onClick={() => onEdit(meal)}
-          type="button"
-        >
+        <button className="meal-sheet__button" onClick={() => onEdit(meal)} type="button">
           Rediger
         </button>
-        <button
-          className="meal-sheet__button meal-sheet__button--danger"
-          onClick={() => onDelete(meal)}
-          type="button"
-        >
+        <button className="meal-sheet__button meal-sheet__button--danger" onClick={() => onDelete(meal)} type="button">
           Slett middag
         </button>
-        <button
-          className="meal-sheet__button meal-sheet__button--muted"
-          onClick={onClose}
-          type="button"
-        >
+        <button className="meal-sheet__button meal-sheet__button--muted" onClick={onClose} type="button">
           Avbryt
         </button>
       </div>
@@ -610,11 +325,7 @@ function MealActionSheet({
   );
 }
 
-function buildTimeline(
-  startDate: string,
-  dayCount: number,
-  mealDays: MockMealDay[],
-): TimelineDay[] {
+function buildTimeline(startDate: string, dayCount: number, mealDays: MockMealDay[]): TimelineDay[] {
   const start = parseDate(startDate);
 
   return Array.from({ length: dayCount }, (_, index) => {
@@ -622,7 +333,7 @@ function buildTimeline(
 
     return {
       date,
-      meal: mealDays.find((meal) => meal.date === date) ?? null,
+      meal: mealDays.find((meal) => meal.date === date) ?? null
     };
   });
 }
@@ -634,23 +345,15 @@ function filterSuggestions(suggestions: string[], query: string): string[] {
     return suggestions;
   }
 
-  return suggestions.filter((suggestion) =>
-    suggestion.toLocaleLowerCase("nb-NO").includes(normalizedQuery),
-  );
+  return suggestions.filter((suggestion) => suggestion.toLocaleLowerCase("nb-NO").includes(normalizedQuery));
 }
 
 function getSuggestionSource(mealDays: MockMealDay[]): string[] {
   const source = [...mealDays]
-    .sort(
-      (first, second) =>
-        new Date(second.updatedAt).getTime() -
-        new Date(first.updatedAt).getTime(),
-    )
+    .sort((first, second) => new Date(second.updatedAt).getTime() - new Date(first.updatedAt).getTime())
     .map((meal) => meal.mealName);
 
-  return [...source, ...PREVIOUS_MEALS].filter(
-    (mealName, index, allMeals) => allMeals.indexOf(mealName) === index,
-  );
+  return [...source, ...PREVIOUS_MEALS].filter((mealName, index, allMeals) => allMeals.indexOf(mealName) === index);
 }
 
 function addDays(date: Date, days: number): Date {
@@ -664,26 +367,15 @@ function parseDate(date: string): Date {
 }
 
 function formatFullDate(date: string): string {
-  return parseDate(date).toLocaleDateString("nb-NO", {
-    day: "numeric",
-    month: "long",
-    timeZone: "UTC",
-    weekday: "long",
-  });
+  return parseDate(date).toLocaleDateString("nb-NO", { day: "numeric", month: "long", timeZone: "UTC", weekday: "long" });
 }
 
 function formatWeekday(date: string): string {
-  return parseDate(date).toLocaleDateString("nb-NO", {
-    timeZone: "UTC",
-    weekday: "short",
-  });
+  return parseDate(date).toLocaleDateString("nb-NO", { timeZone: "UTC", weekday: "short" });
 }
 
 function formatDayNumber(date: string): string {
-  return parseDate(date).toLocaleDateString("nb-NO", {
-    day: "2-digit",
-    timeZone: "UTC",
-  });
+  return parseDate(date).toLocaleDateString("nb-NO", { day: "2-digit", timeZone: "UTC" });
 }
 
 function sortMealDays(first: MockMealDay, second: MockMealDay) {
