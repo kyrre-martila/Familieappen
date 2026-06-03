@@ -1,4 +1,4 @@
-import type { CalendarMvpEvent, CalendarMvpFamilyMember, MealSummary, ReminderSummary } from "@familieappen/shared";
+import type { CalendarMvpEvent, CalendarMvpFamilyMember, ReminderSummary } from "@familieappen/shared";
 
 export const mockToday = "2025-06-03";
 
@@ -8,13 +8,6 @@ export const familyMembers: CalendarMvpFamilyMember[] = [
   { id: "kyrre", name: "Kyrre", initials: "KY", avatarColor: "green" },
   { id: "elisabeth", name: "Elisabeth", initials: "EK", avatarColor: "orange" },
   { id: "alma", name: "Alma", initials: "AL", avatarColor: "purple" }
-];
-
-export const meals: MealSummary[] = [
-  { date: "2025-06-02", title: "Laks" },
-  { date: "2025-06-03", title: "Taco" },
-  { date: "2025-06-04", title: "Pasta" },
-  { date: "2025-06-06", title: "Pizza" }
 ];
 
 export const reminders: ReminderSummary[] = [
@@ -68,22 +61,6 @@ export const calendarEvents: CalendarMvpEvent[] = [
     source: "ics",
     isImported: true,
     reminder: { minutesBefore: 60, label: "1 time før" },
-    recurrence: null
-  },
-  {
-    id: "middag",
-    title: "Middag",
-    date: "2025-06-03",
-    startTime: "17:00",
-    endTime: "17:45",
-    allDay: false,
-    location: "Hjemme",
-    description: null,
-    icon: "meal",
-    participantIds: [],
-    source: "manual",
-    isImported: false,
-    reminder: null,
     recurrence: null
   },
   {

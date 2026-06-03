@@ -9,7 +9,7 @@ export const defaultCreateOptions = [
   { emoji: "📅", label: "Ny kalenderhendelse", description: "Opprett en rolig kalenderhendelse", href: "/calendar/events/new", tone: "calendar" },
   { emoji: "📝", label: "Ny husk", description: "Lett påminnelse uten klokkeslett", href: "/husk/reminders/new", tone: "task" },
   { emoji: "✅", label: "Ny liste", description: "Samle punkter for familien", href: "/husk/lister/new", tone: "shopping" },
-  { emoji: "🍽️", label: "Planlegg middag", description: "Planlegg måltid", href: "/meals", tone: "meal" },
+  { emoji: "🍽️", label: "Legg til middag", description: "Planlegg måltid", href: "/meals?create=1", tone: "meal" },
   { emoji: "🎁", label: "Legg til i ønskeliste", description: "Legg til ønske", href: "/wishlists", tone: "wish" }
 ] as const;
 
