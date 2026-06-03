@@ -32,20 +32,17 @@ export interface HuskReminder {
   memberIds: string[];
 }
 
-export interface HuskListItem {
-  id: string;
-  label: string;
-  meta?: string;
-}
+export type HuskListIcon = "birthday" | "home" | "summer" | "celebration";
 
 export interface HuskListGroup {
   id: string;
   title: string;
-  description: string;
-  owner: string;
-  itemCount: number;
+  completedCount: number;
+  totalCount: number;
   archived: boolean;
-  items: HuskListItem[];
+  icon: HuskListIcon;
+  tone: "blue" | "green" | "orange" | "purple";
+  memberIds: string[];
 }
 
 export interface HuskSchoolDayPlan {
@@ -67,6 +64,7 @@ export interface HuskMockData {
 export const huskMockData: HuskMockData = {
   familyMembers: [
     { id: "elisabeth", name: "Elisabeth", initials: "EL", tone: "pink" },
+    { id: "kyrre", name: "Kyrre", initials: "KY", tone: "green" },
     { id: "fiona", name: "Fiona", initials: "FI", tone: "orange" },
     { id: "alma", name: "Alma", initials: "AL", tone: "purple" },
     { id: "even-olai", name: "Even-Olai", initials: "EO", tone: "blue" },
@@ -165,39 +163,54 @@ export const huskMockData: HuskMockData = {
   ],
   listGroups: [
     {
-      id: "list-morning",
-      title: "Morgenrutine",
-      description: "Rolige steg før avreise til skole og barnehage.",
-      owner: "Familien",
-      itemCount: 5,
+      id: "list-konfirmasjon-alma",
+      title: "Konfirmasjon Alma",
+      completedCount: 7,
+      totalCount: 15,
       archived: false,
-      items: [
-        { id: "morning-lunch", label: "Matbokser i sekken", meta: "Kjøkken" },
-        { id: "morning-clothes", label: "Uteklær etter vær", meta: "Gang" },
-        { id: "morning-water", label: "Drikkeflasker fylt", meta: "Alle" },
-      ],
+      icon: "celebration",
+      tone: "purple",
+      memberIds: ["elisabeth", "kyrre", "alma", "even-olai", "fiona"],
     },
     {
-      id: "list-weekend",
-      title: "Helgepakking",
-      description: "Fast liste for overnatting hos besteforeldre.",
-      owner: "Eva",
-      itemCount: 7,
+      id: "list-sommerferie-2025",
+      title: "Sommerferie 2025",
+      completedCount: 5,
+      totalCount: 12,
       archived: false,
-      items: [
-        { id: "weekend-pjs", label: "Pysj og kosedyr" },
-        { id: "weekend-toothbrush", label: "Tannbørster" },
-        { id: "weekend-medicine", label: "Allergimedisin", meta: "Ved behov" },
-      ],
+      icon: "summer",
+      tone: "orange",
+      memberIds: ["elisabeth", "kyrre", "alma", "even-olai", "fiona"],
     },
     {
-      id: "list-summer-archive",
+      id: "list-bursdag-even-olai",
+      title: "Bursdag Even-Olai (10 år)",
+      completedCount: 3,
+      totalCount: 8,
+      archived: false,
+      icon: "birthday",
+      tone: "green",
+      memberIds: ["elisabeth", "even-olai"],
+    },
+    {
+      id: "list-oppussing-stue",
+      title: "Oppussing stue",
+      completedCount: 2,
+      totalCount: 9,
+      archived: false,
+      icon: "home",
+      tone: "blue",
+      memberIds: ["kyrre", "elisabeth"],
+    },
+    {
+      id: "list-sommer-archive",
       title: "Sommeravslutning 2025",
-      description: "Arkivert plan fra fjorårets avslutning.",
-      owner: "Familien",
-      itemCount: 4,
+      completedCount: 4,
+      totalCount: 4,
       archived: true,
-      items: [{ id: "summer-cake", label: "Kakeform" }],
+      icon: "celebration",
+      tone: "purple",
+      memberIds: ["elisabeth", "kyrre", "alma", "even-olai", "fiona"],
     },
   ],
   schoolWeek: [

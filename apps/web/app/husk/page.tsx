@@ -7,9 +7,10 @@ import {
   Briefcase,
   Cake,
   Car,
-  ClipboardList,
+  ChevronRight,
   Gift,
   GraduationCap,
+  Home,
   Search,
   Shirt,
   SlidersHorizontal,
@@ -23,7 +24,16 @@ import { AppShell } from "../../components/AppShell";
 import { LockedFeatureState } from "../../components/PendingAccess";
 import { useFamilyAccess } from "../../components/ProtectedFamilyRoute";
 import { Card, EmptyState, PageContainer } from "../../components/ui";
-import { huskMockData, type HuskFamilyMember, type HuskReminder, type HuskReminderGroup, type HuskReminderIcon, type HuskTab } from "./mockHuskData";
+import {
+  huskMockData,
+  type HuskFamilyMember,
+  type HuskListGroup,
+  type HuskListIcon,
+  type HuskReminder,
+  type HuskReminderGroup,
+  type HuskReminderIcon,
+  type HuskTab,
+} from "./mockHuskData";
 
 const tabs = [
   { value: "husk", label: "Husk" },
@@ -59,6 +69,13 @@ const reminderIcons = {
   tooth: Stethoscope,
 } satisfies Record<HuskReminderIcon, LucideIcon>;
 
+const listIcons = {
+  birthday: Cake,
+  celebration: Gift,
+  home: Home,
+  summer: Tent,
+} satisfies Record<HuskListIcon, LucideIcon>;
+
 function normalizeSearch(value: string) {
   return value.trim().toLocaleLowerCase("nb-NO");
 }
@@ -88,21 +105,22 @@ function HuskTabs({ selectedTab, onSelectTab }: { selectedTab: HuskTab; onSelect
   );
 }
 
-function HuskToolbar({ query, onQueryChange }: { query: string; onQueryChange: (query: string) => void }) {
+function HuskToolbar({ query, selectedTab, onQueryChange }: { query: string; selectedTab: HuskTab; onQueryChange: (query: string) => void }) {
+  const searchLabel = selectedTab === "lister" ? "Søk i lister" : selectedTab === "skoleuka" ? "Søk i skoleuka" : "Søk i husk";
   return (
     <div className="husk-toolbar" aria-label="Søk og filtrer">
       <label className="husk-search">
         <Search aria-hidden="true" size={20} strokeWidth={2.4} />
-        <span className="sr-only">Søk i Husk</span>
+        <span className="sr-only">{searchLabel}</span>
         <input
           className="husk-search__input"
           onChange={(event) => onQueryChange(event.target.value)}
-          placeholder="Søk i husk"
+          placeholder={searchLabel}
           type="search"
           value={query}
         />
       </label>
-      <button className="husk-filter-button" type="button" aria-label="Åpne filtre for Husk">
+      <button className="husk-filter-button" type="button" aria-label={`Åpne filtre for ${titleByTab[selectedTab]}`}>
         <SlidersHorizontal aria-hidden="true" size={20} strokeWidth={2.4} />
         <span>Filter</span>
       </button>
@@ -188,48 +206,80 @@ function HuskReminders({ query }: { query: string }) {
   );
 }
 
+function ListCardAvatars({ members }: { members: HuskFamilyMember[] }) {
+  const visibleMembers = members.slice(0, 4);
+  const hiddenCount = Math.max(members.length - visibleMembers.length, 0);
+
+  return (
+    <span className="husk-list-card__avatars" aria-label={members.map((member) => member.name).join(", ")}>
+      {visibleMembers.map((member) => (
+        <span className={`husk-avatar husk-avatar--${member.tone}`} key={member.id} aria-hidden="true">
+          {member.initials}
+        </span>
+      ))}
+      {hiddenCount > 0 ? <span className="husk-list-card__avatar-count" aria-hidden="true">+{hiddenCount}</span> : null}
+    </span>
+  );
+}
+
+function HuskListCard({ group }: { group: HuskListGroup }) {
+  const Icon = listIcons[group.icon];
+  const members = group.memberIds
+    .map((memberId) => huskMockData.familyMembers.find((member) => member.id === memberId))
+    .filter((member): member is HuskFamilyMember => Boolean(member));
+  const progressPercent = group.totalCount > 0 ? Math.round((group.completedCount / group.totalCount) * 100) : 0;
+  const progressText = `${group.completedCount} av ${group.totalCount} fullført`;
+
+  return (
+    <button
+      className={`husk-list-card husk-list-card--${group.tone}`}
+      type="button"
+      aria-label={`Åpne listen ${group.title}. ${progressText}`}
+    >
+      <span className="husk-list-card__icon" aria-hidden="true">
+        <Icon size={26} strokeWidth={2.25} />
+      </span>
+      <span className="husk-list-card__copy">
+        <span className="husk-list-card__title">{group.title}</span>
+        <span className="husk-list-card__progress-text">{progressText}</span>
+        <span className="husk-list-card__progress" aria-hidden="true">
+          <span className="husk-list-card__progress-fill" style={{ width: `${progressPercent}%` }} />
+        </span>
+      </span>
+      <ListCardAvatars members={members} />
+      <ChevronRight className="husk-list-card__chevron" aria-hidden="true" size={22} strokeWidth={2.4} />
+    </button>
+  );
+}
+
 function HuskLists({ query }: { query: string }) {
   const normalizedQuery = normalizeSearch(query);
-  const listGroups = huskMockData.listGroups
-    .filter((group) => !group.archived)
-    .filter((group) => {
-      if (!normalizedQuery) {
-        return true;
-      }
+  const activeListGroups = huskMockData.listGroups.filter((group) => !group.archived);
+  const listGroups = activeListGroups.filter((group) => {
+    if (!normalizedQuery) {
+      return true;
+    }
 
-      return [group.title, group.description, group.owner, ...group.items.map((item) => item.label)].some((value) =>
-        value.toLocaleLowerCase("nb-NO").includes(normalizedQuery),
-      );
-    });
+    const memberNames = group.memberIds
+      .map((memberId) => huskMockData.familyMembers.find((member) => member.id === memberId)?.name ?? "")
+      .filter(Boolean);
+
+    return [group.title, `${group.completedCount} av ${group.totalCount} fullført`, ...memberNames].some((value) =>
+      value.toLocaleLowerCase("nb-NO").includes(normalizedQuery),
+    );
+  });
 
   return (
     <section className="husk-panel" id="husk-panel-lister" role="tabpanel" aria-labelledby="husk-tab-lister husk-lists-title">
-      <div className="husk-section-heading">
-        <p className="husk-section-heading__eyebrow">Aktive lister</p>
-        <h2 className="husk-section-heading__title" id="husk-lists-title">Listemaler og grupper</h2>
+      <div className="husk-reminder-group__heading">
+        <h2 className="husk-reminder-group__title" id="husk-lists-title">Aktive lister</h2>
+        <span className="husk-reminder-group__count" aria-label={`${activeListGroups.length} aktive lister`}>
+          {activeListGroups.length}
+        </span>
       </div>
       <div className="husk-card-list">
         {listGroups.map((group) => (
-          <article className="husk-list-card" key={group.id}>
-            <div className="husk-list-card__header">
-              <span className="husk-list-card__icon" aria-hidden="true">
-                <ClipboardList size={22} strokeWidth={2.4} />
-              </span>
-              <span className="husk-list-card__copy">
-                <span className="husk-list-card__title">{group.title}</span>
-                <span className="husk-list-card__description">{group.description}</span>
-              </span>
-              <span className="husk-list-card__count">{group.itemCount}</span>
-            </div>
-            <div className="husk-list-card__items" aria-label={`Eksempler fra ${group.title}`}>
-              {group.items.slice(0, 3).map((item) => (
-                <span className="husk-list-card__item" key={item.id}>
-                  <span>{item.label}</span>
-                  {item.meta ? <span className="husk-list-card__item-meta">{item.meta}</span> : null}
-                </span>
-              ))}
-            </div>
-          </article>
+          <HuskListCard key={group.id} group={group} />
         ))}
       </div>
     </section>
@@ -307,7 +357,7 @@ export default function HuskPage() {
       <PageContainer>
         <div className="husk-page">
           <HuskTabs selectedTab={selectedTab} onSelectTab={setSelectedTab} />
-          <HuskToolbar query={query} onQueryChange={setQuery} />
+          <HuskToolbar query={query} selectedTab={selectedTab} onQueryChange={setQuery} />
           {selectedTab === "husk" ? <HuskReminders query={query} /> : null}
           {selectedTab === "lister" ? <HuskLists query={query} /> : null}
           {selectedTab === "skoleuka" ? <HuskSchoolWeek query={query} /> : null}
