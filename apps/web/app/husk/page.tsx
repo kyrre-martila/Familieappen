@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { useMemo, useState } from "react";
 import {
   Backpack,
@@ -231,9 +232,9 @@ function HuskListCard({ group }: { group: HuskListGroup }) {
   const progressText = `${group.completedCount} av ${group.totalCount} fullført`;
 
   return (
-    <button
+    <Link
       className={`husk-list-card husk-list-card--${group.tone}`}
-      type="button"
+      href={`/husk/lister/${group.id}`}
       aria-label={`Åpne listen ${group.title}. ${progressText}`}
     >
       <span className="husk-list-card__icon" aria-hidden="true">
@@ -248,7 +249,7 @@ function HuskListCard({ group }: { group: HuskListGroup }) {
       </span>
       <ListCardAvatars members={members} />
       <ChevronRight className="husk-list-card__chevron" aria-hidden="true" size={22} strokeWidth={2.4} />
-    </button>
+    </Link>
   );
 }
 

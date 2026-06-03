@@ -45,6 +45,27 @@ export interface HuskListGroup {
   memberIds: string[];
 }
 
+export type HuskListSection = "active" | "completed";
+
+export interface HuskListDetailItem {
+  id: string;
+  title: string;
+  completed: boolean;
+  assignedMemberIds: string[];
+  description?: string;
+  dueLabel?: string;
+}
+
+export interface HuskListDetail {
+  id: string;
+  title: string;
+  scopeText: string;
+  completedCount: number;
+  totalCount: number;
+  familyMembers: HuskFamilyMember[];
+  items: HuskListDetailItem[];
+}
+
 export interface HuskSchoolDayPlan {
   id: string;
   dayLabel: string;
@@ -240,3 +261,84 @@ export const huskMockData: HuskMockData = {
     },
   ],
 };
+
+export const huskListDetails: HuskListDetail[] = [
+  {
+    id: "list-konfirmasjon-alma",
+    title: "Konfirmasjon Alma",
+    scopeText: "Hele familien",
+    completedCount: 7,
+    totalCount: 15,
+    familyMembers: huskMockData.familyMembers,
+    items: [
+      {
+        id: "bestille-lokale",
+        title: "Bestille lokale",
+        completed: false,
+        assignedMemberIds: ["kyrre"],
+      },
+      {
+        id: "fotograf",
+        title: "Fotograf",
+        completed: false,
+        assignedMemberIds: ["elisabeth"],
+      },
+      {
+        id: "kirke-bekreftet",
+        title: "Kirke bekreftet",
+        completed: false,
+        assignedMemberIds: ["elisabeth"],
+        description: "Kirken er bekreftet for lørdag 24. mai kl. 11:00.",
+        dueLabel: "24. mai 2025",
+      },
+      {
+        id: "lage-gjesteliste",
+        title: "Lage gjesteliste",
+        completed: false,
+        assignedMemberIds: [],
+      },
+      {
+        id: "bestille-mat-og-drikke",
+        title: "Bestille mat og drikke",
+        completed: false,
+        assignedMemberIds: ["elisabeth", "kyrre", "alma"],
+      },
+      {
+        id: "kjope-antrekk-til-alma",
+        title: "Kjøpe antrekk til Alma",
+        completed: false,
+        assignedMemberIds: ["even-olai"],
+      },
+      {
+        id: "lage-bordkort",
+        title: "Lage bordkort",
+        completed: false,
+        assignedMemberIds: [],
+      },
+      {
+        id: "planlegge-pynt",
+        title: "Planlegge pynt",
+        completed: false,
+        assignedMemberIds: ["elisabeth"],
+      },
+      {
+        id: "invitasjoner-sendt",
+        title: "Invitasjoner sendt",
+        completed: true,
+        assignedMemberIds: ["elisabeth", "kyrre", "alma"],
+      },
+      {
+        id: "velge-dato",
+        title: "Velge dato",
+        completed: true,
+        assignedMemberIds: ["kyrre"],
+      },
+      {
+        id: "sette-budsjett",
+        title: "Sette budsjett",
+        completed: true,
+        assignedMemberIds: ["even-olai"],
+      },
+    ],
+  },
+];
