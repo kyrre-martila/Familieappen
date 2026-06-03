@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useEffect, useId, useState } from "react";
-import { bottomNavigationItems, createOptions } from "./navigation";
+import { bottomNavigationItems, getCreateOptions } from "./navigation";
 
 type BottomNavigationItem = (typeof bottomNavigationItems)[number];
 
@@ -91,6 +91,8 @@ export function BottomNavigation() {
 
 function CreateBottomSheet({ isOpen, onClose }: { isOpen: boolean; onClose: () => void }) {
   const titleId = useId();
+  const pathname = usePathname();
+  const options = getCreateOptions(pathname === "/husk" || pathname.startsWith("/husk/"));
 
   useEffect(() => {
     if (!isOpen) {
@@ -114,7 +116,7 @@ function CreateBottomSheet({ isOpen, onClose }: { isOpen: boolean; onClose: () =
         <div className="create-sheet__handle" aria-hidden="true" />
         <h2 className="create-sheet__title" id={titleId}>Opprett ny</h2>
         <div className="create-sheet__options">
-          {createOptions.map((option) => (
+          {options.map((option) => (
             <Link className="create-sheet__option" href={option.href} key={option.label} onClick={onClose}>
               <span className={`create-sheet__option-icon create-sheet__option-icon--${option.tone}`} aria-hidden="true">{option.emoji}</span>
               <span className="create-sheet__option-copy">
