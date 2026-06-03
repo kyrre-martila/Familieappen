@@ -1,7 +1,8 @@
 "use client";
 
 import Link from "next/link";
-import { useEffect, useMemo, useState } from "react";
+import { useSearchParams } from "next/navigation";
+import { Suspense, useEffect, useMemo, useState } from "react";
 import {
   Backpack,
   BookOpen,
@@ -128,6 +129,30 @@ const personFilterOptions = [
 
 const defaultHuskFilters: HuskFilters = { person: "all", showPrevious: false };
 const defaultListFilters: ListFilters = { person: "all", showArchived: false };
+const huskTabStorageKey = "familieappen:husk:selected-tab";
+const schoolWeekStorageKey = "familieappen:husk:school-week-start";
+
+function isHuskTab(value: string | null): value is HuskTab {
+  return value === "husk" || value === "lister" || value === "skoleuka";
+}
+
+function readStoredHuskTab() {
+  if (typeof window === "undefined") {
+    return "husk";
+  }
+
+  const storedTab = window.sessionStorage.getItem(huskTabStorageKey);
+  return isHuskTab(storedTab) ? storedTab : "husk";
+}
+
+function readStoredSchoolWeekStart(fallback: number) {
+  if (typeof window === "undefined") {
+    return fallback;
+  }
+
+  const storedWeekStart = Number(window.sessionStorage.getItem(schoolWeekStorageKey));
+  return Number.isFinite(storedWeekStart) ? storedWeekStart : fallback;
+}
 
 const previousReminders: HuskReminder[] = [
   {
@@ -753,14 +778,29 @@ function HuskSchoolRecurringChoiceSheet({ itemTitle, onClose, onChoose }: { item
   );
 }
 
-function HuskSchoolWeek() {
+function HuskSchoolWeek({ shouldOpenPlanner }: { shouldOpenPlanner: boolean }) {
   const todayWeekStart = useMemo(() => getIsoWeekStart(new Date()), []);
-  const [selectedWeekStartTime, setSelectedWeekStartTime] = useState(() => todayWeekStart.getTime());
+  const todayWeekStartTime = todayWeekStart.getTime();
+  const [selectedWeekStartTime, setSelectedWeekStartTime] = useState(() => readStoredSchoolWeekStart(todayWeekStartTime));
   const [selectedChildIndex, setSelectedChildIndex] = useState(0);
-  const [isEditing, setIsEditing] = useState(false);
+  const [isEditing, setIsEditing] = useState(shouldOpenPlanner);
   const [createDraft, setCreateDraft] = useState<SchoolCreateDraft | null>(null);
   const [recurringChoiceTitle, setRecurringChoiceTitle] = useState<string | null>(null);
   const [showSavedBadge, setShowSavedBadge] = useState(false);
+
+  useEffect(() => {
+    if (!shouldOpenPlanner) {
+      return;
+    }
+
+    setSelectedWeekStartTime(todayWeekStartTime);
+    setSelectedChildIndex(0);
+    setIsEditing(true);
+  }, [shouldOpenPlanner, todayWeekStartTime]);
+
+  useEffect(() => {
+    window.sessionStorage.setItem(schoolWeekStorageKey, String(selectedWeekStartTime));
+  }, [selectedWeekStartTime]);
 
   useEffect(() => {
     if (!showSavedBadge) {
@@ -950,15 +990,28 @@ function HuskSchoolWeek() {
 }
 
 
-export default function HuskPage() {
+function HuskPageContent() {
   const familyAccess = useFamilyAccess();
-  const [selectedTab, setSelectedTab] = useState<HuskTab>("husk");
+  const searchParams = useSearchParams();
+  const requestedTab = searchParams.get("tab");
+  const shouldOpenSchoolPlanner = requestedTab === "skoleuka" && searchParams.get("edit") === "1";
+  const [selectedTab, setSelectedTab] = useState<HuskTab>(() => (isHuskTab(requestedTab) ? requestedTab : readStoredHuskTab()));
   const [query, setQuery] = useState("");
   const [huskFilters, setHuskFilters] = useState<HuskFilters>(defaultHuskFilters);
   const [listFilters, setListFilters] = useState<ListFilters>(defaultListFilters);
   const [isFilterSheetOpen, setIsFilterSheetOpen] = useState(false);
   const title = useMemo(() => titleByTab[selectedTab], [selectedTab]);
   const activeFilterCount = selectedTab === "lister" ? getListActiveFilterCount(listFilters) : getHuskActiveFilterCount(huskFilters);
+
+  useEffect(() => {
+    if (isHuskTab(requestedTab)) {
+      setSelectedTab(requestedTab);
+    }
+  }, [requestedTab]);
+
+  useEffect(() => {
+    window.sessionStorage.setItem(huskTabStorageKey, selectedTab);
+  }, [selectedTab]);
 
   if (familyAccess.status === "pending") {
     return <LockedFeatureState />;
@@ -992,7 +1045,7 @@ export default function HuskPage() {
           ) : null}
           {selectedTab === "husk" ? <HuskReminders filters={huskFilters} query={query} /> : null}
           {selectedTab === "lister" ? <HuskLists filters={listFilters} query={query} /> : null}
-          {selectedTab === "skoleuka" ? <HuskSchoolWeek /> : null}
+          {selectedTab === "skoleuka" ? <HuskSchoolWeek shouldOpenPlanner={shouldOpenSchoolPlanner} /> : null}
         </div>
       </PageContainer>
       {selectedTab === "husk" ? (
@@ -1024,5 +1077,13 @@ export default function HuskPage() {
         />
       ) : null}
     </AppShell>
+  );
+}
+
+export default function HuskPage() {
+  return (
+    <Suspense fallback={<LockedFeatureState />}>
+      <HuskPageContent />
+    </Suspense>
   );
 }

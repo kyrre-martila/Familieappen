@@ -205,7 +205,7 @@ export function HuskFocusFormClient({ kind, mode, reminder = null, list = null }
       return;
     }
 
-    router.push(kind === "list" ? "/husk" : "/husk");
+    router.push(kind === "list" ? "/husk?tab=lister" : "/husk?tab=husk");
   }
 
   function handleDelete() {
