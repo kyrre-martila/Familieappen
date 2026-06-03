@@ -30,6 +30,7 @@ export interface HuskReminder {
   icon: HuskReminderIcon;
   tone: "blue" | "green" | "orange" | "pink" | "purple" | "yellow";
   memberIds: string[];
+  note?: string;
 }
 
 export type HuskListIcon = "birthday" | "home" | "summer" | "celebration";
@@ -135,6 +136,7 @@ export const huskMockData: HuskMockData = {
       icon: "gift",
       tone: "orange",
       memberIds: ["elisabeth", "even-olai", "fiona", "alma"],
+      note: "Sjekk ønskelisten før dere handler, så gaven passer.",
     },
     {
       id: "reminder-dentist",
@@ -165,6 +167,7 @@ export const huskMockData: HuskMockData = {
       icon: "passport",
       tone: "purple",
       memberIds: ["elisabeth", "even-olai", "fiona", "alma"],
+      note: "Sjekk at alle pass er gyldige før reisen.",
     },
     {
       id: "reminder-birthday-even-olai",
