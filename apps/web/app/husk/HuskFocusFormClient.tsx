@@ -33,6 +33,7 @@ type HuskFocusMode = "create" | "edit";
 type HuskFocusDraft = {
   title: string;
   iconId: EventFormIconId | "";
+  audience: "family" | "people";
   participantIds: string[];
   date: string;
   reminderEnabled: boolean;
@@ -70,11 +71,18 @@ function getMembers(memberIds: string[]) {
   );
 }
 
-function getScopeSummary(participantIds: string[]) {
+function getScopeSummary(
+  audience: HuskFocusDraft["audience"],
+  participantIds: string[],
+) {
   const selectedMembers = getMembers(participantIds);
 
-  if (selectedMembers.length === 0) {
+  if (audience === "family") {
     return "Hele familien";
+  }
+
+  if (selectedMembers.length === 0) {
+    return "Ingen valgt";
   }
 
   if (selectedMembers.length === 1) {
@@ -84,7 +92,13 @@ function getScopeSummary(participantIds: string[]) {
   return `${selectedMembers.length} personer`;
 }
 
-function ScopePreview({ participantIds }: { participantIds: string[] }) {
+function ScopePreview({
+  audience,
+  participantIds,
+}: {
+  audience: HuskFocusDraft["audience"];
+  participantIds: string[];
+}) {
   const selectedMembers = getMembers(participantIds);
   const visibleMembers = selectedMembers.slice(0, 3);
   const hiddenCount = Math.max(
@@ -92,11 +106,17 @@ function ScopePreview({ participantIds }: { participantIds: string[] }) {
     0,
   );
 
-  if (selectedMembers.length === 0) {
+  if (audience === "family") {
     return (
       <span className="event-form-scope-summary__family" aria-hidden="true">
         <Users size={18} strokeWidth={2.4} />
       </span>
+    );
+  }
+
+  if (selectedMembers.length === 0) {
+    return (
+      <span className="event-form-scope-summary__empty" aria-hidden="true" />
     );
   }
 
@@ -182,6 +202,10 @@ function getDefaultDraft({
     return {
       title: reminder?.title ?? "",
       iconId: reminder ? mapReminderIcon(reminder.icon) : "generelt",
+      audience:
+        !reminder || reminder.scopeText === "Hele familien"
+          ? "family"
+          : "people",
       participantIds:
         reminder?.scopeText === "Hele familien"
           ? []
@@ -195,6 +219,10 @@ function getDefaultDraft({
   return {
     title: list?.title ?? "",
     iconId: list ? mapListIcon(list.icon) : "generelt",
+    audience:
+      list && list.memberIds.length < huskMockData.familyMembers.length
+        ? "people"
+        : "family",
     participantIds:
       list && list.memberIds.length < huskMockData.familyMembers.length
         ? list.memberIds
@@ -220,10 +248,19 @@ function readStoredDraft(storageKey: string, fallback: HuskFocusDraft) {
   }
 
   try {
-    const parsedDraft = JSON.parse(storedDraft) as HuskFocusDraft;
+    const parsedDraft = JSON.parse(storedDraft) as Partial<HuskFocusDraft>;
+    const migratedDraft: HuskFocusDraft = {
+      ...fallback,
+      ...parsedDraft,
+      audience:
+        parsedDraft.audience ??
+        ((parsedDraft.participantIds?.length ?? 0) > 0
+          ? "people"
+          : fallback.audience),
+    };
     return pickedIcon
-      ? { ...parsedDraft, iconId: pickedIcon as EventFormIconId }
-      : parsedDraft;
+      ? { ...migratedDraft, iconId: pickedIcon as EventFormIconId }
+      : migratedDraft;
   } catch {
     return fallback;
   }
@@ -257,11 +294,14 @@ export function HuskFocusFormClient({
       ? "Ny liste"
       : "Rediger liste";
   const titlePlaceholder = isReminder ? "Hva må huskes?" : "Navn på listen";
+  const hasAudience =
+    draft.audience === "family" || draft.participantIds.length > 0;
   const isValid =
     draft.title.trim().length > 0 &&
+    hasAudience &&
     (!isReminder || draft.date.trim().length > 0);
   const iconPickerHref = `/calendar/events/icon-picker?returnTo=${encodeURIComponent(pathname)}&draftKey=${encodeURIComponent(storageKey)}`;
-  const scopeSummary = getScopeSummary(draft.participantIds);
+  const scopeSummary = getScopeSummary(draft.audience, draft.participantIds);
 
   useEffect(() => {
     setDraft(readStoredDraft(storageKey, defaultDraft));
@@ -278,9 +318,18 @@ export function HuskFocusFormClient({
     setDraft((currentDraft) => ({ ...currentDraft, [key]: value }));
   }
 
+  function selectFamilyAudience() {
+    setDraft((currentDraft) => ({
+      ...currentDraft,
+      audience: "family",
+      participantIds: [],
+    }));
+  }
+
   function toggleParticipant(memberId: string) {
     setDraft((currentDraft) => ({
       ...currentDraft,
+      audience: "people",
       participantIds: currentDraft.participantIds.includes(memberId)
         ? currentDraft.participantIds.filter(
             (participantId) => participantId !== memberId,
@@ -406,22 +455,25 @@ export function HuskFocusFormClient({
             </div>
           </div>
           <div className="event-form-scope-summary" aria-live="polite">
-            <ScopePreview participantIds={draft.participantIds} />
+            <ScopePreview
+              audience={draft.audience}
+              participantIds={draft.participantIds}
+            />
             <span>{scopeSummary}</span>
           </div>
           <div className="event-form-avatar-list" aria-label="Velg personer">
             <button
-              className={`event-form-avatar-chip event-form-avatar-chip--family${draft.participantIds.length === 0 ? " event-form-avatar-chip--selected" : ""}`}
+              className={`event-form-avatar-chip event-form-avatar-chip--family${draft.audience === "family" ? " event-form-avatar-chip--selected" : ""}`}
               type="button"
-              onClick={() => updateDraft("participantIds", [])}
-              aria-pressed={draft.participantIds.length === 0}
+              onClick={selectFamilyAudience}
+              aria-pressed={draft.audience === "family"}
             >
               <span
                 className="event-form-avatar-chip__avatar event-form-avatar-chip__avatar--family"
                 aria-hidden="true"
               >
                 <Users size={19} strokeWidth={2.5} />
-                {draft.participantIds.length === 0 ? (
+                {draft.audience === "family" ? (
                   <span className="event-form-avatar-chip__check">
                     <Check size={13} strokeWidth={3.2} />
                   </span>

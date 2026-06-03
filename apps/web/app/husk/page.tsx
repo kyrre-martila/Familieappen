@@ -648,10 +648,8 @@ function HuskReminderDetailSheet({
               <CalendarDays aria-hidden="true" size={19} strokeWidth={2.4} />
               <span>{reminder.dateLabel}</span>
             </div>
-            {reminder.title.includes("pass") ? (
-              <p className="husk-reminder-detail__note">
-                Sjekk at alle pass er gyldige før reisen.
-              </p>
+            {reminder.note ? (
+              <p className="husk-reminder-detail__note">{reminder.note}</p>
             ) : null}
           </div>
           <div className="calendar-filter-sheet__actions">
