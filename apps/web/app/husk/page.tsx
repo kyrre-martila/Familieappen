@@ -104,6 +104,97 @@ const schoolIconOptions = [
   { value: "gift", label: "Dag" },
 ] satisfies { value: HuskReminderIcon; label: string }[];
 
+type HuskPersonFilter = "all" | "kyrre" | "elisabeth" | "fiona" | "alma" | "even-olai" | "family";
+
+type HuskFilters = {
+  person: HuskPersonFilter;
+  showPrevious: boolean;
+};
+
+type ListFilters = {
+  person: HuskPersonFilter;
+  showArchived: boolean;
+};
+
+const personFilterOptions = [
+  { value: "all", label: "Alle" },
+  { value: "kyrre", label: "Kyrre" },
+  { value: "elisabeth", label: "Elisabeth" },
+  { value: "fiona", label: "Fiona" },
+  { value: "alma", label: "Alma" },
+  { value: "even-olai", label: "Even-Olai" },
+  { value: "family", label: "Hele familien" },
+] satisfies { value: HuskPersonFilter; label: string }[];
+
+const defaultHuskFilters: HuskFilters = { person: "all", showPrevious: false };
+const defaultListFilters: ListFilters = { person: "all", showArchived: false };
+
+const previousReminders: HuskReminder[] = [
+  {
+    id: "previous-gymtoy",
+    title: "Gymtøy",
+    scopeText: "Fiona",
+    dateLabel: "I går",
+    group: "today",
+    icon: "shirt",
+    tone: "yellow",
+    memberIds: ["fiona"],
+  },
+  {
+    id: "previous-library-book",
+    title: "Bibliotekbok",
+    scopeText: "Fiona",
+    dateLabel: "Mandag",
+    group: "today",
+    icon: "book",
+    tone: "blue",
+    memberIds: ["fiona"],
+  },
+  {
+    id: "previous-rainwear",
+    title: "Ta med regntøy",
+    scopeText: "Alma",
+    dateLabel: "Forrige uke",
+    group: "today",
+    icon: "backpack",
+    tone: "purple",
+    memberIds: ["alma"],
+  },
+];
+
+const archivedListGroups: HuskListGroup[] = [
+  {
+    id: "archived-christmas-2024",
+    title: "Jul 2024",
+    completedCount: 12,
+    totalCount: 12,
+    archived: true,
+    icon: "celebration",
+    tone: "purple",
+    memberIds: ["elisabeth", "kyrre", "alma", "even-olai", "fiona"],
+  },
+  {
+    id: "archived-winter-break-2025",
+    title: "Vinterferie 2025",
+    completedCount: 8,
+    totalCount: 8,
+    archived: true,
+    icon: "summer",
+    tone: "blue",
+    memberIds: ["elisabeth", "kyrre", "alma", "even-olai", "fiona"],
+  },
+  {
+    id: "archived-old-birthday-list",
+    title: "Gammel bursdagsliste",
+    completedCount: 6,
+    totalCount: 6,
+    archived: true,
+    icon: "birthday",
+    tone: "green",
+    memberIds: ["elisabeth", "even-olai"],
+  },
+];
+
 type SchoolCreateDraft = {
   weekday: HuskSchoolWeekday;
   dateLabel: string;
@@ -146,6 +237,26 @@ function normalizeSearch(value: string) {
   return value.trim().toLocaleLowerCase("nb-NO");
 }
 
+function matchesPersonFilter(memberIds: string[], scopeText: string, person: HuskPersonFilter) {
+  if (person === "all") {
+    return true;
+  }
+
+  if (person === "family") {
+    return scopeText === "Hele familien";
+  }
+
+  return memberIds.includes(person);
+}
+
+function getHuskActiveFilterCount(filters: HuskFilters) {
+  return Number(filters.person !== defaultHuskFilters.person) + Number(filters.showPrevious !== defaultHuskFilters.showPrevious);
+}
+
+function getListActiveFilterCount(filters: ListFilters) {
+  return Number(filters.person !== defaultListFilters.person) + Number(filters.showArchived !== defaultListFilters.showArchived);
+}
+
 function HuskTabs({ selectedTab, onSelectTab }: { selectedTab: HuskTab; onSelectTab: (tab: HuskTab) => void }) {
   return (
     <div className="husk-tabs" role="tablist" aria-label="Velg husk-visning">
@@ -171,8 +282,22 @@ function HuskTabs({ selectedTab, onSelectTab }: { selectedTab: HuskTab; onSelect
   );
 }
 
-function HuskToolbar({ query, selectedTab, onQueryChange }: { query: string; selectedTab: HuskTab; onQueryChange: (query: string) => void }) {
-  const searchLabel = selectedTab === "lister" ? "Søk i lister" : selectedTab === "skoleuka" ? "Søk i skoleuka" : "Søk i husk";
+function HuskToolbar({
+  activeFilterCount,
+  onOpenFilters,
+  onQueryChange,
+  query,
+  selectedTab,
+}: {
+  activeFilterCount: number;
+  onOpenFilters: () => void;
+  onQueryChange: (query: string) => void;
+  query: string;
+  selectedTab: HuskTab;
+}) {
+  const searchLabel = selectedTab === "lister" ? "Søk i lister" : "Søk i husk";
+  const filterLabel = activeFilterCount > 0 ? `Åpne filtre for ${titleByTab[selectedTab]}. ${activeFilterCount} aktive filter` : `Åpne filtre for ${titleByTab[selectedTab]}`;
+
   return (
     <div className="husk-toolbar" aria-label="Søk og filtrer">
       <label className="husk-search">
@@ -186,10 +311,90 @@ function HuskToolbar({ query, selectedTab, onQueryChange }: { query: string; sel
           value={query}
         />
       </label>
-      <button className="husk-filter-button" type="button" aria-label={`Åpne filtre for ${titleByTab[selectedTab]}`}>
+      <button
+        className={`husk-filter-button${activeFilterCount > 0 ? " husk-filter-button--active" : ""}`}
+        type="button"
+        aria-label={filterLabel}
+        onClick={onOpenFilters}
+      >
         <SlidersHorizontal aria-hidden="true" size={20} strokeWidth={2.4} />
         <span>Filter</span>
+        {activeFilterCount > 0 ? <span className="husk-filter-button__count" aria-hidden="true">{activeFilterCount}</span> : null}
       </button>
+    </div>
+  );
+}
+
+function HuskFilterSheet({
+  isOpen,
+  onClose,
+  onPersonChange,
+  onReset,
+  onToggleChange,
+  person,
+  status,
+  title,
+  toggleChecked,
+  toggleLabel,
+}: {
+  isOpen: boolean;
+  onClose: () => void;
+  onPersonChange: (person: HuskPersonFilter) => void;
+  onReset: () => void;
+  onToggleChange: (checked: boolean) => void;
+  person: HuskPersonFilter;
+  status: string;
+  title: string;
+  toggleChecked: boolean;
+  toggleLabel: string;
+}) {
+  return (
+    <div aria-hidden={!isOpen} className={`calendar-filter-sheet${isOpen ? " calendar-filter-sheet--open" : ""}`}>
+      <button className="calendar-filter-sheet__backdrop" type="button" aria-label="Lukk filter" onClick={onClose} />
+      <section aria-labelledby="husk-filter-title" aria-modal="true" className="calendar-filter-sheet__panel" role="dialog">
+        <div className="calendar-filter-sheet__handle" aria-hidden="true" />
+        <div className="calendar-filter-sheet__header">
+          <div>
+            <h3 className="calendar-filter-sheet__title" id="husk-filter-title">{title}</h3>
+            <p className="calendar-filter-sheet__status">{status}</p>
+          </div>
+          <button className="calendar-filter-sheet__close" type="button" aria-label="Lukk filter" onClick={onClose}>
+            <X aria-hidden="true" size={18} strokeWidth={2.5} />
+          </button>
+        </div>
+        <div className="calendar-filter-sheet__content">
+          <fieldset className="calendar-filter-group">
+            <legend className="calendar-filter-group__legend">Person</legend>
+            <div className="calendar-filter-group__options">
+              {personFilterOptions.map((option) => {
+                const isSelected = person === option.value;
+
+                return (
+                  <label className={`calendar-filter-option${isSelected ? " calendar-filter-option--selected" : ""}`} key={option.value}>
+                    <input
+                      checked={isSelected}
+                      className="calendar-filter-option__input"
+                      name="husk-person-filter"
+                      onChange={() => onPersonChange(option.value)}
+                      type="radio"
+                    />
+                    <span className="calendar-filter-option__label">{option.label}</span>
+                    {isSelected ? <Check className="calendar-filter-option__check" aria-hidden="true" size={16} strokeWidth={2.8} /> : null}
+                  </label>
+                );
+              })}
+            </div>
+          </fieldset>
+          <label className="husk-filter-toggle">
+            <span>{toggleLabel}</span>
+            <input checked={toggleChecked} onChange={(event) => onToggleChange(event.target.checked)} type="checkbox" />
+          </label>
+        </div>
+        <div className="calendar-filter-sheet__actions">
+          <button className="calendar-filter-sheet__action calendar-filter-sheet__action--secondary" type="button" onClick={onReset}>Nullstill</button>
+          <button className="calendar-filter-sheet__action calendar-filter-sheet__action--primary" type="button" onClick={onClose}>Ferdig</button>
+        </div>
+      </section>
     </div>
   );
 }
@@ -228,9 +433,27 @@ function HuskReminderCard({ reminder }: { reminder: HuskReminder }) {
   );
 }
 
-function HuskReminders({ query }: { query: string }) {
+function HuskReminders({ filters, query }: { filters: HuskFilters; query: string }) {
   const normalizedQuery = normalizeSearch(query);
   const reminders = huskMockData.reminders.filter((reminder) => {
+    if (!matchesPersonFilter(reminder.memberIds, reminder.scopeText, filters.person)) {
+      return false;
+    }
+
+    if (!normalizedQuery) {
+      return true;
+    }
+
+    return [reminder.title, reminder.scopeText, reminder.dateLabel].some((value) =>
+      value.toLocaleLowerCase("nb-NO").includes(normalizedQuery),
+    );
+  });
+
+  const filteredPreviousReminders = previousReminders.filter((reminder) => {
+    if (!filters.showPrevious || !matchesPersonFilter(reminder.memberIds, reminder.scopeText, filters.person)) {
+      return false;
+    }
+
     if (!normalizedQuery) {
       return true;
     }
@@ -250,6 +473,21 @@ function HuskReminders({ query }: { query: string }) {
   return (
     <section className="husk-panel" id="husk-panel-husk" role="tabpanel" aria-labelledby="husk-tab-husk">
       <div className="husk-reminder-groups">
+        {filters.showPrevious && filteredPreviousReminders.length > 0 ? (
+          <section className="husk-reminder-group" aria-labelledby="husk-reminder-group-previous">
+            <div className="husk-reminder-group__heading">
+              <h2 className="husk-reminder-group__title" id="husk-reminder-group-previous">Tidligere</h2>
+              <span className="husk-reminder-group__count husk-reminder-group__count--previous" aria-label={`${filteredPreviousReminders.length} tidligere påminnelser`}>
+                {filteredPreviousReminders.length}
+              </span>
+            </div>
+            <div className="husk-card-list">
+              {filteredPreviousReminders.map((reminder) => (
+                <HuskReminderCard key={reminder.id} reminder={reminder} />
+              ))}
+            </div>
+          </section>
+        ) : null}
         {groupedReminders.map(({ group, reminders: groupReminders }) => (
           <section className="husk-reminder-group" key={group} aria-labelledby={`husk-reminder-group-${group}`}>
             <div className="husk-reminder-group__heading">
@@ -288,7 +526,7 @@ function ListCardAvatars({ members }: { members: HuskFamilyMember[] }) {
   );
 }
 
-function HuskListCard({ group }: { group: HuskListGroup }) {
+function HuskListCard({ group, isArchived = false }: { group: HuskListGroup; isArchived?: boolean }) {
   const Icon = listIcons[group.icon];
   const members = group.memberIds
     .map((memberId) => huskMockData.familyMembers.find((member) => member.id === memberId))
@@ -296,12 +534,8 @@ function HuskListCard({ group }: { group: HuskListGroup }) {
   const progressPercent = group.totalCount > 0 ? Math.round((group.completedCount / group.totalCount) * 100) : 0;
   const progressText = `${group.completedCount} av ${group.totalCount} fullført`;
 
-  return (
-    <Link
-      className={`husk-list-card husk-list-card--${group.tone}`}
-      href={`/husk/lister/${group.id}`}
-      aria-label={`Åpne listen ${group.title}. ${progressText}`}
-    >
+  const cardContent = (
+    <>
       <span className="husk-list-card__icon" aria-hidden="true">
         <Icon size={26} strokeWidth={2.25} />
       </span>
@@ -313,15 +547,32 @@ function HuskListCard({ group }: { group: HuskListGroup }) {
         </span>
       </span>
       <ListCardAvatars members={members} />
-      <ChevronRight className="husk-list-card__chevron" aria-hidden="true" size={22} strokeWidth={2.4} />
+      {isArchived ? <span className="husk-list-card__archived-label">Arkivert</span> : <ChevronRight className="husk-list-card__chevron" aria-hidden="true" size={22} strokeWidth={2.4} />}
+    </>
+  );
+
+  if (isArchived) {
+    return <article className={`husk-list-card husk-list-card--${group.tone} husk-list-card--archived`}>{cardContent}</article>;
+  }
+
+  return (
+    <Link
+      className={`husk-list-card husk-list-card--${group.tone}`}
+      href={`/husk/lister/${group.id}`}
+      aria-label={`Åpne listen ${group.title}. ${progressText}`}
+    >
+      {cardContent}
     </Link>
   );
 }
 
-function HuskLists({ query }: { query: string }) {
+function HuskLists({ filters, query }: { filters: ListFilters; query: string }) {
   const normalizedQuery = normalizeSearch(query);
-  const activeListGroups = huskMockData.listGroups.filter((group) => !group.archived);
-  const listGroups = activeListGroups.filter((group) => {
+  const filterListGroups = (groups: HuskListGroup[]) => groups.filter((group) => {
+    if (!matchesPersonFilter(group.memberIds, group.memberIds.length > 2 ? "Hele familien" : "", filters.person)) {
+      return false;
+    }
+
     if (!normalizedQuery) {
       return true;
     }
@@ -334,6 +585,8 @@ function HuskLists({ query }: { query: string }) {
       value.toLocaleLowerCase("nb-NO").includes(normalizedQuery),
     );
   });
+  const activeListGroups = filterListGroups(huskMockData.listGroups.filter((group) => !group.archived));
+  const archivedLists = filters.showArchived ? filterListGroups(archivedListGroups) : [];
 
   return (
     <section className="husk-panel" id="husk-panel-lister" role="tabpanel" aria-labelledby="husk-tab-lister husk-lists-title">
@@ -344,10 +597,25 @@ function HuskLists({ query }: { query: string }) {
         </span>
       </div>
       <div className="husk-card-list">
-        {listGroups.map((group) => (
+        {activeListGroups.map((group) => (
           <HuskListCard key={group.id} group={group} />
         ))}
       </div>
+      {filters.showArchived ? (
+        <section className="husk-reminder-group" aria-labelledby="husk-archived-lists-title">
+          <div className="husk-reminder-group__heading">
+            <h2 className="husk-reminder-group__title" id="husk-archived-lists-title">Arkiverte lister</h2>
+            <span className="husk-reminder-group__count husk-reminder-group__count--later" aria-label={`${archivedLists.length} arkiverte lister`}>
+              {archivedLists.length}
+            </span>
+          </div>
+          <div className="husk-card-list">
+            {archivedLists.map((group) => (
+              <HuskListCard key={group.id} group={group} isArchived />
+            ))}
+          </div>
+        </section>
+      ) : null}
     </section>
   );
 }
@@ -686,7 +954,11 @@ export default function HuskPage() {
   const familyAccess = useFamilyAccess();
   const [selectedTab, setSelectedTab] = useState<HuskTab>("husk");
   const [query, setQuery] = useState("");
+  const [huskFilters, setHuskFilters] = useState<HuskFilters>(defaultHuskFilters);
+  const [listFilters, setListFilters] = useState<ListFilters>(defaultListFilters);
+  const [isFilterSheetOpen, setIsFilterSheetOpen] = useState(false);
   const title = useMemo(() => titleByTab[selectedTab], [selectedTab]);
+  const activeFilterCount = selectedTab === "lister" ? getListActiveFilterCount(listFilters) : getHuskActiveFilterCount(huskFilters);
 
   if (familyAccess.status === "pending") {
     return <LockedFeatureState />;
@@ -709,12 +981,48 @@ export default function HuskPage() {
       <PageContainer>
         <div className="husk-page">
           <HuskTabs selectedTab={selectedTab} onSelectTab={setSelectedTab} />
-          {selectedTab !== "skoleuka" ? <HuskToolbar query={query} selectedTab={selectedTab} onQueryChange={setQuery} /> : null}
-          {selectedTab === "husk" ? <HuskReminders query={query} /> : null}
-          {selectedTab === "lister" ? <HuskLists query={query} /> : null}
+          {selectedTab !== "skoleuka" ? (
+            <HuskToolbar
+              activeFilterCount={activeFilterCount}
+              onOpenFilters={() => setIsFilterSheetOpen(true)}
+              query={query}
+              selectedTab={selectedTab}
+              onQueryChange={setQuery}
+            />
+          ) : null}
+          {selectedTab === "husk" ? <HuskReminders filters={huskFilters} query={query} /> : null}
+          {selectedTab === "lister" ? <HuskLists filters={listFilters} query={query} /> : null}
           {selectedTab === "skoleuka" ? <HuskSchoolWeek /> : null}
         </div>
       </PageContainer>
+      {selectedTab === "husk" ? (
+        <HuskFilterSheet
+          isOpen={isFilterSheetOpen}
+          onClose={() => setIsFilterSheetOpen(false)}
+          onPersonChange={(person) => setHuskFilters((current) => ({ ...current, person }))}
+          onReset={() => setHuskFilters(defaultHuskFilters)}
+          onToggleChange={(showPrevious) => setHuskFilters((current) => ({ ...current, showPrevious }))}
+          person={huskFilters.person}
+          status="Velg person og om tidligere påminnelser skal vises."
+          title="Filter for Husk"
+          toggleChecked={huskFilters.showPrevious}
+          toggleLabel="Vis tidligere"
+        />
+      ) : null}
+      {selectedTab === "lister" ? (
+        <HuskFilterSheet
+          isOpen={isFilterSheetOpen}
+          onClose={() => setIsFilterSheetOpen(false)}
+          onPersonChange={(person) => setListFilters((current) => ({ ...current, person }))}
+          onReset={() => setListFilters(defaultListFilters)}
+          onToggleChange={(showArchived) => setListFilters((current) => ({ ...current, showArchived }))}
+          person={listFilters.person}
+          status="Velg person og om arkiverte lister skal vises."
+          title="Filter for Lister"
+          toggleChecked={listFilters.showArchived}
+          toggleLabel="Vis arkiverte lister"
+        />
+      ) : null}
     </AppShell>
   );
 }
