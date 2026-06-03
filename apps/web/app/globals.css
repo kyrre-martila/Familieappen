@@ -9041,3 +9041,336 @@ select {
   border-radius: 999px;
   border: 1.5px dashed rgba(99, 102, 241, 0.35);
 }
+
+.meals-page--inline {
+  position: relative;
+  padding-bottom: calc(var(--space-xl) * 2);
+}
+
+.meals-page--inline .meals-page__header {
+  align-items: start;
+}
+
+.meals-timeline-card {
+  overflow: hidden;
+}
+
+.meals-timeline {
+  display: grid;
+  gap: var(--space-s);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.meals-timeline__item {
+  display: grid;
+  grid-template-columns: calc(var(--space-xl) * 1.35) minmax(0, 1fr);
+  gap: var(--space-s);
+  align-items: stretch;
+}
+
+.meals-timeline__date {
+  display: grid;
+  justify-items: center;
+  align-content: start;
+  gap: calc(var(--space-xs) / 2);
+  position: relative;
+  padding-top: var(--space-xs);
+  color: var(--color-primary-strong);
+}
+
+.meals-timeline__date::after {
+  content: "";
+  width: 2px;
+  min-height: calc(100% - var(--space-xl));
+  border-radius: var(--radius-pill);
+  background: color-mix(in srgb, var(--color-primary-soft) 70%, transparent);
+}
+
+.meals-timeline__weekday {
+  font-size: var(--text-small);
+  font-weight: 850;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+}
+
+.meals-timeline__day {
+  display: grid;
+  place-items: center;
+  width: calc(var(--space-xl) * 1.05);
+  height: calc(var(--space-xl) * 1.05);
+  border: 1px solid color-mix(in srgb, var(--color-primary) 24%, var(--color-border));
+  border-radius: 50%;
+  background: color-mix(in srgb, var(--color-primary-soft) 44%, var(--color-surface));
+  color: var(--color-primary-strong);
+  font-size: var(--text-body);
+  font-weight: 900;
+}
+
+.meals-timeline__content {
+  min-width: 0;
+}
+
+.meal-plan-card,
+.meal-empty-card,
+.meal-inline-editor {
+  width: 100%;
+  border: 1px solid color-mix(in srgb, var(--color-primary) 14%, var(--color-border));
+  border-radius: var(--radius-l);
+  background: color-mix(in srgb, var(--color-surface) 92%, var(--color-primary-soft));
+  box-shadow: 0 14px 34px color-mix(in srgb, var(--color-primary-strong) 8%, transparent);
+}
+
+.meal-plan-card {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  gap: var(--space-s);
+  align-items: center;
+  padding: var(--space-s);
+}
+
+.meal-plan-card__visual {
+  display: grid;
+  place-items: center;
+  width: calc(var(--space-xl) * 1.25);
+  height: calc(var(--space-xl) * 1.25);
+  border-radius: var(--radius-m);
+  background: color-mix(in srgb, var(--color-primary-soft) 78%, var(--color-surface));
+  color: var(--color-primary-strong);
+}
+
+.meal-plan-card__body {
+  display: grid;
+  gap: calc(var(--space-xs) / 3);
+  min-width: 0;
+}
+
+.meal-plan-card__label {
+  margin: 0;
+  color: var(--color-muted);
+  font-size: var(--text-small);
+  font-weight: 800;
+}
+
+.meal-plan-card__title {
+  margin: 0;
+  overflow-wrap: anywhere;
+  color: var(--color-text);
+  font-size: var(--text-heading);
+  line-height: 1.08;
+  letter-spacing: -0.04em;
+}
+
+.meal-plan-card__menu {
+  display: grid;
+  place-items: center;
+  width: calc(var(--space-xl) * 1.05);
+  height: calc(var(--space-xl) * 1.05);
+  border: 0;
+  border-radius: 50%;
+  background: transparent;
+  color: var(--color-primary-strong);
+  cursor: pointer;
+}
+
+.meal-plan-card__menu:focus,
+.meal-empty-card:focus,
+.meal-inline-editor__input:focus,
+.meal-suggestions__item:focus,
+.meal-suggestions__all:focus,
+.meal-sheet__button:focus,
+.meals-toast__action:focus {
+  outline: calc(var(--space-xs) / 2) solid var(--color-primary-soft);
+  outline-offset: 2px;
+}
+
+.meal-empty-card {
+  display: flex;
+  align-items: center;
+  gap: var(--space-s);
+  min-height: calc(var(--space-xl) * 1.9);
+  padding: var(--space-m);
+  cursor: pointer;
+  color: var(--color-primary-strong);
+  font-size: var(--text-body);
+  font-weight: 850;
+  text-align: left;
+}
+
+.meal-empty-card__plus {
+  display: grid;
+  place-items: center;
+  width: calc(var(--space-xl) * 1.05);
+  height: calc(var(--space-xl) * 1.05);
+  border-radius: 50%;
+  background: var(--color-primary);
+  color: var(--color-surface);
+  font-size: var(--text-heading);
+  line-height: 1;
+}
+
+.meal-inline-editor {
+  display: grid;
+  gap: var(--space-xs);
+  padding: var(--space-s);
+}
+
+.meal-inline-editor__label {
+  display: block;
+}
+
+.meal-inline-editor__input {
+  width: 100%;
+  border: 1px solid color-mix(in srgb, var(--color-primary) 24%, var(--color-border));
+  border-radius: var(--radius-m);
+  padding: var(--space-s) var(--space-m);
+  background: var(--color-surface);
+  color: var(--color-text);
+  font-size: var(--text-body);
+  font-weight: 800;
+}
+
+.meal-inline-editor__input::placeholder {
+  color: var(--color-muted);
+  font-weight: 650;
+}
+
+.meal-suggestions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: calc(var(--space-xs) * 0.75);
+  align-items: center;
+}
+
+.meal-suggestions__item,
+.meal-suggestions__all {
+  border: 1px solid color-mix(in srgb, var(--color-primary) 18%, var(--color-border));
+  border-radius: var(--radius-pill);
+  padding: calc(var(--space-xs) * 0.7) var(--space-s);
+  cursor: pointer;
+  background: color-mix(in srgb, var(--color-surface) 88%, var(--color-primary-soft));
+  color: var(--color-primary-strong);
+  font-size: var(--text-small);
+  font-weight: 800;
+}
+
+.meal-suggestions__all {
+  border-color: transparent;
+  background: transparent;
+  color: var(--color-muted);
+  text-decoration: underline;
+  text-underline-offset: 0.18em;
+}
+
+.meal-sheet {
+  position: fixed;
+  inset: 0;
+  z-index: 30;
+  display: grid;
+  align-items: end;
+  padding: var(--space-m);
+  background: color-mix(in srgb, #0f2b1e 34%, transparent);
+}
+
+.meal-sheet__panel {
+  display: grid;
+  gap: var(--space-xs);
+  width: min(100%, 32rem);
+  margin: 0 auto;
+  border: 1px solid var(--color-border);
+  border-radius: calc(var(--radius-l) + var(--space-s)) calc(var(--radius-l) + var(--space-s)) var(--radius-l) var(--radius-l);
+  padding: var(--space-s);
+  background: var(--color-surface);
+  box-shadow: 0 -18px 48px color-mix(in srgb, #0f2b1e 20%, transparent);
+}
+
+.meal-sheet__handle {
+  justify-self: center;
+  width: calc(var(--space-xl) * 1.35);
+  height: calc(var(--space-xs) / 1.5);
+  border-radius: var(--radius-pill);
+  background: color-mix(in srgb, var(--color-primary) 24%, var(--color-border));
+}
+
+.meal-sheet__title {
+  margin: 0;
+  padding: var(--space-xs) var(--space-s);
+  color: var(--color-muted);
+  font-size: var(--text-small);
+  font-weight: 800;
+}
+
+.meal-sheet__button {
+  width: 100%;
+  border: 0;
+  border-radius: var(--radius-m);
+  padding: var(--space-s) var(--space-m);
+  cursor: pointer;
+  background: color-mix(in srgb, var(--color-primary-soft) 36%, var(--color-surface));
+  color: var(--color-primary-strong);
+  font-size: var(--text-body);
+  font-weight: 850;
+  text-align: left;
+}
+
+.meal-sheet__button--danger {
+  background: color-mix(in srgb, #fee2e2 70%, var(--color-surface));
+  color: #b42318;
+}
+
+.meal-sheet__button--muted {
+  background: transparent;
+  color: var(--color-muted);
+  text-align: center;
+}
+
+.meals-toast {
+  position: fixed;
+  right: var(--space-m);
+  bottom: var(--space-m);
+  left: var(--space-m);
+  z-index: 35;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  gap: var(--space-s);
+  width: min(calc(100% - (var(--space-m) * 2)), 28rem);
+  margin: 0 auto;
+  border: 1px solid color-mix(in srgb, var(--color-primary) 18%, transparent);
+  border-radius: var(--radius-pill);
+  padding: var(--space-s) var(--space-m);
+  background: color-mix(in srgb, var(--color-primary-strong) 94%, #000);
+  color: var(--color-surface);
+  box-shadow: 0 18px 44px color-mix(in srgb, var(--color-primary-strong) 18%, transparent);
+  font-size: var(--text-small);
+  font-weight: 800;
+}
+
+.meals-toast__action {
+  border: 0;
+  padding: 0;
+  cursor: pointer;
+  background: transparent;
+  color: var(--color-surface);
+  font: inherit;
+  text-decoration: underline;
+  text-underline-offset: 0.2em;
+}
+
+@media (min-width: 42rem) {
+  .meals-timeline__item {
+    grid-template-columns: calc(var(--space-xl) * 1.8) minmax(0, 1fr);
+    gap: var(--space-m);
+  }
+
+  .meal-plan-card,
+  .meal-inline-editor {
+    padding: var(--space-m);
+  }
+
+  .meals-toast {
+    left: auto;
+    margin: 0;
+  }
+}
