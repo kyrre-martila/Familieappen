@@ -9837,13 +9837,15 @@ button.calendar-chip {
 }
 
 .meal-card__title {
+  display: -webkit-box;
   overflow: hidden;
   color: var(--color-text);
   font-size: var(--text-body);
   font-weight: 870;
   letter-spacing: -0.04em;
-  text-overflow: ellipsis;
-  white-space: nowrap;
+  overflow-wrap: anywhere;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
 }
 
 .meal-card__menu {
@@ -10122,6 +10124,45 @@ button.calendar-chip {
   cursor: pointer;
 }
 
+.meal-inline-editor__actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: var(--space-xs);
+  padding: 0 var(--space-s) var(--space-s);
+}
+
+.meal-inline-editor__actions button {
+  min-height: calc(var(--space-xl) + var(--space-xs));
+  border: 1px solid transparent;
+  border-radius: var(--radius-pill);
+  padding: var(--space-xs) var(--space-m);
+  background: transparent;
+  color: var(--color-muted);
+  cursor: pointer;
+  font: inherit;
+  font-size: var(--text-small);
+  font-weight: 850;
+}
+
+.meal-inline-editor__actions button[type="submit"] {
+  border-color: color-mix(
+    in srgb,
+    var(--color-primary) 18%,
+    var(--color-border)
+  );
+  background: color-mix(
+    in srgb,
+    var(--color-primary-soft) 42%,
+    var(--color-surface)
+  );
+  color: var(--color-primary-strong);
+}
+
+.meal-inline-editor__actions button:disabled {
+  cursor: not-allowed;
+  opacity: 0.48;
+}
+
 .meal-suggestions {
   display: grid;
   padding-top: calc(var(--space-xs) / 2);
@@ -10147,6 +10188,15 @@ button.calendar-chip {
   background: color-mix(in srgb, var(--color-primary-soft) 26%, transparent);
 }
 
+.meal-suggestions__empty {
+  margin: 0;
+  border-top: 1px solid color-mix(in srgb, var(--color-border) 54%, transparent);
+  padding: var(--space-s) var(--space-m);
+  color: var(--color-muted);
+  font-size: var(--text-small);
+  font-weight: 780;
+}
+
 .meal-suggestions__visual {
   display: grid;
   width: calc(var(--space-l) + var(--space-xs));
@@ -10161,22 +10211,6 @@ button.calendar-chip {
   font-size: var(--text-small);
 }
 
-.meal-suggestions__all {
-  border: 0;
-  border-top: 1px solid color-mix(in srgb, var(--color-border) 76%, transparent);
-  padding: var(--space-s) var(--space-m);
-  background: color-mix(
-    in srgb,
-    var(--color-surface) 84%,
-    var(--color-background-soft)
-  );
-  color: var(--color-primary-strong);
-  cursor: pointer;
-  font: inherit;
-  font-size: var(--text-small);
-  font-weight: 820;
-}
-
 .meal-planner__move-helper {
   justify-self: center;
   margin: calc(-1 * var(--space-xs)) 0 0;
@@ -10189,6 +10223,10 @@ button.calendar-chip {
   position: sticky;
   bottom: calc(var(--space-m) + env(safe-area-inset-bottom));
   z-index: 2;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-s);
   justify-self: center;
   min-height: calc(var(--space-xl) + var(--space-xs));
   border: 1px solid
@@ -10208,6 +10246,18 @@ button.calendar-chip {
   transform: translateY(var(--space-s));
   box-shadow: 0 var(--space-s) var(--space-l)
     color-mix(in srgb, var(--color-text) 9%, transparent);
+}
+
+.meal-move-toast button {
+  border: 0;
+  border-radius: var(--radius-pill);
+  padding: calc(var(--space-xs) / 2) var(--space-s);
+  background: var(--color-surface);
+  color: var(--color-primary-strong);
+  cursor: pointer;
+  font: inherit;
+  font-size: var(--text-small);
+  font-weight: 900;
 }
 
 .meal-move-toast--visible {
