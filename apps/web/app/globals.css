@@ -8691,3 +8691,173 @@ select {
   font-size: var(--text-small);
   text-align: right;
 }
+
+/* Run 3.2 Husk fullscreen and navigation polish */
+.root-app-frame--focus .root-app-frame__main {
+  padding: 0;
+}
+
+.app-shell--focus {
+  min-height: 100vh;
+  min-height: 100svh;
+  gap: 0;
+  padding-top: 0;
+}
+
+.app-shell--focus .app-shell__content,
+.app-shell--focus .page-container {
+  gap: 0;
+  padding-bottom: 0;
+}
+
+.app-shell--focus .husk-page {
+  min-height: 100vh;
+  min-height: 100svh;
+  padding: calc(var(--space-m) + env(safe-area-inset-top)) var(--gutter) calc(var(--space-xl) + env(safe-area-inset-bottom));
+  background:
+    radial-gradient(circle at 18% 0%, color-mix(in srgb, var(--color-primary-soft) 44%, transparent), transparent 24rem),
+    linear-gradient(180deg, #fffdf9 0%, var(--color-background) 100%);
+  animation: husk-focus-enter 180ms ease-out;
+}
+
+.app-shell--focus .husk-tabs,
+.app-shell--focus .husk-toolbar {
+  display: none;
+}
+
+.app-shell--focus .husk-panel {
+  margin-inline: 0;
+  border-top: 0;
+  padding-inline: 0;
+}
+
+.event-form-screen,
+.icon-picker-screen,
+.list-detail {
+  animation: husk-focus-enter 180ms ease-out;
+}
+
+@keyframes husk-focus-enter {
+  from {
+    opacity: 0.001;
+    transform: translateY(0.45rem);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .event-form-screen,
+  .icon-picker-screen,
+  .list-detail,
+  .app-shell--focus .husk-page {
+    animation: none;
+  }
+}
+
+.husk-empty-state {
+  display: grid;
+  justify-items: center;
+  gap: var(--space-m);
+  border: 1px solid color-mix(in srgb, var(--color-border) 78%, transparent);
+  border-radius: calc(var(--radius-l) + var(--space-xs));
+  padding: calc(var(--space-xl) + var(--space-s)) var(--space-l);
+  background:
+    radial-gradient(circle at 50% 0%, color-mix(in srgb, var(--color-primary-soft) 58%, transparent), transparent 13rem),
+    color-mix(in srgb, var(--color-surface) 96%, transparent);
+  color: var(--color-text);
+  text-align: center;
+  box-shadow: 0 var(--space-xs) var(--space-m) color-mix(in srgb, var(--color-text) 4%, transparent);
+}
+
+.husk-empty-state__icon {
+  display: grid;
+  width: calc(var(--space-xl) * 1.65);
+  height: calc(var(--space-xl) * 1.65);
+  place-items: center;
+  border-radius: var(--radius-pill);
+  background: color-mix(in srgb, var(--color-primary-soft) 72%, var(--color-surface));
+  color: var(--color-primary-strong);
+}
+
+.husk-empty-state h3,
+.husk-empty-state p {
+  margin: 0;
+}
+
+.husk-empty-state h3 {
+  color: var(--color-primary-strong);
+  font-size: var(--text-heading);
+  font-weight: 880;
+  letter-spacing: -0.045em;
+}
+
+.husk-empty-state p {
+  margin-top: calc(var(--space-xs) * 0.8);
+  color: var(--color-muted);
+  font-size: var(--text-label);
+  font-weight: 730;
+}
+
+.husk-reminder-card__title,
+.husk-list-card__title,
+.list-detail-row__title,
+.husk-school-item__copy span,
+.event-form-avatar-chip span:last-child,
+.husk-school-quick__chip,
+.calendar-filter-option {
+  overflow-wrap: anywhere;
+}
+
+.husk-list-card__title,
+.husk-reminder-card__title,
+.list-detail__title {
+  hyphens: auto;
+}
+
+.list-detail-row__title {
+  white-space: normal;
+  line-height: 1.18;
+}
+
+.husk-list-card__avatars,
+.list-detail-avatars,
+.event-form-scope-stack {
+  max-width: 100%;
+}
+
+.husk-school-quick__chip,
+.calendar-filter-option,
+.husk-filter-button {
+  min-width: 0;
+}
+
+.event-form-title-input,
+.list-detail-editor__title,
+.husk-school-field input,
+.event-form-textarea,
+.list-detail-field textarea {
+  -webkit-tap-highlight-color: transparent;
+}
+
+@media (max-width: 34rem) {
+  .event-form-card--title {
+    grid-template-columns: minmax(0, 1fr);
+    align-items: stretch;
+  }
+
+  .event-form-icon-link {
+    justify-content: flex-start;
+    white-space: normal;
+  }
+
+  .husk-toolbar {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .husk-filter-button {
+    justify-content: center;
+  }
+}

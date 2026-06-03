@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { CalendarDays, Check, ChevronDown, ChevronLeft, ChevronUp, Gift, GripVertical, MoreHorizontal, Users, X } from "lucide-react";
 import { useRouter } from "next/navigation";
 
@@ -117,17 +117,56 @@ function ListItemRow({
   );
 }
 
+function getDetailStorageKey(listId: string, suffix: string) {
+  return `familieappen:husk:list-detail:${listId}:${suffix}`;
+}
+
+function readStoredDetailValue(storageKey: string, fallback: string) {
+  if (typeof window === "undefined") {
+    return fallback;
+  }
+
+  return window.sessionStorage.getItem(storageKey) ?? fallback;
+}
+
 export function HuskListDetailClient({ list }: { list: HuskListDetail }) {
   const router = useRouter();
   const familyAccess = useFamilyAccess();
-  const [selectedSection, setSelectedSection] = useState<HuskListSection>("active");
-  const [expandedItemId, setExpandedItemId] = useState<string>("kirke-bekreftet");
+  const scrollRef = useRef<HTMLDivElement | null>(null);
+  const [selectedSection, setSelectedSection] = useState<HuskListSection>(() => readStoredDetailValue(getDetailStorageKey(list.id, "section"), "active") as HuskListSection);
+  const [expandedItemId, setExpandedItemId] = useState<string>(() => readStoredDetailValue(getDetailStorageKey(list.id, "expanded"), "kirke-bekreftet"));
   const [listItems, setListItems] = useState<HuskListDetailItem[]>(list.items);
   const sectionItems = listItems.filter((item) => (selectedSection === "completed" ? item.completed : !item.completed));
   const completedCount = listItems.filter((item) => item.completed).length;
   const activeCount = listItems.length - completedCount;
   const progressPercent = list.totalCount > 0 ? Math.round((list.completedCount / list.totalCount) * 100) : 0;
   const expandedItem = listItems.find((item) => item.id === expandedItemId);
+
+  useEffect(() => {
+    window.sessionStorage.setItem(getDetailStorageKey(list.id, "section"), selectedSection);
+  }, [list.id, selectedSection]);
+
+  useEffect(() => {
+    window.sessionStorage.setItem(getDetailStorageKey(list.id, "expanded"), expandedItemId);
+  }, [expandedItemId, list.id]);
+
+  useEffect(() => {
+    const scrollElement = scrollRef.current;
+    if (!scrollElement) {
+      return;
+    }
+
+    const storedScrollTop = Number(window.sessionStorage.getItem(getDetailStorageKey(list.id, "scroll")));
+    if (Number.isFinite(storedScrollTop) && storedScrollTop > 0) {
+      window.requestAnimationFrame(() => {
+        scrollElement.scrollTop = storedScrollTop;
+      });
+    }
+
+    return () => {
+      window.sessionStorage.setItem(getDetailStorageKey(list.id, "scroll"), String(scrollElement.scrollTop));
+    };
+  }, [list.id]);
 
   function updateMockItem(itemId: string, update: Partial<Pick<HuskListDetailItem, "title" | "description">>) {
     setListItems((currentItems) => currentItems.map((item) => (item.id === itemId ? { ...item, ...update } : item)));
@@ -152,7 +191,7 @@ export function HuskListDetailClient({ list }: { list: HuskListDetail }) {
         </Link>
       </div>
 
-      <div className="list-detail__scroll">
+      <div className="list-detail__scroll" ref={scrollRef}>
         <header className="list-detail__hero">
           <span className="list-detail__list-icon" aria-hidden="true">
             <Gift size={48} strokeWidth={2.15} />
@@ -163,7 +202,7 @@ export function HuskListDetailClient({ list }: { list: HuskListDetail }) {
               {expandedItem ? (
                 <span className="list-detail__saved-badge" aria-live="polite">
                   <Check aria-hidden="true" size={17} strokeWidth={3} />
-                  Saved
+                  Lagret
                 </span>
               ) : null}
             </div>

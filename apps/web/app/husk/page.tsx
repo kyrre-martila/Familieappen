@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useSearchParams } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { Suspense, useEffect, useMemo, useState } from "react";
 import {
   Backpack,
@@ -11,6 +11,7 @@ import {
   Car,
   CalendarDays,
   Check,
+  ClipboardList,
   ChevronLeft,
   ChevronRight,
   Gift,
@@ -131,6 +132,11 @@ const defaultHuskFilters: HuskFilters = { person: "all", showPrevious: false };
 const defaultListFilters: ListFilters = { person: "all", showArchived: false };
 const huskTabStorageKey = "familieappen:husk:selected-tab";
 const schoolWeekStorageKey = "familieappen:husk:school-week-start";
+const schoolChildStorageKey = "familieappen:husk:school-child-id";
+const huskQueryStorageKey = "familieappen:husk:query";
+const huskFiltersStorageKey = "familieappen:husk:filters";
+const listFiltersStorageKey = "familieappen:husk:list-filters";
+const huskScrollStorageKey = "familieappen:husk:scroll-y";
 
 function isHuskTab(value: string | null): value is HuskTab {
   return value === "husk" || value === "lister" || value === "skoleuka";
@@ -143,6 +149,31 @@ function readStoredHuskTab() {
 
   const storedTab = window.sessionStorage.getItem(huskTabStorageKey);
   return isHuskTab(storedTab) ? storedTab : "husk";
+}
+
+function readStoredValue(storageKey: string, fallback = "") {
+  if (typeof window === "undefined") {
+    return fallback;
+  }
+
+  return window.sessionStorage.getItem(storageKey) ?? fallback;
+}
+
+function readStoredJson<T>(storageKey: string, fallback: T): T {
+  if (typeof window === "undefined") {
+    return fallback;
+  }
+
+  const storedValue = window.sessionStorage.getItem(storageKey);
+  if (!storedValue) {
+    return fallback;
+  }
+
+  try {
+    return { ...fallback, ...(JSON.parse(storedValue) as Partial<T>) };
+  } catch {
+    return fallback;
+  }
 }
 
 function readStoredSchoolWeekStart(fallback: number) {
@@ -458,6 +489,20 @@ function HuskReminderCard({ reminder }: { reminder: HuskReminder }) {
   );
 }
 
+function HuskEmptyState({ title, description }: { title: string; description: string }) {
+  return (
+    <div className="husk-empty-state" role="status">
+      <span className="husk-empty-state__icon" aria-hidden="true">
+        <ClipboardList size={28} strokeWidth={2.25} />
+      </span>
+      <div>
+        <h3>{title}</h3>
+        <p>{description}</p>
+      </div>
+    </div>
+  );
+}
+
 function HuskReminders({ filters, query }: { filters: HuskFilters; query: string }) {
   const normalizedQuery = normalizeSearch(query);
   const reminders = huskMockData.reminders.filter((reminder) => {
@@ -495,8 +540,11 @@ function HuskReminders({ filters, query }: { filters: HuskFilters; query: string
     }))
     .filter(({ reminders: groupReminders }) => groupReminders.length > 0);
 
+  const hasReminders = groupedReminders.length > 0 || (filters.showPrevious && filteredPreviousReminders.length > 0);
+
   return (
     <section className="husk-panel" id="husk-panel-husk" role="tabpanel" aria-labelledby="husk-tab-husk">
+      {hasReminders ? (
       <div className="husk-reminder-groups">
         {filters.showPrevious && filteredPreviousReminders.length > 0 ? (
           <section className="husk-reminder-group" aria-labelledby="husk-reminder-group-previous">
@@ -531,6 +579,9 @@ function HuskReminders({ filters, query }: { filters: HuskFilters; query: string
           </section>
         ))}
       </div>
+      ) : (
+        <HuskEmptyState title="Ingen husk akkurat nå" description="Trykk + for å legge til en husk" />
+      )}
     </section>
   );
 }
@@ -621,11 +672,15 @@ function HuskLists({ filters, query }: { filters: ListFilters; query: string }) 
           {activeListGroups.length}
         </span>
       </div>
-      <div className="husk-card-list">
-        {activeListGroups.map((group) => (
-          <HuskListCard key={group.id} group={group} />
-        ))}
-      </div>
+      {activeListGroups.length > 0 ? (
+        <div className="husk-card-list">
+          {activeListGroups.map((group) => (
+            <HuskListCard key={group.id} group={group} />
+          ))}
+        </div>
+      ) : (
+        <HuskEmptyState title="Ingen lister ennå" description="Lag din første liste" />
+      )}
       {filters.showArchived ? (
         <section className="husk-reminder-group" aria-labelledby="husk-archived-lists-title">
           <div className="husk-reminder-group__heading">
@@ -779,28 +834,29 @@ function HuskSchoolRecurringChoiceSheet({ itemTitle, onClose, onChoose }: { item
 }
 
 function HuskSchoolWeek({ shouldOpenPlanner }: { shouldOpenPlanner: boolean }) {
+  const router = useRouter();
   const todayWeekStart = useMemo(() => getIsoWeekStart(new Date()), []);
   const todayWeekStartTime = todayWeekStart.getTime();
   const [selectedWeekStartTime, setSelectedWeekStartTime] = useState(() => readStoredSchoolWeekStart(todayWeekStartTime));
-  const [selectedChildIndex, setSelectedChildIndex] = useState(0);
+  const [selectedChildId, setSelectedChildId] = useState(() => readStoredValue(schoolChildStorageKey, schoolChildIds[0]));
   const [isEditing, setIsEditing] = useState(shouldOpenPlanner);
   const [createDraft, setCreateDraft] = useState<SchoolCreateDraft | null>(null);
   const [recurringChoiceTitle, setRecurringChoiceTitle] = useState<string | null>(null);
   const [showSavedBadge, setShowSavedBadge] = useState(false);
 
   useEffect(() => {
-    if (!shouldOpenPlanner) {
-      return;
+    if (shouldOpenPlanner) {
+      setIsEditing(true);
     }
-
-    setSelectedWeekStartTime(todayWeekStartTime);
-    setSelectedChildIndex(0);
-    setIsEditing(true);
-  }, [shouldOpenPlanner, todayWeekStartTime]);
+  }, [shouldOpenPlanner]);
 
   useEffect(() => {
     window.sessionStorage.setItem(schoolWeekStorageKey, String(selectedWeekStartTime));
   }, [selectedWeekStartTime]);
+
+  useEffect(() => {
+    window.sessionStorage.setItem(schoolChildStorageKey, selectedChildId);
+  }, [selectedChildId]);
 
   useEffect(() => {
     if (!showSavedBadge) {
@@ -829,16 +885,37 @@ function HuskSchoolWeek({ shouldOpenPlanner }: { shouldOpenPlanner: boolean }) {
   const schoolChildren = schoolChildIds
     .map((childId) => huskMockData.familyMembers.find((member) => member.id === childId))
     .filter((member): member is HuskFamilyMember => Boolean(member));
+  const selectedChildIndex = Math.max(0, schoolChildren.findIndex((child) => child.id === selectedChildId));
   const selectedChild = schoolChildren[selectedChildIndex] ?? schoolChildren[0];
   const selectedPlan = huskMockData.schoolWeek.find((plan) => plan.childId === selectedChild?.id);
+  const hasSchoolItems = schoolWeekdays.some((weekday) => (selectedPlan?.days[weekday.value] ?? []).length > 0);
   const selectedWeek = weekOptions.find((week) => week.startTime === selectedWeekStartTime);
 
   function showPreviousChild() {
-    setSelectedChildIndex((currentIndex) => (currentIndex - 1 + schoolChildren.length) % schoolChildren.length);
+    const previousChild = schoolChildren[(selectedChildIndex - 1 + schoolChildren.length) % schoolChildren.length];
+    if (previousChild) {
+      setSelectedChildId(previousChild.id);
+    }
   }
 
   function showNextChild() {
-    setSelectedChildIndex((currentIndex) => (currentIndex + 1) % schoolChildren.length);
+    const nextChild = schoolChildren[(selectedChildIndex + 1) % schoolChildren.length];
+    if (nextChild) {
+      setSelectedChildId(nextChild.id);
+    }
+  }
+
+  function toggleEditing() {
+    if (isEditing) {
+      if (shouldOpenPlanner) {
+        router.back();
+      } else {
+        setIsEditing(false);
+      }
+      return;
+    }
+
+    router.push("/husk?tab=skoleuka&edit=1");
   }
 
   function showSaved() {
@@ -875,7 +952,7 @@ function HuskSchoolWeek({ shouldOpenPlanner }: { shouldOpenPlanner: boolean }) {
         </div>
         <div className="husk-school__actions">
           {showSavedBadge ? <span className="husk-school__saved" role="status">Lagret</span> : null}
-          <button className={`husk-school__edit-button${isEditing ? " husk-school__edit-button--done" : ""}`} type="button" onClick={() => setIsEditing((current) => !current)}>
+          <button className={`husk-school__edit-button${isEditing ? " husk-school__edit-button--done" : ""}`} type="button" onClick={toggleEditing}>
             {isEditing ? "Ferdig" : "Rediger"}
           </button>
         </div>
@@ -918,6 +995,10 @@ function HuskSchoolWeek({ shouldOpenPlanner }: { shouldOpenPlanner: boolean }) {
             <ChevronRight aria-hidden="true" size={22} strokeWidth={2.5} />
           </button>
         </div>
+      ) : null}
+
+      {!hasSchoolItems ? (
+        <HuskEmptyState title="Ingen skolehusk denne uka" description="Trykk Rediger for å planlegge skoleuka" />
       ) : null}
 
       <div className="husk-school-week" aria-label={`${selectedWeek?.label ?? "Valgt uke"} for ${selectedChild?.name ?? "valgt barn"}`}>
@@ -996,9 +1077,9 @@ function HuskPageContent() {
   const requestedTab = searchParams.get("tab");
   const shouldOpenSchoolPlanner = requestedTab === "skoleuka" && searchParams.get("edit") === "1";
   const [selectedTab, setSelectedTab] = useState<HuskTab>(() => (isHuskTab(requestedTab) ? requestedTab : readStoredHuskTab()));
-  const [query, setQuery] = useState("");
-  const [huskFilters, setHuskFilters] = useState<HuskFilters>(defaultHuskFilters);
-  const [listFilters, setListFilters] = useState<ListFilters>(defaultListFilters);
+  const [query, setQuery] = useState(() => readStoredValue(huskQueryStorageKey));
+  const [huskFilters, setHuskFilters] = useState<HuskFilters>(() => readStoredJson(huskFiltersStorageKey, defaultHuskFilters));
+  const [listFilters, setListFilters] = useState<ListFilters>(() => readStoredJson(listFiltersStorageKey, defaultListFilters));
   const [isFilterSheetOpen, setIsFilterSheetOpen] = useState(false);
   const title = useMemo(() => titleByTab[selectedTab], [selectedTab]);
   const activeFilterCount = selectedTab === "lister" ? getListActiveFilterCount(listFilters) : getHuskActiveFilterCount(huskFilters);
@@ -1012,6 +1093,32 @@ function HuskPageContent() {
   useEffect(() => {
     window.sessionStorage.setItem(huskTabStorageKey, selectedTab);
   }, [selectedTab]);
+
+  useEffect(() => {
+    window.sessionStorage.setItem(huskQueryStorageKey, query);
+  }, [query]);
+
+  useEffect(() => {
+    window.sessionStorage.setItem(huskFiltersStorageKey, JSON.stringify(huskFilters));
+  }, [huskFilters]);
+
+  useEffect(() => {
+    window.sessionStorage.setItem(listFiltersStorageKey, JSON.stringify(listFilters));
+  }, [listFilters]);
+
+  useEffect(() => {
+    const storedScrollY = Number(window.sessionStorage.getItem(huskScrollStorageKey));
+    if (Number.isFinite(storedScrollY) && storedScrollY > 0) {
+      window.requestAnimationFrame(() => window.scrollTo({ top: storedScrollY }));
+    }
+
+    const storeScroll = () => window.sessionStorage.setItem(huskScrollStorageKey, String(window.scrollY));
+    window.addEventListener("pagehide", storeScroll);
+    return () => {
+      storeScroll();
+      window.removeEventListener("pagehide", storeScroll);
+    };
+  }, []);
 
   if (familyAccess.status === "pending") {
     return <LockedFeatureState />;
