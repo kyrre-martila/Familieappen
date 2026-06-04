@@ -159,6 +159,8 @@ model CalendarEvent {
   title           String
   description     String?
   location        String?
+  icon            String                     @default("family")
+  reminderMinutesBefore Int?
   startsAt        DateTime
   endsAt          DateTime?
   allDay          Boolean                    @default(false)

@@ -14,6 +14,8 @@ import {
   getDefaultEventFormDraft,
   getDraftStorageKey,
   getIconOption,
+  mapEventFormIconToCalendarIcon,
+  mapReminderLabelToReminder,
   reminderOptions,
   repeatOptions
 } from "./eventFormModel";
@@ -69,10 +71,12 @@ function readStoredDraft(storageKey: string, fallback: CalendarEventFormDraft) {
 export function CalendarEventFormClient({ mode, event = null }: CalendarEventFormClientProps) {
   const router = useRouter();
   const pathname = usePathname();
-  const { familyMembers, familyMembersLoading, familyMembersError, refreshFamilyMembers } = useCalendar();
+  const { familyMembers, familyMembersLoading, familyMembersError, refreshFamilyMembers, createEvent, updateEvent, deleteEvent } = useCalendar();
   const storageKey = useMemo(() => getDraftStorageKey(mode, event?.id), [event?.id, mode]);
   const defaultDraft = useMemo(() => getDefaultEventFormDraft(event), [event]);
   const [draft, setDraft] = useState<CalendarEventFormDraft>(() => defaultDraft);
+  const [saveError, setSaveError] = useState<string | null>(null);
+  const [isSaving, setIsSaving] = useState(false);
   const selectedIcon = getIconOption(draft.iconId);
   const title = mode === "create" ? "Ny hendelse" : "Rediger hendelse";
   const isValid = draft.title.trim().length > 0 && draft.date.trim().length > 0;
@@ -95,6 +99,7 @@ export function CalendarEventFormClient({ mode, event = null }: CalendarEventFor
   }, [familyMembers]);
 
   function updateDraft<Key extends keyof CalendarEventFormDraft>(key: Key, value: CalendarEventFormDraft[Key]) {
+    setSaveError(null);
     setDraft((currentDraft) => ({ ...currentDraft, [key]: value }));
   }
 
@@ -111,22 +116,66 @@ export function CalendarEventFormClient({ mode, event = null }: CalendarEventFor
     router.back();
   }
 
-  function handleSave() {
-    if (!isValid) {
+  async function handleSave() {
+    if (!isValid || isSaving) {
       return;
     }
 
-    window.sessionStorage.setItem(storageKey, JSON.stringify(draft));
-    if (mode === "edit" && event) {
-      router.push(`/calendar/events/${event.id}`);
-      return;
-    }
+    setIsSaving(true);
+    setSaveError(null);
 
-    router.push("/calendar");
+    const eventInput = {
+      title: draft.title.trim(),
+      date: draft.date,
+      startTime: draft.allDay ? null : draft.startTime || null,
+      endTime: draft.allDay ? null : draft.endTime || null,
+      allDay: draft.allDay,
+      location: draft.location.trim() || null,
+      description: draft.description.trim() || null,
+      icon: mapEventFormIconToCalendarIcon(draft.iconId),
+      participantIds: draft.participantIds,
+      reminder: mapReminderLabelToReminder(draft.reminder),
+      recurrence: draft.repeat === "Aldri" ? null : { rule: "FREQ=WEEKLY" },
+    };
+
+    try {
+      if (mode === "edit" && event) {
+        const savedEvent = await updateEvent(event.id, eventInput);
+        window.sessionStorage.removeItem(storageKey);
+        window.sessionStorage.removeItem(`${storageKey}:icon`);
+        router.push(`/calendar/events/${savedEvent.id}`);
+        return;
+      }
+
+      await createEvent(eventInput);
+      window.sessionStorage.removeItem(storageKey);
+      window.sessionStorage.removeItem(`${storageKey}:icon`);
+      router.push("/calendar");
+    } catch {
+      setSaveError("Kunne ikke lagre hendelsen akkurat nå");
+    } finally {
+      setIsSaving(false);
+    }
   }
 
-  function handleDelete() {
-    window.alert("Slett hendelse kommer senere.");
+  async function handleDelete() {
+    if (!event || isSaving) {
+      return;
+    }
+
+    setIsSaving(true);
+    setSaveError(null);
+
+    try {
+      await deleteEvent(event.id);
+      window.sessionStorage.removeItem(storageKey);
+      window.sessionStorage.removeItem(`${storageKey}:icon`);
+      router.push("/calendar");
+    } catch {
+      setSaveError("Kunne ikke slette hendelsen akkurat nå");
+    } finally {
+      setIsSaving(false);
+    }
   }
 
   return (
@@ -134,10 +183,10 @@ export function CalendarEventFormClient({ mode, event = null }: CalendarEventFor
       <header className="event-form-topbar" aria-label="Hendelsesskjema">
         <button className="event-form-topbar__action" type="button" onClick={handleCancel}>Avbryt</button>
         <h1 className="event-form-topbar__title" id="event-form-title">{title}</h1>
-        <button className="event-form-topbar__action" type="button" onClick={handleSave} disabled={!isValid} aria-disabled={!isValid}>Lagre</button>
+        <button className="event-form-topbar__action" type="button" onClick={() => void handleSave()} disabled={!isValid || isSaving} aria-disabled={!isValid || isSaving}>Lagre</button>
       </header>
 
-      <form className="event-form" onSubmit={(eventSubmit) => { eventSubmit.preventDefault(); handleSave(); }}>
+      <form className="event-form" onSubmit={(eventSubmit) => { eventSubmit.preventDefault(); void handleSave(); }}>
         {event?.isImported ? (
           <section className="event-form-card event-form-source-note" role="note" aria-label="Importert hendelse">
             <p>Dette er en importert ICS-hendelse. Den eksterne kalenderen er fortsatt sannhet for tittel, tid og sted; FamilieAppen-lagring er lokal/mock i denne MVP-en.</p>
@@ -286,12 +335,13 @@ export function CalendarEventFormClient({ mode, event = null }: CalendarEventFor
         </section>
 
         <div className="event-form-actions">
-          <button className="event-form-primary" type="submit" disabled={!isValid} aria-disabled={!isValid}>
+          {saveError ? <p className="event-form-error" role="status">{saveError}</p> : null}
+          <button className="event-form-primary" type="submit" disabled={!isValid || isSaving} aria-disabled={!isValid || isSaving}>
             <Save aria-hidden="true" size={24} />
-            Lagre hendelse
+            {isSaving ? "Lagrer..." : "Lagre hendelse"}
           </button>
           {mode === "edit" ? (
-            <button className="event-form-delete" type="button" onClick={handleDelete} aria-label="Slett hendelse">
+            <button className="event-form-delete" type="button" onClick={() => void handleDelete()} aria-label="Slett hendelse">
               <Trash2 aria-hidden="true" size={20} />
               Slett hendelse
             </button>

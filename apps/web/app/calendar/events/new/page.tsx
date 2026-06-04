@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 
+import { CalendarProvider } from "../../../../features/calendar/hooks/useCalendar";
 import { CalendarEventFormClient } from "../EventFormClient";
 
 export const metadata: Metadata = {
@@ -7,5 +8,9 @@ export const metadata: Metadata = {
 };
 
 export default function NewCalendarEventPage() {
-  return <CalendarEventFormClient mode="create" />;
+  return (
+    <CalendarProvider>
+      <CalendarEventFormClient mode="create" />
+    </CalendarProvider>
+  );
 }

@@ -14,6 +14,12 @@ export interface CalendarEventDto {
   title: string;
   description: string | null;
   location: string | null;
+  icon: string;
+  reminderMinutesBefore: number | null;
+  date: string;
+  startTime: string | null;
+  endTime: string | null;
+  reminder: { minutesBefore: number; label: string } | null;
   startsAt: string;
   endsAt: string | null;
   allDay: boolean;
@@ -32,6 +38,8 @@ export interface CreateCalendarEventRequestDto {
   title?: unknown;
   description?: unknown;
   location?: unknown;
+  icon?: unknown;
+  reminderMinutesBefore?: unknown;
   startsAt?: unknown;
   endsAt?: unknown;
   allDay?: unknown;
@@ -42,6 +50,8 @@ export interface UpdateCalendarEventRequestDto {
   title?: unknown;
   description?: unknown;
   location?: unknown;
+  icon?: unknown;
+  reminderMinutesBefore?: unknown;
   startsAt?: unknown;
   endsAt?: unknown;
   allDay?: unknown;

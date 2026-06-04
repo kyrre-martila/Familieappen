@@ -33,6 +33,8 @@ type CalendarEventRecord = {
   title: string;
   description: string | null;
   location: string | null;
+  icon: string;
+  reminderMinutesBefore: number | null;
   startsAt: Date;
   endsAt: Date | null;
   allDay: boolean;
@@ -75,6 +77,8 @@ export class CalendarService {
     const title = this.validateTitle(input.title);
     const description = this.validateOptionalText(input.description, "Description", 500);
     const location = this.validateOptionalText(input.location, "Location", 160);
+    const icon = this.validateOptionalIcon(input.icon);
+    const reminderMinutesBefore = this.validateOptionalReminderMinutes(input.reminderMinutesBefore);
     const startsAt = this.validateDateTime(input.startsAt, "Start time");
     const endsAt = this.validateOptionalDateTime(input.endsAt, "End time");
     const allDay = this.validateOptionalBoolean(input.allDay);
@@ -91,6 +95,8 @@ export class CalendarService {
         title,
         description,
         location,
+        icon,
+        reminderMinutesBefore,
         startsAt,
         endsAt,
         allDay,
@@ -125,6 +131,14 @@ export class CalendarService {
 
     if (input.location !== undefined) {
       updateData.location = this.validateOptionalText(input.location, "Location", 160);
+    }
+
+    if (input.icon !== undefined) {
+      updateData.icon = this.validateOptionalIcon(input.icon);
+    }
+
+    if (input.reminderMinutesBefore !== undefined) {
+      updateData.reminderMinutesBefore = this.validateOptionalReminderMinutes(input.reminderMinutesBefore);
     }
 
     if (input.startsAt !== undefined) {
@@ -268,6 +282,41 @@ export class CalendarService {
     return text.length === 0 ? null : text;
   }
 
+  private validateOptionalIcon(value: unknown): string {
+    if (value === undefined || value === null || value === "") {
+      return "family";
+    }
+
+    if (typeof value !== "string") {
+      throw new BadRequestException("Icon must be text");
+    }
+
+    const icon = value.trim();
+    const allowedIcons = new Set(["sport", "school", "birthday", "health", "travel", "family", "meal"]);
+
+    if (!allowedIcons.has(icon)) {
+      throw new BadRequestException("Icon must be a valid calendar category");
+    }
+
+    return icon;
+  }
+
+  private validateOptionalReminderMinutes(value: unknown): number | null {
+    if (value === undefined || value === null || value === "") {
+      return null;
+    }
+
+    if (typeof value !== "number" || !Number.isInteger(value)) {
+      throw new BadRequestException("Reminder must be a whole number of minutes");
+    }
+
+    if (value < 0 || value > 525600) {
+      throw new BadRequestException("Reminder must be between 0 minutes and 1 year");
+    }
+
+    return value;
+  }
+
   private validateDateTime(value: unknown, fieldName: string): Date {
     if (typeof value !== "string") {
       throw new BadRequestException(`${fieldName} must be a valid date`);
@@ -303,7 +352,7 @@ export class CalendarService {
   }
 
   private validateEventWindow(startsAt: Date, endsAt: Date | null): void {
-    if (endsAt && endsAt < startsAt) {
+    if (endsAt && endsAt <= startsAt) {
       throw new BadRequestException("End time must be after start time");
     }
   }
@@ -345,6 +394,15 @@ export class CalendarService {
       title: event.title,
       description: event.description,
       location: event.location,
+      icon: event.icon,
+      reminderMinutesBefore: event.reminderMinutesBefore,
+      date: formatDate(event.startsAt),
+      startTime: event.allDay ? null : formatTime(event.startsAt),
+      endTime: event.allDay || !event.endsAt ? null : formatTime(event.endsAt),
+      reminder: event.reminderMinutesBefore === null ? null : {
+        minutesBefore: event.reminderMinutesBefore,
+        label: formatReminderLabel(event.reminderMinutesBefore)
+      },
       startsAt: event.startsAt.toISOString(),
       endsAt: event.endsAt?.toISOString() ?? null,
       allDay: event.allDay,
@@ -368,4 +426,30 @@ export class CalendarService {
       }))
     };
   }
+}
+
+function formatDate(date: Date): string {
+  return date.toISOString().slice(0, 10);
+}
+
+function formatTime(date: Date): string {
+  return date.toISOString().slice(11, 16);
+}
+
+function formatReminderLabel(minutes: number): string {
+  if (minutes === 0) {
+    return "Ved start";
+  }
+
+  if (minutes % 1440 === 0) {
+    const days = minutes / 1440;
+    return days === 1 ? "1 dag før" : `${days} dager før`;
+  }
+
+  if (minutes % 60 === 0) {
+    const hours = minutes / 60;
+    return hours === 1 ? "1 time før" : `${hours} timer før`;
+  }
+
+  return `${minutes} min før`;
 }

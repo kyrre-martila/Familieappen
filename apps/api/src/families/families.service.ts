@@ -68,6 +68,8 @@ type CalendarEventRecord = {
   title: string;
   description: string | null;
   location: string | null;
+  icon: string;
+  reminderMinutesBefore: number | null;
   startsAt: Date;
   endsAt: Date | null;
   allDay: boolean;
@@ -322,6 +324,15 @@ export class FamiliesService {
       title: event.title,
       description: event.description,
       location: event.location,
+      icon: event.icon,
+      reminderMinutesBefore: event.reminderMinutesBefore,
+      date: formatDate(event.startsAt),
+      startTime: event.allDay ? null : formatTime(event.startsAt),
+      endTime: event.allDay || !event.endsAt ? null : formatTime(event.endsAt),
+      reminder: event.reminderMinutesBefore === null ? null : {
+        minutesBefore: event.reminderMinutesBefore,
+        label: formatReminderLabel(event.reminderMinutesBefore)
+      },
       startsAt: event.startsAt.toISOString(),
       endsAt: event.endsAt?.toISOString() ?? null,
       allDay: event.allDay,
@@ -500,4 +511,30 @@ export class FamiliesService {
       updatedAt: member.updatedAt.toISOString()
     };
   }
+}
+
+function formatDate(date: Date): string {
+  return date.toISOString().slice(0, 10);
+}
+
+function formatTime(date: Date): string {
+  return date.toISOString().slice(11, 16);
+}
+
+function formatReminderLabel(minutes: number): string {
+  if (minutes === 0) {
+    return "Ved start";
+  }
+
+  if (minutes % 1440 === 0) {
+    const days = minutes / 1440;
+    return days === 1 ? "1 dag før" : `${days} dager før`;
+  }
+
+  if (minutes % 60 === 0) {
+    const hours = minutes / 60;
+    return hours === 1 ? "1 time før" : `${hours} timer før`;
+  }
+
+  return `${minutes} min før`;
 }

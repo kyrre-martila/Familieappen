@@ -293,10 +293,12 @@ export async function addCalendarEvent(
   familyId: string,
   input: {
     title: string;
-    description?: string;
-    location?: string;
+    description?: string | null;
+    location?: string | null;
+    icon?: string;
+    reminderMinutesBefore?: number | null;
     startsAt: string;
-    endsAt?: string;
+    endsAt?: string | null;
     allDay?: boolean;
     participantFamilyMemberIds?: string[];
   }
@@ -313,8 +315,10 @@ export async function updateCalendarEvent(
   eventId: string,
   input: {
     title?: string;
-    description?: string;
-    location?: string;
+    description?: string | null;
+    location?: string | null;
+    icon?: string;
+    reminderMinutesBefore?: number | null;
     startsAt?: string;
     endsAt?: string | null;
     allDay?: boolean;

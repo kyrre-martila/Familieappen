@@ -24,7 +24,7 @@ import type { CalendarMvpEvent, CalendarMvpEventIcon } from "@familieappen/share
 
 import { LockedFeatureState } from "../../../../components/PendingAccess";
 import { useFamilyAccess } from "../../../../components/ProtectedFamilyRoute";
-import { Card, EmptyState, PageContainer } from "../../../../components/ui";
+import { Button, Card, EmptyState, PageContainer } from "../../../../components/ui";
 import { useCalendar } from "../../../../features/calendar/hooks/useCalendar";
 import { remapLegacyMemberIds } from "../../../../features/family/familyMemberAdapters";
 
@@ -90,22 +90,39 @@ function EventDetailLoading() {
   );
 }
 
-export function EventDetailClient({ event }: { event: CalendarMvpEvent }) {
+export function EventDetailClient({ event: initialEvent = null, eventId }: { event?: CalendarMvpEvent | null; eventId?: string }) {
   const router = useRouter();
   const familyAccess = useFamilyAccess();
-  const { familyMembers } = useCalendar();
-  const participantIds = remapLegacyMemberIds(event.participantIds, familyMembers);
-  const participants = getParticipants(participantIds, familyMembers);
-  const EventIcon = eventIcons[event.icon];
-  const isWholeFamily = event.participantIds.length === 0;
-  const description = event.description ?? "Ingen beskrivelse er lagt til ennå.";
+  const { events, loading, error, refresh, familyMembers } = useCalendar();
+  const event = initialEvent ?? events.find((calendarEvent) => calendarEvent.id === eventId) ?? null;
+  const participantIds = event ? remapLegacyMemberIds(event.participantIds, familyMembers) : [];
+  const participants = event ? getParticipants(participantIds, familyMembers) : [];
+  const EventIcon = event ? eventIcons[event.icon] : eventIcons.family;
+  const isWholeFamily = event ? event.participantIds.length === 0 : false;
+  const description = event?.description ?? "Ingen beskrivelse er lagt til ennå.";
 
   if (familyAccess.status === "pending") {
     return <LockedFeatureState />;
   }
 
-  if (familyAccess.status !== "approved") {
+  if (familyAccess.status !== "approved" || loading) {
     return <EventDetailLoading />;
+  }
+
+  if (!event) {
+    return (
+      <main className="event-detail event-detail--state" aria-live="polite">
+        <PageContainer>
+          <Card tone="default">
+            <EmptyState
+              title={error ?? "Kunne ikke hente kalenderen akkurat nå"}
+              description="Prøv igjen, eller gå tilbake til kalenderen."
+            />
+            <Button onClick={() => void refresh()} variant="primary">Prøv igjen</Button>
+          </Card>
+        </PageContainer>
+      </main>
+    );
   }
 
   return (
