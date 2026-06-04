@@ -7,11 +7,12 @@ import { HealthModule } from "./health";
 import { HuskModule } from "./husk";
 import { MealsModule } from "./meals";
 import { PrismaModule } from "./prisma";
+import { SchoolWeekModule } from "./school-week";
 import { ShoppingModule } from "./shopping";
 import { TasksModule } from "./tasks";
 import { WishlistsModule } from "./wishlists";
 
 @Module({
-  imports: [ConfigModule, PrismaModule, HealthModule, AuthModule, FamiliesModule, ShoppingModule, TasksModule, MealsModule, CalendarModule, HuskModule, WishlistsModule]
+  imports: [ConfigModule, PrismaModule, HealthModule, AuthModule, FamiliesModule, ShoppingModule, TasksModule, MealsModule, CalendarModule, HuskModule, SchoolWeekModule, WishlistsModule]
 })
 export class AppModule {}

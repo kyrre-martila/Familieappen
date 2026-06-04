@@ -134,11 +134,22 @@ export type Meal = {
 
 export type SchoolReminder = {
   id: string;
+  familyId?: string;
+  childFamilyMemberId?: string;
   title: string;
   icon: Reminder["icon"];
+  category?: Reminder["icon"];
+  weekday?: SchoolWeekday;
+  date?: string | null;
+  occurrenceDate?: string;
+  isRecurring?: boolean;
+  recurrenceFrequency?: "weekly";
+  recurrenceEndDate?: string | null;
+  recurringSeriesId?: string | null;
+  exceptionOfId?: string | null;
   tone: Exclude<DomainTone, "pink">;
   memberIds?: string[];
-  note?: string;
+  note?: string | null;
   createdAt?: string;
   updatedAt?: string;
   pending?: boolean;

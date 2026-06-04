@@ -46,6 +46,7 @@ model Family {
   reminders Reminder[]
   lists     List[]
   wishlists Wishlist[]
+  schoolWeekReminders SchoolWeekReminder[]
 
   @@map("families")
 }
@@ -66,6 +67,7 @@ model FamilyMember {
   listAudienceMembers ListAudienceMember[]
   assignedListItems ListItem[]
   ownedWishlists Wishlist[]
+  schoolWeekReminders SchoolWeekReminder[]
 
   @@index([familyId])
   @@index([userId])
@@ -284,6 +286,36 @@ model ListItem {
   @@index([listId])
   @@index([assignedFamilyMemberId])
   @@map("husk_list_items")
+}
+
+model SchoolWeekReminder {
+  id                    String                @id @default(cuid())
+  familyId              String
+  childFamilyMemberId   String
+  title                 String
+  icon                  String                @default("backpack")
+  weekday               String
+  date                  DateTime?
+  isRecurring           Boolean               @default(false)
+  recurrenceFrequency   String                @default("weekly")
+  recurrenceEndDate     DateTime?
+  recurringSeriesId     String?
+  exceptionOfId         String?
+  note                  String?
+  createdAt             DateTime              @default(now())
+  updatedAt             DateTime              @updatedAt
+  deletedAt             DateTime?
+  family                Family                @relation(fields: [familyId], references: [id], onDelete: Cascade)
+  childFamilyMember     FamilyMember          @relation(fields: [childFamilyMemberId], references: [id], onDelete: Cascade)
+  exceptionOf           SchoolWeekReminder?   @relation("SchoolWeekReminderExceptions", fields: [exceptionOfId], references: [id], onDelete: Cascade)
+  exceptions            SchoolWeekReminder[]  @relation("SchoolWeekReminderExceptions")
+
+  @@index([familyId])
+  @@index([childFamilyMemberId])
+  @@index([date])
+  @@index([exceptionOfId])
+  @@index([recurringSeriesId])
+  @@map("school_week_reminders")
 }
 
 model Wishlist {

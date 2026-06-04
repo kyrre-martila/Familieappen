@@ -261,6 +261,33 @@ export interface FamilyMemberSummary {
   role: FamilyMemberRole;
 }
 
+
+export type SchoolWeekday = "monday" | "tuesday" | "wednesday" | "thursday" | "friday";
+
+export interface SchoolWeekReminder {
+  id: string;
+  familyId?: string;
+  childFamilyMemberId?: string;
+  title: string;
+  icon: string;
+  category?: string;
+  weekday?: SchoolWeekday;
+  date?: string | null;
+  occurrenceDate?: string;
+  isRecurring?: boolean;
+  recurrenceFrequency?: "weekly";
+  recurrenceEndDate?: string | null;
+  recurringSeriesId?: string | null;
+  exceptionOfId?: string | null;
+  note?: string | null;
+  tone?: "blue" | "green" | "orange" | "purple" | "yellow";
+}
+
+export interface SchoolWeek {
+  childId: string;
+  days: Record<SchoolWeekday, SchoolWeekReminder[]>;
+}
+
 export type {
   CalendarEvent as CalendarMvpEvent,
   CalendarEventIcon as CalendarMvpEventIcon,
