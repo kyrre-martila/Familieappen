@@ -1,0 +1,97 @@
+"use client";
+
+import { useMemo, useState } from "react";
+
+import { Card } from "../../../components/ui";
+import { useCalendar } from "../hooks/useCalendar";
+import { CalendarEmptyState } from "./CalendarEmptyState";
+import { CalendarFilterSheet } from "./CalendarFilterSheet";
+import { CalendarListDayGroup } from "./CalendarListDayGroup";
+import { CalendarListFilters } from "./CalendarListFilters";
+import { defaultListFilters } from "./calendarConfig";
+import { buildListDayGroups, countActiveListFilters } from "./calendarFilters";
+import type { CalendarListFilters as CalendarListFiltersType } from "./calendarTypes";
+
+export function CalendarListView() {
+  const [filters, setFilters] =
+    useState<CalendarListFiltersType>(defaultListFilters);
+  const [draftFilters, setDraftFilters] =
+    useState<CalendarListFiltersType>(defaultListFilters);
+  const [isFilterOpen, setIsFilterOpen] = useState(false);
+  const activeFilterCount = countActiveListFilters(filters);
+  const { events: calendarEvents, mealSummaries: mealPlannerMeals, reminders, today } = useCalendar();
+  const dayGroups = useMemo(
+    () => buildListDayGroups(filters, calendarEvents, reminders, mealPlannerMeals),
+    [calendarEvents, filters, mealPlannerMeals, reminders],
+  );
+
+  function openFilterSheet() {
+    setDraftFilters(filters);
+    setIsFilterOpen(true);
+  }
+
+  function closeFilterSheet() {
+    setIsFilterOpen(false);
+  }
+
+  function applyFilters() {
+    setFilters(draftFilters);
+    setIsFilterOpen(false);
+  }
+
+  function resetFilters() {
+    setDraftFilters(defaultListFilters);
+    setFilters(defaultListFilters);
+    setIsFilterOpen(false);
+  }
+
+  return (
+    <section
+      className="calendar-list-view"
+      aria-labelledby="calendar-list-title"
+    >
+      <div className="calendar-list-view__toolbar">
+        <h2 className="calendar-list-view__title" id="calendar-list-title">
+          Familietidslinje
+        </h2>
+        <CalendarListFilters
+          activeFilterCount={activeFilterCount}
+          isFilterOpen={isFilterOpen}
+          onOpenFilterSheet={openFilterSheet}
+        />
+      </div>
+
+      {isFilterOpen ? (
+        <CalendarFilterSheet
+          draftFilters={draftFilters}
+          isOpen={isFilterOpen}
+          onApply={applyFilters}
+          onClose={closeFilterSheet}
+          onDraftChange={setDraftFilters}
+          onReset={resetFilters}
+        />
+      ) : null}
+
+      {activeFilterCount > 0 ? (
+        <p className="calendar-list-view__filter-status" aria-live="polite">
+          {activeFilterCount} aktive filter påvirker listen.
+        </p>
+      ) : null}
+
+      {dayGroups.length > 0 ? (
+        <div className="calendar-list-view__groups">
+          {dayGroups.map((group) => (
+            <CalendarListDayGroup group={group} key={group.date} today={today} />
+          ))}
+        </div>
+      ) : (
+        <Card tone="default" className="calendar-list-empty">
+          <CalendarEmptyState
+            title="Ingen treff"
+            description="Prøv å endre filteret."
+          />
+        </Card>
+      )}
+    </section>
+  );
+}
