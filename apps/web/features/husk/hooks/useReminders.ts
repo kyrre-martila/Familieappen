@@ -2,15 +2,22 @@
 
 import { useState } from "react";
 
-import { huskMockData, type HuskReminder } from "../../../app/husk/mockHuskData";
+import { huskMockData } from "../../../app/husk/mockHuskData";
+import type { HuskFamilyMember, HuskReminder } from "../types";
 
 export type ReminderInput = Omit<HuskReminder, "id"> & { id?: string };
 
 export function useReminders() {
-  const [reminders, setReminders] = useState<HuskReminder[]>(huskMockData.reminders);
+  const [reminders, setReminders] = useState<HuskReminder[]>(
+    huskMockData.reminders,
+  );
+  const familyMembers = huskMockData.familyMembers as HuskFamilyMember[];
 
   function createReminder(input: ReminderInput) {
-    const reminder: HuskReminder = { ...input, id: input.id ?? `mock-reminder-${Date.now()}` };
+    const reminder: HuskReminder = {
+      ...input,
+      id: input.id ?? `mock-reminder-${Date.now()}`,
+    };
     setReminders((currentReminders) => [reminder, ...currentReminders]);
     return reminder;
   }
@@ -29,5 +36,11 @@ export function useReminders() {
     );
   }
 
-  return { familyMembers: huskMockData.familyMembers, reminders, createReminder, updateReminder, deleteReminder };
+  return {
+    familyMembers,
+    reminders,
+    createReminder,
+    updateReminder,
+    deleteReminder,
+  };
 }
