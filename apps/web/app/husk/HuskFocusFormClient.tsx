@@ -19,13 +19,13 @@ import {
   type EventFormIconId,
 } from "../calendar/events/eventFormModel";
 import {
-  huskMockData,
   type HuskFamilyMember,
   type HuskListGroup,
   type HuskReminder,
   type HuskReminderIcon,
   type HuskListIcon,
 } from "./mockHuskData";
+import { useReminders } from "../../features/husk/hooks/useReminders";
 
 type HuskFocusKind = "reminder" | "list";
 type HuskFocusMode = "create" | "edit";
@@ -57,16 +57,16 @@ const quickReminderExamples = [
   "Planlegg sommerferie",
 ];
 
-function getOrderedFamilyMembers() {
-  return [...huskMockData.familyMembers].sort(
+function getOrderedFamilyMembers(familyMembers: HuskFamilyMember[]) {
+  return [...familyMembers].sort(
     (memberA, memberB) =>
       familyMemberOrder.indexOf(memberA.id) -
       familyMemberOrder.indexOf(memberB.id),
   );
 }
 
-function getMembers(memberIds: string[]) {
-  return getOrderedFamilyMembers().filter((member) =>
+function getMembers(memberIds: string[], familyMembers: HuskFamilyMember[]) {
+  return getOrderedFamilyMembers(familyMembers).filter((member) =>
     memberIds.includes(member.id),
   );
 }
@@ -74,8 +74,9 @@ function getMembers(memberIds: string[]) {
 function getScopeSummary(
   audience: HuskFocusDraft["audience"],
   participantIds: string[],
+  familyMembers: HuskFamilyMember[],
 ) {
-  const selectedMembers = getMembers(participantIds);
+  const selectedMembers = getMembers(participantIds, familyMembers);
 
   if (audience === "family") {
     return "Hele familien";
@@ -94,12 +95,14 @@ function getScopeSummary(
 
 function ScopePreview({
   audience,
+  familyMembers,
   participantIds,
 }: {
   audience: HuskFocusDraft["audience"];
+  familyMembers: HuskFamilyMember[];
   participantIds: string[];
 }) {
-  const selectedMembers = getMembers(participantIds);
+  const selectedMembers = getMembers(participantIds, familyMembers);
   const visibleMembers = selectedMembers.slice(0, 3);
   const hiddenCount = Math.max(
     selectedMembers.length - visibleMembers.length,
@@ -191,13 +194,14 @@ function getDraftStorageKey(
 }
 
 function getDefaultDraft({
+  familyMemberCount,
   kind,
   reminder,
   list,
 }: Pick<
   HuskFocusFormClientProps,
   "kind" | "reminder" | "list"
->): HuskFocusDraft {
+> & { familyMemberCount: number }): HuskFocusDraft {
   if (kind === "reminder") {
     return {
       title: reminder?.title ?? "",
@@ -220,11 +224,11 @@ function getDefaultDraft({
     title: list?.title ?? "",
     iconId: list ? mapListIcon(list.icon) : "generelt",
     audience:
-      list && list.memberIds.length < huskMockData.familyMembers.length
+      list && list.memberIds.length < familyMemberCount
         ? "people"
         : "family",
     participantIds:
-      list && list.memberIds.length < huskMockData.familyMembers.length
+      list && list.memberIds.length < familyMemberCount
         ? list.memberIds
         : [],
     date: "",
@@ -274,14 +278,21 @@ export function HuskFocusFormClient({
 }: HuskFocusFormClientProps) {
   const router = useRouter();
   const pathname = usePathname();
+  const { familyMembers } = useReminders();
   const itemId = kind === "reminder" ? reminder?.id : list?.id;
   const storageKey = useMemo(
     () => getDraftStorageKey(kind, mode, itemId),
     [itemId, kind, mode],
   );
   const defaultDraft = useMemo(
-    () => getDefaultDraft({ kind, reminder, list }),
-    [kind, list, reminder],
+    () =>
+      getDefaultDraft({
+        familyMemberCount: familyMembers.length,
+        kind,
+        reminder,
+        list,
+      }),
+    [familyMembers.length, kind, list, reminder],
   );
   const [draft, setDraft] = useState<HuskFocusDraft>(() => defaultDraft);
   const selectedIcon = getIconOption(draft.iconId) ?? eventIconOptions[0];
@@ -301,7 +312,7 @@ export function HuskFocusFormClient({
     hasAudience &&
     (!isReminder || draft.date.trim().length > 0);
   const iconPickerHref = `/calendar/events/icon-picker?returnTo=${encodeURIComponent(pathname)}&draftKey=${encodeURIComponent(storageKey)}`;
-  const scopeSummary = getScopeSummary(draft.audience, draft.participantIds);
+  const scopeSummary = getScopeSummary(draft.audience, draft.participantIds, familyMembers);
 
   useEffect(() => {
     setDraft(readStoredDraft(storageKey, defaultDraft));
@@ -457,6 +468,7 @@ export function HuskFocusFormClient({
           <div className="event-form-scope-summary" aria-live="polite">
             <ScopePreview
               audience={draft.audience}
+              familyMembers={familyMembers}
               participantIds={draft.participantIds}
             />
             <span>{scopeSummary}</span>
@@ -481,7 +493,7 @@ export function HuskFocusFormClient({
               </span>
               <span>Hele familien</span>
             </button>
-            {getOrderedFamilyMembers().map((member: HuskFamilyMember) => {
+            {getOrderedFamilyMembers(familyMembers).map((member: HuskFamilyMember) => {
               const isSelected = draft.participantIds.includes(member.id);
 
               return (

@@ -34,7 +34,6 @@ import { LockedFeatureState } from "../../components/PendingAccess";
 import { useFamilyAccess } from "../../components/ProtectedFamilyRoute";
 import { Card, EmptyState, PageContainer } from "../../components/ui";
 import {
-  huskMockData,
   type HuskFamilyMember,
   type HuskListGroup,
   type HuskListIcon,
@@ -44,6 +43,9 @@ import {
   type HuskSchoolWeekday,
   type HuskTab,
 } from "./mockHuskData";
+import { useLists } from "../../features/husk/hooks/useLists";
+import { useReminders } from "../../features/husk/hooks/useReminders";
+import { useSchoolWeek } from "../../features/husk/hooks/useSchoolWeek";
 
 const tabs = [
   { value: "husk", label: "Husk" },
@@ -565,9 +567,10 @@ function HuskReminderCard({
   reminder: HuskReminder;
 }) {
   const Icon = reminderIcons[reminder.icon];
+  const { familyMembers } = useReminders();
   const members = reminder.memberIds
     .map((memberId) =>
-      huskMockData.familyMembers.find((member) => member.id === memberId),
+      familyMembers.find((member) => member.id === memberId),
     )
     .filter((member): member is HuskFamilyMember => Boolean(member));
 
@@ -705,8 +708,9 @@ function HuskReminders({
   const [selectedReminder, setSelectedReminder] = useState<HuskReminder | null>(
     null,
   );
+  const { reminders } = useReminders();
   const normalizedQuery = normalizeSearch(query);
-  const reminders = huskMockData.reminders.filter((reminder) => {
+  const filteredReminders = reminders.filter((reminder) => {
     if (
       !matchesPersonFilter(
         reminder.memberIds,
@@ -750,7 +754,7 @@ function HuskReminders({
   const groupedReminders = reminderGroupOrder
     .map((group) => ({
       group,
-      reminders: reminders.filter((reminder) => reminder.group === group),
+      reminders: filteredReminders.filter((reminder) => reminder.group === group),
     }))
     .filter(({ reminders: groupReminders }) => groupReminders.length > 0);
 
@@ -880,9 +884,10 @@ function HuskListCard({
   isArchived?: boolean;
 }) {
   const Icon = listIcons[group.icon];
+  const { familyMembers } = useLists();
   const members = group.memberIds
     .map((memberId) =>
-      huskMockData.familyMembers.find((member) => member.id === memberId),
+      familyMembers.find((member) => member.id === memberId),
     )
     .filter((member): member is HuskFamilyMember => Boolean(member));
   const progressPercent =
@@ -948,6 +953,7 @@ function HuskLists({
   filters: ListFilters;
   query: string;
 }) {
+  const { familyMembers, lists } = useLists();
   const normalizedQuery = normalizeSearch(query);
   const filterListGroups = (groups: HuskListGroup[]) =>
     groups.filter((group) => {
@@ -968,8 +974,7 @@ function HuskLists({
       const memberNames = group.memberIds
         .map(
           (memberId) =>
-            huskMockData.familyMembers.find((member) => member.id === memberId)
-              ?.name ?? "",
+            familyMembers.find((member) => member.id === memberId)?.name ?? "",
         )
         .filter(Boolean);
 
@@ -982,12 +987,10 @@ function HuskLists({
       );
     });
   const activeListGroups = filterListGroups(
-    huskMockData.listGroups.filter((group) => !group.archived),
+    lists.filter((group) => !group.archived),
   );
   const archivedLists = filters.showArchived
-    ? filterListGroups(
-        huskMockData.listGroups.filter((group) => group.archived),
-      )
+    ? filterListGroups(lists.filter((group) => group.archived))
     : [];
 
   return (
@@ -1270,6 +1273,7 @@ function HuskSchoolWeek({ shouldOpenPlanner }: { shouldOpenPlanner: boolean }) {
     string | null
   >(null);
   const [showSavedBadge, setShowSavedBadge] = useState(false);
+  const { children, weekItems } = useSchoolWeek();
 
   useEffect(() => {
     if (shouldOpenPlanner) {
@@ -1309,16 +1313,14 @@ function HuskSchoolWeek({ shouldOpenPlanner }: { shouldOpenPlanner: boolean }) {
     [selectedWeekStartTime],
   );
   const schoolChildren = schoolChildIds
-    .map((childId) =>
-      huskMockData.familyMembers.find((member) => member.id === childId),
-    )
+    .map((childId) => children.find((member) => member.id === childId))
     .filter((member): member is HuskFamilyMember => Boolean(member));
   const selectedChildIndex = Math.max(
     0,
     schoolChildren.findIndex((child) => child.id === selectedChildId),
   );
   const selectedChild = schoolChildren[selectedChildIndex] ?? schoolChildren[0];
-  const selectedPlan = huskMockData.schoolWeek.find(
+  const selectedPlan = weekItems.find(
     (plan) => plan.childId === selectedChild?.id,
   );
   const hasSchoolItems = schoolWeekdays.some(

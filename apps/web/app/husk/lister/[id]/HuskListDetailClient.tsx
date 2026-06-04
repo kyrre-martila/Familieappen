@@ -24,6 +24,7 @@ import type {
   HuskListDetailItem,
   HuskListSection,
 } from "../../mockHuskData";
+import { useLists } from "../../../../features/husk/hooks/useLists";
 
 const sectionLabels = {
   active: "Pågår",
@@ -275,7 +276,14 @@ export function HuskListDetailClient({ list }: { list: HuskListDetail }) {
       "kirke-bekreftet",
     ),
   );
-  const [listItems, setListItems] = useState<HuskListDetailItem[]>(list.items);
+  const {
+    listItems,
+    createListItem,
+    updateListItem,
+    deleteListItem,
+    completeListItem,
+    uncompleteListItem,
+  } = useLists(list);
   const [showSavedBadge, setShowSavedBadge] = useState(false);
   const [undoItemId, setUndoItemId] = useState<string | null>(null);
   const [recentlyCompletedItemId, setRecentlyCompletedItemId] = useState<
@@ -344,11 +352,7 @@ export function HuskListDetailClient({ list }: { list: HuskListDetail }) {
     itemId: string,
     update: Partial<Pick<HuskListDetailItem, "title" | "description">>,
   ) {
-    setListItems((currentItems) =>
-      currentItems.map((item) =>
-        item.id === itemId ? { ...item, ...update } : item,
-      ),
-    );
+    updateListItem(itemId, update);
     showSaved();
   }
 
@@ -359,11 +363,11 @@ export function HuskListDetailClient({ list }: { list: HuskListDetail }) {
     }
 
     const nextCompleted = !currentItem.completed;
-    setListItems((currentItems) =>
-      currentItems.map((item) =>
-        item.id === itemId ? { ...item, completed: nextCompleted } : item,
-      ),
-    );
+    if (nextCompleted) {
+      completeListItem(itemId);
+    } else {
+      uncompleteListItem(itemId);
+    }
     setExpandedItemId((currentId) => (currentId === itemId ? "" : currentId));
     setSelectedSection(nextCompleted ? "completed" : "active");
     setUndoItemId(nextCompleted ? itemId : null);
@@ -376,20 +380,14 @@ export function HuskListDetailClient({ list }: { list: HuskListDetail }) {
       return;
     }
 
-    setListItems((currentItems) =>
-      currentItems.map((item) =>
-        item.id === undoItemId ? { ...item, completed: false } : item,
-      ),
-    );
+    uncompleteListItem(undoItemId);
     setSelectedSection("active");
     setUndoItemId(null);
     setRecentlyCompletedItemId(null);
   }
 
   function deleteMockItem(itemId: string) {
-    setListItems((currentItems) =>
-      currentItems.filter((item) => item.id !== itemId),
-    );
+    deleteListItem(itemId);
     setExpandedItemId("");
     showSaved();
   }
@@ -404,7 +402,7 @@ export function HuskListDetailClient({ list }: { list: HuskListDetail }) {
     };
 
     setSelectedSection("active");
-    setListItems((currentItems) => [nextItem, ...currentItems]);
+    createListItem(nextItem);
     setExpandedItemId(nextItem.id);
     showSaved();
   }
