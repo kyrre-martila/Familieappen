@@ -308,7 +308,7 @@ function MealsPageContent() {
       return false;
     }
 
-    saveMeal(currentEditingOffset, currentInputValue, { silent: true });
+    void saveMeal(currentEditingOffset, currentInputValue, { silent: true });
     return true;
   }
 
@@ -331,7 +331,7 @@ function MealsPageContent() {
     setInputValue("");
   }
 
-  function saveMeal(
+  async function saveMeal(
     offset: number,
     title: string,
     options: { silent?: boolean } = {},
@@ -351,15 +351,19 @@ function MealsPageContent() {
       return;
     }
 
-    void updateMeal({ offset, title: trimmedTitle }).catch(() => undefined);
     closeEditor();
 
-    if (!options.silent) {
-      showToast("Middag lagret");
+    try {
+      await updateMeal({ offset, title: trimmedTitle });
+      if (!options.silent) {
+        showToast("Middag lagret");
+      }
+    } catch {
+      // useMeals restores visible state and exposes calm error copy through mealError.
     }
   }
 
-  function deleteMeal(offset: number) {
+  async function deleteMeal(offset: number) {
     const mealToDelete = mealsByOffset.get(offset);
 
     if (!mealToDelete) {
@@ -367,20 +371,34 @@ function MealsPageContent() {
       return;
     }
 
-    void deleteMealFromStore({ offset }).catch(() => undefined);
-    setUndoMeal({ offset, meal: mealToDelete });
     closeEditor();
-    showToast("Middag slettet");
+
+    try {
+      const deletedMeal = await deleteMealFromStore({ offset });
+      if (deletedMeal) {
+        setUndoMeal({ offset, meal: mealToDelete });
+        showToast("Middag slettet");
+      }
+    } catch {
+      // useMeals rolls back the optimistic delete and surfaces mealError for retry.
+    }
   }
 
-  function undoDeleteMeal() {
+  async function undoDeleteMeal() {
     if (!undoMeal) {
       return;
     }
 
-    void restoreMeal(undoMeal.offset, undoMeal.meal).catch(() => undefined);
+    const mealToRestore = undoMeal;
     setUndoMeal(null);
-    showToast("Middag lagt tilbake");
+
+    try {
+      await restoreMeal(mealToRestore.offset, mealToRestore.meal);
+      showToast("Middag lagt tilbake");
+    } catch {
+      setUndoMeal(mealToRestore);
+      // useMeals removes the failed restore and exposes mealError for retry.
+    }
   }
 
   function showToast(message: string) {
@@ -447,7 +465,7 @@ function MealsPageContent() {
     );
   }
 
-  function handleDayDrop(targetOffset: number, event: DragEvent<HTMLElement>) {
+  async function handleDayDrop(targetOffset: number, event: DragEvent<HTMLElement>) {
     if (!isMoveMode) {
       return;
     }
@@ -471,9 +489,14 @@ function MealsPageContent() {
 
     const targetMeal = mealsByOffset.get(targetOffset);
 
-    void moveMeal({ sourceOffset, targetOffset }).catch(() => undefined);
-
-    showToast(targetMeal ? "Middager byttet plass" : "Middag flyttet");
+    try {
+      const result = await moveMeal({ sourceOffset, targetOffset });
+      if (result.moved) {
+        showToast(result.swapped ? "Middager byttet plass" : "Middag flyttet");
+      }
+    } catch {
+      // useMeals restores the previous ordering and exposes mealError for retry.
+    }
   }
 
   function handleDragEnd() {

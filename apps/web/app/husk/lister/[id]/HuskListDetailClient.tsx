@@ -291,6 +291,7 @@ export function HuskListDetailClient({ list }: { list: HuskListDetail }) {
     uncompleteListItem,
   } = useLists(list);
   const [showSavedBadge, setShowSavedBadge] = useState(false);
+  const [actionFeedback, setActionFeedback] = useState<string | null>(null);
   const [undoItemId, setUndoItemId] = useState<string | null>(null);
   const [recentlyCompletedItemId, setRecentlyCompletedItemId] = useState<
     string | null
@@ -366,56 +367,75 @@ export function HuskListDetailClient({ list }: { list: HuskListDetail }) {
   }, [list.id]);
 
   function showSaved() {
+    setActionFeedback(null);
     setShowSavedBadge(true);
   }
 
-  function updateMockItem(
+  async function updateListDetailItem(
     itemId: string,
     update: Partial<Pick<HuskListDetailItem, "title" | "description">>,
   ) {
-    updateListItem(itemId, update);
-    showSaved();
+    try {
+      await updateListItem(itemId, update);
+      showSaved();
+    } catch {
+      setActionFeedback("Punktet ble ikke lagret. Prøv igjen om litt.");
+    }
   }
 
-  function toggleMockCompletion(itemId: string) {
+  async function toggleListItemCompletion(itemId: string) {
     const currentItem = listItems.find((item) => item.id === itemId);
     if (!currentItem) {
       return;
     }
 
     const nextCompleted = !currentItem.completed;
-    if (nextCompleted) {
-      completeListItem(itemId);
-    } else {
-      uncompleteListItem(itemId);
+    try {
+      if (nextCompleted) {
+        await completeListItem(itemId);
+      } else {
+        await uncompleteListItem(itemId);
+      }
+      setActionFeedback(null);
+      setExpandedItemId((currentId) => (currentId === itemId ? "" : currentId));
+      setSelectedSection(nextCompleted ? "completed" : "active");
+      setUndoItemId(nextCompleted ? itemId : null);
+      setRecentlyCompletedItemId(nextCompleted ? itemId : null);
+      window.setTimeout(() => setRecentlyCompletedItemId(null), 900);
+    } catch {
+      setActionFeedback(nextCompleted ? "Punktet ble ikke fullført. Prøv igjen." : "Fullføring ble ikke angret. Prøv igjen.");
     }
-    setExpandedItemId((currentId) => (currentId === itemId ? "" : currentId));
-    setSelectedSection(nextCompleted ? "completed" : "active");
-    setUndoItemId(nextCompleted ? itemId : null);
-    setRecentlyCompletedItemId(nextCompleted ? itemId : null);
-    window.setTimeout(() => setRecentlyCompletedItemId(null), 900);
   }
 
-  function undoCompletion() {
+  async function undoCompletion() {
     if (!undoItemId) {
       return;
     }
 
-    uncompleteListItem(undoItemId);
-    setSelectedSection("active");
-    setUndoItemId(null);
-    setRecentlyCompletedItemId(null);
+    try {
+      await uncompleteListItem(undoItemId);
+      setSelectedSection("active");
+      setUndoItemId(null);
+      setRecentlyCompletedItemId(null);
+      setActionFeedback(null);
+    } catch {
+      setActionFeedback("Fullføring ble ikke angret. Prøv igjen.");
+    }
   }
 
-  function deleteMockItem(itemId: string) {
-    deleteListItem(itemId);
-    setExpandedItemId("");
-    showSaved();
+  async function deleteListDetailItem(itemId: string) {
+    try {
+      await deleteListItem(itemId);
+      setExpandedItemId("");
+      showSaved();
+    } catch {
+      setActionFeedback("Punktet ble ikke slettet. Prøv igjen om litt.");
+    }
   }
 
-  function addMockItem() {
+  async function addListDetailItem() {
     const nextItem: HuskListDetailItem = {
-      id: `mock-item-${Date.now()}`,
+      id: `pending-item-${Date.now()}`,
       title: "Nytt punkt",
       completed: false,
       assignedMemberIds: [],
@@ -423,9 +443,14 @@ export function HuskListDetailClient({ list }: { list: HuskListDetail }) {
     };
 
     setSelectedSection("active");
-    createListItem(nextItem);
-    setExpandedItemId(nextItem.id);
-    showSaved();
+
+    try {
+      const savedItem = await createListItem(nextItem);
+      setExpandedItemId(savedItem.id);
+      showSaved();
+    } catch {
+      setActionFeedback("Punktet ble ikke lagt til. Prøv igjen om litt.");
+    }
   }
 
   if (familyAccess.status === "pending") {
@@ -540,6 +565,12 @@ export function HuskListDetailClient({ list }: { list: HuskListDetail }) {
           })}
         </div>
 
+        {actionFeedback ? (
+          <p className="list-detail__feedback" role="alert">
+            {actionFeedback}
+          </p>
+        ) : null}
+
         <section
           className="list-detail-items"
           aria-label={sectionLabels[selectedSection]}
@@ -550,17 +581,17 @@ export function HuskListDetailClient({ list }: { list: HuskListDetail }) {
               key={item.id}
               list={activeList}
               isExpanded={expandedItemId === item.id}
-              onToggleCompletion={() => toggleMockCompletion(item.id)}
+              onToggleCompletion={() => void toggleListItemCompletion(item.id)}
               onToggleExpansion={() =>
                 setExpandedItemId((currentId) =>
                   currentId === item.id ? "" : item.id,
                 )
               }
-              onTitleChange={(title) => updateMockItem(item.id, { title })}
+              onTitleChange={(title) => void updateListDetailItem(item.id, { title })}
               onDescriptionChange={(description) =>
-                updateMockItem(item.id, { description })
+                void updateListDetailItem(item.id, { description })
               }
-              onDelete={() => deleteMockItem(item.id)}
+              onDelete={() => void deleteListDetailItem(item.id)}
               isRecentlyCompleted={recentlyCompletedItemId === item.id}
             />
           ))}
@@ -580,7 +611,7 @@ export function HuskListDetailClient({ list }: { list: HuskListDetail }) {
         <button
           className="list-detail__add-button"
           type="button"
-          onClick={addMockItem}
+          onClick={() => void addListDetailItem()}
         >
           <Plus aria-hidden="true" size={21} strokeWidth={2.5} />
           Legg til punkt

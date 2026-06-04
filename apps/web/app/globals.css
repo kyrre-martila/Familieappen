@@ -7990,6 +7990,17 @@ button.calendar-chip {
   opacity: 0.9;
 }
 
+.list-detail__feedback {
+  margin: var(--space-m) 0 0;
+  border: 1px solid color-mix(in srgb, var(--color-warning) 35%, transparent);
+  border-radius: var(--radius-l);
+  padding: var(--space-s) var(--space-m);
+  background: color-mix(in srgb, var(--color-warning) 10%, var(--color-surface));
+  color: var(--color-text);
+  font-size: var(--text-small);
+  font-weight: 760;
+}
+
 .list-detail__scope {
   display: inline-flex;
   align-items: center;
