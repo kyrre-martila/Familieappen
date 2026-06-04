@@ -17,10 +17,11 @@ import type {
   WishlistShare,
   WishlistSummary,
   PublicWishlist,
-  PublicWishlistItem
+  PublicWishlistItem,
+  Reminder
 } from "@familieappen/shared";
 
-export type { CalendarEvent, Family, FamilyDashboardResponse, FamilyMember, FamilyMemberRole, ManualFamilyMemberRole, MealPlan, MealPlanDay, ShoppingList, ShoppingListItem, Task, Wishlist, WishlistItem, WishlistShare, WishlistSummary, PublicWishlist, PublicWishlistItem };
+export type { CalendarEvent, Family, FamilyDashboardResponse, FamilyMember, FamilyMemberRole, ManualFamilyMemberRole, MealPlan, MealPlanDay, ShoppingList, ShoppingListItem, Task, Wishlist, WishlistItem, WishlistShare, WishlistSummary, PublicWishlist, PublicWishlistItem, Reminder };
 
 export interface AuthUser {
   id: string;
@@ -334,6 +335,57 @@ export async function updateCalendarEvent(
 
 export async function deleteCalendarEvent(familyId: string, eventId: string): Promise<CalendarEvent> {
   return apiRequest<CalendarEvent>(`/calendar/events/${encodeURIComponent(eventId)}`, {
+    method: "DELETE",
+    familyId
+  });
+}
+
+
+export async function getHuskReminders(familyId: string): Promise<Reminder[]> {
+  return apiRequest<Reminder[]>("/husk/reminders", { familyId });
+}
+
+export async function addHuskReminder(
+  familyId: string,
+  input: {
+    title: string;
+    icon?: string;
+    dueDate: string;
+    reminderMinutesBefore?: number | null;
+    note?: string | null;
+    scope: "family" | "members";
+    memberIds?: string[];
+  }
+): Promise<Reminder> {
+  return apiRequest<Reminder>("/husk/reminders", {
+    method: "POST",
+    body: input,
+    familyId
+  });
+}
+
+export async function updateHuskReminder(
+  familyId: string,
+  reminderId: string,
+  input: {
+    title?: string;
+    icon?: string;
+    dueDate?: string;
+    reminderMinutesBefore?: number | null;
+    note?: string | null;
+    scope?: "family" | "members";
+    memberIds?: string[];
+  }
+): Promise<Reminder> {
+  return apiRequest<Reminder>(`/husk/reminders/${encodeURIComponent(reminderId)}`, {
+    method: "PATCH",
+    body: input,
+    familyId
+  });
+}
+
+export async function deleteHuskReminder(familyId: string, reminderId: string): Promise<Reminder> {
+  return apiRequest<Reminder>(`/husk/reminders/${encodeURIComponent(reminderId)}`, {
     method: "DELETE",
     familyId
   });

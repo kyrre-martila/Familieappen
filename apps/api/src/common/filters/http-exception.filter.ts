@@ -154,6 +154,10 @@ export class HttpExceptionFilter implements ExceptionFilter {
       return API_ERROR_CODES.CALENDAR_EVENT_NOT_FOUND;
     }
 
+    if (normalizedMessage.includes("reminder")) {
+      return API_ERROR_CODES.REMINDER_NOT_FOUND;
+    }
+
     if (normalizedMessage.includes("shared wishlist item")) {
       return API_ERROR_CODES.WISHLIST_ITEM_MISMATCH;
     }

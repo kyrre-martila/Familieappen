@@ -82,6 +82,33 @@ export interface CalendarEvent {
   participants: CalendarEventParticipant[];
 }
 
+export interface ReminderAudienceMember {
+  id: string;
+  reminderId: string;
+  familyMemberId: string;
+  createdAt: string;
+  familyMember: FamilyMember;
+}
+
+export interface Reminder {
+  id: string;
+  familyId: string;
+  title: string;
+  icon: string;
+  dueDate: string;
+  date: string;
+  reminderMinutesBefore: number | null;
+  reminder: { minutesBefore: number; label: string } | null;
+  note: string | null;
+  scope: "family" | "members";
+  memberIds: string[];
+  createdByUserId: string | null;
+  createdAt: string;
+  updatedAt: string;
+  archivedAt: string | null;
+  audienceMembers: ReminderAudienceMember[];
+}
+
 export interface FamilyDashboardResponse {
   family: Family;
   members: FamilyMember[];

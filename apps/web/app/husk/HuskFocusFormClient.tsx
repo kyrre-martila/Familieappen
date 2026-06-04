@@ -44,6 +44,7 @@ type HuskFocusDraft = {
 type HuskFocusFormClientProps = {
   kind: HuskFocusKind;
   mode: HuskFocusMode;
+  reminderId?: string;
   reminder?: HuskReminder | null;
   list?: HuskListGroup | null;
 };
@@ -167,6 +168,23 @@ function mapReminderIcon(icon: HuskReminderIcon): EventFormIconId {
   return iconMap[icon];
 }
 
+function mapEventIconToReminderIcon(icon: EventFormIconId | ""): HuskReminderIcon {
+  const iconMap: Partial<Record<EventFormIconId, HuskReminderIcon>> = {
+    bursdag: "cake",
+    gave: "gift",
+    generelt: "backpack",
+    kjoring: "car",
+    lekser: "book",
+    middag: "grill",
+    reise: "passport",
+    skole: "shirt",
+    skolesekk: "backpack",
+    tannlege: "tooth",
+  };
+
+  return icon ? (iconMap[icon] ?? "backpack") : "backpack";
+}
+
 function mapListIcon(icon: HuskListIcon): EventFormIconId {
   const iconMap = {
     birthday: "bursdag",
@@ -209,9 +227,9 @@ function getDefaultDraft({
         reminder?.scopeText === "Hele familien"
           ? []
           : (reminder?.memberIds ?? []),
-      date: reminder ? "2026-06-03" : getTodayDate(),
+      date: reminder?.dueDate ?? getTodayDate(),
       reminderEnabled: false,
-      description: "",
+      description: reminder?.note ?? "",
     };
   }
 
@@ -268,13 +286,15 @@ function readStoredDraft(storageKey: string, fallback: HuskFocusDraft) {
 export function HuskFocusFormClient({
   kind,
   mode,
+  reminderId,
   reminder = null,
   list = null,
 }: HuskFocusFormClientProps) {
   const router = useRouter();
   const pathname = usePathname();
-  const { familyMembers } = useReminders();
-  const itemId = kind === "reminder" ? reminder?.id : list?.id;
+  const { familyMembers, reminders, createReminder, updateReminder, deleteReminder } = useReminders();
+  const resolvedReminder = kind === "reminder" && reminderId ? reminders.find((candidate) => candidate.id === reminderId) ?? reminder : reminder;
+  const itemId = kind === "reminder" ? resolvedReminder?.id ?? reminderId : list?.id;
   const storageKey = useMemo(
     () => getDraftStorageKey(kind, mode, itemId),
     [itemId, kind, mode],
@@ -284,10 +304,10 @@ export function HuskFocusFormClient({
       getDefaultDraft({
         familyMemberCount: familyMembers.length,
         kind,
-        reminder,
+        reminder: resolvedReminder,
         list,
       }),
-    [familyMembers.length, kind, list, reminder],
+    [familyMembers.length, kind, list, resolvedReminder],
   );
   const [draft, setDraft] = useState<HuskFocusDraft>(() => defaultDraft);
   const selectedIcon = getIconOption(draft.iconId) ?? eventIconOptions[0];
@@ -351,12 +371,40 @@ export function HuskFocusFormClient({
     }));
   }
 
-  function handleSave() {
+  async function handleSave() {
     if (!isValid) {
       return;
     }
 
     window.sessionStorage.setItem(storageKey, JSON.stringify(draft));
+
+    if (isReminder) {
+      const reminderPayload = {
+        title: draft.title,
+        icon: mapEventIconToReminderIcon(draft.iconId),
+        memberIds: draft.audience === "family" ? [] : draft.participantIds,
+        scopeText: draft.audience === "family" ? "Hele familien" : scopeSummary,
+        dueDate: draft.date,
+        note: draft.description || undefined,
+        reminderMinutesBefore: draft.reminderEnabled ? 1440 : null,
+      };
+
+      try {
+        if (mode === "edit" && itemId) {
+          await updateReminder(itemId, reminderPayload);
+        } else {
+          await createReminder(reminderPayload);
+        }
+
+        window.sessionStorage.removeItem(storageKey);
+        router.push("/husk?tab=husk");
+      } catch {
+        window.alert("Kunne ikke lagre husk akkurat nå. Prøv igjen om litt.");
+      }
+
+      return;
+    }
+
     if (kind === "list" && mode === "edit" && list) {
       router.push(`/husk/lister/${list.id}`);
       return;
@@ -365,10 +413,20 @@ export function HuskFocusFormClient({
     router.push(kind === "list" ? "/husk?tab=lister" : "/husk?tab=husk");
   }
 
-  function handleDelete() {
-    window.alert(
-      isReminder ? "Slett husk kommer senere." : "Slett liste kommer senere.",
-    );
+  async function handleDelete() {
+    if (isReminder && itemId) {
+      try {
+        await deleteReminder(itemId);
+        window.sessionStorage.removeItem(storageKey);
+        router.push("/husk?tab=husk");
+      } catch {
+        window.alert("Kunne ikke slette husk akkurat nå. Prøv igjen om litt.");
+      }
+
+      return;
+    }
+
+    window.alert("Slett liste kommer senere.");
   }
 
   return (
