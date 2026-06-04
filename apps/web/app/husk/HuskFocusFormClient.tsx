@@ -18,6 +18,8 @@ import {
   getIconOption,
   type EventFormIconId,
 } from "../calendar/events/eventFormModel";
+import { Button, Card, EmptyState, PageContainer } from "../../components/ui";
+
 import {
   type HuskFamilyMember,
   type HuskListGroup,
@@ -300,8 +302,8 @@ export function HuskFocusFormClient({
 }: HuskFocusFormClientProps) {
   const router = useRouter();
   const pathname = usePathname();
-  const { familyMembers, reminders, createReminder, updateReminder, deleteReminder } = useReminders();
-  const { lists, createList, updateList, deleteList } = useLists();
+  const { familyMembers, reminders, loading: remindersLoading, error: remindersError, refresh: refreshReminders, createReminder, updateReminder, deleteReminder } = useReminders();
+  const { lists, loading: listsLoading, error: listsError, refresh: refreshLists, createList, updateList, deleteList } = useLists();
   const resolvedList = kind === "list" && list?.id ? lists.find((candidate) => candidate.id === list.id) ?? list : list;
   const resolvedReminder = kind === "reminder" && reminderId ? reminders.find((candidate) => candidate.id === reminderId) ?? reminder : reminder;
   const itemId = kind === "reminder" ? resolvedReminder?.id ?? reminderId : resolvedList?.id;
@@ -338,6 +340,9 @@ export function HuskFocusFormClient({
     (!isReminder || draft.date.trim().length > 0);
   const iconPickerHref = `/calendar/events/icon-picker?returnTo=${encodeURIComponent(pathname)}&draftKey=${encodeURIComponent(storageKey)}`;
   const scopeSummary = getScopeSummary(draft.audience, draft.participantIds, familyMembers);
+  const isLoadingExisting = mode === "edit" && (isReminder ? remindersLoading : listsLoading);
+  const missingExistingItem = mode === "edit" && !isLoadingExisting && (isReminder ? !resolvedReminder : !resolvedList?.title);
+  const existingItemError = isReminder ? remindersError : listsError;
 
   useEffect(() => {
     setDraft(readStoredDraft(storageKey, defaultDraft));
@@ -359,6 +364,34 @@ export function HuskFocusFormClient({
       participantIds: remapLegacyMemberIds(currentDraft.participantIds, familyMembers),
     }));
   }, [familyMembers]);
+
+  if (isLoadingExisting) {
+    return (
+      <main className="event-form-screen" aria-live="polite">
+        <PageContainer>
+          <Card tone="default">
+            <EmptyState title={isReminder ? "Henter husk" : "Henter liste"} description="Et lite øyeblikk." />
+          </Card>
+        </PageContainer>
+      </main>
+    );
+  }
+
+  if (missingExistingItem) {
+    return (
+      <main className="event-form-screen" aria-live="polite">
+        <PageContainer>
+          <Card tone="default">
+            <EmptyState
+              title={existingItemError ?? (isReminder ? "Kunne ikke hente husk akkurat nå" : "Kunne ikke hente listen akkurat nå")}
+              description="Prøv igjen, eller gå tilbake til Husk."
+            />
+            <Button onClick={() => void (isReminder ? refreshReminders() : refreshLists())} variant="primary">Prøv igjen</Button>
+          </Card>
+        </PageContainer>
+      </main>
+    );
+  }
 
   function updateDraft<Key extends keyof HuskFocusDraft>(
     key: Key,
@@ -415,7 +448,8 @@ export function HuskFocusFormClient({
         window.sessionStorage.removeItem(storageKey);
         router.push("/husk?tab=husk");
       } catch {
-        window.alert("Kunne ikke lagre husk akkurat nå. Prøv igjen om litt.");
+        // Provider keeps the optimistic state and calm error copy consistent across Husk.
+        return;
       }
 
       return;
@@ -444,7 +478,8 @@ export function HuskFocusFormClient({
           router.push("/husk?tab=lister");
         }
       } catch {
-        window.alert("Kunne ikke lagre liste akkurat nå. Prøv igjen om litt.");
+        // Provider keeps the optimistic state and calm error copy consistent across Lister.
+        return;
       }
 
       return;
@@ -460,7 +495,7 @@ export function HuskFocusFormClient({
         window.sessionStorage.removeItem(storageKey);
         router.push("/husk?tab=husk");
       } catch {
-        window.alert("Kunne ikke slette husk akkurat nå. Prøv igjen om litt.");
+        return;
       }
 
       return;
@@ -472,7 +507,7 @@ export function HuskFocusFormClient({
         window.sessionStorage.removeItem(storageKey);
         router.push("/husk?tab=lister");
       } catch {
-        window.alert("Kunne ikke slette liste akkurat nå. Prøv igjen om litt.");
+        return;
       }
     }
   }

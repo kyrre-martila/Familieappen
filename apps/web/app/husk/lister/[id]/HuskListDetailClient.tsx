@@ -17,6 +17,7 @@ import {
 import { useRouter } from "next/navigation";
 
 import { LockedFeatureState } from "../../../../components/PendingAccess";
+import { Button, Card, EmptyState, PageContainer } from "../../../../components/ui";
 import { useFamilyAccess } from "../../../../components/ProtectedFamilyRoute";
 import type {
   HuskFamilyMember,
@@ -278,6 +279,9 @@ export function HuskListDetailClient({ list }: { list: HuskListDetail }) {
   );
   const {
     familyMembers,
+    loading,
+    error,
+    refresh,
     listDetails,
     listItems,
     createListItem,
@@ -293,6 +297,7 @@ export function HuskListDetailClient({ list }: { list: HuskListDetail }) {
   >(null);
   const backendList = listDetails.find((candidate) => candidate.id === list.id);
   const activeList = { ...(backendList ?? list), familyMembers };
+  const hasLoadedMissingList = !loading && !backendList;
   const sectionItems = listItems.filter((item) =>
     selectedSection === "completed" ? item.completed : !item.completed,
   );
@@ -315,6 +320,18 @@ export function HuskListDetailClient({ list }: { list: HuskListDetail }) {
       expandedItemId,
     );
   }, [expandedItemId, list.id]);
+
+  useEffect(() => {
+    if (expandedItemId && !listItems.some((item) => item.id === expandedItemId)) {
+      setExpandedItemId("");
+    }
+  }, [expandedItemId, listItems]);
+
+  useEffect(() => {
+    if (selectedSection === "completed" && completedCount === 0) {
+      setSelectedSection("active");
+    }
+  }, [completedCount, selectedSection]);
 
   useEffect(() => {
     if (!showSavedBadge) {
@@ -415,10 +432,27 @@ export function HuskListDetailClient({ list }: { list: HuskListDetail }) {
     return <LockedFeatureState />;
   }
 
-  if (familyAccess.status !== "approved") {
+  if (familyAccess.status !== "approved" || loading) {
     return (
-      <main className="list-detail list-detail--state">
-        Sjekker familietilgang …
+      <main className="list-detail list-detail--state" aria-live="polite">
+        <PageContainer>
+          <Card tone="default">
+            <EmptyState title={loading ? "Henter liste" : "Sjekker familietilgang"} description="Et lite øyeblikk." />
+          </Card>
+        </PageContainer>
+      </main>
+    );
+  }
+
+  if (hasLoadedMissingList) {
+    return (
+      <main className="list-detail list-detail--state" aria-live="polite">
+        <PageContainer>
+          <Card tone="default">
+            <EmptyState title={error ?? "Kunne ikke hente listen akkurat nå"} description="Prøv igjen, eller gå tilbake til Lister." />
+            <Button onClick={() => void refresh()} variant="primary">Prøv igjen</Button>
+          </Card>
+        </PageContainer>
       </main>
     );
   }
@@ -456,7 +490,7 @@ export function HuskListDetailClient({ list }: { list: HuskListDetail }) {
               {showSavedBadge ? (
                 <span className="list-detail__saved-badge" aria-live="polite">
                   <Check aria-hidden="true" size={17} strokeWidth={3} />
-                  Lagret
+                  Punkt lagret
                 </span>
               ) : null}
             </div>

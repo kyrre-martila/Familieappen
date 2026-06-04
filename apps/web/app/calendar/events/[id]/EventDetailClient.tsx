@@ -115,7 +115,7 @@ export function EventDetailClient({ event: initialEvent = null, eventId }: { eve
         <PageContainer>
           <Card tone="default">
             <EmptyState
-              title={error ?? "Kunne ikke hente kalenderen akkurat nå"}
+              title={error ?? "Hendelsen finnes ikke lenger"}
               description="Prøv igjen, eller gå tilbake til kalenderen."
             />
             <Button onClick={() => void refresh()} variant="primary">Prøv igjen</Button>

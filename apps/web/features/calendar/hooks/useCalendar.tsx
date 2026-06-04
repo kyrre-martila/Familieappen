@@ -15,7 +15,6 @@ import {
   addCalendarEvent,
   deleteCalendarEvent as deleteBackendCalendarEvent,
   getCalendarEvents,
-  getMealPlan,
   updateCalendarEvent as updateBackendCalendarEvent,
   type CalendarEvent as BackendCalendarEvent,
 } from "../../../lib/api";
@@ -24,6 +23,7 @@ import { mockToday } from "../../../app/calendar/mockCalendarData";
 import { remapLegacyMemberIds } from "../../family/familyMemberAdapters";
 import { useFamilyMembers } from "../../family/hooks/useFamilyMembers";
 import { useReminders } from "../../husk/hooks/useReminders";
+import { useMeals } from "../../meals/hooks/useMeals";
 import type { CalendarEvent, CalendarFamilyMember } from "../../types";
 
 export type CalendarEventInput = Partial<CalendarEvent> & Pick<CalendarEvent, "title" | "date">;
@@ -171,7 +171,8 @@ function useCalendarContractValue(): CalendarContract {
   const [events, setEvents] = useState<CalendarEvent[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const { reminders } = useReminders();
+  const { reminders, loading: remindersLoading, error: remindersError, refresh: refreshReminders } = useReminders();
+  const { meals, loading: mealsLoading, error: mealsError, refresh: refreshMeals } = useMeals();
   const [selectedDate, setSelectedDate] = useState(today || mockToday);
   const [selectedView, setSelectedView] = useState<CalendarViewMode>("day");
   const [mealSummaries, setMealSummaries] = useState<MealSummary[]>([]);
@@ -191,22 +192,32 @@ function useCalendarContractValue(): CalendarContract {
 
     try {
       const range = getCalendarRange(today);
-      const [backendEvents, mealPlan] = await Promise.all([
-        getCalendarEvents(activeFamilyId, range),
-        getMealPlan(activeFamilyId),
-      ]);
+      const backendEvents = await getCalendarEvents(activeFamilyId, range);
       setEvents(backendEvents.map(toCalendarEvent));
-      setMealSummaries(mealPlan.days.map((meal) => ({ date: meal.date, title: meal.title ?? meal.mealName })));
+      await Promise.all([refreshMeals(), refreshReminders()]);
     } catch (refreshError) {
       setError(getUserFacingApiMessage(refreshError, CALENDAR_ERROR_COPY));
     } finally {
       setLoading(false);
     }
-  }, [activeFamilyId, familyMembersLoading, today]);
+  }, [activeFamilyId, familyMembersLoading, refreshMeals, refreshReminders, today]);
 
   useEffect(() => {
     void refresh();
   }, [refresh]);
+
+
+  useEffect(() => {
+    setMealSummaries(meals.filter((meal) => Boolean(meal.date)).map((meal) => ({ date: meal.date as string, title: meal.title })));
+  }, [meals]);
+
+  useEffect(() => {
+    const crossModuleError = remindersError ?? mealsError;
+
+    if (crossModuleError && !error) {
+      setError(crossModuleError);
+    }
+  }, [error, mealsError, remindersError]);
 
   const calendarEvents = useMemo(
     () =>
@@ -295,7 +306,7 @@ function useCalendarContractValue(): CalendarContract {
   return useMemo(
     () => ({
       events: calendarEvents,
-      loading,
+      loading: loading || remindersLoading || mealsLoading,
       error,
       refresh,
       reminders: calendarReminders,
@@ -313,7 +324,7 @@ function useCalendarContractValue(): CalendarContract {
       updateEvent,
       deleteEvent,
     }),
-    [calendarEvents, calendarReminders, createEvent, deleteEvent, error, familyMembers, familyMembersError, familyMembersLoading, loading, mealSummaries, refresh, refreshFamilyMembers, selectedDate, selectedView, today, updateEvent],
+    [calendarEvents, calendarReminders, createEvent, deleteEvent, error, familyMembers, familyMembersError, familyMembersLoading, loading, mealsLoading, mealSummaries, refresh, refreshFamilyMembers, remindersLoading, selectedDate, selectedView, today, updateEvent],
   );
 }
 
