@@ -18,10 +18,12 @@ import type {
   WishlistSummary,
   PublicWishlist,
   PublicWishlistItem,
-  Reminder
+  Reminder,
+  HuskList,
+  HuskListItem
 } from "@familieappen/shared";
 
-export type { CalendarEvent, Family, FamilyDashboardResponse, FamilyMember, FamilyMemberRole, ManualFamilyMemberRole, MealPlan, MealPlanDay, ShoppingList, ShoppingListItem, Task, Wishlist, WishlistItem, WishlistShare, WishlistSummary, PublicWishlist, PublicWishlistItem, Reminder };
+export type { CalendarEvent, Family, FamilyDashboardResponse, FamilyMember, FamilyMemberRole, ManualFamilyMemberRole, MealPlan, MealPlanDay, ShoppingList, ShoppingListItem, Task, Wishlist, WishlistItem, WishlistShare, WishlistSummary, PublicWishlist, PublicWishlistItem, Reminder, HuskList, HuskListItem };
 
 export interface AuthUser {
   id: string;
@@ -389,6 +391,58 @@ export async function deleteHuskReminder(familyId: string, reminderId: string): 
     method: "DELETE",
     familyId
   });
+}
+
+export async function getHuskLists(familyId: string): Promise<HuskList[]> {
+  return apiRequest<HuskList[]>("/husk/lists", { familyId });
+}
+
+export async function addHuskList(
+  familyId: string,
+  input: { title: string; icon?: string; category?: string; description?: string | null; scope: "family" | "members"; memberIds?: string[] }
+): Promise<HuskList> {
+  return apiRequest<HuskList>("/husk/lists", { method: "POST", body: input, familyId });
+}
+
+export async function updateHuskList(
+  familyId: string,
+  listId: string,
+  input: { title?: string; icon?: string; category?: string; description?: string | null; scope?: "family" | "members"; memberIds?: string[]; archivedAt?: string | null }
+): Promise<HuskList> {
+  return apiRequest<HuskList>(`/husk/lists/${encodeURIComponent(listId)}`, { method: "PATCH", body: input, familyId });
+}
+
+export async function deleteHuskList(familyId: string, listId: string): Promise<HuskList> {
+  return apiRequest<HuskList>(`/husk/lists/${encodeURIComponent(listId)}`, { method: "DELETE", familyId });
+}
+
+export async function addHuskListItem(
+  familyId: string,
+  listId: string,
+  input: { title: string; description?: string | null; assignedFamilyMemberId?: string | null; assignedMemberIds?: string[]; dueDate?: string | null; sortOrder?: number }
+): Promise<HuskListItem> {
+  return apiRequest<HuskListItem>(`/husk/lists/${encodeURIComponent(listId)}/items`, { method: "POST", body: input, familyId });
+}
+
+export async function updateHuskListItem(
+  familyId: string,
+  listId: string,
+  itemId: string,
+  input: { title?: string; description?: string | null; completedAt?: string | null; assignedFamilyMemberId?: string | null; assignedMemberIds?: string[]; dueDate?: string | null; sortOrder?: number }
+): Promise<HuskListItem> {
+  return apiRequest<HuskListItem>(`/husk/lists/${encodeURIComponent(listId)}/items/${encodeURIComponent(itemId)}`, { method: "PATCH", body: input, familyId });
+}
+
+export async function deleteHuskListItem(familyId: string, listId: string, itemId: string): Promise<HuskListItem> {
+  return apiRequest<HuskListItem>(`/husk/lists/${encodeURIComponent(listId)}/items/${encodeURIComponent(itemId)}`, { method: "DELETE", familyId });
+}
+
+export async function completeHuskListItem(familyId: string, listId: string, itemId: string): Promise<HuskListItem> {
+  return apiRequest<HuskListItem>(`/husk/lists/${encodeURIComponent(listId)}/items/${encodeURIComponent(itemId)}/complete`, { method: "PATCH", familyId });
+}
+
+export async function uncompleteHuskListItem(familyId: string, listId: string, itemId: string): Promise<HuskListItem> {
+  return apiRequest<HuskListItem>(`/husk/lists/${encodeURIComponent(listId)}/items/${encodeURIComponent(itemId)}/uncomplete`, { method: "PATCH", familyId });
 }
 
 export async function getTasks(familyId: string): Promise<Task[]> {

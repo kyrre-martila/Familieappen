@@ -109,6 +109,47 @@ export interface Reminder {
   audienceMembers: ReminderAudienceMember[];
 }
 
+export interface HuskListAudienceMember {
+  id: string;
+  listId: string;
+  familyMemberId: string;
+  createdAt: string;
+  familyMember: FamilyMember;
+}
+
+export interface HuskListItem {
+  id: string;
+  listId: string;
+  title: string;
+  description: string | null;
+  completedAt: string | null;
+  completed: boolean;
+  assignedFamilyMemberId: string | null;
+  dueDate: string | null;
+  sortOrder: number;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface HuskList {
+  id: string;
+  familyId: string;
+  title: string;
+  icon: string;
+  category: string;
+  description: string | null;
+  archivedAt: string | null;
+  archived: boolean;
+  scope: "family" | "members";
+  memberIds: string[];
+  completedCount: number;
+  totalCount: number;
+  createdAt: string;
+  updatedAt: string;
+  audienceMembers: HuskListAudienceMember[];
+  items: HuskListItem[];
+}
+
 export interface FamilyDashboardResponse {
   family: Family;
   members: FamilyMember[];
