@@ -277,6 +277,7 @@ export function HuskListDetailClient({ list }: { list: HuskListDetail }) {
     ),
   );
   const {
+    familyMembers,
     listItems,
     createListItem,
     updateListItem,
@@ -289,6 +290,7 @@ export function HuskListDetailClient({ list }: { list: HuskListDetail }) {
   const [recentlyCompletedItemId, setRecentlyCompletedItemId] = useState<
     string | null
   >(null);
+  const activeList = { ...list, familyMembers };
   const sectionItems = listItems.filter((item) =>
     selectedSection === "completed" ? item.completed : !item.completed,
   );
@@ -472,7 +474,7 @@ export function HuskListDetailClient({ list }: { list: HuskListDetail }) {
                   />
                 </span>
               </div>
-              <StackedAvatars members={list.familyMembers} maxVisible={3} />
+              <StackedAvatars members={activeList.familyMembers} maxVisible={3} />
             </div>
           </div>
         </header>
@@ -510,7 +512,7 @@ export function HuskListDetailClient({ list }: { list: HuskListDetail }) {
             <ListItemRow
               item={item}
               key={item.id}
-              list={list}
+              list={activeList}
               isExpanded={expandedItemId === item.id}
               onToggleCompletion={() => toggleMockCompletion(item.id)}
               onToggleExpansion={() =>

@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useMemo, useState } from "react";
 
 import {
   huskListDetails,
@@ -8,17 +8,48 @@ import {
   type HuskListDetail,
   type HuskListDetailItem,
 } from "../../../app/husk/mockHuskData";
+import { remapLegacyMemberIds } from "../../family/familyMemberAdapters";
+import { useFamilyMembers } from "../../family/hooks/useFamilyMembers";
 import type { HuskFamilyMember, HuskListGroup } from "../types";
 
 export type ListInput = Omit<HuskListGroup, "id"> & { id?: string };
 
 export function useLists(initialListDetail?: HuskListDetail) {
   const [lists, setLists] = useState<HuskListGroup[]>(huskMockData.listGroups);
-  const familyMembers = huskMockData.familyMembers as HuskFamilyMember[];
+  const { familyMembers, loading, error, refresh } = useFamilyMembers();
+  const huskFamilyMembers = familyMembers as HuskFamilyMember[];
+  const scopedLists = useMemo(
+    () =>
+      lists.map((list) => ({
+        ...list,
+        memberIds: remapLegacyMemberIds(list.memberIds, huskFamilyMembers),
+      })),
+    [huskFamilyMembers, lists],
+  );
   const [listDetails, setListDetails] =
     useState<HuskListDetail[]>(huskListDetails);
+  const scopedListDetails = useMemo(
+    () =>
+      listDetails.map((detail) => ({
+        ...detail,
+        familyMembers: huskFamilyMembers,
+        items: detail.items.map((item) => ({
+          ...item,
+          assignedMemberIds: remapLegacyMemberIds(item.assignedMemberIds, huskFamilyMembers),
+        })),
+      })),
+    [huskFamilyMembers, listDetails],
+  );
   const [listItems, setListItems] = useState<HuskListDetailItem[]>(
     initialListDetail?.items ?? [],
+  );
+  const scopedListItems = useMemo(
+    () =>
+      listItems.map((item) => ({
+        ...item,
+        assignedMemberIds: remapLegacyMemberIds(item.assignedMemberIds, huskFamilyMembers),
+      })),
+    [huskFamilyMembers, listItems],
   );
 
   function createList(input: ListInput) {
@@ -70,10 +101,13 @@ export function useLists(initialListDetail?: HuskListDetail) {
   }
 
   return {
-    familyMembers,
-    lists,
-    listDetails,
-    listItems,
+    familyMembers: huskFamilyMembers,
+    lists: scopedLists,
+    loading,
+    error,
+    refresh,
+    listDetails: scopedListDetails,
+    listItems: scopedListItems,
     createList,
     updateList,
     deleteList,

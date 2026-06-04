@@ -8,14 +8,7 @@ import type {
 } from "../types";
 
 export type HuskTab = "husk" | "lister" | "skoleuka";
-export type HuskPersonFilter =
-  | "all"
-  | "kyrre"
-  | "elisabeth"
-  | "fiona"
-  | "alma"
-  | "even-olai"
-  | "family";
+export type HuskPersonFilter = "all" | "family" | (string & {});
 
 export type HuskFilters = {
   person: HuskPersonFilter;

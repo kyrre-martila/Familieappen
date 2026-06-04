@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 
+import { FamilyMembersEmptyState, FamilyMembersErrorState, FamilyMembersLoadingState } from "../../family/FamilyMembersEmptyState";
 import { useReminders } from "../hooks/useReminders";
 import type { HuskFilters, HuskReminder } from "../types";
 import { previousReminders, reminderGroupOrder } from "./huskConfig";
@@ -20,7 +21,7 @@ export function HuskRemindersSection({
   const [selectedReminder, setSelectedReminder] = useState<HuskReminder | null>(
     null,
   );
-  const { familyMembers, reminders } = useReminders();
+  const { familyMembers, reminders, loading, error, refresh } = useReminders();
   const normalizedQuery = normalizeSearch(query);
   const filteredReminders = reminders.filter((reminder) => {
     if (
@@ -75,6 +76,30 @@ export function HuskRemindersSection({
   const hasReminders =
     groupedReminders.length > 0 ||
     (filters.showPrevious && filteredPreviousReminders.length > 0);
+
+  if (loading) {
+    return (
+      <section className="husk-panel" id="husk-panel-husk" role="tabpanel" aria-labelledby="husk-tab-husk">
+        <FamilyMembersLoadingState />
+      </section>
+    );
+  }
+
+  if (error) {
+    return (
+      <section className="husk-panel" id="husk-panel-husk" role="tabpanel" aria-labelledby="husk-tab-husk">
+        <FamilyMembersErrorState onRetry={() => void refresh()} />
+      </section>
+    );
+  }
+
+  if (familyMembers.length === 0) {
+    return (
+      <section className="husk-panel" id="husk-panel-husk" role="tabpanel" aria-labelledby="husk-tab-husk">
+        <FamilyMembersEmptyState />
+      </section>
+    );
+  }
 
   return (
     <section

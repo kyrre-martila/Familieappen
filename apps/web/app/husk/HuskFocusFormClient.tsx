@@ -24,7 +24,8 @@ import {
   type HuskReminder,
   type HuskReminderIcon,
   type HuskListIcon,
-} from "./mockHuskData";
+} from "../../features/husk/types";
+import { remapLegacyMemberIds } from "../../features/family/familyMemberAdapters";
 import { useReminders } from "../../features/husk/hooks/useReminders";
 
 type HuskFocusKind = "reminder" | "list";
@@ -47,8 +48,6 @@ type HuskFocusFormClientProps = {
   list?: HuskListGroup | null;
 };
 
-const familyMemberOrder = ["elisabeth", "kyrre", "fiona", "alma", "even-olai"];
-
 const quickReminderExamples = [
   "Gymtøy",
   "Bibliotekbok",
@@ -58,11 +57,7 @@ const quickReminderExamples = [
 ];
 
 function getOrderedFamilyMembers(familyMembers: HuskFamilyMember[]) {
-  return [...familyMembers].sort(
-    (memberA, memberB) =>
-      familyMemberOrder.indexOf(memberA.id) -
-      familyMemberOrder.indexOf(memberB.id),
-  );
+  return familyMembers;
 }
 
 function getMembers(memberIds: string[], familyMembers: HuskFamilyMember[]) {
@@ -321,6 +316,13 @@ export function HuskFocusFormClient({
   useEffect(() => {
     window.sessionStorage.setItem(storageKey, JSON.stringify(draft));
   }, [draft, storageKey]);
+
+  useEffect(() => {
+    setDraft((currentDraft) => ({
+      ...currentDraft,
+      participantIds: remapLegacyMemberIds(currentDraft.participantIds, familyMembers),
+    }));
+  }, [familyMembers]);
 
   function updateDraft<Key extends keyof HuskFocusDraft>(
     key: Key,
