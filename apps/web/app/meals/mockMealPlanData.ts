@@ -1,8 +1,6 @@
-export type MockMeal = {
-  id: string;
-  title: string;
-  icon: string;
-};
+import type { Meal } from "../../features/types";
+
+export type MockMeal = Meal;
 
 export type MockMealPlanDay = {
   offset: number;

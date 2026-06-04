@@ -5,7 +5,6 @@ import { useMemo, useState } from "react";
 import {
   getMockMealForOffset,
   mockMeals,
-  type MockMeal,
 } from "../../../app/meals/mockMealPlanData";
 import type { Meal } from "../../types";
 
@@ -95,7 +94,7 @@ export function useMeals() {
     return deletedMeal;
   }
 
-  function restoreMeal(offset: number, meal: MockMeal) {
+  function restoreMeal(offset: number, meal: Meal) {
     setMealsByOffset((currentMeals) => {
       const nextMeals = new Map(currentMeals);
       nextMeals.set(offset, meal);
