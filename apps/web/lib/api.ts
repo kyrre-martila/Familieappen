@@ -20,10 +20,11 @@ import type {
   PublicWishlistItem,
   Reminder,
   HuskList,
-  HuskListItem
+  HuskListItem,
+  SchoolWeekReminder
 } from "@familieappen/shared";
 
-export type { CalendarEvent, Family, FamilyDashboardResponse, FamilyMember, FamilyMemberRole, ManualFamilyMemberRole, MealPlan, MealPlanDay, ShoppingList, ShoppingListItem, Task, Wishlist, WishlistItem, WishlistShare, WishlistSummary, PublicWishlist, PublicWishlistItem, Reminder, HuskList, HuskListItem };
+export type { CalendarEvent, Family, FamilyDashboardResponse, FamilyMember, FamilyMemberRole, ManualFamilyMemberRole, MealPlan, MealPlanDay, ShoppingList, ShoppingListItem, Task, Wishlist, WishlistItem, WishlistShare, WishlistSummary, PublicWishlist, PublicWishlistItem, Reminder, HuskList, HuskListItem, SchoolWeekReminder };
 
 export interface AuthUser {
   id: string;
@@ -443,6 +444,37 @@ export async function completeHuskListItem(familyId: string, listId: string, ite
 
 export async function uncompleteHuskListItem(familyId: string, listId: string, itemId: string): Promise<HuskListItem> {
   return apiRequest<HuskListItem>(`/husk/lists/${encodeURIComponent(listId)}/items/${encodeURIComponent(itemId)}/uncomplete`, { method: "PATCH", familyId });
+}
+
+
+export type SchoolWeekMutationScope = "occurrence" | "series";
+
+export async function getSchoolWeekReminders(familyId: string, weekStart: string): Promise<SchoolWeekReminder[]> {
+  const params = new URLSearchParams({ weekStart });
+  return apiRequest<SchoolWeekReminder[]>(`/school-week?${params.toString()}`, { familyId });
+}
+
+export async function addSchoolWeekReminder(
+  familyId: string,
+  input: { childFamilyMemberId: string; title: string; icon?: string; category?: string; weekday: string; date: string; isRecurring?: boolean; recurrenceFrequency?: "weekly"; recurrenceEndDate?: string | null; note?: string | null }
+): Promise<SchoolWeekReminder> {
+  return apiRequest<SchoolWeekReminder>("/school-week", { method: "POST", body: input, familyId });
+}
+
+export async function updateSchoolWeekReminder(
+  familyId: string,
+  reminderId: string,
+  input: { title?: string; icon?: string; category?: string; weekday?: string; date?: string; occurrenceDate?: string; isRecurring?: boolean; recurrenceFrequency?: "weekly"; recurrenceEndDate?: string | null; note?: string | null; scope?: SchoolWeekMutationScope }
+): Promise<SchoolWeekReminder> {
+  return apiRequest<SchoolWeekReminder>(`/school-week/${encodeURIComponent(reminderId)}`, { method: "PATCH", body: input, familyId });
+}
+
+export async function deleteSchoolWeekReminder(familyId: string, reminderId: string, input: { scope?: SchoolWeekMutationScope; occurrenceDate?: string } = {}): Promise<SchoolWeekReminder> {
+  const params = new URLSearchParams();
+  if (input.scope) params.set("scope", input.scope);
+  if (input.occurrenceDate) params.set("occurrenceDate", input.occurrenceDate);
+  const suffix = params.toString() ? `?${params.toString()}` : "";
+  return apiRequest<SchoolWeekReminder>(`/school-week/${encodeURIComponent(reminderId)}${suffix}`, { method: "DELETE", familyId });
 }
 
 export async function getTasks(familyId: string): Promise<Task[]> {

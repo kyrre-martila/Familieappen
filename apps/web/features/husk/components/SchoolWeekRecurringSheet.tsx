@@ -7,7 +7,7 @@ export function SchoolWeekRecurringSheet({
 }: {
   itemTitle: string;
   onClose: () => void;
-  onChoose: () => void;
+  onChoose: (scope: "occurrence" | "series") => void;
 }) {
   return (
     <div className="husk-school-sheet husk-school-sheet--open">
@@ -33,10 +33,10 @@ export function SchoolWeekRecurringSheet({
           <span>{itemTitle}</span>
         </div>
         <div className="husk-school-choice__options">
-          <button type="button" onClick={onChoose}>
+          <button type="button" onClick={() => onChoose("occurrence")}>
             Kun denne gangen
           </button>
-          <button type="button" onClick={onChoose}>
+          <button type="button" onClick={() => onChoose("series")}>
             Hele serien
           </button>
           <button type="button" onClick={onClose}>

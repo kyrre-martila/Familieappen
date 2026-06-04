@@ -12,7 +12,7 @@ import {
 
 import { FamilyMembersErrorState, FamilyMembersLoadingState } from "../../family/FamilyMembersEmptyState";
 import { useSchoolWeek } from "../hooks/useSchoolWeek";
-import type { HuskFamilyMember, SchoolCreateDraft } from "../types";
+import type { HuskFamilyMember, HuskSchoolWeekItem, SchoolCreateDraft } from "../types";
 import { reminderIcons, schoolWeekdays } from "./huskConfig";
 import {
   formatSchoolDate,
@@ -52,11 +52,22 @@ export function SchoolWeekPanel({
   const [createDraft, setCreateDraft] = useState<SchoolCreateDraft | null>(
     null,
   );
-  const [recurringChoiceTitle, setRecurringChoiceTitle] = useState<
-    string | null
-  >(null);
+  const [recurringChoiceItem, setRecurringChoiceItem] = useState<HuskSchoolWeekItem | null>(null);
+  const [schoolFeedback, setSchoolFeedback] = useState<string | null>(null);
   const [showSavedBadge, setShowSavedBadge] = useState(false);
-  const { children, weekItems, loading, error, refresh } = useSchoolWeek();
+  const selectedWeekStart = useMemo(
+    () => new Date(selectedWeekStartTime),
+    [selectedWeekStartTime],
+  );
+  const {
+    children,
+    weekItems,
+    loading,
+    error,
+    refresh,
+    createSchoolReminder,
+    updateSchoolReminder,
+  } = useSchoolWeek(selectedWeekStart);
 
   useEffect(() => {
     if (shouldOpenPlanner) {
@@ -93,10 +104,6 @@ export function SchoolWeekPanel({
     });
   }, [todayWeekStart]);
 
-  const selectedWeekStart = useMemo(
-    () => new Date(selectedWeekStartTime),
-    [selectedWeekStartTime],
-  );
   const schoolChildren = children;
   const selectedChildIndex = Math.max(
     0,
@@ -167,23 +174,54 @@ export function SchoolWeekPanel({
       dateLabel: `${weekday.label} ${formatSchoolDate(date)}`,
       title: "",
       icon: "shirt",
-      recurring: true,
+      recurring: false,
       endDate: "",
     });
   }
 
-  function saveCreateDraft() {
-    if (!createDraft?.title.trim()) {
+  async function saveCreateDraft() {
+    if (!createDraft?.title.trim() || !selectedChild) {
       return;
     }
 
-    setCreateDraft(null);
-    showSaved();
+    const date = new Date(selectedWeekStart);
+    const weekday = schoolWeekdays.find((option) => option.value === createDraft.weekday);
+    date.setUTCDate(date.getUTCDate() + (weekday?.dayOffset ?? 0));
+
+    try {
+      await createSchoolReminder({
+        childId: selectedChild.id,
+        weekday: createDraft.weekday,
+        date: date.toISOString().slice(0, 10),
+        title: createDraft.title,
+        icon: createDraft.icon,
+        isRecurring: createDraft.recurring,
+        recurrenceEndDate: createDraft.recurring ? createDraft.endDate || null : null,
+      });
+      setCreateDraft(null);
+      setSchoolFeedback(null);
+      showSaved();
+    } catch {
+      setSchoolFeedback("Skolehusk ble ikke lagret. Prøv igjen om litt.");
+    }
   }
 
-  function chooseRecurringScope() {
-    setRecurringChoiceTitle(null);
-    showSaved();
+  async function chooseRecurringScope(scope: "occurrence" | "series") {
+    if (!recurringChoiceItem) {
+      return;
+    }
+
+    try {
+      await updateSchoolReminder(recurringChoiceItem.id, {
+        scope,
+        occurrenceDate: recurringChoiceItem.occurrenceDate,
+        title: recurringChoiceItem.title,
+      });
+      setRecurringChoiceItem(null);
+      setSchoolFeedback(null);
+    } catch {
+      setSchoolFeedback("Endringen ble ikke lagret. Prøv igjen om litt.");
+    }
   }
 
   if (loading) {
@@ -329,6 +367,10 @@ export function SchoolWeekPanel({
         />
       ) : null}
 
+      {schoolFeedback ? (
+        <p className="husk-school__tip" role="status">{schoolFeedback}</p>
+      ) : null}
+
       <div
         className="husk-school-week"
         aria-label={`${selectedWeek?.label ?? "Valgt uke"} for ${selectedChild?.name ?? "valgt barn"}`}
@@ -373,10 +415,10 @@ export function SchoolWeekPanel({
                         </span>
                         <span className="husk-school-item__copy">
                           <span>{item.title}</span>
-                          {isEditing ? (
+                          {isEditing && item.isRecurring ? (
                             <small>
                               <RotateCcw size={12} strokeWidth={2.4} /> Hver uke
-                              til 20. juni 2026
+                              {item.recurrenceEndDate ? ` til ${formatSchoolDate(new Date(`${item.recurrenceEndDate}T00:00:00.000Z`))}` : ""}
                             </small>
                           ) : null}
                         </span>
@@ -393,7 +435,7 @@ export function SchoolWeekPanel({
                         className={`husk-school-item husk-school-item--${item.tone} husk-school-item--editable`}
                         key={item.id}
                         type="button"
-                        onClick={() => setRecurringChoiceTitle(item.title)}
+                        onClick={() => item.isRecurring ? setRecurringChoiceItem(item) : setSchoolFeedback("Enkeltstående skolehusk er lagret for denne uka.")}
                       >
                         {content}
                       </button>
@@ -432,10 +474,10 @@ export function SchoolWeekPanel({
         />
       ) : null}
 
-      {recurringChoiceTitle ? (
+      {recurringChoiceItem ? (
         <SchoolWeekRecurringSheet
-          itemTitle={recurringChoiceTitle}
-          onClose={() => setRecurringChoiceTitle(null)}
+          itemTitle={recurringChoiceItem.title}
+          onClose={() => setRecurringChoiceItem(null)}
           onChoose={chooseRecurringScope}
         />
       ) : null}
