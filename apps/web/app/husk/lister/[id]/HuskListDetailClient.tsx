@@ -278,6 +278,7 @@ export function HuskListDetailClient({ list }: { list: HuskListDetail }) {
   );
   const {
     familyMembers,
+    listDetails,
     listItems,
     createListItem,
     updateListItem,
@@ -290,7 +291,8 @@ export function HuskListDetailClient({ list }: { list: HuskListDetail }) {
   const [recentlyCompletedItemId, setRecentlyCompletedItemId] = useState<
     string | null
   >(null);
-  const activeList = { ...list, familyMembers };
+  const backendList = listDetails.find((candidate) => candidate.id === list.id);
+  const activeList = { ...(backendList ?? list), familyMembers };
   const sectionItems = listItems.filter((item) =>
     selectedSection === "completed" ? item.completed : !item.completed,
   );
@@ -434,7 +436,7 @@ export function HuskListDetailClient({ list }: { list: HuskListDetail }) {
         </button>
         <Link
           className="list-detail__icon-button"
-          href={`/husk/lister/${list.id}/edit`}
+          href={`/husk/lister/${activeList.id}/edit`}
           aria-label="Rediger liste"
         >
           <MoreHorizontal aria-hidden="true" size={30} strokeWidth={2.8} />
@@ -449,7 +451,7 @@ export function HuskListDetailClient({ list }: { list: HuskListDetail }) {
           <div className="list-detail__headline">
             <div className="list-detail__title-row">
               <h1 className="list-detail__title" id="list-detail-title">
-                {list.title}
+                {activeList.title}
               </h1>
               {showSavedBadge ? (
                 <span className="list-detail__saved-badge" aria-live="polite">
@@ -460,7 +462,7 @@ export function HuskListDetailClient({ list }: { list: HuskListDetail }) {
             </div>
             <p className="list-detail__scope">
               <Users aria-hidden="true" size={18} strokeWidth={2.4} />
-              {list.scopeText}
+              {activeList.scopeText}
             </p>
             <div className="list-detail__progress-row">
               <div className="list-detail__progress-copy">

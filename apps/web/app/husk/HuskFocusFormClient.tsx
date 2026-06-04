@@ -27,6 +27,7 @@ import {
 } from "../../features/husk/types";
 import { remapLegacyMemberIds } from "../../features/family/familyMemberAdapters";
 import { useReminders } from "../../features/husk/hooks/useReminders";
+import { useLists } from "../../features/husk/hooks/useLists";
 
 type HuskFocusKind = "reminder" | "list";
 type HuskFocusMode = "create" | "edit";
@@ -185,6 +186,13 @@ function mapEventIconToReminderIcon(icon: EventFormIconId | ""): HuskReminderIco
   return icon ? (iconMap[icon] ?? "backpack") : "backpack";
 }
 
+function mapEventIconToListIcon(icon: EventFormIconId | ""): HuskListIcon {
+  if (icon === "bursdag") return "birthday";
+  if (icon === "gave") return "celebration";
+  if (icon === "reise" || icon === "svomming") return "summer";
+  return "home";
+}
+
 function mapListIcon(icon: HuskListIcon): EventFormIconId {
   const iconMap = {
     birthday: "bursdag",
@@ -293,8 +301,10 @@ export function HuskFocusFormClient({
   const router = useRouter();
   const pathname = usePathname();
   const { familyMembers, reminders, createReminder, updateReminder, deleteReminder } = useReminders();
+  const { lists, createList, updateList, deleteList } = useLists();
+  const resolvedList = kind === "list" && list?.id ? lists.find((candidate) => candidate.id === list.id) ?? list : list;
   const resolvedReminder = kind === "reminder" && reminderId ? reminders.find((candidate) => candidate.id === reminderId) ?? reminder : reminder;
-  const itemId = kind === "reminder" ? resolvedReminder?.id ?? reminderId : list?.id;
+  const itemId = kind === "reminder" ? resolvedReminder?.id ?? reminderId : resolvedList?.id;
   const storageKey = useMemo(
     () => getDraftStorageKey(kind, mode, itemId),
     [itemId, kind, mode],
@@ -305,9 +315,9 @@ export function HuskFocusFormClient({
         familyMemberCount: familyMembers.length,
         kind,
         reminder: resolvedReminder,
-        list,
+        list: resolvedList,
       }),
-    [familyMembers.length, kind, list, resolvedReminder],
+    [familyMembers.length, kind, resolvedList, resolvedReminder],
   );
   const [draft, setDraft] = useState<HuskFocusDraft>(() => defaultDraft);
   const selectedIcon = getIconOption(draft.iconId) ?? eventIconOptions[0];
@@ -332,6 +342,12 @@ export function HuskFocusFormClient({
   useEffect(() => {
     setDraft(readStoredDraft(storageKey, defaultDraft));
   }, [defaultDraft, storageKey]);
+
+  useEffect(() => {
+    if (kind === "list" && mode === "edit" && resolvedList?.title && !draft.title.trim()) {
+      setDraft(defaultDraft);
+    }
+  }, [defaultDraft, draft.title, kind, mode, resolvedList?.title]);
 
   useEffect(() => {
     window.sessionStorage.setItem(storageKey, JSON.stringify(draft));
@@ -405,12 +421,36 @@ export function HuskFocusFormClient({
       return;
     }
 
-    if (kind === "list" && mode === "edit" && list) {
-      router.push(`/husk/lister/${list.id}`);
+    if (kind === "list") {
+      const listPayload = {
+        title: draft.title,
+        icon: mapEventIconToListIcon(draft.iconId),
+        memberIds: draft.audience === "family" ? familyMembers.map((member) => member.id) : draft.participantIds,
+        scopeText: draft.audience === "family" ? "Hele familien" : scopeSummary,
+        completedCount: resolvedList?.completedCount ?? 0,
+        totalCount: resolvedList?.totalCount ?? 0,
+        archived: resolvedList?.archived ?? false,
+        tone: resolvedList?.tone ?? "blue" as const,
+      };
+
+      try {
+        if (mode === "edit" && itemId) {
+          await updateList(itemId, listPayload);
+          window.sessionStorage.removeItem(storageKey);
+          router.push(`/husk/lister/${itemId}`);
+        } else {
+          await createList(listPayload);
+          window.sessionStorage.removeItem(storageKey);
+          router.push("/husk?tab=lister");
+        }
+      } catch {
+        window.alert("Kunne ikke lagre liste akkurat nå. Prøv igjen om litt.");
+      }
+
       return;
     }
 
-    router.push(kind === "list" ? "/husk?tab=lister" : "/husk?tab=husk");
+    router.push("/husk?tab=husk");
   }
 
   async function handleDelete() {
@@ -426,7 +466,15 @@ export function HuskFocusFormClient({
       return;
     }
 
-    window.alert("Slett liste kommer senere.");
+    if (kind === "list" && itemId) {
+      try {
+        await deleteList(itemId);
+        window.sessionStorage.removeItem(storageKey);
+        router.push("/husk?tab=lister");
+      } catch {
+        window.alert("Kunne ikke slette liste akkurat nå. Prøv igjen om litt.");
+      }
+    }
   }
 
   return (

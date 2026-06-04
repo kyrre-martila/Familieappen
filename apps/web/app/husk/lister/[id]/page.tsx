@@ -1,33 +1,27 @@
 import type { Metadata } from "next";
-import { notFound } from "next/navigation";
 
-import { huskListDetails } from "../../mockHuskData";
 import { HuskListDetailClient } from "./HuskListDetailClient";
+import type { HuskListDetail } from "../../mockHuskData";
 
 interface HuskListDetailPageProps {
   params: Promise<{ id: string }>;
 }
 
-function getListDetail(id: string) {
-  return huskListDetails.find((list) => list.id === id) ?? null;
-}
-
-export async function generateMetadata({ params }: HuskListDetailPageProps): Promise<Metadata> {
-  const { id } = await params;
-  const list = getListDetail(id);
-
-  return {
-    title: list ? `${list.title} – Lister` : "Liste – Husk",
-  };
+export async function generateMetadata(): Promise<Metadata> {
+  return { title: "Liste – Husk" };
 }
 
 export default async function HuskListDetailPage({ params }: HuskListDetailPageProps) {
   const { id } = await params;
-  const list = getListDetail(id);
-
-  if (!list) {
-    notFound();
-  }
+  const list: HuskListDetail = {
+    id,
+    title: "Laster liste …",
+    scopeText: "Hele familien",
+    completedCount: 0,
+    totalCount: 0,
+    familyMembers: [],
+    items: [],
+  };
 
   return <HuskListDetailClient list={list} />;
 }
