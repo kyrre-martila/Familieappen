@@ -67,6 +67,12 @@ export interface CalendarEvent {
   title: string;
   description: string | null;
   location: string | null;
+  icon: string;
+  reminderMinutesBefore: number | null;
+  date: string;
+  startTime: string | null;
+  endTime: string | null;
+  reminder: { minutesBefore: number; label: string } | null;
   startsAt: string;
   endsAt: string | null;
   allDay: boolean;

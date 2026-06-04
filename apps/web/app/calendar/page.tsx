@@ -5,7 +5,7 @@ import { useState } from "react";
 import { AppShell } from "../../components/AppShell";
 import { LockedFeatureState } from "../../components/PendingAccess";
 import { useFamilyAccess } from "../../components/ProtectedFamilyRoute";
-import { Card, EmptyState, PageContainer } from "../../components/ui";
+import { Button, Card, EmptyState, PageContainer } from "../../components/ui";
 import { CalendarDateStrip } from "../../features/calendar/components/CalendarDateStrip";
 import { CalendarDayView } from "../../features/calendar/components/CalendarDayView";
 import { CalendarHeader } from "../../features/calendar/components/CalendarHeader";
@@ -16,7 +16,7 @@ import { CalendarProvider, useCalendar } from "../../features/calendar/hooks/use
 
 function CalendarPageContent() {
   const familyAccess = useFamilyAccess();
-  const { selectedDate, selectedView, setSelectedDate, setSelectedView, today } = useCalendar();
+  const { error, loading, refresh, selectedDate, selectedView, setSelectedDate, setSelectedView, today } = useCalendar();
   const [visibleMonth, setVisibleMonth] = useState(() =>
     parseDateString(today),
   );
@@ -68,6 +68,17 @@ function CalendarPageContent() {
       }
     >
       <PageContainer>
+        {error ? (
+          <Card tone="default">
+            <EmptyState title="Kunne ikke hente kalenderen akkurat nå" description="Kalenderen kan prøves på nytt uten at noe går tapt." />
+            <Button onClick={() => void refresh()} variant="primary">Prøv igjen</Button>
+          </Card>
+        ) : null}
+        {loading && !error ? (
+          <Card tone="default">
+            <EmptyState title="Henter kalender" description="Vent litt mens vi finner hendelsene deres." />
+          </Card>
+        ) : null}
         {selectedView === "day" ? (
           <>
             <CalendarDateStrip

@@ -128,6 +128,51 @@ export function getDefaultEventFormDraft(event?: CalendarMvpEvent | null): Calen
   };
 }
 
+export function mapEventFormIconToCalendarIcon(iconId: EventFormIconId | ""): CalendarMvpEvent["icon"] {
+  const iconMap = {
+    avtale: "family",
+    bursdag: "birthday",
+    familie: "family",
+    fotball: "sport",
+    gave: "birthday",
+    generelt: "family",
+    handling: "family",
+    hjemme: "family",
+    jobb: "family",
+    kjaeledyr: "family",
+    kjoring: "travel",
+    kultur: "family",
+    lege: "health",
+    lekser: "school",
+    middag: "meal",
+    medisin: "health",
+    mote: "family",
+    musikk: "family",
+    reise: "travel",
+    skole: "school",
+    skolesekk: "school",
+    svomming: "sport",
+    tannlege: "health",
+    trening: "sport",
+    turn: "sport"
+  } satisfies Record<EventFormIconId, CalendarMvpEvent["icon"]>;
+
+  return iconId ? iconMap[iconId] : "family";
+}
+
+export function mapReminderLabelToReminder(reminder: string): CalendarMvpEvent["reminder"] {
+  switch (reminder) {
+    case "15 minutter før":
+      return { minutesBefore: 15, label: reminder };
+    case "1 time før":
+      return { minutesBefore: 60, label: reminder };
+    case "1 dag før":
+      return { minutesBefore: 1440, label: reminder };
+    default:
+      return null;
+  }
+}
+
 function mapMockEventIcon(icon: CalendarMvpEvent["icon"]): EventFormIconId {
   const iconMap = {
     birthday: "bursdag",
