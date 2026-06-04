@@ -1,275 +1,281 @@
-# Run 3.2 Review
+# Run 3 Review
 
 Date: 2026-06-03
 
 ## Score
 
-**6.2 / 10**
+**6.4 / 10**
 
-Run 3.2 has the right product direction, but it is not beta-ready yet. The surface is calm and generally aligned with the Calendar baseline, but several flows currently feel like a polished prototype rather than a reliable family tool. The highest-risk pattern is that the UI says or implies changes are saved while the underlying behavior is incomplete, hidden, or not reflected back to the parent.
+Run 3 has the right calm product direction, but it is not ready for backend integration without tightening several prototype-like behaviors first. Calendar remains the strongest UX baseline: it has a legible day/month/list structure, passive cross-module summaries, and low-pressure entry points. Husk, Lister, Skoleuka, and Meal Planner mostly follow that tone, but several interactions currently create false confidence, hidden state, or mobile friction.
 
-A stressed parent would understand the broad intent of **Husk**, **Lister**, and **Skoleuka** quickly. They would not always understand what happened after tapping, saving, editing a recurring school item, or trying to complete a list item.
+The critical test is: **Would a stressed parent immediately understand this?** For Calendar: mostly yes. For Husk: usually yes. For Lister: yes after the latest checklist detail improvements, but list creation/editing still feels heavier than needed. For Skoleuka: not reliably, because week navigation and recurring edits imply more correctness than the data/model currently supports. For Meal Planner: the calm inline model is promising, but move mode is too desktop-like for real mobile families.
+
+Backend persistence is intentionally out of scope for Run 3, so this review does **not** penalize missing backend storage. The concern is whether the frontend state model, UX language, and interaction contracts are clear enough to wire to real data in Run 4.
 
 ## Strengths
 
-- **The three-tab mental model is understandable.** `Husk`, `Lister`, and `Skoleuka` are distinct enough for parents and avoid an admin-panel feeling.
-- **The visual tone is calm and premium.** Cards, rounded controls, soft backgrounds, and restrained iconography are broadly consistent with the Calendar module.
-- **Husk reminders avoid checkbox pressure.** Passive reminders fit the low-stress philosophy better than turning every reminder into a task.
-- **List detail is more focused than a dashboard.** The fullscreen route helps parents stay inside one list instead of juggling multiple panels.
-- **Skoleuka has a promising mobile-first concept.** A one-child-at-a-time view is preferable to a dense school timetable on phone screens.
-- **Session-based tab and scroll preservation show good intent.** Returning to the same tab/scroll position is important for mobile family use.
+- **Calendar is a credible UX baseline.** Day, month, and list views cover the main parent mental models without feeling like an admin panel. Meal chips and reminder chips work as passive context rather than turning Calendar into another task inbox.
+- **The product tone is mostly right.** Rounded cards, soft surfaces, restrained icons, small status text, and non-alarming copy support a calm, premium, family-first feel.
+- **Husk has the right philosophy.** Passive reminders avoid completion pressure, which is appropriate for “remember this” content such as gym clothes, books, gifts, and family errands.
+- **Lister is now closer to a real checklist.** The detail screen has local completion toggles, progress updates, undo for completion, inline editing, and a sticky add action. That removes the biggest checklist-failure risk from the earlier state.
+- **Skoleuka’s one-child-at-a-time model is directionally correct.** A dense multi-child timetable would be too stressful on mobile. The child carousel is more parent-friendly than a spreadsheet-style school calendar.
+- **Meal Planner has a strong MVP concept.** A timeline with inline editing is calmer than fullscreen forms. Autocomplete from prior meals supports tired-parent reuse, and the “snart tomt” reminder is appropriately gentle.
+- **Session restoration shows care for real usage.** Storing selected Husk tab, search, filters, school child, detail section, and scroll positions is a good Run 3 signal for mobile continuity.
 
 ## P0 Issues
 
-### P0.1 — Skoleuka edit actions create false confidence
+### P0.1 — Skoleuka shows “Lagret” without changing visible data
 
-**Problem:** Skoleuka lets users add an item, choose recurring edit scope, and see `Lagret`, but the new item is not inserted into the visible school week data. Existing recurring edits also do not change anything; both `Kun denne gangen` and `Hele serien` close the sheet and show saved.
+**Classification:** P0 — must fix before backend.
 
-**Why this is serious:** This is worse than a missing feature because the UI tells parents that school information was saved. For a real family, this can cause missed gym clothes, books, food days, or equipment.
+**Problem:** Creating a school item closes the sheet and shows `Lagret`, but the new item is not inserted into the visible week. Choosing a recurring edit scope also closes the sheet and shows `Lagret`, but no item is changed.
 
-**Fix before beta/backend integration:**
+**Real-family risk:** This is more dangerous than an obviously mocked feature. A parent may believe gym clothes, books, food days, or equipment were saved when the plan did not actually change.
 
-- Either make the mock state mutate locally and reflect immediately, or clearly mark these actions as unavailable.
-- Do not show `Lagret` unless the visible UI changes.
-- For recurring changes, separate `edit single occurrence`, `edit series`, and `delete` paths, even if backed by mock state initially.
+**Required fix before Run 4:**
 
-### P0.2 — List detail looks like a checklist but cannot reliably complete items
+- Mutate local mock state for create/edit/delete and reflect the result immediately in the week.
+- Never show `Lagret` unless visible state changes.
+- Add explicit local data structures for single occurrence vs recurring series before connecting backend persistence.
+- If a backend-compatible recurrence model is not ready, label the screen as “ukentlig mal” instead of a dated week planner.
 
-**Problem:** `Lister` cards show progress and the detail route has `Pågår` / `Fullført`, check-style status circles, and completed counts. But tapping a row expands editing instead of completing. In the expanded state, tapping the status circle collapses the editor rather than marking the item complete. There is no obvious way to move an item from `Pågår` to `Fullført`.
+### P0.2 — Skoleuka week navigation implies date-specific accuracy that does not exist
 
-**Why this is serious:** A list app without an understandable completion action fails the core promise of `Lister`. This will confuse parents immediately because the UI strongly suggests checklist behavior.
+**Classification:** P0 — must fix before backend.
 
-**Fix before beta/backend integration:**
+**Problem:** The week strip changes week labels and dates, but the items are the same static weekly plan. This makes “Uke 24” and “Uke 25” look like separate real weeks when they are effectively the same template.
 
-- Make the status circle a real completion toggle.
-- Keep row expansion as a separate affordance, such as a chevron, `Detaljer`, or long press only if tested.
-- Update counts/progress instantly when completion changes.
-- Add undo or a gentle completed-state transition so accidental taps are recoverable.
+**Real-family risk:** Parents will assume the selected week is accurate. That can fail badly around holidays, school trips, end-of-term events, and exceptions.
 
-### P0.3 — Week selector in Skoleuka is misleading
+**Required fix before Run 4:**
 
-**Problem:** The week selector changes dates and week labels, but the displayed school items come from the same static child plan regardless of selected week. A parent can move two weeks forward and still see the same items as if they belong to that week.
+- Decide whether Skoleuka is a **weekly template** or a **dated occurrence planner**.
+- If template: remove the dated week strip or make it secondary and clearly say “Fast ukeplan”.
+- If dated planner: generate/filter occurrences per selected week, including exceptions.
+- Align copy, data shape, and edit-scope UI before backend integration so Run 4 does not hard-code the wrong mental model.
 
-**Why this is serious:** The module is named `Skoleuka`, and week context is central. Showing repeated items across all weeks without clearly indicating recurrence can lead to wrong assumptions.
+### P0.3 — Meal Planner move mode depends on drag-and-drop, which is weak on mobile
 
-**Fix before beta/backend integration:**
+**Classification:** P0 — must fix before backend if move/reorder is part of MVP.
 
-- If all items are recurring weekly, label the view explicitly as a weekly template rather than a dated week.
-- If dated weeks are intended, store/render occurrences per selected week.
-- Current-week default is good, but the current week selector must not imply date-specific accuracy until the data model supports it.
+**Problem:** Move mode tells users to drag meals to move or swap them. HTML drag-and-drop is unreliable and often unintuitive on touch devices. The affordance may work in desktop testing but fail for the mobile-first target.
+
+**Real-family risk:** A parent planning dinners on a phone will try to move a meal, fail to drag correctly, and conclude the planner is fiddly. This directly conflicts with “low friction” and “tired-parent usability”.
+
+**Required fix before Run 4:**
+
+- Replace or supplement drag with a touch-safe action sheet: `Flytt til…`, `Bytt med…`, or quick date chips.
+- Keep drag only as optional enhancement, not the primary mobile mechanism.
+- Add a clear non-drag fallback for keyboard and accessibility users.
+- Confirm move/edit collision behavior: entering move mode should save or cancel inline edits visibly, not silently.
 
 ## P1 Issues
 
-### P1.1 — Primary creation paths are too hidden
+### P1.1 — Primary creation is inconsistent across modules
 
-The main page has no visible `+` action in the reviewed Husk/Lister shell. Empty states say `Trykk +`, but the visible code path does not render a clear add button for `Husk` or `Lister` in the tab content. If the plus lives in global navigation, it is too detached from the context and not discoverable enough for tired parents.
+**Classification:** P1 — should fix before beta.
 
-**Recommendation:** Add a contextual primary action per tab:
+Calendar uses clear top actions and creation routes. Meal Planner has inline “legg til” affordances. Lister detail has a sticky add button. Husk and Lister overview rely more on empty-state actions and global create behavior, which is less discoverable when data already exists.
+
+**Recommendation:** Add contextual primary actions near the module heading:
 
 - `Ny husk` on Husk.
 - `Ny liste` on Lister.
-- `Rediger skoleuka` / `Legg til skolehusk` on Skoleuka.
+- `Legg til skolehusk` or `Rediger ukeplan` on Skoleuka.
+- Keep global create as a shortcut, not the only obvious route.
 
-### P1.2 — Duplicate save actions make forms feel heavier than Calendar
+### P1.2 — Search and filters add admin-panel weight to a calm reminder module
 
-Create/edit flows have both a topbar `Lagre` and a bottom primary `Lagre`. Calendar can tolerate this on larger forms, but Husk and Lister are meant to be lighter. On mobile, two save buttons increase cognitive load and make users wonder if one has a different meaning.
+**Classification:** P1 — should fix before beta.
 
-**Recommendation:** Keep the topbar `Lagre` for fullscreen focus routes and remove the bottom duplicate for simple Husk/List forms, or make the bottom action sticky only when the topbar is off-screen.
+Search + filter is useful, but on the Husk landing screen it can dominate the experience and make the module feel more like a database than a family memory aid. This is especially true when the reminder count is small.
 
-### P1.3 — `Ingen valgt betyr hele familien` is clever but not parent-friendly
+**Recommendation:**
 
-The person picker uses an implicit rule: selecting nobody means the whole family. This saves one chip but increases mental load. Parents may interpret no selected person as incomplete or private, especially when the filter sheet has an explicit `Hele familien` option.
+- Hide or collapse advanced filters until the family has enough content.
+- Keep search visible only where it solves an immediate problem.
+- Use family-friendly filter labels such as “Vis for” and “Ta med tidligere” instead of generic admin filter language.
 
-**Recommendation:** Add an explicit `Hele familien` chip selected by default. Keep individual family members as alternatives.
+### P1.3 — Person selection rules are not obvious enough
 
-### P1.4 — Search state is shared between Husk and Lister
+**Classification:** P1 — should fix before beta.
 
-The search query is persisted globally for the Husk module. A search entered on `Husk` carries into `Lister`, where it can create an unexpected empty or filtered state. This is subtle but frustrating on phones because users may not notice the search text after switching tabs.
+Several flows rely on distinctions between individual family members, “Hele familien”, and implied all-family scope. If “no one selected” means everyone in one place but “Alle” is a filter value elsewhere, parents can misunderstand whether an item is assigned, shared, or simply unfiltered.
 
-**Recommendation:** Use separate search state per tab, or clear the query when changing between content types after confirming this with product.
+**Recommendation:**
 
-### P1.5 — Filter semantics are inconsistent and brittle
+- Use explicit `Hele familien` selection in creation/editing.
+- Reserve `Alle` for filtering only.
+- Show the resulting scope in the review line before save.
 
-The filter sheet visually reuses Calendar patterns, which is good, but the actual person semantics are not consistent:
+### P1.4 — Lister is a hybrid of project planning and checklist; that needs sharper copy
 
-- `Hele familien` filtering depends on scope text or member-count heuristics.
-- Lists infer family scope from more than two members in one place.
-- Reminder forms use no selected participants to mean the family.
+**Classification:** P1 — should fix before beta.
 
-**Recommendation:** Introduce explicit audience/scope data before backend integration: `family`, `members[]`, and eventually `household adults`, `children`, or `custom` if needed.
+The hybrid model is promising for birthdays, trips, and home projects, but the product language alternates between “liste”, “punkt”, “ansvarlig”, “frist”, progress, archive, and completion. That can feel task-management-heavy if not softened.
 
-### P1.6 — Archived lists are visible but inert
+**Recommendation:**
 
-Archived lists render as non-clickable cards. This avoids editing old lists, but it gives parents no obvious way to inspect, restore, or understand why an archived list is shown.
+- Keep the overview calm: title, progress, people.
+- In detail, separate “quick checklist” from “optional details”.
+- Make assigning people and deadlines clearly optional, not required admin work.
 
-**Recommendation:** Either make archived cards open read-only detail with restore/unarchive later, or hide archived lists entirely until archive management exists.
+### P1.5 — Skoleuka edit scope is too abstract for parents
 
-### P1.7 — Reminder cards only open edit; there is no lightweight read state
+**Classification:** P1 — should fix before beta.
 
-Tapping a Husk reminder jumps straight to edit mode. For passive reminders, a parent often wants to read context, not edit. The direct-edit behavior makes the module feel more like data administration than a calm family memory aid.
+`Kun denne gangen` / `Hele serien` is technically correct, but parent context matters more. They need to know whether they are changing this Friday only, every Friday, or all future Fridays until a date.
 
-**Recommendation:** Consider a lightweight detail/bottom sheet with `Endre` as secondary, especially for reminders with notes, dates, or multiple people.
+**Recommendation:**
 
-### P1.8 — Delete actions are fake alerts
+- Use concrete labels: `Bare fredag 12. juni`, `Hver fredag fremover`, `Hver fredag til 20. juni`.
+- Preview the affected child, weekday, and date range in the sheet.
+- Include delete behavior in the same mental model.
 
-Edit forms expose `Slett husk` / `Slett liste`, but deletion only shows an alert saying it comes later. This is acceptable for an internal prototype, but not for beta.
+### P1.6 — Meal Planner needs stronger empty and “not enough dinners” behavior
 
-**Recommendation:** Remove delete buttons until implemented, or implement local mock deletion with a confirmation and undo.
+**Classification:** P1 — should fix before beta.
 
-### P1.9 — Date handling loses original reminder specificity
+The “snart tomt” reminder is good, but the planner needs clearer guidance for the first real week. A blank timeline can still be cognitively heavy: parents need to understand whether they should plan today, tomorrow, weekdays, or the whole week.
 
-Editing a reminder maps all existing reminders to a hardcoded ISO date. Date labels such as `I morgen`, `Tirsdag 10. juni`, and `Uke 26` are not faithfully represented. This will become backend debt if the form model does not distinguish exact dates, relative labels, weeks, and recurrence.
+**Recommendation:**
 
-**Recommendation:** Define the reminder date model before integrating backend APIs.
+- Add a low-pressure “Planlegg de neste 3 middagene” starter.
+- Offer quick chips such as `I dag`, `I morgen`, `Mandag-fredag`.
+- Keep this as help, not a required wizard.
 
-### P1.10 — Skoleuka child navigation is discoverable but inefficient for many children
+### P1.7 — Mobile sheets need stricter interaction contracts
 
-The one-child flow is right for mobile, but previous/next arrows do not scale well once a family has many children or if a parent needs to jump directly to one child.
+**Classification:** P1 — should fix before beta.
 
-**Recommendation:** Keep arrows, but add a compact child chip row or child switcher sheet when there are more than two children.
+Filter sheets, reminder detail sheets, school create sheets, recurring choice sheets, and meal menus use similar bottom-sheet language but not always the same behavior. Some have explicit actions, some close on backdrop, some act immediately.
 
-### P1.11 — Bottom sheets need stronger mobile interaction handling
+**Recommendation:**
 
-Filter and Skoleuka sheets look good, but they need production-level interaction behavior:
-
-- focus should move into the sheet when opened;
-- background content should not be screen-reader reachable;
-- body scroll should be locked;
-- Escape/back behavior should close the sheet predictably;
-- keyboard should not obscure primary actions.
-
-**Recommendation:** Extract one shared mobile sheet primitive and reuse it for filters, Skoleuka create, recurring choice, and future detail sheets.
+- Standardize sheet anatomy: handle, title, close, content, sticky action row.
+- Define when changes are live vs saved on `Ferdig`.
+- Add escape/back behavior and focus return for every sheet.
+- Prevent background scroll while sheets are open.
 
 ## P2 Improvements
 
-- **Add active-filter empty-state copy.** `Ingen husk akkurat nå` is misleading when filters/search hide existing content. Say `Ingen treff` and offer `Nullstill filter`.
-- **Make empty states actionable.** Empty states should include the actual action button, not only instructional text.
-- **Reduce decorative icon variance.** Husk, Skoleuka, List detail, and Calendar use similar but not identical icon sizes and tones. Normalize to a smaller set of icon container sizes.
-- **Clarify wording.** `Husk` as both module and item label works in Norwegian, but `Ny husk`, `Rediger husk`, and `Hva må huskes?` should be user-tested. `Påminnelse` toggle also needs to explain what happens when it is off.
-- **Use softer archived/list progress language.** `fullført` is clear, but for family lists it may feel project-management-like. Test `klart`, `ferdig`, or `gjort`.
-- **Add long-title stress tests.** Some wrapping fixes exist, but list cards with many avatars and very long titles still need real phone review.
-- **Add saved-state nuance.** `Lagret` appears after every keystroke/change in list detail. That can feel noisy. Consider quieter autosave copy such as `Endringer lagres automatisk` plus only show `Lagret` after meaningful actions.
-- **Add transition consistency.** Fullscreen routes and sheets should use the same duration/easing as Calendar focus routes.
-- **Consider a today/current-week reset.** If users navigate weeks in Skoleuka, provide a small `Denne uka` reset.
-- **Improve direct-entry back behavior.** `router.back()` can leave a user stranded if they open a detail route directly. Add deterministic fallback links.
+### P2.1 — Calendar list filters include categories with no results
 
-## Architecture Notes
+The Calendar category filter includes options such as music/general handling that can produce no results or special-case logic. This is acceptable for mock data but should be tightened before real data so parents do not see dead filters.
 
-### Component structure
+### P2.2 — Long labels and names need more stress testing
 
-- `apps/web/app/husk/page.tsx` is doing too much: tab orchestration, filters, search, reminder cards, list cards, school week date logic, child navigation, sheets, and session storage. This should be split before backend integration.
-- `HuskListDetailClient` mixes fullscreen shell, item editing, local persistence, progress calculations, scroll restoration, and family access handling. It is manageable now but will become fragile once backend mutations are added.
-- `HuskFocusFormClient` reuses Calendar form classes and icon picker paths, which is efficient, but it couples Husk creation to Calendar event form concepts. This should be made explicit through a shared `FocusForm` primitive instead of hidden reuse.
+Run 3 uses realistic Norwegian content, but not enough extreme content. Test long child names, compound school reminders, long meal names, and lists with many people.
 
-### State handling
+### P2.3 — Avatar density should be capped consistently
 
-- Session storage is used for selected tab, search query, filters, selected school child, scroll position, expanded list item, selected section, and form drafts. This is useful for a prototype, but it is not a backend-ready state strategy.
-- Form drafts persist after saving. Without cleanup, a parent can return to a stale draft and see data that was already “saved”.
-- Local state mutations are inconsistent: list detail mutates local items, Skoleuka create does not update displayed items, and edit forms save drafts without changing the source mock data.
+Calendar, Husk reminder cards, Lister cards, and list detail use avatars differently. Most are pleasant with 3–4 members, but larger families will create visual noise.
 
-### Route organization
+### P2.4 — Green accent use should be more intentional
 
-- Fullscreen routes exist for list detail and create/edit flows, but they do not share one route-shell abstraction.
-- The `Skoleuka` edit mode is encoded as a query parameter instead of a clear route/sheet state. That can work, but the current `router.back()` behavior is risky if the user lands directly on `?edit=1`.
-- Icon picking goes through `/calendar/events/icon-picker`, which leaks Calendar implementation details into Husk. This is acceptable temporarily, but the route should become shared or renamed before broader use.
+Green appears as selected state, success, action, and brand accent. It still feels calm, but the system should distinguish “selected”, “saved”, “positive completion”, and “primary action” more carefully.
 
-### Mock/provider organization
+### P2.5 — Completion animation in Lister should stay subtle
 
-- Mock data is static and route-local. It does not model real operations such as create, update, complete, archive, restore, or recurring occurrence updates.
-- Hardcoded school child IDs assume specific demo children. This will fail for empty families, families with no children, blended families, and children added later.
-- Family member color/avatar handling is duplicated across Calendar, Husk, and List detail with slightly different class names.
+The recently-completed state and undo are good, but avoid celebratory motion or gamified pressure. The app philosophy is calm completion, not productivity scoring.
 
-### Backend readiness
+### P2.6 — Meal autocomplete should tolerate messy family input
 
-Before backend integration, define these domain models explicitly:
-
-- Reminder: title, audience, due date/date label, optional notification, passive/dismissed state, notes, icon.
-- List: title, audience, archived state, items, item completion, item assignment, due date, description.
-- School week: child, weekday, recurrence rule, occurrence exceptions, school-year boundaries, end dates, and conflict behavior.
-
-Without this, the backend will inherit UI shortcuts such as “no selected people means family” and “all school items repeat every displayed week”.
+Autocomplete should handle spelling variants, plural/singular, Norwegian characters, and partial words. It should not make custom meals feel like second-class entries.
 
 ## Product Concerns
 
+### Calendar
+
+- **Day/month/list structure is right.** This is the most mature Run 3 module.
+- **Meal chips are useful but must remain passive.** Calendar should show dinner context without becoming the meal-planning workflow.
+- **Husk integration is product-correct.** Reminders belong in Calendar as awareness, not pressure.
+- **Risk:** Calendar could become cluttered when real families have school, meals, reminders, birthdays, sports, shared events, and recurring items. The list view will need strong grouping and filters without looking administrative.
+
 ### Husk
 
-The passive reminder direction is good, but the product still needs a clear answer to: **what does a parent do after the thing is no longer relevant?** No checkboxes is calm, but there still needs to be archive, dismiss, expires-after-date, or auto-expire behavior.
+- **Passive reminders are the right choice.** Do not add aggressive completion states just because tasks have completion.
+- **Risk:** If Husk becomes a second task manager, it will increase mental load. Keep it closer to “things we should remember” than “things we must finish”.
+- **Risk:** Previous reminders need careful treatment. Showing old reminders can be useful, but too much old content can make parents feel behind.
 
 ### Lister
 
-The product decision to make Lister a checklist/project container is strong, but the current detail interaction undermines it because completion is not obvious. `Detail view editing only` can work, but list rows must still support quick completion. Otherwise parents are forced into an editor for simple tasks.
+- **The project/checklist hybrid is useful.** It fits birthdays, trips, packing, seasonal chores, and family events.
+- **Risk:** Assignment, due date, archive, editing, progress, and sections can drift toward productivity-app complexity.
+- **Risk:** Families may use lists collaboratively. Run 4 must handle concurrent edits, completed-item movement, undo windows, and optimistic state clearly.
 
 ### Skoleuka
 
-Current-week default and one-child mobile flow are good. The risk is that `Skoleuka` mixes two concepts:
+- **One-child mobile flow is the right foundation.** It avoids a dense multi-child schedule.
+- **Biggest product risk:** The module is currently caught between recurring weekly template and dated calendar. Real school life has exceptions. This needs a clean model before backend work.
+- **Risk:** Families with no school-age children, one child, many children, alternating-week plans, SFO, school holidays, and divorced-family routines need clear states.
 
-1. a weekly template for recurring school routines;
-2. a dated current-week planner.
+### Meal Planner
 
-Both are useful, but combining them without clear labels will confuse families. Recurring weekly only is fine for MVP, but exceptions must be planned because school weeks are full of one-off events.
+- **Timeline + inline editing is right.** It avoids heavy forms and supports quick planning.
+- **Autocomplete is important.** Reusing prior meals reduces mental load.
+- **Move mode is conceptually useful but mechanically risky.** Drag-and-drop is not enough for mobile-first.
+- **Risk:** The planner may become too open-ended. Parents often need “just help me fill the next few dinners”, not an infinite timeline.
 
-### Filters
+## Architecture Notes
 
-Filters are useful, but they may be too prominent for a calm MVP if most families only have a handful of items. Search plus filters on both Husk and Lister can make the module feel more like an admin tool. Consider keeping filters, but make defaults and reset behavior extremely forgiving.
+- **Provider/mock strategy is adequate for Run 3, but Run 4 needs a boundary now.** Mock data is imported directly into feature pages. Before backend integration, introduce feature-level providers/hooks with the same shape expected from the API. This will reduce rewrites and make optimistic state testable.
+- **Local mutable state should match backend contracts.** Lister detail now mutates local state in a useful way. Skoleuka does not. Meal Planner mutates a local map. Calendar mostly reads static imports. These should converge on a shared pattern: query state, optimistic mutation, rollback/error state, and visible confirmation only after state changes.
+- **Route organization is understandable but could become fragmented.** Calendar has event routes, Husk has reminders/lister/skoleuka in one section, Meal Planner is standalone. That is fine, but shared primitives should be extracted before adding backend states to every page.
+- **Shared primitives are emerging but not formal enough.** Bottom sheets, chips, avatars, empty states, progress bars, search/filter toolbars, saved badges, sticky actions, and inline editors repeat across modules. Extracting too early can slow product work, but Run 4 will otherwise duplicate loading/error/dirty-state behavior.
+- **Session storage is useful but fragile.** It is fine for Run 3 continuity. With backend data and multi-device families, it must not become the source of truth. Also validate stale stored IDs when families, children, or lists change.
+- **Accessibility needs a pass before beta.** There are many aria labels and roles, which is good, but dialogs need focus management, background scroll locking, keyboard escape behavior, and consistent focus return.
+- **Direct route handling needs hardening.** Detail routes should handle missing IDs, unavailable family access, archived/deleted records, no children, and stale session-selected tabs.
 
 ## Missing Edge Cases
 
-- Empty family.
-- Approved user with no family members loaded.
-- Family with adults only and no children.
-- Family with one child.
-- Family with more than five children.
-- Child removed from a family after school week items exist.
-- Multiple people selected on reminders and lists.
-- Very long reminder titles, list titles, item titles, and child names.
-- Many reminders in `I dag` causing long scroll and sticky navigation needs.
-- Search active while switching tabs.
-- Filters active while creating a new item that does not match the current filter.
-- Archived lists with restore/delete/read-only needs.
-- Direct URL entry to list detail, edit forms, and `?edit=1` school planner.
-- Browser back from fullscreen routes when there is no in-app history.
-- Keyboard covering Skoleuka sheet save action.
-- Recurring item conflicts, exceptions, holidays, and end dates before selected occurrence.
-- Reminder dates in past/current week/future week with different labels.
-- Duplicate list item titles.
-- List with zero items.
-- List where all items are completed.
-- Offline or failed backend save after optimistic UI says `Lagret`.
+- **Long titles:** Event names, list titles, school reminders, and meal names can overflow card layouts or push actions off-screen.
+- **Empty families:** Modules assume usable family/member data. Empty household states need explicit onboarding-like copy.
+- **Many family members:** Avatar stacks and person filters need overflow behavior beyond 4–5 people.
+- **No children:** Skoleuka must not show an empty carousel or school-specific copy if there are no school-age children.
+- **Huge datasets:** Calendar list, Husk reminders, and Lister overview need pagination/windowing or at least tested performance with hundreds of items.
+- **Switching tabs:** Stored tab/query/filter state is good, but users may be confused if they return to a filtered empty list and forget filters are active.
+- **Direct routes:** `/husk?tab=skoleuka&edit=1`, list detail routes, and calendar event routes need robust unavailable-record states.
+- **Keyboard overlap:** Inline meal editing, school create sheet fields, and fullscreen list editing need mobile keyboard tests, especially with sticky bottom navigation.
+- **Scroll restoration:** Session scroll restoration is useful but can restore to the wrong place after filtering, adding items, or switching tabs.
+- **Move/edit collisions:** Meal Planner must clearly handle entering move mode while an inline editor is open, dragging to an occupied day, cancelling move mode, and undoing after a move.
+- **Recurring exceptions:** Skoleuka needs single occurrence changes, skipped weeks, holidays, and end dates before real data.
+- **Concurrent family edits:** Lister and Meal Planner need conflict behavior if two parents edit the same item.
 
 ## Recommended Next Steps
 
-1. **Fix the P0 trust issues first.** Make Skoleuka create/edit reflect changes or remove the fake saved paths. Make list item completion obvious and functional.
-2. **Define backend-ready domain models before API work.** Especially audience/scope, reminder dates, list item completion, archive state, and recurring school week rules.
-3. **Split `husk/page.tsx` into maintainable components.** Suggested slices: `HuskTabs`, `HuskToolbar`, `HuskFilters`, `HuskReminders`, `HuskLists`, `SchoolWeek`, and shared sheet primitives.
-4. **Create a shared fullscreen focus shell.** Reuse it for Calendar event forms, Husk forms, and List detail instead of hand-rolling each route.
-5. **Add contextual primary actions and actionable empty states.** Parents should never have to search for `+`.
-6. **Normalize filter/search behavior.** Separate query state per tab, show active-filter empty copy, and add one-tap reset.
-7. **Make audience selection explicit.** Replace the implicit “none means family” rule with a selected-by-default `Hele familien` option.
-8. **Harden mobile sheets.** Add focus trapping, scroll lock, keyboard-safe actions, and predictable back behavior.
-9. **Add edge-case fixtures.** Test empty family, one child, many children, long text, no items, all items completed, and many reminders.
-10. **Postpone advanced post-MVP work.** Wait on custom recurrence, complex school calendars, collaboration history, comments, attachments, and sophisticated archive management until after MVP usage data.
+1. **Fix Skoleuka’s product/data contract first.** Choose weekly template vs dated occurrence planner, then make create/edit/delete mutate local state accordingly.
+2. **Replace mobile drag dependency in Meal Planner.** Add a tap-based move/swap fallback before backend work.
+3. **Introduce feature providers/hooks before Run 4 backend.** Calendar, Husk, Lister, Skoleuka, and Meals should consume provider APIs instead of importing mock data directly inside UI components.
+4. **Standardize bottom sheets and saved-state behavior.** No `Lagret` unless state changes. Define live vs committed edits consistently.
+5. **Add contextual creation actions.** Each module should have an obvious creation path even when data is not empty.
+6. **Run a mobile edge-case QA pass.** Test small screens, keyboard overlap, long content, many members, no children, empty family, and direct routes.
+7. **Create backend-ready mutation specs.** For each module, document create/update/delete/complete/move/recurrence operations and expected optimistic UI behavior.
+8. **Do a copy pass for tired parents.** Replace technical/admin labels with concrete family language where possible.
 
 ## Founder Recommendation
 
-**Fix before backend integration:**
+### A. Must fix before Run 4 backend
 
-- List completion interaction.
-- Skoleuka save/edit truthfulness.
-- Reminder/list/school domain models.
-- Shared fullscreen and sheet primitives.
-- Explicit audience model.
+- Skoleuka must stop showing saved state without visible changes.
+- Skoleuka must choose and reflect one model: weekly template or dated week occurrences.
+- Meal Planner needs a mobile-safe move/swap mechanism that does not depend on drag-and-drop.
+- Feature-level provider/hooks should be introduced so backend integration does not require rewriting page components.
+- Saved badges, optimistic updates, and local state changes must follow one reliable rule across modules.
 
-**Can wait until beta polish:**
+### B. Can wait until beta
 
-- Copy refinements.
-- Transition tuning.
-- Better active-filter empty states.
-- Archived read-only detail.
-- Child switcher sheet for larger families.
+- Contextual creation buttons for Husk and Lister overviews.
+- Better first-use guidance in Meal Planner.
+- More parent-friendly copy for filters, assignment, recurrence, and scopes.
+- Full bottom-sheet standardization and accessibility focus management.
+- Edge-case QA for long titles, many members, no children, and stale routes.
 
-**Postpone until post-MVP:**
+### C. Post-MVP only
 
-- Custom recurrence rules beyond weekly school items.
-- Full project-management features for lists.
-- Comments, attachments, activity logs, and per-item notifications.
-- Advanced school calendar import/sync.
+- Advanced meal planning features such as grocery generation, nutrition, recipes, and meal categories.
+- Complex school scheduling such as alternating weeks, holiday calendars, and school-system integrations.
+- Advanced list automation, templates, dependencies, or productivity-style reminders.
+- Deep Calendar analytics or dense agenda customization.
+
+**Bottom line:** Run 3 is directionally strong but still behaves like a polished prototype in the riskiest places. Calendar can remain the benchmark. Before Run 4, prioritize interaction truthfulness, mobile-safe meal moving, and a backend-ready Skoleuka model over more surface polish.
