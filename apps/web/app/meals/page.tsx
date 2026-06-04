@@ -24,11 +24,8 @@ import {
 import { AppShell } from "../../components/AppShell";
 import { ProtectedFamilyRoute } from "../../components/ProtectedFamilyRoute";
 import { PageContainer } from "../../components/ui";
-import {
-  mockMeals,
-  getMockMealForOffset,
-  type MockMeal,
-} from "./mockMealPlanData";
+import { type MockMeal } from "./mockMealPlanData";
+import { useMeals } from "../../features/meals/hooks/useMeals";
 
 const initialPastDays = 10;
 const initialFutureDays = 21;
@@ -109,30 +106,6 @@ function normalizeMealTitle(value: string) {
   return value.trim().toLocaleLowerCase("nb-NO");
 }
 
-function getMealVisual(title: string) {
-  const normalizedTitle = normalizeMealTitle(title);
-  return (
-    mockMeals.find((meal) => normalizeMealTitle(meal.title) === normalizedTitle)
-      ?.icon ?? "🍽️"
-  );
-}
-
-function createMealFromTitle(title: string): MockMeal {
-  const trimmedTitle = title.trim();
-  const existingMeal = mockMeals.find(
-    (meal) =>
-      normalizeMealTitle(meal.title) === normalizeMealTitle(trimmedTitle),
-  );
-
-  return (
-    existingMeal ?? {
-      id: `custom-${normalizeMealTitle(trimmedTitle).replace(/\s+/g, "-")}`,
-      title: trimmedTitle,
-      icon: getMealVisual(trimmedTitle),
-    }
-  );
-}
-
 function formatReminderDate(today: Date, latestOffset: number) {
   const latestDate = addDays(today, latestOffset);
   if (latestOffset <= 1) {
@@ -171,23 +144,15 @@ function MealsPageContent() {
   const [inputValue, setInputValue] = useState("");
   const editingOffsetRef = useRef<number | null>(null);
   const inputValueRef = useRef("");
-  const [mealsByOffset, setMealsByOffset] = useState(() => {
-    const initialMeals = new Map<number, MockMeal>();
-
-    for (
-      let offset = -initialPastDays;
-      offset <= initialFutureDays;
-      offset += 1
-    ) {
-      const meal = getMockMealForOffset(offset);
-
-      if (meal) {
-        initialMeals.set(offset, meal);
-      }
-    }
-
-    return initialMeals;
-  });
+  const {
+    mealCatalog,
+    mealsByOffset,
+    createMeal,
+    updateMeal,
+    deleteMeal: deleteMealFromStore,
+    restoreMeal,
+    moveMeal,
+  } = useMeals();
   const topSentinelRef = useRef<HTMLDivElement | null>(null);
   const bottomSentinelRef = useRef<HTMLDivElement | null>(null);
   const todayRef = useRef<HTMLElement | null>(null);
@@ -243,7 +208,7 @@ function MealsPageContent() {
     const normalizedQuery = normalizeMealTitle(inputValue);
     const suggestions = [
       ...previousMealSuggestions,
-      ...mockMeals.filter(
+      ...mealCatalog.filter(
         (meal) =>
           !previousMealSuggestions.some(
             (previousMeal) =>
@@ -266,7 +231,7 @@ function MealsPageContent() {
         );
       })
       .slice(0, 5);
-  }, [inputValue, previousMealSuggestions]);
+  }, [inputValue, mealCatalog, previousMealSuggestions]);
 
 
   useEffect(() => {
@@ -396,11 +361,7 @@ function MealsPageContent() {
       return;
     }
 
-    setMealsByOffset((currentMeals) => {
-      const nextMeals = new Map(currentMeals);
-      nextMeals.set(offset, createMealFromTitle(trimmedTitle));
-      return nextMeals;
-    });
+    updateMeal({ offset, title: trimmedTitle });
     closeEditor();
 
     if (!options.silent) {
@@ -416,11 +377,7 @@ function MealsPageContent() {
       return;
     }
 
-    setMealsByOffset((currentMeals) => {
-      const nextMeals = new Map(currentMeals);
-      nextMeals.delete(offset);
-      return nextMeals;
-    });
+    deleteMealFromStore({ offset });
     setUndoMeal({ offset, meal: mealToDelete });
     closeEditor();
     showToast("Middag slettet");
@@ -431,11 +388,7 @@ function MealsPageContent() {
       return;
     }
 
-    setMealsByOffset((currentMeals) => {
-      const nextMeals = new Map(currentMeals);
-      nextMeals.set(undoMeal.offset, undoMeal.meal);
-      return nextMeals;
-    });
+    restoreMeal(undoMeal.offset, undoMeal.meal);
     setUndoMeal(null);
     showToast("Middag lagt tilbake");
   }
@@ -526,22 +479,9 @@ function MealsPageContent() {
       return;
     }
 
-    const targetMeal = mealsByOffset.get(targetOffset) ?? null;
+    const { swapped } = moveMeal({ sourceOffset, targetOffset });
 
-    setMealsByOffset((currentMeals) => {
-      const nextMeals = new Map(currentMeals);
-      nextMeals.set(targetOffset, sourceMeal);
-
-      if (targetMeal) {
-        nextMeals.set(sourceOffset, targetMeal);
-      } else {
-        nextMeals.delete(sourceOffset);
-      }
-
-      return nextMeals;
-    });
-
-    showToast(targetMeal ? "Middager byttet plass" : "Middag flyttet");
+    showToast(swapped ? "Middager byttet plass" : "Middag flyttet");
   }
 
   function handleDragEnd() {

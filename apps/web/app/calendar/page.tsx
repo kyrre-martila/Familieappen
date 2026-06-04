@@ -34,13 +34,7 @@ import { AppShell } from "../../components/AppShell";
 import { LockedFeatureState } from "../../components/PendingAccess";
 import { useFamilyAccess } from "../../components/ProtectedFamilyRoute";
 import { Card, EmptyState, PageContainer } from "../../components/ui";
-import {
-  calendarEvents,
-  familyMembers,
-  mockToday,
-  reminders,
-} from "./mockCalendarData";
-import { getMockMealSummariesFromStartDate } from "../meals/mockMealPlanData";
+import { CalendarProvider, useCalendar } from "../../features/calendar/hooks/useCalendar";
 
 const dayFormatter = new Intl.DateTimeFormat("nb-NO", { weekday: "short" });
 const selectedDateFormatter = new Intl.DateTimeFormat("nb-NO", {
@@ -63,9 +57,6 @@ const monthDayLabelFormatter = new Intl.DateTimeFormat("nb-NO", {
   month: "long",
 });
 const weekDayLabels = ["MAN", "TIR", "ONS", "TOR", "FRE", "LØR", "SØN"];
-const mealPlannerMeals: MealSummary[] =
-  getMockMealSummariesFromStartDate(mockToday);
-
 type CalendarContentTypeFilter = "all" | "events" | "reminders" | "meals";
 type CalendarCategoryFilter =
   | "all"
@@ -300,6 +291,9 @@ function reminderMatchesCategory(
 
 function buildListDayGroups(
   filters: CalendarListFilters,
+  calendarEvents: CalendarMvpEvent[],
+  reminders: ReminderSummary[],
+  mealPlannerMeals: MealSummary[],
 ): CalendarListDayGroup[] {
   const dates = new Set<string>();
 
@@ -349,7 +343,10 @@ function buildListDayGroups(
     );
 }
 
-function getFamilyMembers(participantIds: string[]) {
+function getFamilyMembers(
+  participantIds: string[],
+  familyMembers: ReturnType<typeof useCalendar>["familyMembers"],
+) {
   if (participantIds.length === 0) {
     return familyMembers;
   }
@@ -406,6 +403,7 @@ function DateStrip({
   selectedDate: string;
   onSelectDate: (date: string) => void;
 }) {
+  const { events: calendarEvents, mealSummaries: mealPlannerMeals, reminders, today } = useCalendar();
   const dates = useMemo(() => buildDateStrip("2025-06-02"), []);
   const scrollerRef = useRef<HTMLDivElement>(null);
 
@@ -433,7 +431,7 @@ function DateStrip({
       >
         {dates.map((date) => {
           const dateObject = parseDateString(date);
-          const isToday = date === mockToday;
+          const isToday = date === today;
           const isSelected = date === selectedDate;
           const hasEvent =
             calendarEvents.some((event) => event.date === date) ||
@@ -482,6 +480,7 @@ function DateStrip({
 }
 
 function SummaryChips({ selectedDate }: { selectedDate: string }) {
+  const { mealSummaries: mealPlannerMeals, reminders } = useCalendar();
   const meal = mealPlannerMeals.find((item) => item.date === selectedDate);
   const visibleReminders = reminders.filter(
     (item) => item.date === selectedDate,
@@ -533,7 +532,8 @@ function SummaryChips({ selectedDate }: { selectedDate: string }) {
 }
 
 function ParticipantStack({ participantIds }: { participantIds: string[] }) {
-  const members = getFamilyMembers(participantIds);
+  const { familyMembers } = useCalendar();
+  const members = getFamilyMembers(participantIds, familyMembers);
 
   return (
     <div className="calendar-participants">
@@ -635,6 +635,7 @@ function MonthView({
   onChangeMonth: (direction: "previous" | "next") => void;
   onSelectDate: (date: string) => void;
 }) {
+  const { events: calendarEvents, mealSummaries: mealPlannerMeals, reminders, today } = useCalendar();
   const activeMonth = visibleMonth.getMonth();
   const weeks = useMemo(() => buildMonthWeeks(visibleMonth), [visibleMonth]);
   const title = monthTitleFormatter.format(visibleMonth);
@@ -706,7 +707,7 @@ function MonthView({
               const hasReminder = reminders.some(
                 (reminder) => reminder.date === date,
               );
-              const isToday = date === mockToday;
+              const isToday = date === today;
               const isSelected = date === selectedDate;
               const isOutsideMonth = day.getMonth() !== activeMonth;
               const isSunday = day.getDay() === 0;
@@ -864,6 +865,7 @@ function CalendarFilterSheet({
   onDraftChange: (filters: CalendarListFilters) => void;
   onReset: () => void;
 }) {
+  const { familyMembers } = useCalendar();
   const familyOptions = useMemo(
     () => [
       { value: "all", label: "Alle" },
@@ -872,7 +874,7 @@ function CalendarFilterSheet({
         label: member.name,
       })),
     ],
-    [],
+    [familyMembers],
   );
   const draftActiveCount = countActiveListFilters(draftFilters);
 
@@ -976,7 +978,11 @@ function ListView() {
     useState<CalendarListFilters>(defaultListFilters);
   const [isFilterOpen, setIsFilterOpen] = useState(false);
   const activeFilterCount = countActiveListFilters(filters);
-  const dayGroups = useMemo(() => buildListDayGroups(filters), [filters]);
+  const { events: calendarEvents, mealSummaries: mealPlannerMeals, reminders, today } = useCalendar();
+  const dayGroups = useMemo(
+    () => buildListDayGroups(filters, calendarEvents, reminders, mealPlannerMeals),
+    [calendarEvents, filters, mealPlannerMeals, reminders],
+  );
   const filterButtonLabel =
     activeFilterCount > 0
       ? `Filter, ${activeFilterCount} aktive filter`
@@ -1066,7 +1072,7 @@ function ListView() {
                   <h3 className="calendar-list-day__title" id={headingId}>
                     {formatListDate(group.date)}
                   </h3>
-                  {group.date === mockToday ? (
+                  {group.date === today ? (
                     <span className="calendar-list-day__today">I dag</span>
                   ) : null}
                 </div>
@@ -1132,6 +1138,7 @@ function ListView() {
 }
 
 function DayView({ selectedDate }: { selectedDate: string }) {
+  const { events: calendarEvents } = useCalendar();
   const eventsForDate = calendarEvents.filter(
     (event) => event.date === selectedDate,
   );
@@ -1164,12 +1171,11 @@ function DayView({ selectedDate }: { selectedDate: string }) {
   );
 }
 
-export default function CalendarPage() {
+function CalendarPageContent() {
   const familyAccess = useFamilyAccess();
-  const [selectedView, setSelectedView] = useState<CalendarViewMode>("day");
-  const [selectedDate, setSelectedDate] = useState(mockToday);
+  const { selectedDate, selectedView, setSelectedDate, setSelectedView, today } = useCalendar();
   const [visibleMonth, setVisibleMonth] = useState(() =>
-    parseDateString(mockToday),
+    parseDateString(today),
   );
 
   function handleChangeMonth(direction: "previous" | "next") {
@@ -1248,5 +1254,14 @@ export default function CalendarPage() {
         {selectedView === "list" ? <ListView /> : null}
       </PageContainer>
     </AppShell>
+  );
+}
+
+
+export default function CalendarPage() {
+  return (
+    <CalendarProvider>
+      <CalendarPageContent />
+    </CalendarProvider>
   );
 }

@@ -4,7 +4,7 @@ import { useMemo, useState, type FormEvent } from "react";
 import { CalendarClock, CircleHelp, Copy, Link as LinkIcon, Plus, RefreshCw, ShieldAlert, Trash2 } from "lucide-react";
 import type { CalendarExportFeed, CalendarExportScope, CalendarImportSource, CalendarMvpEventIcon, CalendarViewMode } from "@familieappen/shared";
 
-import { familyMembers } from "../../calendar/mockCalendarData";
+import { useCalendar } from "../../../features/calendar/hooks/useCalendar";
 import { Badge, Button, Card, PageContainer, SectionHeader } from "../../../components/ui";
 import { PageHeader } from "../../../components/PageHeader";
 
@@ -109,7 +109,10 @@ const exportScopeOptions = [
   { value: "selectedParticipant", label: "Valgt familiemedlem" },
 ] satisfies { value: CalendarExportScope; label: string }[];
 
-function getParticipantName(participantId: string) {
+function getParticipantName(
+  participantId: string,
+  familyMembers: ReturnType<typeof useCalendar>["familyMembers"],
+) {
   return familyMembers.find((member) => member.id === participantId)?.name ?? "Ikke valgt";
 }
 
@@ -133,6 +136,7 @@ function createImportId(name: string) {
 }
 
 export function CalendarSettingsClient() {
+  const { familyMembers } = useCalendar();
   const [preferences, setPreferences] = useState<CalendarPreferences>(initialPreferences);
   const [imports, setImports] = useState<CalendarImportSource[]>(initialImportSources);
   const [exportFeed, setExportFeed] = useState<CalendarExportFeed>(() => createInitialExportFeed());
@@ -580,7 +584,7 @@ export function CalendarSettingsClient() {
               <dl className="calendar-import-card__meta">
                 <div>
                   <dt>Standard deltaker</dt>
-                  <dd>{getParticipantName(source.defaultParticipantId)}</dd>
+                  <dd>{getParticipantName(source.defaultParticipantId, familyMembers)}</dd>
                 </div>
                 <div>
                   <dt>Standard ikon/kategori</dt>

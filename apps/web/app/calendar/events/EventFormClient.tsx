@@ -6,7 +6,7 @@ import { useEffect, useMemo, useState } from "react";
 import { CalendarCheck, Check, Clock, FileText, MapPin, Repeat, Save, Trash2, Users } from "lucide-react";
 import type { CalendarMvpEvent } from "@familieappen/shared";
 
-import { familyMembers } from "../mockCalendarData";
+import { useCalendar } from "../../../features/calendar/hooks/useCalendar";
 import {
   type CalendarEventFormDraft,
   getDefaultEventFormDraft,
@@ -23,16 +23,16 @@ interface CalendarEventFormClientProps {
 
 const participantOrder = ["alma", "fiona", "even-olai", "kyrre", "elisabeth"];
 
-function getOrderedFamilyMembers() {
+function getOrderedFamilyMembers(familyMembers: ReturnType<typeof useCalendar>["familyMembers"]) {
   return [...familyMembers].sort((memberA, memberB) => participantOrder.indexOf(memberA.id) - participantOrder.indexOf(memberB.id));
 }
 
-function getParticipantSummary(participantIds: string[]) {
+function getParticipantSummary(participantIds: string[], familyMembers: ReturnType<typeof useCalendar>["familyMembers"]) {
   if (participantIds.length === 0) {
     return "Gjelder hele familien";
   }
 
-  const selectedMembers = getOrderedFamilyMembers().filter((member) => participantIds.includes(member.id));
+  const selectedMembers = getOrderedFamilyMembers(familyMembers).filter((member) => participantIds.includes(member.id));
   const [firstMember] = selectedMembers;
 
   if (selectedMembers.length === 1) {
@@ -65,13 +65,14 @@ function readStoredDraft(storageKey: string, fallback: CalendarEventFormDraft) {
 export function CalendarEventFormClient({ mode, event = null }: CalendarEventFormClientProps) {
   const router = useRouter();
   const pathname = usePathname();
+  const { familyMembers } = useCalendar();
   const storageKey = useMemo(() => getDraftStorageKey(mode, event?.id), [event?.id, mode]);
   const defaultDraft = useMemo(() => getDefaultEventFormDraft(event), [event]);
   const [draft, setDraft] = useState<CalendarEventFormDraft>(() => defaultDraft);
   const selectedIcon = getIconOption(draft.iconId);
   const title = mode === "create" ? "Ny hendelse" : "Rediger hendelse";
   const isValid = draft.title.trim().length > 0 && draft.date.trim().length > 0;
-  const participantSummary = getParticipantSummary(draft.participantIds);
+  const participantSummary = getParticipantSummary(draft.participantIds, familyMembers);
   const iconPickerHref = `/calendar/events/icon-picker?returnTo=${encodeURIComponent(pathname)}&draftKey=${encodeURIComponent(storageKey)}`;
 
   useEffect(() => {
@@ -166,7 +167,7 @@ export function CalendarEventFormClient({ mode, event = null }: CalendarEventFor
             </div>
           </div>
           <div className="event-form-avatar-list" role="group" aria-label="Velg deltakere">
-            {getOrderedFamilyMembers().map((member) => {
+            {getOrderedFamilyMembers(familyMembers).map((member) => {
               const isSelected = draft.participantIds.includes(member.id);
 
               return (

@@ -25,7 +25,7 @@ import type { CalendarMvpEvent, CalendarMvpEventIcon } from "@familieappen/share
 import { LockedFeatureState } from "../../../../components/PendingAccess";
 import { useFamilyAccess } from "../../../../components/ProtectedFamilyRoute";
 import { Card, EmptyState, PageContainer } from "../../../../components/ui";
-import { familyMembers } from "../../mockCalendarData";
+import { useCalendar } from "../../../../features/calendar/hooks/useCalendar";
 
 const eventIcons = {
   birthday: Cake,
@@ -64,7 +64,10 @@ function formatEventTime(event: CalendarMvpEvent) {
   return event.endTime ? `${event.startTime}–${event.endTime}` : event.startTime;
 }
 
-function getParticipants(participantIds: string[]) {
+function getParticipants(
+  participantIds: string[],
+  familyMembers: ReturnType<typeof useCalendar>["familyMembers"],
+) {
   if (participantIds.length === 0) {
     return familyMembers;
   }
@@ -87,7 +90,8 @@ function EventDetailLoading() {
 export function EventDetailClient({ event }: { event: CalendarMvpEvent }) {
   const router = useRouter();
   const familyAccess = useFamilyAccess();
-  const participants = getParticipants(event.participantIds);
+  const { familyMembers } = useCalendar();
+  const participants = getParticipants(event.participantIds, familyMembers);
   const EventIcon = eventIcons[event.icon];
   const isWholeFamily = event.participantIds.length === 0;
   const description = event.description ?? "Ingen beskrivelse er lagt til ennå.";
