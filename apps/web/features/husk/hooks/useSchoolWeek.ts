@@ -2,7 +2,13 @@
 
 import { useState } from "react";
 
-import { huskMockData, type HuskSchoolWeekChildPlan, type HuskSchoolWeekItem, type HuskSchoolWeekday } from "../../../app/husk/mockHuskData";
+import { huskMockData } from "../../../app/husk/mockHuskData";
+import type {
+  HuskFamilyMember,
+  HuskSchoolWeekChildPlan,
+  HuskSchoolWeekItem,
+  HuskSchoolWeekday,
+} from "../types";
 
 export type SchoolReminderInput = HuskSchoolWeekItem & {
   childId: string;
@@ -10,28 +16,39 @@ export type SchoolReminderInput = HuskSchoolWeekItem & {
 };
 
 export function useSchoolWeek() {
-  const [weekItems, setWeekItems] = useState<HuskSchoolWeekChildPlan[]>(huskMockData.schoolWeek);
+  const [weekItems, setWeekItems] = useState<HuskSchoolWeekChildPlan[]>(
+    huskMockData.schoolWeek,
+  );
+  const children = huskMockData.familyMembers as HuskFamilyMember[];
 
   function createSchoolReminder(input: SchoolReminderInput) {
     const { childId, weekday, ...item } = input;
     setWeekItems((currentPlans) =>
       currentPlans.map((plan) =>
         plan.childId === childId
-          ? { ...plan, days: { ...plan.days, [weekday]: [...plan.days[weekday], item] } }
+          ? {
+              ...plan,
+              days: { ...plan.days, [weekday]: [...plan.days[weekday], item] },
+            }
           : plan,
       ),
     );
     return item;
   }
 
-  function updateSchoolReminder(itemId: string, update: Partial<HuskSchoolWeekItem>) {
+  function updateSchoolReminder(
+    itemId: string,
+    update: Partial<HuskSchoolWeekItem>,
+  ) {
     setWeekItems((currentPlans) =>
       currentPlans.map((plan) => ({
         ...plan,
         days: Object.fromEntries(
           Object.entries(plan.days).map(([weekday, items]) => [
             weekday,
-            items.map((item) => (item.id === itemId ? { ...item, ...update } : item)),
+            items.map((item) =>
+              item.id === itemId ? { ...item, ...update } : item,
+            ),
           ]),
         ) as HuskSchoolWeekChildPlan["days"],
       })),
@@ -53,7 +70,7 @@ export function useSchoolWeek() {
   }
 
   return {
-    children: huskMockData.familyMembers,
+    children,
     weekItems,
     createSchoolReminder,
     updateSchoolReminder,

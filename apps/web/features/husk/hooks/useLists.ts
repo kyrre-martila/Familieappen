@@ -2,26 +2,39 @@
 
 import { useState } from "react";
 
-import { huskListDetails, huskMockData, type HuskListDetail, type HuskListDetailItem, type HuskListGroup } from "../../../app/husk/mockHuskData";
+import {
+  huskListDetails,
+  huskMockData,
+  type HuskListDetail,
+  type HuskListDetailItem,
+} from "../../../app/husk/mockHuskData";
+import type { HuskFamilyMember, HuskListGroup } from "../types";
 
 export type ListInput = Omit<HuskListGroup, "id"> & { id?: string };
 
 export function useLists(initialListDetail?: HuskListDetail) {
   const [lists, setLists] = useState<HuskListGroup[]>(huskMockData.listGroups);
-  const [listDetails, setListDetails] = useState<HuskListDetail[]>(huskListDetails);
+  const familyMembers = huskMockData.familyMembers as HuskFamilyMember[];
+  const [listDetails, setListDetails] =
+    useState<HuskListDetail[]>(huskListDetails);
   const [listItems, setListItems] = useState<HuskListDetailItem[]>(
     initialListDetail?.items ?? [],
   );
 
   function createList(input: ListInput) {
-    const list: HuskListGroup = { ...input, id: input.id ?? `mock-list-${Date.now()}` };
+    const list: HuskListGroup = {
+      ...input,
+      id: input.id ?? `mock-list-${Date.now()}`,
+    };
     setLists((currentLists) => [list, ...currentLists]);
     return list;
   }
 
   function updateList(id: string, update: Partial<HuskListGroup>) {
     setLists((currentLists) =>
-      currentLists.map((list) => (list.id === id ? { ...list, ...update } : list)),
+      currentLists.map((list) =>
+        list.id === id ? { ...list, ...update } : list,
+      ),
     );
   }
 
@@ -31,7 +44,9 @@ export function useLists(initialListDetail?: HuskListDetail) {
 
   function updateListItem(itemId: string, update: Partial<HuskListDetailItem>) {
     setListItems((currentItems) =>
-      currentItems.map((item) => (item.id === itemId ? { ...item, ...update } : item)),
+      currentItems.map((item) =>
+        item.id === itemId ? { ...item, ...update } : item,
+      ),
     );
   }
 
@@ -44,7 +59,9 @@ export function useLists(initialListDetail?: HuskListDetail) {
   }
 
   function deleteListItem(itemId: string) {
-    setListItems((currentItems) => currentItems.filter((item) => item.id !== itemId));
+    setListItems((currentItems) =>
+      currentItems.filter((item) => item.id !== itemId),
+    );
   }
 
   function createListItem(item: HuskListDetailItem) {
@@ -53,7 +70,7 @@ export function useLists(initialListDetail?: HuskListDetail) {
   }
 
   return {
-    familyMembers: huskMockData.familyMembers,
+    familyMembers,
     lists,
     listDetails,
     listItems,
