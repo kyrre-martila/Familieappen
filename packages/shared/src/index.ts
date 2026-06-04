@@ -37,11 +37,22 @@ export interface Task {
 export interface MealPlanDay {
   id: string;
   mealPlanId: string;
+  familyId: string;
   date: string;
   mealName: string;
+  title: string;
+  note: string | null;
   notes: string | null;
+  createdByFamilyMemberId: string | null;
+  sortOrder: number | null;
   createdAt: string;
   updatedAt: string;
+  deletedAt: string | null;
+}
+
+export interface MoveMealResult {
+  meals: MealPlanDay[];
+  swapped: boolean;
 }
 
 export interface MealPlan {

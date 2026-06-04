@@ -1,9 +1,9 @@
 import { BadRequestException, Injectable, NotFoundException } from "@nestjs/common";
-import { FamilyAuthorizationService } from "../families";
 import { PrismaService } from "../prisma";
-import { MealPlanDayDto, MealPlanDto, UpsertMealPlanDayRequestDto } from "./dto/meal.dto";
+import { FamilyAuthorizationService } from "../families";
+import { MealPlanDayDto, MealPlanDto, MoveMealRequestDto, MoveMealResultDto, UpsertMealPlanDayRequestDto } from "./dto/meal.dto";
 
-const DEFAULT_RECENT_MEAL_LIMIT = 5;
+const DEFAULT_RECENT_MEAL_LIMIT = 8;
 
 type MealPlanRecord = {
   id: string;
@@ -15,11 +15,15 @@ type MealPlanRecord = {
 type MealPlanDayRecord = {
   id: string;
   mealPlanId: string;
+  familyId: string;
   date: Date;
   mealName: string;
   notes: string | null;
+  createdByFamilyMemberId: string | null;
+  sortOrder: number | null;
   createdAt: Date;
   updatedAt: Date;
+  deletedAt: Date | null;
 };
 
 @Injectable()
@@ -37,28 +41,36 @@ export class MealsService {
   }
 
   async upsertDay(userId: string, familyId: string, input: UpsertMealPlanDayRequestDto = {}): Promise<MealPlanDayDto> {
-    await this.familyAuthorization.requireFamilyMember(userId, familyId);
+    const membership = await this.familyAuthorization.requireFamilyMember(userId, familyId);
     const mealPlan = await this.getOrCreateFamilyMealPlan(familyId);
     const date = this.validateDate(input.date);
-    const mealName = this.validateMealName(input.mealName);
-    const notes = this.validateNotes(input.notes);
+    const mealName = this.validateMealName(input.mealName ?? input.title);
+    const notes = this.validateNotes(input.notes ?? input.note);
+    const createdByFamilyMemberId = await this.validateCreatedByFamilyMemberId(familyId, input.createdByFamilyMemberId, membership.id);
+    const sortOrder = this.validateSortOrder(input.sortOrder);
 
     const day = await this.prisma.client.mealPlanDay.upsert({
       where: {
-        mealPlanId_date: {
-          mealPlanId: mealPlan.id,
+        familyId_date: {
+          familyId,
           date
         }
       },
       create: {
         mealPlanId: mealPlan.id,
+        familyId,
         date,
         mealName,
-        notes
+        notes,
+        createdByFamilyMemberId,
+        sortOrder
       },
       update: {
         mealName,
-        notes
+        notes,
+        createdByFamilyMemberId,
+        sortOrder,
+        deletedAt: null
       }
     });
 
@@ -68,18 +80,24 @@ export class MealsService {
   async updateDay(userId: string, familyId: string, dayId: string, input: UpsertMealPlanDayRequestDto = {}): Promise<MealPlanDayDto> {
     await this.familyAuthorization.requireFamilyMember(userId, familyId);
     const day = await this.getFamilyMealPlanDayOrThrow(familyId, dayId);
-    const updateData: { date?: Date; mealName?: string; notes?: string | null } = {};
+    const updateData: { date?: Date; mealName?: string; notes?: string | null; sortOrder?: number | null } = {};
 
     if (input.date !== undefined) {
       updateData.date = this.validateDate(input.date);
     }
 
-    if (input.mealName !== undefined) {
-      updateData.mealName = this.validateMealName(input.mealName);
+    const titleInput = input.mealName ?? input.title;
+    if (titleInput !== undefined) {
+      updateData.mealName = this.validateMealName(titleInput);
     }
 
-    if (input.notes !== undefined) {
-      updateData.notes = this.validateNotes(input.notes);
+    const noteInput = input.notes ?? input.note;
+    if (noteInput !== undefined) {
+      updateData.notes = this.validateNotes(noteInput);
+    }
+
+    if (input.sortOrder !== undefined) {
+      updateData.sortOrder = this.validateSortOrder(input.sortOrder);
     }
 
     if (Object.keys(updateData).length === 0) {
@@ -89,13 +107,17 @@ export class MealsService {
     if (updateData.date) {
       const existingDayForDate = await this.prisma.client.mealPlanDay.findFirst({
         where: {
-          mealPlanId: day.mealPlanId,
+          familyId,
           date: updateData.date
         }
       });
 
-      if (existingDayForDate && existingDayForDate.id !== day.id) {
+      if (existingDayForDate && existingDayForDate.id !== day.id && !existingDayForDate.deletedAt) {
         throw new BadRequestException("A dinner is already planned for that date");
+      }
+
+      if (existingDayForDate?.deletedAt) {
+        await this.prisma.client.mealPlanDay.delete({ where: { id: existingDayForDate.id } });
       }
     }
 
@@ -111,11 +133,51 @@ export class MealsService {
     await this.familyAuthorization.requireFamilyMember(userId, familyId);
     const day = await this.getFamilyMealPlanDayOrThrow(familyId, dayId);
 
-    const deletedDay = await this.prisma.client.mealPlanDay.delete({
-      where: { id: day.id }
+    const deletedDay = await this.prisma.client.mealPlanDay.update({
+      where: { id: day.id },
+      data: { deletedAt: new Date() }
     });
 
     return this.toMealPlanDayDto(deletedDay);
+  }
+
+  async moveDay(userId: string, familyId: string, input: MoveMealRequestDto = {}): Promise<MoveMealResultDto> {
+    await this.familyAuthorization.requireFamilyMember(userId, familyId);
+    const targetDate = this.validateDate(input.targetDate);
+    const sourceDay = await this.getMoveSourceDay(familyId, input);
+
+    if (sourceDay.date.getTime() === targetDate.getTime()) {
+      return { meals: [this.toMealPlanDayDto(sourceDay)], swapped: false };
+    }
+
+    const targetDay = await this.prisma.client.mealPlanDay.findFirst({
+      where: { familyId, date: targetDate }
+    });
+
+    if (!targetDay || targetDay.deletedAt) {
+      const movedDay = await this.prisma.client.$transaction(async (transaction) => {
+        if (targetDay?.deletedAt) {
+          await transaction.mealPlanDay.delete({ where: { id: targetDay.id } });
+        }
+
+        return transaction.mealPlanDay.update({
+          where: { id: sourceDay.id },
+          data: { date: targetDate }
+        });
+      });
+
+      return { meals: [this.toMealPlanDayDto(movedDay)], swapped: false };
+    }
+
+    const tempDate = await this.findTemporarySwapDate(familyId);
+    const [movedSourceDay, movedTargetDay] = await this.prisma.client.$transaction(async (transaction) => {
+      await transaction.mealPlanDay.update({ where: { id: sourceDay.id }, data: { date: tempDate } });
+      const updatedTargetDay = await transaction.mealPlanDay.update({ where: { id: targetDay.id }, data: { date: sourceDay.date } });
+      const updatedSourceDay = await transaction.mealPlanDay.update({ where: { id: sourceDay.id }, data: { date: targetDate } });
+      return [updatedSourceDay, updatedTargetDay];
+    });
+
+    return { meals: [this.toMealPlanDayDto(movedSourceDay), this.toMealPlanDayDto(movedTargetDay)], swapped: true };
   }
 
   async getDinnerToday(userId: string, familyId: string): Promise<MealPlanDayDto | null> {
@@ -124,16 +186,11 @@ export class MealsService {
   }
 
   async getDinnerTodayForFamily(familyId: string): Promise<MealPlanDayDto | null> {
-    const mealPlan = await this.prisma.client.mealPlan.findUnique({ where: { familyId }, select: { id: true } });
-
-    if (!mealPlan) {
-      return null;
-    }
-
     const day = await this.prisma.client.mealPlanDay.findFirst({
       where: {
-        mealPlanId: mealPlan.id,
-        date: this.startOfUtcDay(new Date())
+        familyId,
+        date: this.startOfUtcDay(new Date()),
+        deletedAt: null
       }
     });
 
@@ -145,6 +202,7 @@ export class MealsService {
       where: { familyId },
       include: {
         days: {
+          where: { deletedAt: null },
           orderBy: { date: "asc" }
         }
       }
@@ -158,6 +216,7 @@ export class MealsService {
       data: { familyId },
       include: {
         days: {
+          where: { deletedAt: null },
           orderBy: { date: "asc" }
         }
       }
@@ -168,12 +227,28 @@ export class MealsService {
     const day = await this.prisma.client.mealPlanDay.findFirst({
       where: {
         id: dayId,
-        mealPlan: { familyId }
+        familyId,
+        deletedAt: null
       }
     });
 
     if (!day) {
-      throw new NotFoundException("Meal plan day was not found");
+      throw new NotFoundException("Meal was not found");
+    }
+
+    return day;
+  }
+
+  private async getMoveSourceDay(familyId: string, input: MoveMealRequestDto): Promise<MealPlanDayRecord> {
+    if (typeof input.mealId === "string" && input.mealId.trim()) {
+      return this.getFamilyMealPlanDayOrThrow(familyId, input.mealId.trim());
+    }
+
+    const sourceDate = this.validateDate(input.sourceDate);
+    const day = await this.prisma.client.mealPlanDay.findFirst({ where: { familyId, date: sourceDate, deletedAt: null } });
+
+    if (!day) {
+      throw new NotFoundException("Meal was not found");
     }
 
     return day;
@@ -231,6 +306,42 @@ export class MealsService {
     return notes.length === 0 ? null : notes;
   }
 
+  private validateSortOrder(value: unknown): number | null {
+    if (value === undefined || value === null) {
+      return null;
+    }
+
+    if (typeof value !== "number" || !Number.isInteger(value)) {
+      throw new BadRequestException("Meal sort order must be an integer");
+    }
+
+    return value;
+  }
+
+  private async validateCreatedByFamilyMemberId(familyId: string, value: unknown, fallbackFamilyMemberId: string): Promise<string> {
+    if (value === undefined || value === null || value === "") {
+      return fallbackFamilyMemberId;
+    }
+
+    if (typeof value !== "string") {
+      throw new BadRequestException("Meal creator must be a family member id");
+    }
+
+    const member = await this.prisma.client.familyMember.findFirst({
+      where: {
+        id: value,
+        familyId
+      },
+      select: { id: true }
+    });
+
+    if (!member) {
+      throw new BadRequestException("Meal creator must belong to this family");
+    }
+
+    return member.id;
+  }
+
   private toMealPlanDto(mealPlan: MealPlanRecord & { days: MealPlanDayRecord[] }): MealPlanDto {
     return {
       id: mealPlan.id,
@@ -246,19 +357,29 @@ export class MealsService {
     return {
       id: day.id,
       mealPlanId: day.mealPlanId,
+      familyId: day.familyId,
       date: day.date.toISOString().slice(0, 10),
       mealName: day.mealName,
+      title: day.mealName,
+      note: day.notes,
       notes: day.notes,
+      createdByFamilyMemberId: day.createdByFamilyMemberId,
+      sortOrder: day.sortOrder,
       createdAt: day.createdAt.toISOString(),
-      updatedAt: day.updatedAt.toISOString()
+      updatedAt: day.updatedAt.toISOString(),
+      deletedAt: day.deletedAt ? day.deletedAt.toISOString() : null
     };
   }
 
   private getRecentMeals(days: MealPlanDayRecord[]): string[] {
     const recentMeals: string[] = [];
+    const normalizedTitles = new Set<string>();
 
-    for (const day of [...days].sort((first, second) => second.updatedAt.getTime() - first.updatedAt.getTime())) {
-      if (!recentMeals.includes(day.mealName)) {
+    for (const day of [...days].sort((first, second) => second.date.getTime() - first.date.getTime())) {
+      const normalizedTitle = day.mealName.trim().toLocaleLowerCase("nb-NO");
+
+      if (!normalizedTitles.has(normalizedTitle)) {
+        normalizedTitles.add(normalizedTitle);
         recentMeals.push(day.mealName);
       }
 
@@ -268,6 +389,19 @@ export class MealsService {
     }
 
     return recentMeals;
+  }
+
+  private async findTemporarySwapDate(familyId: string): Promise<Date> {
+    for (let year = 1900; year >= 1800; year -= 1) {
+      const date = new Date(Date.UTC(year, 0, 1));
+      const existing = await this.prisma.client.mealPlanDay.findFirst({ where: { familyId, date } });
+
+      if (!existing) {
+        return date;
+      }
+    }
+
+    throw new BadRequestException("Could not move meal right now");
   }
 
   private startOfUtcDay(date: Date): Date {
