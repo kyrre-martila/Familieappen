@@ -26,6 +26,7 @@ model User {
   createdTasks Task[] @relation("TaskCreatedBy")
   completedTasks Task[] @relation("TaskCompletedBy")
   createdCalendarEvents CalendarEvent[] @relation("CalendarEventCreatedBy")
+  createdReminders Reminder[] @relation("ReminderCreatedBy")
   createdWishlists Wishlist[] @relation("WishlistCreatedBy")
   wishlistReservations WishlistReservation[] @relation("WishlistReservationReservedBy")
 
@@ -42,6 +43,7 @@ model Family {
   mealPlans MealPlan[]
   tasks     Task[]
   calendarEvents CalendarEvent[]
+  reminders Reminder[]
   wishlists Wishlist[]
 
   @@map("families")
@@ -59,6 +61,7 @@ model FamilyMember {
   family      Family           @relation(fields: [familyId], references: [id], onDelete: Cascade)
   assignedTasks Task[]
   calendarEventParticipants CalendarEventParticipant[]
+  reminderAudienceMembers ReminderAudienceMember[]
   ownedWishlists Wishlist[]
 
   @@index([familyId])
@@ -192,6 +195,43 @@ model CalendarEventParticipant {
   @@map("calendar_event_participants")
 }
 
+
+
+model Reminder {
+  id              String                   @id @default(cuid())
+  familyId        String
+  title           String
+  icon            String                   @default("backpack")
+  dueDate         DateTime
+  reminderMinutesBefore Int?
+  note            String?
+  createdByUserId String?
+  createdAt       DateTime                 @default(now())
+  updatedAt       DateTime                 @updatedAt
+  archivedAt      DateTime?
+  family          Family                   @relation(fields: [familyId], references: [id], onDelete: Cascade)
+  createdByUser   User?                    @relation("ReminderCreatedBy", fields: [createdByUserId], references: [id], onDelete: SetNull)
+  audienceMembers ReminderAudienceMember[]
+
+  @@index([familyId])
+  @@index([dueDate])
+  @@index([createdByUserId])
+  @@map("reminders")
+}
+
+model ReminderAudienceMember {
+  id             String       @id @default(cuid())
+  reminderId     String
+  familyMemberId String
+  createdAt      DateTime     @default(now())
+  reminder       Reminder     @relation(fields: [reminderId], references: [id], onDelete: Cascade)
+  familyMember   FamilyMember @relation(fields: [familyMemberId], references: [id], onDelete: Cascade)
+
+  @@unique([reminderId, familyMemberId])
+  @@index([reminderId])
+  @@index([familyMemberId])
+  @@map("reminder_audience_members")
+}
 
 model Wishlist {
   id                  String               @id @default(cuid())

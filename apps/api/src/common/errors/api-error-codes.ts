@@ -10,6 +10,7 @@ export const API_ERROR_CODES = {
   SHOPPING_ITEM_NOT_FOUND: "shopping.item_not_found",
   TASK_NOT_FOUND: "task.not_found",
   CALENDAR_EVENT_NOT_FOUND: "calendar.event_not_found",
+  REMINDER_NOT_FOUND: "husk.reminder_not_found",
   WISHLIST_NOT_FOUND: "wishlist.not_found",
   WISHLIST_INVALID_SHARE_TOKEN: "wishlist.invalid_share_token",
   WISHLIST_ITEM_MISMATCH: "wishlist.item_mismatch",

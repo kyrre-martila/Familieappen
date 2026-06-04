@@ -40,6 +40,8 @@ interface PrismaClientConnection {
   task: PrismaDelegate;
   calendarEvent: PrismaDelegate;
   calendarEventParticipant: PrismaDelegate;
+  reminder: PrismaDelegate;
+  reminderAudienceMember: PrismaDelegate;
   wishlist: PrismaDelegate;
   wishlistItem: PrismaDelegate;
   wishlistReservation: PrismaDelegate;

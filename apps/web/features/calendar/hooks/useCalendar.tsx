@@ -19,13 +19,11 @@ import {
   type CalendarEvent as BackendCalendarEvent,
 } from "../../../lib/api";
 import { getUserFacingApiMessage } from "../../../lib/auth-family";
-import {
-  mockToday,
-  reminders as mockReminders,
-} from "../../../app/calendar/mockCalendarData";
+import { mockToday } from "../../../app/calendar/mockCalendarData";
 import { getMockMealSummariesFromStartDate } from "../../../app/meals/mockMealPlanData";
 import { remapLegacyMemberIds } from "../../family/familyMemberAdapters";
 import { useFamilyMembers } from "../../family/hooks/useFamilyMembers";
+import { useReminders } from "../../husk/hooks/useReminders";
 import type { CalendarEvent, CalendarFamilyMember } from "../../types";
 
 export type CalendarEventInput = Partial<CalendarEvent> & Pick<CalendarEvent, "title" | "date">;
@@ -173,7 +171,7 @@ function useCalendarContractValue(): CalendarContract {
   const [events, setEvents] = useState<CalendarEvent[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [reminders] = useState<ReminderSummary[]>(mockReminders);
+  const { reminders } = useReminders();
   const [selectedDate, setSelectedDate] = useState(today || mockToday);
   const [selectedView, setSelectedView] = useState<CalendarViewMode>("day");
   const activeFamilyId = family?.id ?? null;
@@ -219,10 +217,13 @@ function useCalendarContractValue(): CalendarContract {
   const calendarReminders = useMemo(
     () =>
       reminders.map((reminder) => ({
-        ...reminder,
-        participantIds: remapLegacyMemberIds(reminder.participantIds, familyMembers),
-      })),
-    [familyMembers, reminders],
+        id: reminder.id,
+        date: reminder.dueDate ?? today,
+        title: reminder.title,
+        icon: reminder.icon === "gift" || reminder.icon === "backpack" ? reminder.icon : "family",
+        participantIds: remapLegacyMemberIds(reminder.memberIds, familyMembers),
+      } satisfies ReminderSummary)),
+    [familyMembers, reminders, today],
   );
 
   const createEvent = useCallback(async (input: CalendarEventInput) => {

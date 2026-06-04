@@ -5,7 +5,7 @@ import { useState } from "react";
 import { FamilyMembersEmptyState, FamilyMembersErrorState, FamilyMembersLoadingState } from "../../family/FamilyMembersEmptyState";
 import { useReminders } from "../hooks/useReminders";
 import type { HuskFilters, HuskReminder } from "../types";
-import { previousReminders, reminderGroupOrder } from "./huskConfig";
+import { reminderGroupOrder } from "./huskConfig";
 import { matchesPersonFilter, normalizeSearch } from "./huskUtils";
 import { HuskReminderDetailSheet } from "./HuskReminderDetailSheet";
 import { HuskReminderEmptyState } from "./HuskReminderEmptyState";
@@ -23,7 +23,10 @@ export function HuskRemindersSection({
   );
   const { familyMembers, reminders, loading, error, refresh } = useReminders();
   const normalizedQuery = normalizeSearch(query);
-  const filteredReminders = reminders.filter((reminder) => {
+  const today = new Date().toISOString().slice(0, 10);
+  const activeReminders = reminders.filter((reminder) => !reminder.dueDate || reminder.dueDate >= today);
+  const previousReminders = reminders.filter((reminder) => reminder.dueDate && reminder.dueDate < today);
+  const filteredReminders = activeReminders.filter((reminder) => {
     if (
       !matchesPersonFilter(
         reminder.memberIds,
