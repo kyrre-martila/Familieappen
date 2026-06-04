@@ -11,11 +11,12 @@ import type { CalendarViewMode, MealSummary, ReminderSummary } from "@familieapp
 
 import {
   calendarEvents as mockCalendarEvents,
-  familyMembers as mockFamilyMembers,
   mockToday,
   reminders as mockReminders,
 } from "../../../app/calendar/mockCalendarData";
 import { getMockMealSummariesFromStartDate } from "../../../app/meals/mockMealPlanData";
+import { remapLegacyMemberIds } from "../../family/familyMemberAdapters";
+import { useFamilyMembers } from "../../family/hooks/useFamilyMembers";
 import type { CalendarEvent, CalendarFamilyMember } from "../../types";
 
 export type CalendarEventInput = Partial<CalendarEvent> & Pick<CalendarEvent, "title" | "date">;
@@ -25,6 +26,9 @@ export type CalendarContract = {
   reminders: ReminderSummary[];
   mealSummaries: MealSummary[];
   familyMembers: CalendarFamilyMember[];
+  familyMembersLoading: boolean;
+  familyMembersError: string | null;
+  refreshFamilyMembers: () => Promise<void>;
   today: string;
   selectedDate: string;
   selectedView: CalendarViewMode;
@@ -56,6 +60,7 @@ function createCalendarEvent(input: CalendarEventInput): CalendarEvent {
 }
 
 function useCalendarContractValue(): CalendarContract {
+  const { familyMembers, loading: familyMembersLoading, error: familyMembersError, refresh: refreshFamilyMembers } = useFamilyMembers();
   const [events, setEvents] = useState<CalendarEvent[]>(mockCalendarEvents);
   const [reminders] = useState<ReminderSummary[]>(mockReminders);
   const [selectedDate, setSelectedDate] = useState(mockToday);
@@ -63,6 +68,22 @@ function useCalendarContractValue(): CalendarContract {
   const mealSummaries = useMemo(
     () => getMockMealSummariesFromStartDate(mockToday),
     [],
+  );
+  const calendarEvents = useMemo(
+    () =>
+      events.map((event) => ({
+        ...event,
+        participantIds: remapLegacyMemberIds(event.participantIds, familyMembers),
+      })),
+    [events, familyMembers],
+  );
+  const calendarReminders = useMemo(
+    () =>
+      reminders.map((reminder) => ({
+        ...reminder,
+        participantIds: remapLegacyMemberIds(reminder.participantIds, familyMembers),
+      })),
+    [familyMembers, reminders],
   );
 
   function createEvent(input: CalendarEventInput) {
@@ -81,10 +102,13 @@ function useCalendarContractValue(): CalendarContract {
 
   return useMemo(
     () => ({
-      events,
-      reminders,
+      events: calendarEvents,
+      reminders: calendarReminders,
       mealSummaries,
-      familyMembers: mockFamilyMembers,
+      familyMembers,
+      familyMembersLoading,
+      familyMembersError,
+      refreshFamilyMembers,
       today: mockToday,
       selectedDate,
       selectedView,
@@ -93,7 +117,7 @@ function useCalendarContractValue(): CalendarContract {
       createEvent,
       updateEvent,
     }),
-    [events, mealSummaries, reminders, selectedDate, selectedView],
+    [calendarEvents, calendarReminders, familyMembers, familyMembersError, familyMembersLoading, mealSummaries, selectedDate, selectedView, refreshFamilyMembers],
   );
 }
 

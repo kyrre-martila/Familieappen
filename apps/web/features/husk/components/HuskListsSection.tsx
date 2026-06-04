@@ -1,5 +1,6 @@
 "use client";
 
+import { FamilyMembersEmptyState, FamilyMembersErrorState, FamilyMembersLoadingState } from "../../family/FamilyMembersEmptyState";
 import { useLists } from "../hooks/useLists";
 import type { HuskListGroup, ListFilters } from "../types";
 import { matchesPersonFilter, normalizeSearch } from "./huskUtils";
@@ -14,7 +15,7 @@ export function HuskListsSection({
   filters: ListFilters;
   query: string;
 }) {
-  const { familyMembers, lists } = useLists();
+  const { familyMembers, lists, loading, error, refresh } = useLists();
   const normalizedQuery = normalizeSearch(query);
   const filterListGroups = (groups: HuskListGroup[]) =>
     groups.filter((group) => {
@@ -53,6 +54,30 @@ export function HuskListsSection({
   const archivedLists = filters.showArchived
     ? filterListGroups(lists.filter((group) => group.archived))
     : [];
+
+  if (loading) {
+    return (
+      <section className="husk-panel" id="husk-panel-lister" role="tabpanel" aria-labelledby="husk-tab-lister husk-lists-title">
+        <FamilyMembersLoadingState />
+      </section>
+    );
+  }
+
+  if (error) {
+    return (
+      <section className="husk-panel" id="husk-panel-lister" role="tabpanel" aria-labelledby="husk-tab-lister husk-lists-title">
+        <FamilyMembersErrorState onRetry={() => void refresh()} />
+      </section>
+    );
+  }
+
+  if (familyMembers.length === 0) {
+    return (
+      <section className="husk-panel" id="husk-panel-lister" role="tabpanel" aria-labelledby="husk-tab-lister husk-lists-title">
+        <FamilyMembersEmptyState />
+      </section>
+    );
+  }
 
   return (
     <section

@@ -1,7 +1,7 @@
 import { Check, X } from "lucide-react";
 
 import type { HuskPersonFilter } from "../types";
-import { personFilterOptions } from "./huskConfig";
+import { useFamilyMembers } from "../../family/hooks/useFamilyMembers";
 import { HuskMobileSheet } from "./HuskMobileSheet";
 
 export function HuskFilterSheet({
@@ -27,6 +27,13 @@ export function HuskFilterSheet({
   toggleChecked: boolean;
   toggleLabel: string;
 }) {
+  const { familyMembers } = useFamilyMembers();
+  const personFilterOptions = [
+    { value: "all" as HuskPersonFilter, label: "Alle" },
+    ...familyMembers.map((member) => ({ value: member.id as HuskPersonFilter, label: member.name })),
+    { value: "family" as HuskPersonFilter, label: "Hele familien" },
+  ];
+
   return (
     <HuskMobileSheet
       isOpen={isOpen}

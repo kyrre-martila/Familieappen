@@ -26,6 +26,7 @@ import { LockedFeatureState } from "../../../../components/PendingAccess";
 import { useFamilyAccess } from "../../../../components/ProtectedFamilyRoute";
 import { Card, EmptyState, PageContainer } from "../../../../components/ui";
 import { useCalendar } from "../../../../features/calendar/hooks/useCalendar";
+import { remapLegacyMemberIds } from "../../../../features/family/familyMemberAdapters";
 
 const eventIcons = {
   birthday: Cake,
@@ -72,7 +73,9 @@ function getParticipants(
     return familyMembers;
   }
 
-  return familyMembers.filter((member) => participantIds.includes(member.id));
+  const scopedParticipantIds = remapLegacyMemberIds(participantIds, familyMembers);
+
+  return familyMembers.filter((member) => scopedParticipantIds.includes(member.id));
 }
 
 function EventDetailLoading() {
@@ -91,7 +94,8 @@ export function EventDetailClient({ event }: { event: CalendarMvpEvent }) {
   const router = useRouter();
   const familyAccess = useFamilyAccess();
   const { familyMembers } = useCalendar();
-  const participants = getParticipants(event.participantIds, familyMembers);
+  const participantIds = remapLegacyMemberIds(event.participantIds, familyMembers);
+  const participants = getParticipants(participantIds, familyMembers);
   const EventIcon = eventIcons[event.icon];
   const isWholeFamily = event.participantIds.length === 0;
   const description = event.description ?? "Ingen beskrivelse er lagt til ennå.";

@@ -7,6 +7,8 @@ import { CalendarCheck, Check, Clock, FileText, MapPin, Repeat, Save, Trash2, Us
 import type { CalendarMvpEvent } from "@familieappen/shared";
 
 import { useCalendar } from "../../../features/calendar/hooks/useCalendar";
+import { FamilyMembersEmptyState, FamilyMembersErrorState, FamilyMembersLoadingState } from "../../../features/family/FamilyMembersEmptyState";
+import { remapLegacyMemberIds } from "../../../features/family/familyMemberAdapters";
 import {
   type CalendarEventFormDraft,
   getDefaultEventFormDraft,
@@ -21,10 +23,8 @@ interface CalendarEventFormClientProps {
   event?: CalendarMvpEvent | null;
 }
 
-const participantOrder = ["alma", "fiona", "even-olai", "kyrre", "elisabeth"];
-
 function getOrderedFamilyMembers(familyMembers: ReturnType<typeof useCalendar>["familyMembers"]) {
-  return [...familyMembers].sort((memberA, memberB) => participantOrder.indexOf(memberA.id) - participantOrder.indexOf(memberB.id));
+  return familyMembers;
 }
 
 function getParticipantSummary(participantIds: string[], familyMembers: ReturnType<typeof useCalendar>["familyMembers"]) {
@@ -34,6 +34,10 @@ function getParticipantSummary(participantIds: string[], familyMembers: ReturnTy
 
   const selectedMembers = getOrderedFamilyMembers(familyMembers).filter((member) => participantIds.includes(member.id));
   const [firstMember] = selectedMembers;
+
+  if (!firstMember) {
+    return "Ingen deltakere valgt";
+  }
 
   if (selectedMembers.length === 1) {
     return `Gjelder ${firstMember.name}`;
@@ -65,7 +69,7 @@ function readStoredDraft(storageKey: string, fallback: CalendarEventFormDraft) {
 export function CalendarEventFormClient({ mode, event = null }: CalendarEventFormClientProps) {
   const router = useRouter();
   const pathname = usePathname();
-  const { familyMembers } = useCalendar();
+  const { familyMembers, familyMembersLoading, familyMembersError, refreshFamilyMembers } = useCalendar();
   const storageKey = useMemo(() => getDraftStorageKey(mode, event?.id), [event?.id, mode]);
   const defaultDraft = useMemo(() => getDefaultEventFormDraft(event), [event]);
   const [draft, setDraft] = useState<CalendarEventFormDraft>(() => defaultDraft);
@@ -82,6 +86,13 @@ export function CalendarEventFormClient({ mode, event = null }: CalendarEventFor
   useEffect(() => {
     window.sessionStorage.setItem(storageKey, JSON.stringify(draft));
   }, [draft, storageKey]);
+
+  useEffect(() => {
+    setDraft((currentDraft) => ({
+      ...currentDraft,
+      participantIds: remapLegacyMemberIds(currentDraft.participantIds, familyMembers),
+    }));
+  }, [familyMembers]);
 
   function updateDraft<Key extends keyof CalendarEventFormDraft>(key: Key, value: CalendarEventFormDraft[Key]) {
     setDraft((currentDraft) => ({ ...currentDraft, [key]: value }));
@@ -166,28 +177,36 @@ export function CalendarEventFormClient({ mode, event = null }: CalendarEventFor
               <p>{participantSummary}</p>
             </div>
           </div>
-          <div className="event-form-avatar-list" role="group" aria-label="Velg deltakere">
-            {getOrderedFamilyMembers(familyMembers).map((member) => {
-              const isSelected = draft.participantIds.includes(member.id);
+          {familyMembersLoading ? (
+            <FamilyMembersLoadingState />
+          ) : familyMembersError ? (
+            <FamilyMembersErrorState onRetry={() => void refreshFamilyMembers()} />
+          ) : familyMembers.length === 0 ? (
+            <FamilyMembersEmptyState />
+          ) : (
+            <div className="event-form-avatar-list" role="group" aria-label="Velg deltakere">
+              {getOrderedFamilyMembers(familyMembers).map((member) => {
+                const isSelected = draft.participantIds.includes(member.id);
 
-              return (
-                <button
-                  className={`event-form-avatar-chip ${isSelected ? "event-form-avatar-chip--selected" : ""}`}
-                  key={member.id}
-                  type="button"
-                  onClick={() => toggleParticipant(member.id)}
-                  aria-pressed={isSelected}
-                  aria-label={`${member.name}. ${isSelected ? "Valgt" : "Ikke valgt"}`}
-                >
-                  <span className={`event-form-avatar-chip__avatar event-form-avatar-chip__avatar--${member.avatarColor}`} aria-hidden="true">
-                    {member.initials}
-                    {isSelected ? <span className="event-form-avatar-chip__check"><Check size={14} strokeWidth={3.2} /></span> : null}
-                  </span>
-                  <span>{member.name}</span>
-                </button>
-              );
-            })}
-          </div>
+                return (
+                  <button
+                    className={`event-form-avatar-chip ${isSelected ? "event-form-avatar-chip--selected" : ""}`}
+                    key={member.id}
+                    type="button"
+                    onClick={() => toggleParticipant(member.id)}
+                    aria-pressed={isSelected}
+                    aria-label={`${member.name}. ${isSelected ? "Valgt" : "Ikke valgt"}`}
+                  >
+                    <span className={`event-form-avatar-chip__avatar event-form-avatar-chip__avatar--${member.avatarColor}`} aria-hidden="true">
+                      {member.initials}
+                      {isSelected ? <span className="event-form-avatar-chip__check"><Check size={14} strokeWidth={3.2} /></span> : null}
+                    </span>
+                    <span>{member.name}</span>
+                  </button>
+                );
+              })}
+            </div>
+          )}
         </section>
 
         <section className="event-form-card event-form-card--rows" aria-labelledby="event-date-title">

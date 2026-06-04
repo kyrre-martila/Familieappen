@@ -10,9 +10,10 @@ import {
   RotateCcw,
 } from "lucide-react";
 
+import { FamilyMembersErrorState, FamilyMembersLoadingState } from "../../family/FamilyMembersEmptyState";
 import { useSchoolWeek } from "../hooks/useSchoolWeek";
 import type { HuskFamilyMember, SchoolCreateDraft } from "../types";
-import { reminderIcons, schoolChildIds, schoolWeekdays } from "./huskConfig";
+import { reminderIcons, schoolWeekdays } from "./huskConfig";
 import {
   formatSchoolDate,
   formatWeekRange,
@@ -45,7 +46,7 @@ export function SchoolWeekPanel({
   const [selectedWeekStartTime, setSelectedWeekStartTime] =
     useState(todayWeekStartTime);
   const [selectedChildId, setSelectedChildId] = useState(() =>
-    readStoredValue(schoolChildStorageKey, schoolChildIds[0]),
+    readStoredValue(schoolChildStorageKey),
   );
   const [isEditing, setIsEditing] = useState(shouldOpenPlanner);
   const [createDraft, setCreateDraft] = useState<SchoolCreateDraft | null>(
@@ -55,7 +56,7 @@ export function SchoolWeekPanel({
     string | null
   >(null);
   const [showSavedBadge, setShowSavedBadge] = useState(false);
-  const { children, weekItems } = useSchoolWeek();
+  const { children, weekItems, loading, error, refresh } = useSchoolWeek();
 
   useEffect(() => {
     if (shouldOpenPlanner) {
@@ -64,7 +65,9 @@ export function SchoolWeekPanel({
   }, [shouldOpenPlanner]);
 
   useEffect(() => {
-    window.sessionStorage.setItem(schoolChildStorageKey, selectedChildId);
+    if (selectedChildId) {
+      window.sessionStorage.setItem(schoolChildStorageKey, selectedChildId);
+    }
   }, [selectedChildId]);
 
   useEffect(() => {
@@ -94,14 +97,12 @@ export function SchoolWeekPanel({
     () => new Date(selectedWeekStartTime),
     [selectedWeekStartTime],
   );
-  const schoolChildren = schoolChildIds
-    .map((childId) => children.find((member) => member.id === childId))
-    .filter((member): member is HuskFamilyMember => Boolean(member));
+  const schoolChildren = children;
   const selectedChildIndex = Math.max(
     0,
     schoolChildren.findIndex((child) => child.id === selectedChildId),
   );
-  const selectedChild = schoolChildren[selectedChildIndex] ?? schoolChildren[0];
+  const selectedChild = schoolChildren.find((child) => child.id === selectedChildId) ?? schoolChildren[0];
   const selectedPlan = weekItems.find(
     (plan) => plan.childId === selectedChild?.id,
   );
@@ -111,6 +112,16 @@ export function SchoolWeekPanel({
   const selectedWeek = weekOptions.find(
     (week) => week.startTime === selectedWeekStartTime,
   );
+
+  useEffect(() => {
+    if (schoolChildren.length === 0) {
+      return;
+    }
+
+    if (!schoolChildren.some((child) => child.id === selectedChildId)) {
+      setSelectedChildId(schoolChildren[0].id);
+    }
+  }, [schoolChildren, selectedChildId]);
 
   function showPreviousChild() {
     const previousChild =
@@ -173,6 +184,58 @@ export function SchoolWeekPanel({
   function chooseRecurringScope() {
     setRecurringChoiceTitle(null);
     showSaved();
+  }
+
+  if (loading) {
+    return (
+      <section
+        className="husk-panel husk-school"
+        id="husk-panel-skoleuka"
+        role="tabpanel"
+        aria-labelledby="husk-tab-skoleuka husk-school-title"
+      >
+        <FamilyMembersLoadingState />
+      </section>
+    );
+  }
+
+  if (error) {
+    return (
+      <section
+        className="husk-panel husk-school"
+        id="husk-panel-skoleuka"
+        role="tabpanel"
+        aria-labelledby="husk-tab-skoleuka husk-school-title"
+      >
+        <FamilyMembersErrorState onRetry={() => void refresh()} />
+      </section>
+    );
+  }
+
+  if (schoolChildren.length === 0) {
+    return (
+      <section
+        className="husk-panel husk-school"
+        id="husk-panel-skoleuka"
+        role="tabpanel"
+        aria-labelledby="husk-tab-skoleuka husk-school-title"
+      >
+        <div className="husk-school__topline">
+          <div className="husk-section-heading">
+            <p className="husk-section-heading__eyebrow">Skoleplan</p>
+            <h2 className="husk-section-heading__title" id="husk-school-title">
+              Skoleuka
+            </h2>
+          </div>
+        </div>
+        <SchoolWeekEmptyState
+          title="Ingen barn med skoleuke ennå"
+          description="Legg til barn i familien før skoleuka kan planlegges."
+          actionHref="/onboarding/add-members"
+          actionLabel="Legg til familiemedlem"
+        />
+      </section>
+    );
   }
 
   return (

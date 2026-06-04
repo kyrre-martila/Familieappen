@@ -6,6 +6,7 @@ import {
   getMockMealForOffset,
   mockMeals,
 } from "../../../app/meals/mockMealPlanData";
+import { useFamilyMembers } from "../../family/hooks/useFamilyMembers";
 import type { Meal } from "../../types";
 
 export type CreateMealInput = { offset: number; title: string };
@@ -59,6 +60,7 @@ function getInitialMealsByOffset() {
 }
 
 export function useMeals() {
+  const { family, familyMembers, adults, children, currentUserMember } = useFamilyMembers();
   const [mealsByOffset, setMealsByOffset] = useState(getInitialMealsByOffset);
 
   const meals = useMemo(
@@ -128,6 +130,11 @@ export function useMeals() {
   }
 
   return {
+    family,
+    familyMembers,
+    adults,
+    children,
+    currentUserMember,
     mealCatalog: mockMeals,
     meals,
     mealsByOffset,
