@@ -49,6 +49,7 @@ interface PrismaClientConnection {
   $connect(): Promise<void>;
   $disconnect(): Promise<void>;
   $queryRaw<T = unknown>(query: TemplateStringsArray): Promise<T>;
+  $transaction<T>(callback: (transaction: PrismaClientConnection) => Promise<T>): Promise<T>;
 }
 
 type PrismaClientConstructor = new (options: {

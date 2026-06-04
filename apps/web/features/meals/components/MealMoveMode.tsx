@@ -45,9 +45,13 @@ export function MealMoveModeButton({
 export function MealMoveToast({
   message,
   onUndo,
+  retryLabel,
+  onRetry,
 }: {
   message: string | null;
   onUndo?: () => void;
+  retryLabel?: string;
+  onRetry?: () => void;
 }) {
   return (
     <div
@@ -62,6 +66,11 @@ export function MealMoveToast({
       {onUndo ? (
         <button type="button" onClick={onUndo}>
           Angre
+        </button>
+      ) : null}
+      {onRetry ? (
+        <button type="button" onClick={onRetry}>
+          {retryLabel ?? "Prøv igjen"}
         </button>
       ) : null}
     </div>

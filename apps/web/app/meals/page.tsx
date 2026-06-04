@@ -127,6 +127,8 @@ function MealsPageContent() {
     deleteMeal: deleteMealFromStore,
     restoreMeal,
     moveMeal,
+    error: mealError,
+    refresh: refreshMeals,
   } = useMeals();
   const topSentinelRef = useRef<HTMLDivElement | null>(null);
   const bottomSentinelRef = useRef<HTMLDivElement | null>(null);
@@ -247,6 +249,12 @@ function MealsPageContent() {
   }, [toastMessage]);
 
   useEffect(() => {
+    if (mealError) {
+      showToast(mealError);
+    }
+  }, [mealError]);
+
+  useEffect(() => {
     const createMode = searchParams.get("create") === "1";
     const dateParam = searchParams.get("date");
     const routeActionKey = `${dateParam ?? "today"}:${createMode ? "create" : "focus"}`;
@@ -335,7 +343,15 @@ function MealsPageContent() {
       return;
     }
 
-    updateMeal({ offset, title: trimmedTitle });
+    const existingMeal = mealsByOffset.get(offset);
+    const visibleStateChanged = !existingMeal || normalizeMealTitle(existingMeal.title) !== normalizeMealTitle(trimmedTitle);
+
+    if (!visibleStateChanged) {
+      closeEditor();
+      return;
+    }
+
+    void updateMeal({ offset, title: trimmedTitle }).catch(() => undefined);
     closeEditor();
 
     if (!options.silent) {
@@ -351,7 +367,7 @@ function MealsPageContent() {
       return;
     }
 
-    deleteMealFromStore({ offset });
+    void deleteMealFromStore({ offset }).catch(() => undefined);
     setUndoMeal({ offset, meal: mealToDelete });
     closeEditor();
     showToast("Middag slettet");
@@ -362,7 +378,7 @@ function MealsPageContent() {
       return;
     }
 
-    restoreMeal(undoMeal.offset, undoMeal.meal);
+    void restoreMeal(undoMeal.offset, undoMeal.meal).catch(() => undefined);
     setUndoMeal(null);
     showToast("Middag lagt tilbake");
   }
@@ -453,9 +469,11 @@ function MealsPageContent() {
       return;
     }
 
-    const { swapped } = moveMeal({ sourceOffset, targetOffset });
+    const targetMeal = mealsByOffset.get(targetOffset);
 
-    showToast(swapped ? "Middager byttet plass" : "Middag flyttet");
+    void moveMeal({ sourceOffset, targetOffset }).catch(() => undefined);
+
+    showToast(targetMeal ? "Middager byttet plass" : "Middag flyttet");
   }
 
   function handleDragEnd() {
@@ -560,6 +578,7 @@ function MealsPageContent() {
                   ? undoDeleteMeal
                   : undefined
               }
+              onRetry={mealError ? () => void refreshMeals() : undefined}
             />
           </section>
         </PageContainer>

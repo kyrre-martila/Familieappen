@@ -9,6 +9,7 @@ import type {
   ManualFamilyMemberRole,
   MealPlan,
   MealPlanDay,
+  MoveMealResult,
   ShoppingList,
   ShoppingListItem,
   Task,
@@ -24,7 +25,7 @@ import type {
   SchoolWeekReminder
 } from "@familieappen/shared";
 
-export type { CalendarEvent, Family, FamilyDashboardResponse, FamilyMember, FamilyMemberRole, ManualFamilyMemberRole, MealPlan, MealPlanDay, ShoppingList, ShoppingListItem, Task, Wishlist, WishlistItem, WishlistShare, WishlistSummary, PublicWishlist, PublicWishlistItem, Reminder, HuskList, HuskListItem, SchoolWeekReminder };
+export type { CalendarEvent, Family, FamilyDashboardResponse, FamilyMember, FamilyMemberRole, ManualFamilyMemberRole, MealPlan, MealPlanDay, MoveMealResult, ShoppingList, ShoppingListItem, Task, Wishlist, WishlistItem, WishlistShare, WishlistSummary, PublicWishlist, PublicWishlistItem, Reminder, HuskList, HuskListItem, SchoolWeekReminder };
 
 export interface AuthUser {
   id: string;
@@ -256,9 +257,9 @@ export async function getMealPlan(familyId: string): Promise<MealPlan> {
 
 export async function addMealPlanDay(
   familyId: string,
-  input: { date: string; mealName: string; notes?: string }
+  input: { date: string; mealName?: string; title?: string; notes?: string | null; note?: string | null }
 ): Promise<MealPlanDay> {
-  return apiRequest<MealPlanDay>("/meals/day", {
+  return apiRequest<MealPlanDay>("/meals", {
     method: "POST",
     body: input,
     familyId
@@ -268,9 +269,9 @@ export async function addMealPlanDay(
 export async function updateMealPlanDay(
   familyId: string,
   dayId: string,
-  input: { date?: string; mealName?: string; notes?: string }
+  input: { date?: string; mealName?: string; title?: string; notes?: string | null; note?: string | null }
 ): Promise<MealPlanDay> {
-  return apiRequest<MealPlanDay>(`/meals/day/${encodeURIComponent(dayId)}`, {
+  return apiRequest<MealPlanDay>(`/meals/${encodeURIComponent(dayId)}`, {
     method: "PATCH",
     body: input,
     familyId
@@ -278,8 +279,19 @@ export async function updateMealPlanDay(
 }
 
 export async function deleteMealPlanDay(familyId: string, dayId: string): Promise<MealPlanDay> {
-  return apiRequest<MealPlanDay>(`/meals/day/${encodeURIComponent(dayId)}`, {
+  return apiRequest<MealPlanDay>(`/meals/${encodeURIComponent(dayId)}`, {
     method: "DELETE",
+    familyId
+  });
+}
+
+export async function moveMealPlanDay(
+  familyId: string,
+  input: { mealId?: string; sourceDate?: string; targetDate: string }
+): Promise<MoveMealResult> {
+  return apiRequest<MoveMealResult>("/meals/move", {
+    method: "POST",
+    body: input,
     familyId
   });
 }

@@ -41,12 +41,14 @@ model Family {
   members   FamilyMember[]
   shoppingLists ShoppingList[]
   mealPlans MealPlan[]
+  meals MealPlanDay[]
   tasks     Task[]
   calendarEvents CalendarEvent[]
   reminders Reminder[]
   lists     List[]
   wishlists Wishlist[]
   schoolWeekReminders SchoolWeekReminder[]
+  createdMealPlanDays MealPlanDay[]
 
   @@map("families")
 }
@@ -68,6 +70,7 @@ model FamilyMember {
   assignedListItems ListItem[]
   ownedWishlists Wishlist[]
   schoolWeekReminders SchoolWeekReminder[]
+  createdMealPlanDays MealPlanDay[]
 
   @@index([familyId])
   @@index([userId])
@@ -120,18 +123,28 @@ model MealPlan {
 }
 
 model MealPlanDay {
-  id         String   @id @default(cuid())
-  mealPlanId String
-  date       DateTime
-  mealName   String
-  notes      String?
-  createdAt  DateTime @default(now())
-  updatedAt  DateTime @updatedAt
-  mealPlan   MealPlan @relation(fields: [mealPlanId], references: [id], onDelete: Cascade)
+  id                      String        @id @default(cuid())
+  mealPlanId              String
+  familyId                String
+  date                    DateTime
+  mealName                String
+  notes                   String?
+  createdByFamilyMemberId String?
+  sortOrder               Int?
+  createdAt               DateTime      @default(now())
+  updatedAt               DateTime      @updatedAt
+  deletedAt               DateTime?
+  mealPlan                MealPlan      @relation(fields: [mealPlanId], references: [id], onDelete: Cascade)
+  family                  Family        @relation(fields: [familyId], references: [id], onDelete: Cascade)
+  createdByFamilyMember   FamilyMember? @relation(fields: [createdByFamilyMemberId], references: [id], onDelete: SetNull)
 
+  @@unique([familyId, date])
   @@unique([mealPlanId, date])
   @@index([mealPlanId])
+  @@index([familyId])
+  @@index([createdByFamilyMemberId])
   @@index([date])
+  @@index([deletedAt])
   @@map("meal_plan_days")
 }
 

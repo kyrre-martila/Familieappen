@@ -15,12 +15,12 @@ import {
   addCalendarEvent,
   deleteCalendarEvent as deleteBackendCalendarEvent,
   getCalendarEvents,
+  getMealPlan,
   updateCalendarEvent as updateBackendCalendarEvent,
   type CalendarEvent as BackendCalendarEvent,
 } from "../../../lib/api";
 import { getUserFacingApiMessage } from "../../../lib/auth-family";
 import { mockToday } from "../../../app/calendar/mockCalendarData";
-import { getMockMealSummariesFromStartDate } from "../../../app/meals/mockMealPlanData";
 import { remapLegacyMemberIds } from "../../family/familyMemberAdapters";
 import { useFamilyMembers } from "../../family/hooks/useFamilyMembers";
 import { useReminders } from "../../husk/hooks/useReminders";
@@ -174,15 +174,13 @@ function useCalendarContractValue(): CalendarContract {
   const { reminders } = useReminders();
   const [selectedDate, setSelectedDate] = useState(today || mockToday);
   const [selectedView, setSelectedView] = useState<CalendarViewMode>("day");
+  const [mealSummaries, setMealSummaries] = useState<MealSummary[]>([]);
   const activeFamilyId = family?.id ?? null;
-  const mealSummaries = useMemo(
-    () => getMockMealSummariesFromStartDate(today),
-    [today],
-  );
 
   const refresh = useCallback(async () => {
     if (!activeFamilyId) {
       setEvents([]);
+      setMealSummaries([]);
       setLoading(familyMembersLoading);
       setError(null);
       return;
@@ -193,8 +191,12 @@ function useCalendarContractValue(): CalendarContract {
 
     try {
       const range = getCalendarRange(today);
-      const backendEvents = await getCalendarEvents(activeFamilyId, range);
+      const [backendEvents, mealPlan] = await Promise.all([
+        getCalendarEvents(activeFamilyId, range),
+        getMealPlan(activeFamilyId),
+      ]);
       setEvents(backendEvents.map(toCalendarEvent));
+      setMealSummaries(mealPlan.days.map((meal) => ({ date: meal.date, title: meal.title ?? meal.mealName })));
     } catch (refreshError) {
       setError(getUserFacingApiMessage(refreshError, CALENDAR_ERROR_COPY));
     } finally {

@@ -1,7 +1,7 @@
 import { Body, Controller, Delete, Get, Headers, HttpStatus, Param, Patch, Post, Req, UseGuards } from "@nestjs/common";
 import { AuthGuard } from "../auth/guards/auth.guard";
 import { API_ERROR_CODES, ApiException, ApiResponse, createApiResponse } from "../common";
-import { MealPlanDayDto, MealPlanDto, UpsertMealPlanDayRequestDto } from "./dto/meal.dto";
+import { MealPlanDayDto, MealPlanDto, MoveMealRequestDto, MoveMealResultDto, UpsertMealPlanDayRequestDto } from "./dto/meal.dto";
 import { MealsService } from "./meals.service";
 
 type AuthenticatedRequest = {
@@ -24,6 +24,15 @@ export class MealsController {
     return createApiResponse(await this.mealsService.getMealPlan(request.user.id, requireFamilyId(familyId)));
   }
 
+  @Post()
+  async createMeal(
+    @Req() request: AuthenticatedRequest,
+    @Headers("x-family-id") familyId: string,
+    @Body() body: UpsertMealPlanDayRequestDto
+  ): Promise<ApiResponse<MealPlanDayDto>> {
+    return createApiResponse(await this.mealsService.upsertDay(request.user.id, requireFamilyId(familyId), body));
+  }
+
   @Post("day")
   async upsertDay(
     @Req() request: AuthenticatedRequest,
@@ -43,6 +52,16 @@ export class MealsController {
     return createApiResponse(await this.mealsService.updateDay(request.user.id, requireFamilyId(familyId), dayId, body));
   }
 
+  @Patch(":mealId")
+  async updateMeal(
+    @Req() request: AuthenticatedRequest,
+    @Headers("x-family-id") familyId: string,
+    @Param("mealId") mealId: string,
+    @Body() body: UpsertMealPlanDayRequestDto
+  ): Promise<ApiResponse<MealPlanDayDto>> {
+    return createApiResponse(await this.mealsService.updateDay(request.user.id, requireFamilyId(familyId), mealId, body));
+  }
+
   @Delete("day/:dayId")
   async deleteDay(
     @Req() request: AuthenticatedRequest,
@@ -50,6 +69,24 @@ export class MealsController {
     @Param("dayId") dayId: string
   ): Promise<ApiResponse<MealPlanDayDto>> {
     return createApiResponse(await this.mealsService.deleteDay(request.user.id, requireFamilyId(familyId), dayId));
+  }
+
+  @Delete(":mealId")
+  async deleteMeal(
+    @Req() request: AuthenticatedRequest,
+    @Headers("x-family-id") familyId: string,
+    @Param("mealId") mealId: string
+  ): Promise<ApiResponse<MealPlanDayDto>> {
+    return createApiResponse(await this.mealsService.deleteDay(request.user.id, requireFamilyId(familyId), mealId));
+  }
+
+  @Post("move")
+  async moveMeal(
+    @Req() request: AuthenticatedRequest,
+    @Headers("x-family-id") familyId: string,
+    @Body() body: MoveMealRequestDto
+  ): Promise<ApiResponse<MoveMealResultDto>> {
+    return createApiResponse(await this.mealsService.moveDay(request.user.id, requireFamilyId(familyId), body));
   }
 }
 

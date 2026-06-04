@@ -46,11 +46,15 @@ type TaskRecord = {
 type MealPlanDayRecord = {
   id: string;
   mealPlanId: string;
+  familyId?: string;
   date: Date;
   mealName: string;
   notes: string | null;
+  createdByFamilyMemberId?: string | null;
+  sortOrder?: number | null;
   createdAt: Date;
   updatedAt: Date;
+  deletedAt?: Date | null;
 };
 
 
@@ -364,7 +368,9 @@ export class FamiliesService {
     const day = await this.prisma.client.mealPlanDay.findFirst({
       where: {
         mealPlanId: mealPlan.id,
-        date: today
+        familyId,
+        date: today,
+        deletedAt: null
       }
     });
 
@@ -399,10 +405,16 @@ export class FamiliesService {
       id: day.id,
       mealPlanId: day.mealPlanId,
       date: day.date.toISOString().slice(0, 10),
+      familyId: day.familyId ?? "",
       mealName: day.mealName,
+      title: day.mealName,
+      note: day.notes,
       notes: day.notes,
+      createdByFamilyMemberId: day.createdByFamilyMemberId ?? null,
+      sortOrder: day.sortOrder ?? null,
       createdAt: day.createdAt.toISOString(),
-      updatedAt: day.updatedAt.toISOString()
+      updatedAt: day.updatedAt.toISOString(),
+      deletedAt: day.deletedAt ? day.deletedAt.toISOString() : null
     };
   }
 
