@@ -69,9 +69,9 @@ function WishlistShareButton() {
     setBusy(true);
     setMessage(null);
     try {
-      await inviteToWishlistByEmail(familyId, email);
+      const result = await inviteToWishlistByEmail(familyId, email);
       setEmail("");
-      setMessage("Invitasjonen er sendt.");
+      setMessage(result.email.mode === "dev-log" ? "Invitasjonslenken er skrevet til serverloggen." : "Invitasjonen er sendt.");
       await refreshInvitations();
     } catch (error) {
       setMessage(error instanceof Error ? error.message : "Kunne ikke sende invitasjonen.");
@@ -141,6 +141,8 @@ function WishlistShareButton() {
               Send invitasjon
             </button>
             {message ? <p className="wishlist-share-sheet__message" role="status">{message}</p> : null}
+            {busy && invitations.length === 0 ? <p className="wishlist-share-sheet__message" role="status">Henter invitasjoner …</p> : null}
+            {!busy && invitations.length === 0 ? <p className="wishlist-share-sheet__message">Ingen e-postinvitasjoner ennå.</p> : null}
             <div className="wishlist-share-sheet__list" aria-label="Inviterte personer">
               {invitations.map((invitation) => (
                 <article className="wishlist-share-sheet__invite" key={invitation.id}>
@@ -375,8 +377,8 @@ function AddWishButton() {
 function SharedWishlistEmptyState() {
   return (
     <section className="wishlist-empty wishlist-empty--shared" aria-live="polite">
-      <h2>Ingen delte ønskelister enda</h2>
-      <p>Når noen i familien legger til ønsker, vises de her.</p>
+      <h2>Ingen ønskelister delt med deg</h2>
+      <p>Familieønsker og godtatte e-postinvitasjoner vises her.</p>
     </section>
   );
 }
@@ -718,7 +720,7 @@ function WishlistPageInner() {
 export default function WishlistPage() {
   return (
     <Suspense fallback={
-      <AppShell title="Ønskeliste" titleAction={<WishlistShareButton />}>
+      <AppShell title="Ønskeliste">
         <PageContainer>
           <WishlistSkeleton />
         </PageContainer>

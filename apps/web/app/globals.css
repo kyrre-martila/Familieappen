@@ -11498,3 +11498,36 @@ button.calendar-chip {
   padding: 0.65rem 0.9rem;
   font-weight: 700;
 }
+
+/* Run 5 wishlist polish: keep sheets usable on small screens and with keyboards. */
+.wishlist-invite-page__secondary-link {
+  width: fit-content;
+  color: var(--color-primary);
+  font-weight: 850;
+}
+
+@media (max-width: 34rem) {
+  .wishlist-share-sheet__panel,
+  .wishlist-reserve-sheet__panel {
+    max-height: min(82dvh, 42rem);
+    padding-bottom: calc(var(--space-l) + env(safe-area-inset-bottom));
+    overscroll-behavior: contain;
+  }
+
+  .wishlist-share-sheet__header,
+  .wishlist-share-sheet__invite,
+  .wishlist-share-sheet__actions,
+  .wishlist-reserve-sheet__actions {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .wishlist-share-sheet__actions button,
+  .wishlist-reserve-sheet__button {
+    min-height: 2.75rem;
+  }
+
+  .wishlist-form-shell {
+    padding-bottom: calc(var(--space-xl) + env(safe-area-inset-bottom));
+  }
+}
