@@ -520,11 +520,13 @@ export async function addHuskReminder(
   input: {
     title: string;
     icon?: string;
-    dueDate: string;
+    dueDate?: string | null;
     reminderMinutesBefore?: number | null;
     note?: string | null;
     scope: "family" | "members";
     memberIds?: string[];
+    sourceType?: string | null;
+    sourceId?: string | null;
   }
 ): Promise<Reminder> {
   return apiRequest<Reminder>("/husk/reminders", {

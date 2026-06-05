@@ -106,13 +106,15 @@ export interface Reminder {
   familyId: string;
   title: string;
   icon: string;
-  dueDate: string;
-  date: string;
+  dueDate: string | null;
+  date: string | null;
   reminderMinutesBefore: number | null;
   reminder: { minutesBefore: number; label: string } | null;
   note: string | null;
   scope: "family" | "members";
   memberIds: string[];
+  sourceType: string | null;
+  sourceId: string | null;
   createdByUserId: string | null;
   createdAt: string;
   updatedAt: string;

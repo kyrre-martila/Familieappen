@@ -11215,6 +11215,13 @@ button.calendar-chip {
   padding: var(--space-xs) var(--space-m);
 }
 
+.wishlist-reservation-action__buttons {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: calc(var(--space-xs) * 0.7);
+}
+
 .wishlist-reservation-button:disabled,
 .wishlist-reservation-undo:disabled {
   cursor: not-allowed;
@@ -11235,6 +11242,9 @@ button.calendar-chip {
 }
 
 .wishlist-reservation-undo {
+  display: inline-flex;
+  align-items: center;
+  gap: calc(var(--space-xs) * 0.45);
   border: 0;
   padding: 0 var(--space-xs);
   font-size: var(--text-small);

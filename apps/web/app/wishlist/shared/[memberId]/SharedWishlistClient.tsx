@@ -2,14 +2,14 @@
 
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
-import { CheckCircle2, Image as ImageIcon, RefreshCw } from "lucide-react";
+import { CheckCircle2, Gift, Image as ImageIcon, RefreshCw } from "lucide-react";
 
 import { AppShell } from "../../../../components/AppShell";
 import { LockedFeatureState } from "../../../../components/PendingAccess";
 import { useFamilyAccess } from "../../../../components/ProtectedFamilyRoute";
 import { PageContainer } from "../../../../components/ui";
 import { useSharedWishlists } from "../../../../features/wishlist/hooks/useSharedWishlists";
-import { ApiError, removeSharedWishlist, type SharedWishlistItem, type SharedWishlistItemsResponse } from "../../../../lib/api";
+import { ApiError, addHuskReminder, removeSharedWishlist, type SharedWishlistItem, type SharedWishlistItemsResponse } from "../../../../lib/api";
 
 const priceFormatter = new Intl.NumberFormat("nb-NO", {
   maximumFractionDigits: 0,
@@ -96,11 +96,13 @@ function ReservationBadge() {
 function SharedWishlistItemCard({
   item,
   onOpenReserve,
+  onAddToHusk,
   onUnreserve,
   isBusy,
 }: {
   item: SharedWishlistItem;
   onOpenReserve: (item: SharedWishlistItem) => void;
+  onAddToHusk: (item: SharedWishlistItem) => void;
   onUnreserve: (item: SharedWishlistItem) => void;
   isBusy: boolean;
 }) {
@@ -124,9 +126,15 @@ function SharedWishlistItemCard({
           <>
             <ReservationBadge />
             {item.reservedByMe ? (
-              <button className="wishlist-reservation-undo" type="button" onClick={() => onUnreserve(item)} disabled={isBusy}>
-                Angre
-              </button>
+              <div className="wishlist-reservation-action__buttons">
+                <button className="wishlist-reservation-undo" type="button" onClick={() => onAddToHusk(item)} disabled={isBusy}>
+                  <Gift size={14} aria-hidden="true" />
+                  Legg i Husk
+                </button>
+                <button className="wishlist-reservation-undo" type="button" onClick={() => onUnreserve(item)} disabled={isBusy}>
+                  Angre
+                </button>
+              </div>
             ) : null}
           </>
         ) : (
@@ -162,13 +170,14 @@ function ReserveSheet({ item, onCancel, onConfirm, isBusy }: { item: SharedWishl
 
 function SharedWishlistContent({ memberId }: { memberId: string }) {
   const router = useRouter();
-  const { getSharedWishlistItems, reserveSharedWishlistItem, unreserveSharedWishlistItem, loading, loadingItemsForMemberId, error } = useSharedWishlists();
+  const { activeFamilyId, currentUserMember, getSharedWishlistItems, reserveSharedWishlistItem, unreserveSharedWishlistItem, loading, loadingItemsForMemberId, error } = useSharedWishlists();
   const [wishlist, setWishlist] = useState<SharedWishlistItemsResponse | null>(null);
   const [loadError, setLoadError] = useState<string | null>(null);
   const [pendingReserveItem, setPendingReserveItem] = useState<SharedWishlistItem | null>(null);
   const [busyItemId, setBusyItemId] = useState<string | null>(null);
   const [toast, setToast] = useState<string | null>(null);
   const [removingShare, setRemovingShare] = useState(false);
+  const [huskReminderItemIds, setHuskReminderItemIds] = useState<Set<string>>(() => new Set());
 
   useEffect(() => {
     let isMounted = true;
@@ -245,6 +254,60 @@ function SharedWishlistContent({ memberId }: { memberId: string }) {
     }
   };
 
+  const buildHuskNote = (item: SharedWishlistItem) => {
+    const noteParts = [`Til ${wishlist?.ownerName ?? "ønskelisteeier"}.`];
+    const price = formatPrice(item.price);
+
+    if (price) {
+      noteParts.push(`${price}.`);
+    }
+
+    if (item.storeOrLink) {
+      noteParts.push(item.storeOrLink);
+    }
+
+    return noteParts.join(" ");
+  };
+
+  const handleAddToHusk = async (item: SharedWishlistItem) => {
+    if (!activeFamilyId || !currentUserMember || !item.reservedByMe) {
+      setToast("Kunne ikke legge til i Husk akkurat nå");
+      return;
+    }
+
+    if (huskReminderItemIds.has(item.id)) {
+      setToast("Ligger allerede i Husk");
+      return;
+    }
+
+    setBusyItemId(item.id);
+
+    try {
+      await addHuskReminder(activeFamilyId, {
+        title: `Kjøp gave: ${item.title}`,
+        icon: "gift",
+        dueDate: null,
+        reminderMinutesBefore: null,
+        note: buildHuskNote(item),
+        scope: "members",
+        memberIds: [currentUserMember.id],
+        sourceType: "wishlist",
+        sourceId: item.id,
+      });
+      setHuskReminderItemIds((currentIds) => new Set(currentIds).add(item.id));
+      setToast("Lagt til i Husk");
+    } catch (huskError) {
+      if (huskError instanceof ApiError && huskError.status === 409) {
+        setHuskReminderItemIds((currentIds) => new Set(currentIds).add(item.id));
+        setToast("Ligger allerede i Husk");
+      } else {
+        setToast("Kunne ikke legge til i Husk akkurat nå");
+      }
+    } finally {
+      setBusyItemId(null);
+    }
+  };
+
   const handleUnreserve = async (item: SharedWishlistItem) => {
     const previousItem = { ...item };
     const optimisticItem = { ...item, isReserved: false, reservedByMe: false };
@@ -307,6 +370,7 @@ function SharedWishlistContent({ memberId }: { memberId: string }) {
                     item={item}
                     key={item.id}
                     onOpenReserve={setPendingReserveItem}
+                    onAddToHusk={handleAddToHusk}
                     onUnreserve={handleUnreserve}
                     isBusy={busyItemId === item.id}
                   />

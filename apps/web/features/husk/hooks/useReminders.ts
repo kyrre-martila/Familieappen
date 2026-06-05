@@ -21,6 +21,8 @@ export type ReminderInput = Omit<HuskReminder, "id" | "dateLabel" | "group" | "s
   group?: HuskReminder["group"];
   tone?: HuskReminder["tone"];
   reminderMinutesBefore?: number | null;
+  sourceType?: string | null;
+  sourceId?: string | null;
 };
 
 const REMINDERS_ERROR_COPY = "Kunne ikke hente husk akkurat nå";
@@ -182,11 +184,13 @@ function toBackendInput(input: ReminderInput) {
   return {
     title: input.title,
     icon: input.icon,
-    dueDate: input.dueDate ?? new Date().toISOString().slice(0, 10),
+    dueDate: input.dueDate ?? null,
     reminderMinutesBefore: input.reminderMinutesBefore ?? null,
     note: input.note ?? null,
     scope: input.scopeText === "Hele familien" || input.memberIds.length === 0 ? "family" as const : "members" as const,
     memberIds: input.scopeText === "Hele familien" ? [] : input.memberIds,
+    sourceType: input.sourceType ?? null,
+    sourceId: input.sourceId ?? null,
   };
 }
 
@@ -209,14 +213,14 @@ function createOptimisticBackendReminder(input: ReminderInput, familyId: string)
   const now = new Date().toISOString();
   const scope = input.scopeText === "Hele familien" || input.memberIds.length === 0 ? "family" : "members";
   const memberIds = scope === "family" ? [] : input.memberIds;
-  const dueDate = input.dueDate ?? now.slice(0, 10);
+  const dueDate = input.dueDate ?? null;
 
   return {
     id: input.id ?? `optimistic-reminder-${Date.now()}`,
     familyId,
     title: input.title,
     icon: input.icon,
-    dueDate: `${dueDate}T00:00:00.000Z`,
+    dueDate: dueDate ? `${dueDate}T00:00:00.000Z` : null,
     date: dueDate,
     reminderMinutesBefore: input.reminderMinutesBefore ?? null,
     reminder: input.reminderMinutesBefore ? { minutesBefore: input.reminderMinutesBefore, label: `${input.reminderMinutesBefore} min før` } : null,
@@ -226,6 +230,8 @@ function createOptimisticBackendReminder(input: ReminderInput, familyId: string)
     createdByUserId: null,
     createdAt: now,
     updatedAt: now,
+    sourceType: input.sourceType ?? null,
+    sourceId: input.sourceId ?? null,
     archivedAt: null,
     audienceMembers: [],
   };
@@ -241,7 +247,7 @@ function applyHuskUpdate(reminder: BackendReminder, update: Partial<HuskReminder
     ...(update.title !== undefined ? { title: update.title } : {}),
     ...(update.icon !== undefined ? { icon: update.icon } : {}),
     ...(update.note !== undefined ? { note: update.note ?? null } : {}),
-    dueDate: `${nextDate}T00:00:00.000Z`,
+    dueDate: nextDate ? `${nextDate}T00:00:00.000Z` : null,
     date: nextDate,
     scope,
     memberIds: scope === "family" ? [] : nextMemberIds,
@@ -258,9 +264,9 @@ function toHuskReminder(reminder: BackendReminder, familyMembers: HuskFamilyMemb
     familyId: reminder.familyId,
     title: reminder.title,
     scopeText,
-    dateLabel: getDateLabel(reminder.date),
+    dateLabel: reminder.date ? getDateLabel(reminder.date) : "Ingen dato",
     dueDate: reminder.date,
-    group: getReminderGroup(reminder.date),
+    group: reminder.date ? getReminderGroup(reminder.date) : "later",
     icon: isReminderIcon(reminder.icon) ? reminder.icon : "backpack",
     tone: tones[index % tones.length],
     memberIds,
