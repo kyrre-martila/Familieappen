@@ -7,7 +7,8 @@
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
-    "typecheck": "tsc -p tsconfig.json --noEmit"
+    "typecheck": "tsc -p tsconfig.json --noEmit",
+    "test:email": "tsx --conditions react-server --test lib/email/email-service.test.ts"
   },
   "dependencies": {
     "@familieappen/shared": "workspace:*",
@@ -15,12 +16,14 @@
     "lucide-react": "^1.17.0",
     "next": "^16.2.6",
     "react": "19.1.0",
-    "react-dom": "19.1.0"
+    "react-dom": "19.1.0",
+    "server-only": "^0.0.1"
   },
   "devDependencies": {
     "@types/node": "^24.12.4",
     "@types/react": "^19.2.15",
     "@types/react-dom": "^19.2.3",
+    "tsx": "^4.22.4",
     "typescript": "^5.9.3"
   }
 }
