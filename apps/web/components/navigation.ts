@@ -1,6 +1,7 @@
 export const bottomNavigationItems = [
   { href: "/dashboard", label: "Hjem", icon: "home" },
   { href: "/calendar", label: "Kalender", icon: "calendar" },
+  { href: "/wishlist", label: "Ønskeliste", icon: "gift" },
   { href: "/husk", label: "Husk", icon: "check" },
   { href: "/menu", label: "Meny", icon: "menu" }
 ] as const;
@@ -10,7 +11,7 @@ export const defaultCreateOptions = [
   { emoji: "📝", label: "Ny husk", description: "Lett påminnelse uten klokkeslett", href: "/husk/reminders/new", tone: "task" },
   { emoji: "✅", label: "Ny liste", description: "Samle punkter for familien", href: "/husk/lister/new", tone: "shopping" },
   { emoji: "🍽️", label: "Legg til middag", description: "Planlegg måltid", href: "/meals?create=1", tone: "meal" },
-  { emoji: "🎁", label: "Legg til i ønskeliste", description: "Legg til ønske", href: "/wishlists", tone: "wish" }
+  { emoji: "🎁", label: "Legg til i ønskeliste", description: "Legg til ønske", href: "/wishlist", tone: "wish" }
 ] as const;
 
 export const huskCreateOptions = [

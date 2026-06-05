@@ -14,6 +14,9 @@ import type {
   ShoppingListItem,
   Task,
   WishlistItem,
+  WishlistItemCreateInput,
+  WishlistItemListResponse,
+  WishlistItemUpdateInput,
   WishlistSummary,
   Reminder,
   HuskList,
@@ -21,7 +24,7 @@ import type {
   SchoolWeekReminder
 } from "@familieappen/shared";
 
-export type { CalendarEvent, Family, FamilyDashboardResponse, FamilyMember, FamilyMemberRole, ManualFamilyMemberRole, MealPlan, MealPlanDay, MoveMealResult, ShoppingList, ShoppingListItem, Task, WishlistItem, WishlistSummary, Reminder, HuskList, HuskListItem, SchoolWeekReminder };
+export type { CalendarEvent, Family, FamilyDashboardResponse, FamilyMember, FamilyMemberRole, ManualFamilyMemberRole, MealPlan, MealPlanDay, MoveMealResult, ShoppingList, ShoppingListItem, Task, WishlistItem, WishlistItemCreateInput, WishlistItemListResponse, WishlistItemUpdateInput, WishlistSummary, Reminder, HuskList, HuskListItem, SchoolWeekReminder };
 
 
 type LegacyWishlistItem = WishlistItem & {
@@ -166,6 +169,40 @@ export async function removeFamilyMember(familyId: string, memberId: string): Pr
     `/families/${encodeURIComponent(familyId)}/members/${encodeURIComponent(memberId)}`,
     { method: "DELETE" }
   );
+}
+
+export async function getMyWishlistItems(familyId: string): Promise<WishlistItemListResponse> {
+  return apiRequest<WishlistItemListResponse>("/wishlist", { familyId });
+}
+
+export async function createWishlistItem(
+  familyId: string,
+  input: WishlistItemCreateInput
+): Promise<WishlistItem> {
+  return apiRequest<WishlistItem>("/wishlist", {
+    method: "POST",
+    body: input,
+    familyId
+  });
+}
+
+export async function updateMyWishlistItem(
+  familyId: string,
+  itemId: string,
+  input: WishlistItemUpdateInput
+): Promise<WishlistItem> {
+  return apiRequest<WishlistItem>(`/wishlist/${encodeURIComponent(itemId)}`, {
+    method: "PATCH",
+    body: input,
+    familyId
+  });
+}
+
+export async function deleteMyWishlistItem(familyId: string, itemId: string): Promise<WishlistItem> {
+  return apiRequest<WishlistItem>(`/wishlist/${encodeURIComponent(itemId)}`, {
+    method: "DELETE",
+    familyId
+  });
 }
 
 
