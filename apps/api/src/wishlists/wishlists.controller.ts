@@ -24,6 +24,24 @@ export class WishlistsController {
     return createApiResponse(await this.wishlistsService.listMyItems(request.user.id, requireFamilyId(familyId)));
   }
 
+
+  @Get("shared")
+  async getSharedWishlists(
+    @Req() request: AuthenticatedRequest,
+    @Headers("x-family-id") familyId: string
+  ) {
+    return createApiResponse(await this.wishlistsService.listSharedWishlists(request.user.id, requireFamilyId(familyId)));
+  }
+
+  @Get("shared/:memberId")
+  async getSharedWishlistItems(
+    @Req() request: AuthenticatedRequest,
+    @Headers("x-family-id") familyId: string,
+    @Param("memberId") memberId: string
+  ) {
+    return createApiResponse(await this.wishlistsService.listSharedWishlistItems(request.user.id, requireFamilyId(familyId), memberId));
+  }
+
   @Post()
   async createItem(
     @Req() request: AuthenticatedRequest,

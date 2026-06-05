@@ -1,7 +1,7 @@
 import { BadRequestException, Injectable, NotFoundException } from "@nestjs/common";
 import { FamilyAuthorizationService } from "../families";
 import { PrismaService } from "../prisma";
-import { WishlistItemCreateInput, WishlistItemDto, WishlistItemListResponseDto, WishlistItemUpdateInput, WishlistReorderInput } from "./dto/wishlist.dto";
+import { SharedWishlistItemsResponseDto, SharedWishlistSummaryDto, WishlistItemCreateInput, WishlistItemDto, WishlistItemListResponseDto, WishlistItemUpdateInput, WishlistReorderInput } from "./dto/wishlist.dto";
 
 const TITLE_MAX_LENGTH = 120;
 const DESCRIPTION_MAX_LENGTH = 1000;
@@ -14,6 +14,7 @@ type FamilyMemberRecord = {
   id: string;
   userId: string | null;
   familyId: string;
+  displayName: string;
 };
 
 type WishlistItemRecord = {
@@ -45,6 +46,89 @@ export class WishlistsService {
     const items = await this.findActiveItems(userId, familyId);
 
     return { items: items.map((item) => this.toWishlistItemDto(item)) };
+  }
+
+
+  async listSharedWishlists(userId: string, familyId: string): Promise<SharedWishlistSummaryDto[]> {
+    const membership = await this.requireCurrentMember(userId, familyId);
+    const activeItems = await this.prisma.client.wishlistItem.findMany({
+      where: {
+        familyId,
+        deletedAt: null,
+        ownerFamilyMemberId: {
+          not: null
+        },
+        NOT: {
+          ownerFamilyMemberId: membership.id
+        }
+      },
+      include: {
+        ownerFamilyMember: true
+      },
+      orderBy: [{ updatedAt: "desc" }, { createdAt: "desc" }]
+    }) as Array<WishlistItemRecord & { ownerFamilyMember: FamilyMemberRecord | null }>;
+
+    const summaries = new Map<string, SharedWishlistSummaryDto>();
+
+    for (const item of activeItems) {
+      const owner = item.ownerFamilyMember;
+
+      if (!owner || owner.familyId !== familyId) {
+        continue;
+      }
+
+      const existing = summaries.get(owner.id);
+
+      if (existing) {
+        existing.itemCount += 1;
+        if (new Date(item.updatedAt).getTime() > new Date(existing.updatedAt).getTime()) {
+          existing.updatedAt = item.updatedAt.toISOString();
+        }
+        continue;
+      }
+
+      summaries.set(owner.id, {
+        ownerFamilyMemberId: owner.id,
+        ownerName: owner.displayName,
+        ownerAvatarUrl: null,
+        ownerColor: this.getOwnerColor(owner.id),
+        itemCount: 1,
+        updatedAt: item.updatedAt.toISOString()
+      });
+    }
+
+    return Array.from(summaries.values()).sort((a, b) => a.ownerName.localeCompare(b.ownerName, "nb"));
+  }
+
+  async listSharedWishlistItems(userId: string, familyId: string, memberId: string): Promise<SharedWishlistItemsResponseDto> {
+    await this.requireCurrentMember(userId, familyId);
+    const owner = await this.prisma.client.familyMember.findFirst({
+      where: {
+        id: memberId,
+        familyId
+      }
+    }) as FamilyMemberRecord | null;
+
+    if (!owner) {
+      throw new NotFoundException("Shared wishlist was not found");
+    }
+
+    const items = await this.prisma.client.wishlistItem.findMany({
+      where: {
+        familyId,
+        ownerFamilyMemberId: owner.id,
+        deletedAt: null
+      },
+      orderBy: [{ position: "asc" }, { createdAt: "asc" }]
+    }) as WishlistItemRecord[];
+
+    return {
+      ownerFamilyMemberId: owner.id,
+      ownerName: owner.displayName,
+      ownerAvatarUrl: null,
+      ownerColor: this.getOwnerColor(owner.id),
+      items: items.map((item) => this.toWishlistItemDto(item))
+    };
   }
 
   async createItem(userId: string, familyId: string, input: WishlistItemCreateInput = {}): Promise<WishlistItemDto> {
@@ -316,6 +400,13 @@ export class WishlistsService {
 
   private pickAlias(primary: unknown, secondary: unknown): unknown {
     return primary !== undefined ? primary : secondary;
+  }
+
+  private getOwnerColor(ownerFamilyMemberId: string): string {
+    const colors = ["#e7d8ff", "#d8efe4", "#f8dfbd", "#d9e9fb", "#f4d7df"];
+    const colorIndex = [...ownerFamilyMemberId].reduce((total, character) => total + character.charCodeAt(0), 0) % colors.length;
+
+    return colors[colorIndex];
   }
 
   private toWishlistItemDto(item: WishlistItemRecord): WishlistItemDto {
