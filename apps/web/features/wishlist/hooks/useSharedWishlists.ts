@@ -19,7 +19,7 @@ function sortWishlistItems(items: SharedWishlistItem[]) {
 }
 
 export function useSharedWishlists() {
-  const { family, loading: familyLoading, error: familyError } = useFamilyMembers();
+  const { family, currentUserMember, loading: familyLoading, error: familyError } = useFamilyMembers();
   const [sharedWishlistSummaries, setSharedWishlistSummaries] = useState<SharedWishlistSummary[]>([]);
   const [itemsByMemberId, setItemsByMemberId] = useState<Record<string, SharedWishlistItemsResponse>>({});
   const [loading, setLoading] = useState(true);
@@ -135,5 +135,7 @@ export function useSharedWishlists() {
     error: familyError ?? error,
     status,
     refresh,
-  }), [error, familyError, familyLoading, getSharedWishlistItemsForMember, itemsByMemberId, loading, loadingItemsForMemberId, refresh, reserveSharedWishlistItem, sharedWishlistSummaries, status, unreserveSharedWishlistItem]);
+    activeFamilyId,
+    currentUserMember,
+  }), [activeFamilyId, currentUserMember, error, familyError, familyLoading, getSharedWishlistItemsForMember, itemsByMemberId, loading, loadingItemsForMemberId, refresh, reserveSharedWishlistItem, sharedWishlistSummaries, status, unreserveSharedWishlistItem]);
 }

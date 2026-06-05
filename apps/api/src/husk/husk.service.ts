@@ -1,4 +1,4 @@
-import { BadRequestException, Injectable, NotFoundException } from "@nestjs/common";
+import { BadRequestException, ConflictException, Injectable, NotFoundException } from "@nestjs/common";
 import { FamilyAuthorizationService } from "../families";
 import { PrismaService } from "../prisma";
 import { CreateListItemRequestDto, CreateListRequestDto, ListDto, ListItemDto, UpdateListItemRequestDto, UpdateListRequestDto } from "./dto/list.dto";
@@ -27,9 +27,11 @@ type ReminderRecord = {
   familyId: string;
   title: string;
   icon: string;
-  dueDate: Date;
+  dueDate: Date | null;
   reminderMinutesBefore: number | null;
   note: string | null;
+  sourceType: string | null;
+  sourceId: string | null;
   createdByUserId: string | null;
   createdAt: Date;
   updatedAt: Date;
@@ -74,7 +76,7 @@ type ListRecord = {
 type ReminderUpdateData = {
   title?: string;
   icon?: string;
-  dueDate?: Date;
+  dueDate?: Date | null;
   reminderMinutesBefore?: number | null;
   note?: string | null;
   archivedAt?: Date | null;
@@ -122,28 +124,41 @@ export class HuskService {
     await this.familyAuthorization.requireFamilyMember(userId, familyId);
     const title = this.validateRequiredText(input.title, "Title", 120);
     const icon = this.validateOptionalReminderIcon(input.icon);
-    const dueDate = this.validateDate(input.dueDate, "Due date");
+    const dueDate = input.dueDate === undefined || input.dueDate === null || input.dueDate === "" ? null : this.validateDate(input.dueDate, "Due date");
     const reminderMinutesBefore = this.validateOptionalReminderMinutes(input.reminderMinutesBefore);
     const note = this.validateOptionalText(input.note, "Note", 500);
+    const sourceType = this.validateOptionalText(input.sourceType, "Source type", 40);
+    const sourceId = this.validateOptionalText(input.sourceId, "Source id", 120);
     const memberIds = await this.validateAudienceMemberIds(familyId, input.scope, input.memberIds);
 
-    const reminder = await this.prisma.client.reminder.create({
-      data: {
-        familyId,
-        title,
-        icon,
-        dueDate,
-        reminderMinutesBefore,
-        note,
-        createdByUserId: userId,
-        audienceMembers: {
-          create: memberIds.map((familyMemberId) => ({ familyMemberId }))
-        }
-      },
-      include: this.reminderInclude
-    });
+    try {
+      const reminder = await this.prisma.client.reminder.create({
+        data: {
+          familyId,
+          title,
+          icon,
+          dueDate,
+          reminderMinutesBefore,
+          note,
+          sourceType,
+          sourceId,
+          createdByUserId: userId,
+          audienceMembers: {
+            create: memberIds.map((familyMemberId) => ({ familyMemberId }))
+          }
+        },
+        include: this.reminderInclude
+      });
 
-    return this.toReminderDto(reminder);
+      return this.toReminderDto(reminder);
+    } catch (error) {
+      if (this.isUniqueConstraintError(error)) {
+        throw new ConflictException("Ligger allerede i Husk");
+      }
+
+      throw error;
+    }
+
   }
 
   async updateReminder(userId: string, familyId: string, reminderId: string, input: UpdateReminderRequestDto): Promise<ReminderDto> {
@@ -153,7 +168,7 @@ export class HuskService {
 
     if (input.title !== undefined) updateData.title = this.validateRequiredText(input.title, "Title", 120);
     if (input.icon !== undefined) updateData.icon = this.validateOptionalReminderIcon(input.icon);
-    if (input.dueDate !== undefined) updateData.dueDate = this.validateDate(input.dueDate, "Due date");
+    if (input.dueDate !== undefined) updateData.dueDate = input.dueDate === null || input.dueDate === "" ? null : this.validateDate(input.dueDate, "Due date");
     if (input.reminderMinutesBefore !== undefined) updateData.reminderMinutesBefore = this.validateOptionalReminderMinutes(input.reminderMinutesBefore);
     if (input.note !== undefined) updateData.note = this.validateOptionalText(input.note, "Note", 500);
     if (input.archivedAt !== undefined) updateData.archivedAt = this.validateOptionalDateTime(input.archivedAt, "Archived at");
@@ -412,6 +427,10 @@ export class HuskService {
     return value;
   }
 
+  private isUniqueConstraintError(error: unknown): boolean {
+    return typeof error === "object" && error !== null && "code" in error && (error as { code?: string }).code === "P2002";
+  }
+
   private validateSortOrder(value: unknown): number {
     if (typeof value !== "number" || !Number.isInteger(value) || value < 0 || value > 100000) throw new BadRequestException("Sort order is invalid");
     return value;
@@ -429,13 +448,15 @@ export class HuskService {
       familyId: reminder.familyId,
       title: reminder.title,
       icon: reminder.icon,
-      dueDate: reminder.dueDate.toISOString(),
-      date: reminder.dueDate.toISOString().slice(0, 10),
+      dueDate: reminder.dueDate?.toISOString() ?? null,
+      date: reminder.dueDate?.toISOString().slice(0, 10) ?? null,
       reminderMinutesBefore: reminder.reminderMinutesBefore,
       reminder: reminder.reminderMinutesBefore === null ? null : { minutesBefore: reminder.reminderMinutesBefore, label: this.getReminderLabel(reminder.reminderMinutesBefore) },
       note: reminder.note,
       scope: memberIds.length === 0 ? "family" : "members",
       memberIds,
+      sourceType: reminder.sourceType,
+      sourceId: reminder.sourceId,
       createdByUserId: reminder.createdByUserId,
       createdAt: reminder.createdAt.toISOString(),
       updatedAt: reminder.updatedAt.toISOString(),

@@ -229,24 +229,28 @@ model CalendarEventParticipant {
 
 
 model Reminder {
-  id              String                   @id @default(cuid())
-  familyId        String
-  title           String
-  icon            String                   @default("backpack")
-  dueDate         DateTime
+  id                    String                   @id @default(cuid())
+  familyId              String
+  title                 String
+  icon                  String                   @default("backpack")
+  dueDate               DateTime?
   reminderMinutesBefore Int?
-  note            String?
-  createdByUserId String?
-  createdAt       DateTime                 @default(now())
-  updatedAt       DateTime                 @updatedAt
-  archivedAt      DateTime?
-  family          Family                   @relation(fields: [familyId], references: [id], onDelete: Cascade)
-  createdByUser   User?                    @relation("ReminderCreatedBy", fields: [createdByUserId], references: [id], onDelete: SetNull)
-  audienceMembers ReminderAudienceMember[]
+  note                  String?
+  sourceType            String?                  @map("source_type")
+  sourceId              String?                  @map("source_id")
+  createdByUserId       String?
+  createdAt             DateTime                 @default(now())
+  updatedAt             DateTime                 @updatedAt
+  archivedAt            DateTime?
+  family                Family                   @relation(fields: [familyId], references: [id], onDelete: Cascade)
+  createdByUser         User?                    @relation("ReminderCreatedBy", fields: [createdByUserId], references: [id], onDelete: SetNull)
+  audienceMembers       ReminderAudienceMember[]
 
+  @@unique([createdByUserId, sourceType, sourceId])
   @@index([familyId])
   @@index([dueDate])
   @@index([createdByUserId])
+  @@index([sourceType, sourceId])
   @@map("reminders")
 }
 
