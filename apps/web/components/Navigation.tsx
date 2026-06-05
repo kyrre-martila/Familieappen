@@ -46,18 +46,6 @@ function NavIcon({ icon }: { icon: BottomNavigationItem["icon"] }) {
     );
   }
 
-  if (icon === "gift") {
-    return (
-      <svg {...commonProps}>
-        <path d="M20 12v7.2a1.3 1.3 0 0 1-1.3 1.3H5.3A1.3 1.3 0 0 1 4 19.2V12" />
-        <path d="M3.5 8.2h17v3.8h-17z" />
-        <path d="M12 8.2v12.3" />
-        <path d="M12 8.1c-1.3-2.9-4.7-3.5-5.2-1.2-.4 1.9 1.8 2.4 5.2 1.2Z" />
-        <path d="M12 8.1c1.3-2.9 4.7-3.5 5.2-1.2.4 1.9-1.8 2.4-5.2 1.2Z" />
-      </svg>
-    );
-  }
-
   return (
     <svg {...commonProps}>
       <path d="M4.5 7h15M4.5 12h15M4.5 17h15" />
@@ -95,7 +83,6 @@ export function BottomNavigation() {
         </button>
         <NavigationLink item={bottomNavigationItems[2]} />
         <NavigationLink item={bottomNavigationItems[3]} />
-        <NavigationLink item={bottomNavigationItems[4]} />
       </nav>
       <CreateBottomSheet isOpen={isCreateOpen} onClose={() => setIsCreateOpen(false)} />
     </>
