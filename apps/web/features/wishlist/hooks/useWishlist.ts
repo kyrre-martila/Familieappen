@@ -6,6 +6,7 @@ import {
   createWishlistItem,
   deleteMyWishlistItem,
   getMyWishlistItems,
+  reorderMyWishlistItems,
   updateMyWishlistItem,
   type WishlistItem,
 } from "../../../lib/api";
@@ -133,6 +134,40 @@ export function useWishlist() {
     }
   }, [activeFamilyId, items]);
 
+  const reorderItems = useCallback(async (orderedIds: string[]) => {
+    if (!activeFamilyId) {
+      throw new Error("Velg en familie før du fortsetter.");
+    }
+
+    const previousItems = items;
+    const itemsById = new Map(items.map((item) => [item.id, item]));
+    const optimisticItems = orderedIds
+      .map((id, index) => {
+        const item = itemsById.get(id);
+        return item ? { ...item, position: index + 1, updatedAt: new Date().toISOString() } : null;
+      })
+      .filter((item): item is WishlistItem => Boolean(item));
+
+    if (optimisticItems.length !== items.length || orderedIds.length !== items.length) {
+      setError("Ønskelisten er endret et annet sted. Vi henter den på nytt.");
+      await refresh();
+      throw new Error("Wishlist items are stale");
+    }
+
+    setError(null);
+    setItems(optimisticItems);
+
+    try {
+      const response = await reorderMyWishlistItems(activeFamilyId, orderedIds);
+      setItems(sortWishlistItems(response.items));
+      return response.items;
+    } catch (reorderError) {
+      setItems(previousItems);
+      setError(getUserFacingApiMessage(reorderError, "Kunne ikke flytte ønskene akkurat nå"));
+      throw reorderError;
+    }
+  }, [activeFamilyId, items, refresh]);
+
   const deleteItem = useCallback(async (itemId: string) => {
     if (!activeFamilyId) {
       throw new Error("Velg en familie før du fortsetter.");
@@ -162,8 +197,10 @@ export function useWishlist() {
     createItem,
     updateItem,
     deleteItem,
+    reorderItems,
     createWishlistItem: createItem,
     updateWishlistItem: updateItem,
     deleteWishlistItem: deleteItem,
+    reorderWishlistItems: reorderItems,
   };
 }

@@ -10302,6 +10302,7 @@ button.calendar-chip {
 
 .wishlist-share-button,
 .wishlist-add-button,
+.wishlist-done-button,
 .wishlist-empty__button {
   display: inline-flex;
   min-height: calc(var(--space-xl) + var(--space-xs));
@@ -10329,9 +10330,11 @@ button.calendar-chip {
 
 .wishlist-share-button[aria-disabled="true"],
 .wishlist-add-button[aria-disabled="true"],
+.wishlist-done-button[aria-disabled="true"],
 .wishlist-empty__button[aria-disabled="true"],
 .wishlist-tabs__tab[aria-disabled="true"],
-.wishlist-card__menu-panel button[aria-disabled="true"] {
+.wishlist-card__menu-panel button[aria-disabled="true"],
+.wishlist-card__menu-panel button:disabled {
   cursor: default;
 }
 
@@ -10405,6 +10408,19 @@ button.calendar-chip {
   box-shadow: 0 var(--space-s) var(--space-l)
     color-mix(in srgb, var(--color-text) 6%, transparent);
   outline: none;
+  transition: border-color 160ms ease, box-shadow 160ms ease, opacity 160ms ease;
+}
+
+.wishlist-card--move-mode {
+  grid-template-columns: calc(var(--space-xl) + var(--space-xs)) calc(var(--space-xl) * 2.15) minmax(0, 1fr);
+  padding-right: var(--space-m);
+}
+
+.wishlist-card--dragging {
+  border-color: color-mix(in srgb, var(--color-primary) 34%, var(--color-border));
+  box-shadow: 0 var(--space-s) var(--space-l)
+    color-mix(in srgb, var(--color-primary) 10%, transparent);
+  opacity: 0.92;
 }
 
 .wishlist-card:focus-visible,
@@ -10455,11 +10471,22 @@ button.calendar-chip {
   line-height: 1.18;
 }
 
+.wishlist-card__meta {
+  display: flex;
+  min-width: 0;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: calc(var(--space-xs) * 0.7);
+  margin: calc(var(--space-xs) * 0.55) 0 0;
+  color: var(--color-muted);
+  font-size: var(--text-small);
+  font-weight: 760;
+  line-height: 1.18;
+}
+
 .wishlist-card__price,
 .wishlist-card__store {
-  margin: calc(var(--space-xs) * 0.55) 0 0;
-  font-size: var(--text-small);
-  line-height: 1.18;
+  margin: 0;
 }
 
 .wishlist-card__price {
@@ -10468,6 +10495,7 @@ button.calendar-chip {
 }
 
 .wishlist-card__store {
+  min-width: 0;
   overflow: hidden;
   color: var(--color-muted);
   font-weight: 760;
@@ -10495,9 +10523,29 @@ button.calendar-chip {
   display: none;
 }
 
-.wishlist-card__menu summary:focus-visible {
+.wishlist-card__menu summary:focus-visible,
+.wishlist-card__drag-handle:focus-visible,
+.wishlist-done-button:focus-visible {
   outline: 3px solid var(--color-primary-soft);
   outline-offset: 2px;
+}
+
+.wishlist-card__drag-handle {
+  display: grid;
+  width: calc(var(--space-xl) + var(--space-xs));
+  height: calc(var(--space-xl) + var(--space-xs));
+  place-items: center;
+  border: 0;
+  border-radius: var(--radius-pill);
+  background: color-mix(in srgb, var(--color-primary-soft) 38%, var(--color-surface));
+  color: var(--color-muted);
+  cursor: grab;
+  touch-action: none;
+}
+
+.wishlist-card--dragging .wishlist-card__drag-handle {
+  cursor: grabbing;
+  color: var(--color-primary-strong);
 }
 
 .wishlist-card__menu-panel {
@@ -10532,11 +10580,35 @@ button.calendar-chip {
   color: #a64242;
 }
 
-.wishlist-add-button {
+.wishlist-add-button,
+.wishlist-done-button {
   justify-self: start;
   margin-top: calc(var(--space-xs) * -0.25);
   background: transparent;
   box-shadow: none;
+}
+
+.wishlist-done-button {
+  min-width: 0;
+  padding-inline: var(--space-l);
+}
+
+.wishlist-move-helper,
+.wishlist-move-note {
+  margin: 0;
+  color: var(--color-muted);
+  font-size: var(--text-small);
+  font-weight: 760;
+  line-height: 1.4;
+}
+
+.wishlist-move-note {
+  width: fit-content;
+  border: 1px solid color-mix(in srgb, var(--color-primary) 18%, var(--color-border));
+  border-radius: var(--radius-pill);
+  padding: var(--space-xs) var(--space-s);
+  background: color-mix(in srgb, var(--color-primary-soft) 38%, transparent);
+  color: var(--color-primary-strong);
 }
 
 .wishlist-empty {
@@ -10631,6 +10703,10 @@ button.calendar-chip {
   .wishlist-card {
     grid-template-columns: calc(var(--space-xl) * 1.8) minmax(0, 1fr) auto;
     gap: var(--space-s);
+  }
+
+  .wishlist-card--move-mode {
+    grid-template-columns: calc(var(--space-xl) + var(--space-xs)) calc(var(--space-xl) * 1.8) minmax(0, 1fr);
   }
 
   .wishlist-card__media {

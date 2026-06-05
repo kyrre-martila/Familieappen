@@ -205,6 +205,14 @@ export async function deleteMyWishlistItem(familyId: string, itemId: string): Pr
   });
 }
 
+export async function reorderMyWishlistItems(familyId: string, orderedIds: string[]): Promise<WishlistItemListResponse> {
+  return apiRequest<WishlistItemListResponse>("/wishlist/reorder", {
+    method: "POST",
+    body: { orderedIds },
+    familyId
+  });
+}
+
 
 export async function getWishlists(familyId: string): Promise<WishlistSummary[]> {
   return apiRequest<WishlistSummary[]>("/wishlists", { familyId });
