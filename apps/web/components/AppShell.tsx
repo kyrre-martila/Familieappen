@@ -25,7 +25,7 @@ function useCurrentSearch(pathname: string) {
 function isFocusRoute(pathname: string, search = "") {
   const searchParams = new URLSearchParams(search);
   const isSchoolWeekEdit = pathname === "/husk" && searchParams.get("tab") === "skoleuka" && searchParams.get("edit") === "1";
-  return isSchoolWeekEdit || pathname.startsWith("/calendar/events/") || pathname.startsWith("/husk/lister/") || pathname.startsWith("/husk/reminders/");
+  return isSchoolWeekEdit || pathname.startsWith("/calendar/events/") || pathname.startsWith("/husk/lister/") || pathname.startsWith("/husk/reminders/") || pathname === "/wishlist/new" || (pathname.startsWith("/wishlist/") && pathname.endsWith("/edit"));
 }
 
 export function RootAppFrame({ children }: Readonly<{ children: React.ReactNode }>) {

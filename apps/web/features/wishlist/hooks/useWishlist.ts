@@ -162,5 +162,8 @@ export function useWishlist() {
     createItem,
     updateItem,
     deleteItem,
+    createWishlistItem: createItem,
+    updateWishlistItem: updateItem,
+    deleteWishlistItem: deleteItem,
   };
 }

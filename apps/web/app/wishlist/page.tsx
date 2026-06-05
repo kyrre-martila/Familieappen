@@ -1,6 +1,8 @@
 "use client";
 
 import type { MouseEvent } from "react";
+import { useEffect, useState } from "react";
+import Link from "next/link";
 import { Gift, Image as ImageIcon, MoreHorizontal, Plus, RefreshCw, Share2 } from "lucide-react";
 
 import { AppShell } from "../../components/AppShell";
@@ -74,10 +76,10 @@ function WishlistEmptyState() {
       </div>
       <h2>Du har ingen ønsker enda</h2>
       <p>Legg til ting du ønsker deg til bursdag, jul eller senere</p>
-      <button className="wishlist-empty__button" type="button" aria-disabled="true" onClick={handleUnavailableAction} title="Legg til kommer senere">
+      <Link className="wishlist-empty__button" href="/wishlist/new">
         <Plus aria-hidden="true" size={18} />
         Legg til første ønske
-      </button>
+      </Link>
     </section>
   );
 }
@@ -130,7 +132,7 @@ function WishlistCard({ item, onDelete }: { item: WishlistItem; onDelete: (itemI
         </summary>
         <div className="wishlist-card__menu-panel" role="menu">
           <button type="button" role="menuitem" aria-disabled="true" onClick={handleUnavailableAction}>Flytt</button>
-          <button type="button" role="menuitem" aria-disabled="true" onClick={handleUnavailableAction}>Rediger</button>
+          <Link href={`/wishlist/${item.id}/edit`} role="menuitem">Rediger</Link>
           <button type="button" role="menuitem" onClick={() => onDelete(item.id)}>Slett</button>
         </div>
       </details>
@@ -140,11 +142,28 @@ function WishlistCard({ item, onDelete }: { item: WishlistItem; onDelete: (itemI
 
 function AddWishButton() {
   return (
-    <button className="wishlist-add-button" type="button" aria-disabled="true" onClick={handleUnavailableAction} title="Legg til kommer senere">
+    <Link className="wishlist-add-button" href="/wishlist/new">
       <Plus aria-hidden="true" size={18} />
       Legg til ønske
-    </button>
+    </Link>
   );
+}
+
+function WishlistToast() {
+  const [message, setMessage] = useState<string | null>(null);
+
+  useEffect(() => {
+    const savedMessage = window.sessionStorage.getItem("familieappen:wishlist:toast");
+    if (!savedMessage) return;
+
+    window.sessionStorage.removeItem("familieappen:wishlist:toast");
+    setMessage(savedMessage);
+    const timeout = window.setTimeout(() => setMessage(null), 2400);
+
+    return () => window.clearTimeout(timeout);
+  }, []);
+
+  return <p className={`wishlist-toast${message ? " wishlist-toast--visible" : ""}`} role="status" aria-live="polite">{message}</p>;
 }
 
 function WishlistContent() {
@@ -152,6 +171,7 @@ function WishlistContent() {
 
   return (
     <div className="wishlist-page">
+      <WishlistToast />
       <WishlistTabs />
       <p className="wishlist-coming-soon" aria-live="polite">Delt med meg: Kommer snart</p>
       {loading ? <WishlistSkeleton /> : null}
