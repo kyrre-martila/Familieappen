@@ -11192,3 +11192,158 @@ button.calendar-chip {
     width: var(--space-m);
   }
 }
+
+/* Shared wishlist reservations */
+.wishlist-reservation-action {
+  display: grid;
+  justify-items: end;
+  gap: calc(var(--space-xs) * 0.65);
+}
+
+.wishlist-reservation-button,
+.wishlist-reservation-undo {
+  border-radius: var(--radius-pill);
+  background: color-mix(in srgb, var(--color-surface) 96%, transparent);
+  color: var(--color-primary);
+  cursor: pointer;
+  font-weight: 850;
+}
+
+.wishlist-reservation-button {
+  min-height: calc(var(--space-xl) + var(--space-xs));
+  border: 1px solid color-mix(in srgb, var(--color-primary) 58%, var(--color-border));
+  padding: var(--space-xs) var(--space-m);
+}
+
+.wishlist-reservation-button:disabled,
+.wishlist-reservation-undo:disabled {
+  cursor: not-allowed;
+  opacity: 0.55;
+}
+
+.wishlist-reservation-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: calc(var(--space-xs) * 0.65);
+  border-radius: var(--radius-pill);
+  padding: var(--space-xs) var(--space-s);
+  background: color-mix(in srgb, var(--color-primary-soft) 72%, var(--color-surface));
+  color: var(--color-primary-strong);
+  font-size: var(--text-small);
+  font-weight: 860;
+  white-space: nowrap;
+}
+
+.wishlist-reservation-undo {
+  border: 0;
+  padding: 0 var(--space-xs);
+  font-size: var(--text-small);
+}
+
+.wishlist-reservation-note {
+  justify-self: center;
+  max-width: 22rem;
+  margin: var(--space-m) auto 0;
+  color: var(--color-muted);
+  font-size: var(--text-small);
+  font-weight: 760;
+  line-height: 1.35;
+  text-align: center;
+}
+
+.wishlist-reserve-sheet {
+  position: fixed;
+  inset: 0;
+  z-index: 40;
+  display: grid;
+  align-items: end;
+}
+
+.wishlist-reserve-sheet__backdrop {
+  position: absolute;
+  inset: 0;
+  border: 0;
+  background: color-mix(in srgb, var(--color-text) 32%, transparent);
+}
+
+.wishlist-reserve-sheet__panel {
+  position: relative;
+  display: grid;
+  width: min(100%, var(--page-width));
+  margin: 0 auto;
+  gap: var(--space-s);
+  border: 1px solid color-mix(in srgb, var(--color-border) 74%, transparent);
+  border-radius: var(--radius-l) var(--radius-l) 0 0;
+  padding: var(--space-l) var(--gutter) calc(var(--space-l) + env(safe-area-inset-bottom));
+  background: color-mix(in srgb, var(--color-surface) 98%, transparent);
+  box-shadow: var(--shadow-floating);
+}
+
+.wishlist-reserve-sheet__eyebrow,
+.wishlist-reserve-sheet__panel h2,
+.wishlist-reserve-sheet__panel p {
+  margin: 0;
+}
+
+.wishlist-reserve-sheet__eyebrow {
+  color: var(--color-muted);
+  font-size: var(--text-small);
+  font-weight: 780;
+}
+
+.wishlist-reserve-sheet__panel h2 {
+  color: var(--color-text);
+  font-size: var(--text-title);
+  font-weight: 880;
+  letter-spacing: -0.045em;
+}
+
+.wishlist-reserve-sheet__panel p:not(.wishlist-reserve-sheet__eyebrow) {
+  color: var(--color-muted);
+  font-weight: 740;
+  line-height: 1.45;
+}
+
+.wishlist-reserve-sheet__actions {
+  display: flex;
+  gap: var(--space-s);
+  justify-content: flex-end;
+  margin-top: var(--space-xs);
+}
+
+.wishlist-reserve-sheet__button {
+  min-height: calc(var(--space-xl) + var(--space-xs));
+  border-radius: var(--radius-pill);
+  padding: var(--space-xs) var(--space-l);
+  cursor: pointer;
+  font-weight: 850;
+}
+
+.wishlist-reserve-sheet__button--ghost {
+  border: 1px solid color-mix(in srgb, var(--color-border) 88%, var(--color-muted));
+  background: var(--color-surface);
+  color: var(--color-text);
+}
+
+.wishlist-reserve-sheet__button--primary {
+  border: 1px solid var(--color-primary);
+  background: linear-gradient(135deg, var(--color-primary), var(--color-primary-strong));
+  color: var(--color-surface);
+}
+
+.wishlist-reserve-sheet__button:disabled {
+  cursor: not-allowed;
+  opacity: 0.62;
+}
+
+@media (max-width: 720px) {
+  .wishlist-reservation-action {
+    align-self: stretch;
+    align-content: center;
+  }
+
+  .wishlist-reservation-button,
+  .wishlist-reservation-badge {
+    padding-inline: var(--space-s);
+  }
+}

@@ -1,7 +1,7 @@
 import { Body, Controller, Delete, Get, Headers, HttpStatus, Param, Patch, Post, Req, UseGuards } from "@nestjs/common";
 import { AuthGuard } from "../auth/guards/auth.guard";
 import { API_ERROR_CODES, ApiException, ApiResponse, createApiResponse } from "../common";
-import { SharedWishlistItemsResponseDto, SharedWishlistSummaryDto, WishlistItemCreateInput, WishlistItemDto, WishlistItemListResponseDto, WishlistItemUpdateInput, WishlistReorderInput } from "./dto/wishlist.dto";
+import { SharedWishlistItemDto, SharedWishlistItemsResponseDto, SharedWishlistSummaryDto, WishlistItemCreateInput, WishlistItemDto, WishlistItemListResponseDto, WishlistItemUpdateInput, WishlistReorderInput } from "./dto/wishlist.dto";
 import { WishlistsService } from "./wishlists.service";
 
 type AuthenticatedRequest = {
@@ -49,6 +49,25 @@ export class WishlistsController {
     @Body() body: WishlistItemCreateInput
   ): Promise<ApiResponse<WishlistItemDto>> {
     return createApiResponse(await this.wishlistsService.createItem(request.user.id, requireFamilyId(familyId), body));
+  }
+
+
+  @Post("items/:itemId/reserve")
+  async reserveItem(
+    @Req() request: AuthenticatedRequest,
+    @Headers("x-family-id") familyId: string,
+    @Param("itemId") itemId: string
+  ): Promise<ApiResponse<SharedWishlistItemDto>> {
+    return createApiResponse(await this.wishlistsService.reserveItem(request.user.id, requireFamilyId(familyId), itemId));
+  }
+
+  @Post("items/:itemId/unreserve")
+  async unreserveItem(
+    @Req() request: AuthenticatedRequest,
+    @Headers("x-family-id") familyId: string,
+    @Param("itemId") itemId: string
+  ): Promise<ApiResponse<SharedWishlistItemDto>> {
+    return createApiResponse(await this.wishlistsService.unreserveItem(request.user.id, requireFamilyId(familyId), itemId));
   }
 
   @Patch(":id")

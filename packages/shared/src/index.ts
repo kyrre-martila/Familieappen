@@ -193,6 +193,20 @@ export interface WishlistItem {
   createdAt: string;
   updatedAt: string;
   deletedAt: string | null;
+  isReserved?: boolean;
+  reservedByMe?: boolean;
+}
+
+export interface SharedWishlistItem {
+  id: string;
+  title: string;
+  description: string | null;
+  price: number | null;
+  storeOrLink: string | null;
+  imageUrl: string | null;
+  icon: string | null;
+  isReserved: boolean;
+  reservedByMe: boolean;
 }
 
 export interface WishlistItemCreateInput {
@@ -236,7 +250,7 @@ export interface SharedWishlistItemsResponse {
   ownerName: string;
   ownerAvatarUrl: string | null;
   ownerColor: string;
-  items: WishlistItem[];
+  items: SharedWishlistItem[];
 }
 
 export interface WishlistSummary {
