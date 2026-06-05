@@ -180,29 +180,46 @@ export interface FamilyDashboardResponse {
 
 export interface WishlistItem {
   id: string;
-  wishlistId: string;
+  familyId: string;
+  ownerUserId: string;
+  ownerFamilyMemberId: string | null;
   title: string;
   description: string | null;
-  productUrl: string | null;
+  price: number | null;
+  storeOrLink: string | null;
   imageUrl: string | null;
-  estimatedPrice: string | null;
-  purchased: boolean;
-  unavailable: boolean;
-  reserved: boolean;
+  icon: string | null;
+  position: number;
   createdAt: string;
   updatedAt: string;
+  deletedAt: string | null;
 }
 
-export interface Wishlist {
-  id: string;
-  familyId: string;
-  ownerFamilyMemberId: string;
+export interface WishlistItemCreateInput {
   title: string;
-  description: string | null;
-  createdByUserId: string | null;
-  createdAt: string;
-  updatedAt: string;
+  description?: string | null;
+  price?: number | null;
+  storeOrLink?: string | null;
+  imageUrl?: string | null;
+  icon?: string | null;
+}
+
+export interface WishlistItemUpdateInput {
+  title?: string;
+  description?: string | null;
+  price?: number | null;
+  storeOrLink?: string | null;
+  imageUrl?: string | null;
+  icon?: string | null;
+}
+
+export interface WishlistItemListResponse {
   items: WishlistItem[];
+}
+
+export interface WishlistReorderInput {
+  orderedIds?: string[];
+  positions?: Record<string, number>;
 }
 
 export interface WishlistSummary {
@@ -215,30 +232,6 @@ export interface WishlistSummary {
   updatedAt: string;
 }
 
-export interface WishlistShare {
-  token: string;
-  shareUrl: string;
-  expiresAt: string | null;
-}
-
-export interface PublicWishlistItem {
-  id: string;
-  title: string;
-  description: string | null;
-  productUrl: string | null;
-  imageUrl: string | null;
-  estimatedPrice: string | null;
-  purchased: boolean;
-  unavailable: boolean;
-  reserved: boolean;
-}
-
-export interface PublicWishlist {
-  id: string;
-  title: string;
-  description: string | null;
-  items: PublicWishlistItem[];
-}
 
 export interface ShoppingListItem {
   id: string;

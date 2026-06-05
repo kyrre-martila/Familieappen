@@ -27,8 +27,7 @@ model User {
   completedTasks Task[] @relation("TaskCompletedBy")
   createdCalendarEvents CalendarEvent[] @relation("CalendarEventCreatedBy")
   createdReminders Reminder[] @relation("ReminderCreatedBy")
-  createdWishlists Wishlist[] @relation("WishlistCreatedBy")
-  wishlistReservations WishlistReservation[] @relation("WishlistReservationReservedBy")
+  wishlistItems WishlistItem[] @relation("WishlistItemOwnerUser")
 
   @@map("users")
 }
@@ -46,7 +45,7 @@ model Family {
   calendarEvents CalendarEvent[]
   reminders Reminder[]
   lists     List[]
-  wishlists Wishlist[]
+  wishlistItems WishlistItem[]
   schoolWeekReminders SchoolWeekReminder[]
   createdMealPlanDays MealPlanDay[]
 
@@ -68,7 +67,7 @@ model FamilyMember {
   reminderAudienceMembers ReminderAudienceMember[]
   listAudienceMembers ListAudienceMember[]
   assignedListItems ListItem[]
-  ownedWishlists Wishlist[]
+  wishlistItems WishlistItem[]
   schoolWeekReminders SchoolWeekReminder[]
   createdMealPlanDays MealPlanDay[]
 
@@ -331,71 +330,28 @@ model SchoolWeekReminder {
   @@map("school_week_reminders")
 }
 
-model Wishlist {
-  id                  String               @id @default(cuid())
-  familyId            String
-  ownerFamilyMemberId String
-  title               String
-  description         String?
-  createdByUserId     String?
-  createdAt           DateTime             @default(now())
-  updatedAt           DateTime             @updatedAt
-  family              Family               @relation(fields: [familyId], references: [id], onDelete: Cascade)
-  ownerFamilyMember   FamilyMember         @relation(fields: [ownerFamilyMemberId], references: [id], onDelete: Cascade)
-  createdByUser       User?                @relation("WishlistCreatedBy", fields: [createdByUserId], references: [id], onDelete: SetNull)
-  items               WishlistItem[]
-  shares              WishlistShare[]
+model WishlistItem {
+  id                    String        @id @default(cuid())
+  familyId              String        @map("family_id")
+  ownerUserId           String        @map("owner_user_id")
+  ownerFamilyMemberId   String?       @map("owner_family_member_id")
+  title                 String
+  description           String?
+  price                 Decimal?      @db.Decimal(10, 2)
+  storeOrLink           String?       @map("store_or_link")
+  imageUrl              String?       @map("image_url")
+  icon                  String?
+  position              Int
+  createdAt             DateTime      @default(now()) @map("created_at")
+  updatedAt             DateTime      @updatedAt @map("updated_at")
+  deletedAt             DateTime?     @map("deleted_at")
+  family                Family        @relation(fields: [familyId], references: [id], onDelete: Cascade)
+  ownerUser             User          @relation("WishlistItemOwnerUser", fields: [ownerUserId], references: [id], onDelete: Cascade)
+  ownerFamilyMember     FamilyMember? @relation(fields: [ownerFamilyMemberId], references: [id], onDelete: SetNull)
 
   @@index([familyId])
+  @@index([ownerUserId])
   @@index([ownerFamilyMemberId])
-  @@index([createdByUserId])
-  @@map("wishlists")
-}
-
-model WishlistItem {
-  id             String                @id @default(cuid())
-  wishlistId     String
-  title          String
-  description    String?
-  productUrl     String?
-  imageUrl       String?
-  estimatedPrice String?
-  purchased      Boolean               @default(false)
-  createdAt      DateTime              @default(now())
-  updatedAt      DateTime              @updatedAt
-  wishlist       Wishlist              @relation(fields: [wishlistId], references: [id], onDelete: Cascade)
-  reservations   WishlistReservation[]
-
-  @@index([wishlistId])
+  @@index([familyId, ownerUserId, deletedAt, position])
   @@map("wishlist_items")
-}
-
-model WishlistReservation {
-  id                String       @id @default(cuid())
-  wishlistItemId    String
-  reservedByUserId  String?
-  reservedByName    String?
-  purchased         Boolean      @default(false)
-  createdAt         DateTime     @default(now())
-  updatedAt         DateTime     @updatedAt
-  wishlistItem      WishlistItem @relation(fields: [wishlistItemId], references: [id], onDelete: Cascade)
-  reservedByUser    User?        @relation("WishlistReservationReservedBy", fields: [reservedByUserId], references: [id], onDelete: SetNull)
-
-  @@index([wishlistItemId])
-  @@index([reservedByUserId])
-  @@map("wishlist_reservations")
-}
-
-model WishlistShare {
-  id         String    @id @default(cuid())
-  wishlistId String
-  token      String    @unique
-  expiresAt  DateTime?
-  createdAt  DateTime  @default(now())
-  updatedAt  DateTime  @updatedAt
-  wishlist   Wishlist  @relation(fields: [wishlistId], references: [id], onDelete: Cascade)
-
-  @@index([wishlistId])
-  @@index([token])
-  @@map("wishlist_shares")
 }

@@ -1,54 +1,36 @@
 import { BadRequestException, Injectable, NotFoundException } from "@nestjs/common";
-import { randomBytes } from "crypto";
 import { FamilyAuthorizationService } from "../families";
 import { PrismaService } from "../prisma";
-import {
-  AddWishlistItemRequestDto,
-  CreateWishlistRequestDto,
-  PublicWishlistDto,
-  PublicWishlistItemDto,
-  ReserveWishlistItemRequestDto,
-  UpdateWishlistItemRequestDto,
-  WishlistDto,
-  WishlistItemDto,
-  WishlistShareDto,
-  WishlistSummaryDto
-} from "./dto/wishlist.dto";
+import { WishlistItemCreateInput, WishlistItemDto, WishlistItemListResponseDto, WishlistItemUpdateInput, WishlistReorderInput } from "./dto/wishlist.dto";
 
-type WishlistReservationRecord = {
+const TITLE_MAX_LENGTH = 120;
+const DESCRIPTION_MAX_LENGTH = 1000;
+const LINK_MAX_LENGTH = 2048;
+const IMAGE_URL_MAX_LENGTH = 2048;
+const ICON_MAX_LENGTH = 80;
+const POSITION_STEP = 1000;
+
+type FamilyMemberRecord = {
   id: string;
-  wishlistItemId: string;
-  reservedByUserId: string | null;
-  reservedByName: string | null;
-  purchased: boolean;
-  createdAt: Date;
-  updatedAt: Date;
+  userId: string | null;
+  familyId: string;
 };
 
 type WishlistItemRecord = {
   id: string;
-  wishlistId: string;
-  title: string;
-  description: string | null;
-  productUrl: string | null;
-  imageUrl: string | null;
-  estimatedPrice: string | null;
-  purchased: boolean;
-  createdAt: Date;
-  updatedAt: Date;
-  reservations: WishlistReservationRecord[];
-};
-
-type WishlistRecord = {
-  id: string;
   familyId: string;
-  ownerFamilyMemberId: string;
+  ownerUserId: string;
+  ownerFamilyMemberId: string | null;
   title: string;
   description: string | null;
-  createdByUserId: string | null;
+  price: number | string | null;
+  storeOrLink: string | null;
+  imageUrl: string | null;
+  icon: string | null;
+  position: number;
   createdAt: Date;
   updatedAt: Date;
-  items: WishlistItemRecord[];
+  deletedAt: Date | null;
 };
 
 @Injectable()
@@ -58,95 +40,42 @@ export class WishlistsService {
     private readonly familyAuthorization: FamilyAuthorizationService
   ) {}
 
-  async listWishlists(userId: string, familyId: string): Promise<WishlistSummaryDto[]> {
-    await this.familyAuthorization.requireFamilyMember(userId, familyId);
+  async listMyItems(userId: string, familyId: string): Promise<WishlistItemListResponseDto> {
+    await this.requireCurrentMember(userId, familyId);
+    const items = await this.findActiveItems(userId, familyId);
 
-    const wishlists = await this.prisma.client.wishlist.findMany({
-      where: { familyId },
-      include: { items: { include: { reservations: true } } },
-      orderBy: { updatedAt: "desc" }
+    return { items: items.map((item) => this.toWishlistItemDto(item)) };
+  }
+
+  async createItem(userId: string, familyId: string, input: WishlistItemCreateInput = {}): Promise<WishlistItemDto> {
+    const membership = await this.requireCurrentMember(userId, familyId);
+    const data = this.validateCreateInput(input);
+
+    const createdItem = await this.prisma.client.$transaction(async (transaction) => {
+      const lastItem = await transaction.wishlistItem.findFirst({
+        where: this.myActiveWhere(userId, familyId),
+        orderBy: [{ position: "desc" }, { createdAt: "desc" }]
+      });
+      const nextPosition = ((lastItem as WishlistItemRecord | null)?.position ?? 0) + POSITION_STEP;
+
+      return transaction.wishlistItem.create({
+        data: {
+          ...data,
+          familyId,
+          ownerUserId: userId,
+          ownerFamilyMemberId: membership.id,
+          position: nextPosition
+        }
+      });
     });
 
-    return wishlists.map((wishlist: WishlistRecord) => this.toWishlistSummaryDto(wishlist));
+    return this.toWishlistItemDto(createdItem as WishlistItemRecord);
   }
 
-  async createWishlist(userId: string, familyId: string, input: CreateWishlistRequestDto = {}): Promise<WishlistDto> {
-    await this.familyAuthorization.requireFamilyMember(userId, familyId);
-    const ownerFamilyMemberId = this.validateRequiredText(input.ownerFamilyMemberId, "Wishlist owner is required", 120);
-    await this.requireFamilyMemberRecord(familyId, ownerFamilyMemberId);
-
-    const wishlist = await this.prisma.client.wishlist.create({
-      data: {
-        familyId,
-        ownerFamilyMemberId,
-        title: this.validateRequiredText(input.title, "Wishlist title is required", 120),
-        description: this.validateOptionalText(input.description, "Wishlist description", 500),
-        createdByUserId: userId
-      },
-      include: this.wishlistInclude()
-    });
-
-    return this.toWishlistDto(wishlist);
-  }
-
-  async getWishlist(userId: string, familyId: string, wishlistId: string): Promise<WishlistDto> {
-    await this.familyAuthorization.requireFamilyMember(userId, familyId);
-    const wishlist = await this.getFamilyWishlistOrThrow(familyId, wishlistId);
-
-    return this.toWishlistDto(wishlist);
-  }
-
-  async addItem(userId: string, familyId: string, wishlistId: string, input: AddWishlistItemRequestDto = {}): Promise<WishlistItemDto> {
-    await this.familyAuthorization.requireFamilyMember(userId, familyId);
-    const wishlist = await this.getFamilyWishlistOrThrow(familyId, wishlistId);
-
-    const item = await this.prisma.client.wishlistItem.create({
-      data: {
-        wishlistId: wishlist.id,
-        title: this.validateRequiredText(input.title, "Wishlist item title is required", 140),
-        description: this.validateOptionalText(input.description, "Wishlist item description", 700),
-        productUrl: this.validateOptionalUrl(input.productUrl, "Product URL"),
-        imageUrl: this.validateOptionalUrl(input.imageUrl, "Image URL"),
-        estimatedPrice: this.validateOptionalText(input.estimatedPrice, "Estimated price", 80)
-      },
-      include: { reservations: true }
-    });
-
-    return this.toWishlistItemDto(item);
-  }
-
-  async updateItem(userId: string, familyId: string, itemId: string, input: UpdateWishlistItemRequestDto = {}): Promise<WishlistItemDto> {
-    await this.familyAuthorization.requireFamilyMember(userId, familyId);
-    const item = await this.getFamilyWishlistItemOrThrow(familyId, itemId);
-    const data: Record<string, unknown> = {};
-
-    if (input.title !== undefined) {
-      data.title = this.validateRequiredText(input.title, "Wishlist item title is required", 140);
-    }
-
-    if (input.description !== undefined) {
-      data.description = this.validateOptionalText(input.description, "Wishlist item description", 700);
-    }
-
-    if (input.productUrl !== undefined) {
-      data.productUrl = this.validateOptionalUrl(input.productUrl, "Product URL");
-    }
-
-    if (input.imageUrl !== undefined) {
-      data.imageUrl = this.validateOptionalUrl(input.imageUrl, "Image URL");
-    }
-
-    if (input.estimatedPrice !== undefined) {
-      data.estimatedPrice = this.validateOptionalText(input.estimatedPrice, "Estimated price", 80);
-    }
-
-    if (input.purchased !== undefined) {
-      if (typeof input.purchased !== "boolean") {
-        throw new BadRequestException("Purchased must be true or false");
-      }
-
-      data.purchased = input.purchased;
-    }
+  async updateItem(userId: string, familyId: string, itemId: string, input: WishlistItemUpdateInput = {}): Promise<WishlistItemDto> {
+    await this.requireCurrentMember(userId, familyId);
+    const item = await this.getMyActiveItemOrThrow(userId, familyId, itemId);
+    const data = this.validateUpdateInput(input);
 
     if (Object.keys(data).length === 0) {
       throw new BadRequestException("No wishlist item changes were provided");
@@ -154,353 +83,257 @@ export class WishlistsService {
 
     const updatedItem = await this.prisma.client.wishlistItem.update({
       where: { id: item.id },
-      data,
-      include: { reservations: true }
+      data
     });
 
-    return this.toWishlistItemDto(updatedItem);
+    return this.toWishlistItemDto(updatedItem as WishlistItemRecord);
   }
 
   async deleteItem(userId: string, familyId: string, itemId: string): Promise<WishlistItemDto> {
-    await this.familyAuthorization.requireFamilyMember(userId, familyId);
-    const item = await this.getFamilyWishlistItemOrThrow(familyId, itemId);
-    const deletedItem = await this.prisma.client.wishlistItem.delete({
+    await this.requireCurrentMember(userId, familyId);
+    const item = await this.getMyActiveItemOrThrow(userId, familyId, itemId);
+    const deletedItem = await this.prisma.client.wishlistItem.update({
       where: { id: item.id },
-      include: { reservations: true }
+      data: { deletedAt: new Date() }
     });
 
-    return this.toWishlistItemDto(deletedItem);
+    return this.toWishlistItemDto(deletedItem as WishlistItemRecord);
   }
 
-  async reserveItem(userId: string | null, familyId: string | null, itemId: string, input: ReserveWishlistItemRequestDto = {}): Promise<WishlistItemDto> {
-    const item = familyId ? await this.getFamilyWishlistItemOrThrow(familyId, itemId) : await this.getWishlistItemOrThrow(itemId);
+  async reorderItems(userId: string, familyId: string, input: WishlistReorderInput = {}): Promise<WishlistItemListResponseDto> {
+    await this.requireCurrentMember(userId, familyId);
+    const activeItems = await this.findActiveItems(userId, familyId);
+    const orderedIds = this.resolveReorderIds(input, activeItems);
 
-    if (familyId && userId) {
-      await this.familyAuthorization.requireFamilyMember(userId, familyId);
-    }
+    const items = await this.prisma.client.$transaction(async (transaction) => {
+      await Promise.all(
+        orderedIds.map((id, index) => transaction.wishlistItem.update({
+          where: { id },
+          data: { position: -((index + 1) * POSITION_STEP) }
+        }))
+      );
+      await Promise.all(
+        orderedIds.map((id, index) => transaction.wishlistItem.update({
+          where: { id },
+          data: { position: (index + 1) * POSITION_STEP }
+        }))
+      );
 
-    if (item.purchased || item.reservations.length > 0) {
-      throw new BadRequestException("Wishlist item is already unavailable");
-    }
-
-    await this.prisma.client.wishlistReservation.create({
-      data: {
-        wishlistItemId: item.id,
-        reservedByUserId: userId,
-        reservedByName: this.validateOptionalText(input.reservedByName, "Reserved by name", 120)
-      }
-    });
-
-    const updatedItem = await this.getWishlistItemOrThrow(item.id);
-    return this.toWishlistItemDto(updatedItem);
-  }
-
-  async markPurchased(userId: string | null, familyId: string | null, itemId: string, input: ReserveWishlistItemRequestDto = {}): Promise<WishlistItemDto> {
-    const item = familyId ? await this.getFamilyWishlistItemOrThrow(familyId, itemId) : await this.getWishlistItemOrThrow(itemId);
-
-    if (familyId && userId) {
-      await this.familyAuthorization.requireFamilyMember(userId, familyId);
-    }
-
-    const reservation = item.reservations[0];
-
-    if (reservation) {
-      await this.prisma.client.wishlistReservation.update({
-        where: { id: reservation.id },
-        data: {
-          purchased: true,
-          reservedByUserId: reservation.reservedByUserId ?? userId,
-          reservedByName: reservation.reservedByName ?? this.validateOptionalText(input.reservedByName, "Reserved by name", 120)
-        }
+      return transaction.wishlistItem.findMany({
+        where: this.myActiveWhere(userId, familyId),
+        orderBy: [{ position: "asc" }, { createdAt: "asc" }]
       });
-    } else {
-      await this.prisma.client.wishlistReservation.create({
-        data: {
-          wishlistItemId: item.id,
-          reservedByUserId: userId,
-          reservedByName: this.validateOptionalText(input.reservedByName, "Reserved by name", 120),
-          purchased: true
-        }
-      });
-    }
-
-    const updatedItem = await this.prisma.client.wishlistItem.update({
-      where: { id: item.id },
-      data: { purchased: true },
-      include: { reservations: true }
     });
 
-    return this.toWishlistItemDto(updatedItem);
+    return { items: (items as WishlistItemRecord[]).map((item) => this.toWishlistItemDto(item)) };
   }
 
-  async createShare(userId: string, familyId: string, wishlistId: string): Promise<WishlistShareDto> {
-    await this.familyAuthorization.requireFamilyMember(userId, familyId);
-    const wishlist = await this.getFamilyWishlistOrThrow(familyId, wishlistId);
-    const share = await this.prisma.client.wishlistShare.create({
-      data: {
-        wishlistId: wishlist.id,
-        token: this.createToken()
-      }
+  private async requireCurrentMember(userId: string, familyId: string): Promise<FamilyMemberRecord> {
+    const membership = await this.familyAuthorization.requireFamilyMember(userId, familyId);
+    return membership as FamilyMemberRecord;
+  }
+
+  private async findActiveItems(userId: string, familyId: string): Promise<WishlistItemRecord[]> {
+    const items = await this.prisma.client.wishlistItem.findMany({
+      where: this.myActiveWhere(userId, familyId),
+      orderBy: [{ position: "asc" }, { createdAt: "asc" }]
     });
 
-    return {
-      token: share.token,
-      shareUrl: `/shared/wishlist/${share.token}`,
-      expiresAt: share.expiresAt?.toISOString() ?? null
-    };
+    return items as WishlistItemRecord[];
   }
 
-  async getPublicWishlist(token: string): Promise<PublicWishlistDto> {
-    const share = await this.getActiveShareOrThrow(token);
-
-    return this.toPublicWishlistDto(share.wishlist);
-  }
-
-  async reservePublicItem(token: string, itemId: string, input: ReserveWishlistItemRequestDto = {}): Promise<PublicWishlistItemDto> {
-    const share = await this.getActiveShareOrThrow(token);
-    this.requireItemInWishlist(share.wishlist.id, itemId, share.wishlist);
-
-    return this.toPublicWishlistItemDto(await this.reserveItem(null, null, itemId, input));
-  }
-
-  async markPublicItemPurchased(token: string, itemId: string, input: ReserveWishlistItemRequestDto = {}): Promise<PublicWishlistItemDto> {
-    const share = await this.getActiveShareOrThrow(token);
-    this.requireItemInWishlist(share.wishlist.id, itemId, share.wishlist);
-
-    return this.toPublicWishlistItemDto(await this.markPurchased(null, null, itemId, input));
-  }
-
-  async getDashboardSummary(familyId: string): Promise<{ wishlistCount: number; unavailableItemCount: number; recentlyUpdated: WishlistSummaryDto[] }> {
-    const wishlists = await this.prisma.client.wishlist.findMany({
-      where: { familyId },
-      include: { items: { include: { reservations: true } } },
-      orderBy: { updatedAt: "desc" },
-      take: 3
-    });
-    const wishlistCount = await this.prisma.client.wishlist.count({ where: { familyId } });
-    const unavailableItemCount = wishlists.reduce((count: number, wishlist: WishlistRecord) => {
-      return count + wishlist.items.filter((item) => this.isUnavailable(item)).length;
-    }, 0);
-
-    return {
-      wishlistCount,
-      unavailableItemCount,
-      recentlyUpdated: wishlists.map((wishlist: WishlistRecord) => this.toWishlistSummaryDto(wishlist))
-    };
-  }
-
-  private async requireFamilyMemberRecord(familyId: string, memberId: string): Promise<void> {
-    const member = await this.prisma.client.familyMember.findFirst({ where: { id: memberId, familyId } });
-
-    if (!member) {
-      throw new NotFoundException("Wishlist owner was not found");
-    }
-  }
-
-  private async getFamilyWishlistOrThrow(familyId: string, wishlistId: string): Promise<WishlistRecord> {
-    const wishlist = await this.prisma.client.wishlist.findFirst({
-      where: { id: wishlistId, familyId },
-      include: this.wishlistInclude()
-    });
-
-    if (!wishlist) {
-      throw new NotFoundException("Wishlist was not found");
-    }
-
-    return wishlist;
-  }
-
-  private async getFamilyWishlistItemOrThrow(familyId: string, itemId: string): Promise<WishlistItemRecord> {
+  private async getMyActiveItemOrThrow(userId: string, familyId: string, itemId: string): Promise<WishlistItemRecord> {
     const item = await this.prisma.client.wishlistItem.findFirst({
-      where: { id: itemId, wishlist: { familyId } },
-      include: { reservations: { orderBy: { createdAt: "asc" } } }
+      where: {
+        id: itemId,
+        ...this.myActiveWhere(userId, familyId)
+      }
     });
 
     if (!item) {
       throw new NotFoundException("Wishlist item was not found");
     }
 
-    return item;
+    return item as WishlistItemRecord;
   }
 
-  private async getWishlistItemOrThrow(itemId: string): Promise<WishlistItemRecord> {
-    const item = await this.prisma.client.wishlistItem.findUnique({
-      where: { id: itemId },
-      include: { reservations: { orderBy: { createdAt: "asc" } } }
-    });
-
-    if (!item) {
-      throw new NotFoundException("Wishlist item was not found");
-    }
-
-    return item;
-  }
-
-  private async getActiveShareOrThrow(token: string): Promise<{ wishlist: WishlistRecord }> {
-    if (!/^[A-Za-z0-9_-]{32,}$/.test(token)) {
-      throw new NotFoundException("Shared wishlist was not found");
-    }
-
-    const share = await this.prisma.client.wishlistShare.findUnique({
-      where: { token },
-      include: { wishlist: { include: this.wishlistInclude() } }
-    });
-
-    if (!share || (share.expiresAt && share.expiresAt < new Date())) {
-      throw new NotFoundException("Shared wishlist was not found");
-    }
-
-    return share;
-  }
-
-  private requireItemInWishlist(wishlistId: string, itemId: string, wishlist?: WishlistRecord): void {
-    const belongsToShare = wishlist?.items.some((item) => item.id === itemId) ?? false;
-
-    if (!itemId || !wishlistId || !belongsToShare) {
-      throw new NotFoundException("Wishlist item was not found");
-    }
-  }
-
-  private wishlistInclude() {
+  private myActiveWhere(userId: string, familyId: string) {
     return {
-      items: {
-        include: { reservations: { orderBy: { createdAt: "asc" } } },
-        orderBy: { createdAt: "asc" }
-      }
+      familyId,
+      ownerUserId: userId,
+      deletedAt: null
     };
   }
 
-  private createToken(): string {
-    return randomBytes(32).toString("base64url");
+  private validateCreateInput(input: WishlistItemCreateInput): {
+    title: string;
+    description?: string | null;
+    price?: number | null;
+    storeOrLink?: string | null;
+    imageUrl?: string | null;
+    icon?: string | null;
+  } {
+    return {
+      title: this.validateRequiredText(input.title, "Title", TITLE_MAX_LENGTH),
+      description: this.validateOptionalText(input.description, "Description", DESCRIPTION_MAX_LENGTH),
+      price: this.validateOptionalPrice(input.price),
+      storeOrLink: this.validateOptionalText(this.pickAlias(input.storeOrLink, input.store_or_link), "Store or link", LINK_MAX_LENGTH),
+      imageUrl: this.validateOptionalText(this.pickAlias(input.imageUrl, input.image_url), "Image URL", IMAGE_URL_MAX_LENGTH),
+      icon: this.validateOptionalText(input.icon, "Icon", ICON_MAX_LENGTH)
+    };
   }
 
-  private validateRequiredText(value: unknown, message: string, maxLength: number): string {
+  private validateUpdateInput(input: WishlistItemUpdateInput): Record<string, string | number | null> {
+    const data: Record<string, string | number | null> = {};
+
+    if (Object.prototype.hasOwnProperty.call(input, "title")) {
+      data.title = this.validateRequiredText(input.title, "Title", TITLE_MAX_LENGTH);
+    }
+
+    if (Object.prototype.hasOwnProperty.call(input, "description")) {
+      data.description = this.validateOptionalText(input.description, "Description", DESCRIPTION_MAX_LENGTH);
+    }
+
+    if (Object.prototype.hasOwnProperty.call(input, "price")) {
+      data.price = this.validateOptionalPrice(input.price);
+    }
+
+    if (Object.prototype.hasOwnProperty.call(input, "storeOrLink") || Object.prototype.hasOwnProperty.call(input, "store_or_link")) {
+      data.storeOrLink = this.validateOptionalText(this.pickAlias(input.storeOrLink, input.store_or_link), "Store or link", LINK_MAX_LENGTH);
+    }
+
+    if (Object.prototype.hasOwnProperty.call(input, "imageUrl") || Object.prototype.hasOwnProperty.call(input, "image_url")) {
+      data.imageUrl = this.validateOptionalText(this.pickAlias(input.imageUrl, input.image_url), "Image URL", IMAGE_URL_MAX_LENGTH);
+    }
+
+    if (Object.prototype.hasOwnProperty.call(input, "icon")) {
+      data.icon = this.validateOptionalText(input.icon, "Icon", ICON_MAX_LENGTH);
+    }
+
+    return data;
+  }
+
+  private resolveReorderIds(input: WishlistReorderInput, activeItems: WishlistItemRecord[]): string[] {
+    const activeIds = activeItems.map((item) => item.id);
+    const expectedIds = new Set(activeIds);
+    let orderedIds: string[];
+
+    if (Array.isArray(input.orderedIds)) {
+      orderedIds = input.orderedIds.map((id) => this.validateId(id));
+    } else if (input.positions && typeof input.positions === "object" && !Array.isArray(input.positions)) {
+      orderedIds = Object.entries(input.positions as Record<string, unknown>)
+        .map(([id, position]) => ({ id: this.validateId(id), position: this.validatePosition(position) }))
+        .sort((a, b) => a.position - b.position)
+        .map((entry) => entry.id);
+    } else {
+      throw new BadRequestException("Provide orderedIds or positions to reorder wishlist items");
+    }
+
+    const uniqueIds = new Set(orderedIds);
+
+    if (orderedIds.length !== activeIds.length || uniqueIds.size !== orderedIds.length) {
+      throw new BadRequestException("Reorder payload must include each active wishlist item exactly once");
+    }
+
+    for (const id of orderedIds) {
+      if (!expectedIds.has(id)) {
+        throw new BadRequestException("Reorder payload contains an invalid wishlist item");
+      }
+    }
+
+    return orderedIds;
+  }
+
+  private validateRequiredText(value: unknown, field: string, maxLength: number): string {
     if (typeof value !== "string") {
-      throw new BadRequestException(message);
+      throw new BadRequestException(`${field} is required`);
     }
 
-    const text = value.trim();
+    const normalizedValue = value.trim();
 
-    if (text.length < 1 || text.length > maxLength) {
-      throw new BadRequestException(`${message.replace(" is required", "")} must be between 1 and ${maxLength} characters`);
+    if (!normalizedValue) {
+      throw new BadRequestException(`${field} is required`);
     }
 
-    return text;
+    if (normalizedValue.length > maxLength) {
+      throw new BadRequestException(`${field} must be ${maxLength} characters or less`);
+    }
+
+    return normalizedValue;
   }
 
-  private validateOptionalText(value: unknown, label: string, maxLength: number): string | null {
-    if (value === undefined || value === null) {
+  private validateOptionalText(value: unknown, field: string, maxLength: number): string | null {
+    if (value === undefined || value === null || value === "") {
       return null;
     }
 
     if (typeof value !== "string") {
-      throw new BadRequestException(`${label} must be text`);
+      throw new BadRequestException(`${field} must be a string`);
     }
 
-    const text = value.trim();
+    const normalizedValue = value.trim();
 
-    if (text.length > maxLength) {
-      throw new BadRequestException(`${label} must be ${maxLength} characters or fewer`);
-    }
-
-    return text.length ? text : null;
-  }
-
-  private validateOptionalUrl(value: unknown, label: string): string | null {
-    const text = this.validateOptionalText(value, label, 500);
-
-    if (!text) {
+    if (!normalizedValue) {
       return null;
     }
 
-    try {
-      const url = new URL(text);
-
-      if (!["http:", "https:"].includes(url.protocol)) {
-        throw new Error("Unsupported URL protocol");
-      }
-
-      return url.toString();
-    } catch {
-      throw new BadRequestException(`${label} must be a valid http or https URL`);
+    if (normalizedValue.length > maxLength) {
+      throw new BadRequestException(`${field} must be ${maxLength} characters or less`);
     }
+
+    return normalizedValue;
   }
 
-  private isUnavailable(item: WishlistItemRecord): boolean {
-    return item.purchased || item.reservations.length > 0;
+  private validateOptionalPrice(value: unknown): number | null {
+    if (value === undefined || value === null || value === "") {
+      return null;
+    }
+
+    const numericValue = typeof value === "number" ? value : typeof value === "string" ? Number(value) : Number.NaN;
+
+    if (!Number.isFinite(numericValue) || numericValue <= 0) {
+      throw new BadRequestException("Price must be a positive number");
+    }
+
+    return Math.round(numericValue * 100) / 100;
   }
 
-  private toWishlistSummaryDto(wishlist: WishlistRecord): WishlistSummaryDto {
-    const unavailableCount = wishlist.items.filter((item) => this.isUnavailable(item)).length;
+  private validateId(value: unknown): string {
+    if (typeof value !== "string" || !value.trim()) {
+      throw new BadRequestException("Wishlist item id must be a string");
+    }
 
-    return {
-      id: wishlist.id,
-      ownerFamilyMemberId: wishlist.ownerFamilyMemberId,
-      title: wishlist.title,
-      description: wishlist.description,
-      itemCount: wishlist.items.length,
-      unavailableCount,
-      updatedAt: wishlist.updatedAt.toISOString()
-    };
+    return value.trim();
   }
 
-  private toWishlistDto(wishlist: WishlistRecord): WishlistDto {
-    return {
-      id: wishlist.id,
-      familyId: wishlist.familyId,
-      ownerFamilyMemberId: wishlist.ownerFamilyMemberId,
-      title: wishlist.title,
-      description: wishlist.description,
-      createdByUserId: wishlist.createdByUserId,
-      createdAt: wishlist.createdAt.toISOString(),
-      updatedAt: wishlist.updatedAt.toISOString(),
-      items: wishlist.items.map((item) => this.toWishlistItemDto(item))
-    };
+  private validatePosition(value: unknown): number {
+    if (typeof value !== "number" || !Number.isInteger(value) || value < 0) {
+      throw new BadRequestException("Wishlist positions must be non-negative integers");
+    }
+
+    return value;
+  }
+
+  private pickAlias(primary: unknown, secondary: unknown): unknown {
+    return primary !== undefined ? primary : secondary;
   }
 
   private toWishlistItemDto(item: WishlistItemRecord): WishlistItemDto {
-    const reserved = item.reservations.length > 0;
-
     return {
       id: item.id,
-      wishlistId: item.wishlistId,
+      familyId: item.familyId,
+      ownerUserId: item.ownerUserId,
+      ownerFamilyMemberId: item.ownerFamilyMemberId,
       title: item.title,
       description: item.description,
-      productUrl: item.productUrl,
+      price: item.price === null ? null : Number(item.price),
+      storeOrLink: item.storeOrLink,
       imageUrl: item.imageUrl,
-      estimatedPrice: item.estimatedPrice,
-      purchased: item.purchased || item.reservations.some((reservation) => reservation.purchased),
-      unavailable: this.isUnavailable(item),
-      reserved,
+      icon: item.icon,
+      position: item.position,
       createdAt: item.createdAt.toISOString(),
-      updatedAt: item.updatedAt.toISOString()
-    };
-  }
-
-  private toPublicWishlistItemDto(item: WishlistItemDto): PublicWishlistItemDto {
-    return {
-      id: item.id,
-      title: item.title,
-      description: item.description,
-      productUrl: item.productUrl,
-      imageUrl: item.imageUrl,
-      estimatedPrice: item.estimatedPrice,
-      purchased: item.purchased,
-      unavailable: item.unavailable,
-      reserved: item.reserved
-    };
-  }
-
-  private toPublicWishlistDto(wishlist: WishlistRecord): PublicWishlistDto {
-    return {
-      id: wishlist.id,
-      title: wishlist.title,
-      description: wishlist.description,
-      items: wishlist.items.map((item) => {
-        const dto = this.toWishlistItemDto(item);
-
-        return this.toPublicWishlistItemDto(dto);
-      })
+      updatedAt: item.updatedAt.toISOString(),
+      deletedAt: item.deletedAt?.toISOString() ?? null
     };
   }
 }

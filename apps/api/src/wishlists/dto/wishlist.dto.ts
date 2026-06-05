@@ -1,88 +1,47 @@
-export interface CreateWishlistRequestDto {
-  ownerFamilyMemberId?: unknown;
+export interface WishlistItemCreateInput {
   title?: unknown;
   description?: unknown;
-}
-
-export interface AddWishlistItemRequestDto {
-  title?: unknown;
-  description?: unknown;
-  productUrl?: unknown;
+  price?: unknown;
+  storeOrLink?: unknown;
+  store_or_link?: unknown;
   imageUrl?: unknown;
-  estimatedPrice?: unknown;
+  image_url?: unknown;
+  icon?: unknown;
 }
 
-export interface UpdateWishlistItemRequestDto {
+export interface WishlistItemUpdateInput {
   title?: unknown;
   description?: unknown;
-  productUrl?: unknown;
+  price?: unknown;
+  storeOrLink?: unknown;
+  store_or_link?: unknown;
   imageUrl?: unknown;
-  estimatedPrice?: unknown;
-  purchased?: unknown;
+  image_url?: unknown;
+  icon?: unknown;
 }
 
-export interface ReserveWishlistItemRequestDto {
-  reservedByName?: unknown;
+export interface WishlistReorderInput {
+  orderedIds?: unknown;
+  positions?: unknown;
 }
 
 export interface WishlistItemDto {
   id: string;
-  wishlistId: string;
-  title: string;
-  description: string | null;
-  productUrl: string | null;
-  imageUrl: string | null;
-  estimatedPrice: string | null;
-  purchased: boolean;
-  unavailable: boolean;
-  reserved: boolean;
-  createdAt: string;
-  updatedAt: string;
-}
-
-export interface WishlistDto {
-  id: string;
   familyId: string;
-  ownerFamilyMemberId: string;
+  ownerUserId: string;
+  ownerFamilyMemberId: string | null;
   title: string;
   description: string | null;
-  createdByUserId: string | null;
+  price: number | null;
+  storeOrLink: string | null;
+  imageUrl: string | null;
+  icon: string | null;
+  position: number;
   createdAt: string;
   updatedAt: string;
+  deletedAt: string | null;
+}
+
+export interface WishlistItemListResponseDto {
   items: WishlistItemDto[];
-}
-
-export interface WishlistSummaryDto {
-  id: string;
-  ownerFamilyMemberId: string;
-  title: string;
-  description: string | null;
-  itemCount: number;
-  unavailableCount: number;
-  updatedAt: string;
-}
-
-export interface WishlistShareDto {
-  token: string;
-  shareUrl: string;
-  expiresAt: string | null;
-}
-
-export interface PublicWishlistItemDto {
-  id: string;
-  title: string;
-  description: string | null;
-  productUrl: string | null;
-  imageUrl: string | null;
-  estimatedPrice: string | null;
-  purchased: boolean;
-  unavailable: boolean;
-  reserved: boolean;
-}
-
-export interface PublicWishlistDto {
-  id: string;
-  title: string;
-  description: string | null;
-  items: PublicWishlistItemDto[];
 }
