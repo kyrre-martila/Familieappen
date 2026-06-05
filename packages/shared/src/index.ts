@@ -243,6 +243,8 @@ export interface SharedWishlistSummary {
   ownerColor: string;
   itemCount: number;
   updatedAt: string;
+  shareId?: string;
+  isExternal?: boolean;
 }
 
 export interface SharedWishlistItemsResponse {
@@ -251,6 +253,43 @@ export interface SharedWishlistItemsResponse {
   ownerAvatarUrl: string | null;
   ownerColor: string;
   items: SharedWishlistItem[];
+  shareId?: string;
+  isExternal?: boolean;
+}
+
+export type WishlistShareInvitationStatus = "pending" | "accepted" | "declined" | "removed" | "revoked";
+
+export interface WishlistShareInvitation {
+  id: string;
+  wishlistOwnerUserId: string;
+  wishlistOwnerFamilyMemberId: string | null;
+  familyId: string;
+  invitedEmail: string;
+  invitedUserId: string | null;
+  status: WishlistShareInvitationStatus;
+  createdByUserId: string;
+  acceptedAt: string | null;
+  declinedAt: string | null;
+  removedAt: string | null;
+  revokedAt: string | null;
+  expiresAt: string | null;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface WishlistInvitePreview {
+  id: string;
+  invitedEmail: string;
+  ownerName: string;
+  inviterName: string;
+  status: WishlistShareInvitationStatus;
+  expiresAt: string | null;
+  requiresAuth: true;
+}
+
+export interface WishlistShareInviteResponse {
+  invitation: WishlistShareInvitation;
+  email: { ok: boolean; mode: "provider" | "dev-log" };
 }
 
 export interface WishlistSummary {

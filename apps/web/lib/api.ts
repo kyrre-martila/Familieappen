@@ -21,13 +21,16 @@ import type {
   WishlistItemListResponse,
   WishlistItemUpdateInput,
   WishlistSummary,
+  WishlistInvitePreview,
+  WishlistShareInvitation,
+  WishlistShareInviteResponse,
   Reminder,
   HuskList,
   HuskListItem,
   SchoolWeekReminder
 } from "@familieappen/shared";
 
-export type { CalendarEvent, Family, FamilyDashboardResponse, FamilyMember, FamilyMemberRole, ManualFamilyMemberRole, MealPlan, MealPlanDay, MoveMealResult, ShoppingList, ShoppingListItem, SharedWishlistItem, SharedWishlistItemsResponse, SharedWishlistSummary, Task, WishlistItem, WishlistItemCreateInput, WishlistItemListResponse, WishlistItemUpdateInput, WishlistSummary, Reminder, HuskList, HuskListItem, SchoolWeekReminder };
+export type { CalendarEvent, Family, FamilyDashboardResponse, FamilyMember, FamilyMemberRole, ManualFamilyMemberRole, MealPlan, MealPlanDay, MoveMealResult, ShoppingList, ShoppingListItem, SharedWishlistItem, SharedWishlistItemsResponse, SharedWishlistSummary, Task, WishlistItem, WishlistItemCreateInput, WishlistItemListResponse, WishlistItemUpdateInput, WishlistSummary, WishlistInvitePreview, WishlistShareInvitation, WishlistShareInviteResponse, Reminder, HuskList, HuskListItem, SchoolWeekReminder };
 
 
 type LegacyWishlistItem = WishlistItem & {
@@ -176,6 +179,48 @@ export async function removeFamilyMember(familyId: string, memberId: string): Pr
 
 export async function getMyWishlistItems(familyId: string): Promise<WishlistItemListResponse> {
   return apiRequest<WishlistItemListResponse>("/wishlist", { familyId });
+}
+
+export async function getWishlistShareInvitations(familyId: string): Promise<WishlistShareInvitation[]> {
+  return apiRequest<WishlistShareInvitation[]>("/wishlist/share", { familyId });
+}
+
+export async function inviteToWishlistByEmail(familyId: string, email: string): Promise<WishlistShareInviteResponse> {
+  return apiRequest<WishlistShareInviteResponse>("/wishlist/share/invite", {
+    method: "POST",
+    body: { email },
+    familyId
+  });
+}
+
+export async function resendWishlistShareInvitation(familyId: string, inviteId: string): Promise<WishlistShareInviteResponse> {
+  return apiRequest<WishlistShareInviteResponse>(`/wishlist/share/${encodeURIComponent(inviteId)}/resend`, {
+    method: "POST",
+    familyId
+  });
+}
+
+export async function revokeWishlistShareInvitation(familyId: string, inviteId: string): Promise<WishlistShareInvitation> {
+  return apiRequest<WishlistShareInvitation>(`/wishlist/share/${encodeURIComponent(inviteId)}/revoke`, {
+    method: "POST",
+    familyId
+  });
+}
+
+export async function getWishlistInvitePreview(token: string): Promise<WishlistInvitePreview> {
+  return apiRequest<WishlistInvitePreview>(`/wishlist/invites/${encodeURIComponent(token)}`, { includeAuth: false });
+}
+
+export async function acceptWishlistInvite(token: string): Promise<WishlistShareInvitation> {
+  return apiRequest<WishlistShareInvitation>(`/wishlist/invites/${encodeURIComponent(token)}/accept`, { method: "POST" });
+}
+
+export async function declineWishlistInvite(token: string): Promise<WishlistShareInvitation> {
+  return apiRequest<WishlistShareInvitation>(`/wishlist/invites/${encodeURIComponent(token)}/decline`, { method: "POST" });
+}
+
+export async function removeSharedWishlist(shareId: string): Promise<WishlistShareInvitation> {
+  return apiRequest<WishlistShareInvitation>(`/wishlist/shared/${encodeURIComponent(shareId)}/remove`, { method: "POST" });
 }
 
 

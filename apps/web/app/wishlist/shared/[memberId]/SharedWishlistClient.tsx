@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { useRouter } from "next/navigation";
 import { CheckCircle2, Image as ImageIcon, RefreshCw } from "lucide-react";
 
 import { AppShell } from "../../../../components/AppShell";
@@ -8,7 +9,7 @@ import { LockedFeatureState } from "../../../../components/PendingAccess";
 import { useFamilyAccess } from "../../../../components/ProtectedFamilyRoute";
 import { PageContainer } from "../../../../components/ui";
 import { useSharedWishlists } from "../../../../features/wishlist/hooks/useSharedWishlists";
-import { ApiError, type SharedWishlistItem, type SharedWishlistItemsResponse } from "../../../../lib/api";
+import { ApiError, removeSharedWishlist, type SharedWishlistItem, type SharedWishlistItemsResponse } from "../../../../lib/api";
 
 const priceFormatter = new Intl.NumberFormat("nb-NO", {
   maximumFractionDigits: 0,
@@ -160,12 +161,14 @@ function ReserveSheet({ item, onCancel, onConfirm, isBusy }: { item: SharedWishl
 }
 
 function SharedWishlistContent({ memberId }: { memberId: string }) {
+  const router = useRouter();
   const { getSharedWishlistItems, reserveSharedWishlistItem, unreserveSharedWishlistItem, loading, loadingItemsForMemberId, error } = useSharedWishlists();
   const [wishlist, setWishlist] = useState<SharedWishlistItemsResponse | null>(null);
   const [loadError, setLoadError] = useState<string | null>(null);
   const [pendingReserveItem, setPendingReserveItem] = useState<SharedWishlistItem | null>(null);
   const [busyItemId, setBusyItemId] = useState<string | null>(null);
   const [toast, setToast] = useState<string | null>(null);
+  const [removingShare, setRemovingShare] = useState(false);
 
   useEffect(() => {
     let isMounted = true;
@@ -260,6 +263,21 @@ function SharedWishlistContent({ memberId }: { memberId: string }) {
     }
   };
 
+
+  const handleRemoveSharedWishlist = async () => {
+    if (!wishlist?.shareId) return;
+
+    setRemovingShare(true);
+    try {
+      await removeSharedWishlist(wishlist.shareId);
+      window.sessionStorage.setItem("familieappen:wishlist:toast", "Ønskelisten er fjernet fra Delt med meg.");
+      router.push("/wishlist?tab=shared");
+    } catch (removeError) {
+      setToast(removeError instanceof Error ? removeError.message : "Kunne ikke fjerne ønskelisten akkurat nå");
+      setRemovingShare(false);
+    }
+  };
+
   const isLoading = !wishlist && !loadError && (loading || loadingItemsForMemberId === memberId);
   const title = wishlist ? `${wishlist.ownerName} sin ønskeliste` : "Delt ønskeliste";
 
@@ -275,6 +293,11 @@ function SharedWishlistContent({ memberId }: { memberId: string }) {
             <section className="wishlist-empty" aria-live="polite">
               <h2>Ingen ønsker enda</h2>
             </section>
+          ) : null}
+          {wishlist?.isExternal ? (
+            <button className="wishlist-remove-shared-button" type="button" onClick={() => void handleRemoveSharedWishlist()} disabled={removingShare}>
+              Fjern fra Delt med meg
+            </button>
           ) : null}
           {wishlist && wishlist.items.length > 0 ? (
             <>

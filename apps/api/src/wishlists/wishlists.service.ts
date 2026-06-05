@@ -1,7 +1,9 @@
 import { BadRequestException, ConflictException, ForbiddenException, Injectable, NotFoundException } from "@nestjs/common";
+import { createHash, randomBytes } from "node:crypto";
+import { EmailService } from "../email";
 import { FamilyAuthorizationService } from "../families";
 import { PrismaService } from "../prisma";
-import { SharedWishlistItemDto, SharedWishlistItemsResponseDto, SharedWishlistSummaryDto, WishlistItemCreateInput, WishlistItemDto, WishlistItemListResponseDto, WishlistItemUpdateInput, WishlistReorderInput } from "./dto/wishlist.dto";
+import { SharedWishlistItemDto, SharedWishlistItemsResponseDto, SharedWishlistSummaryDto, WishlistInvitePreviewDto, WishlistItemCreateInput, WishlistItemDto, WishlistItemListResponseDto, WishlistItemUpdateInput, WishlistReorderInput, WishlistShareInvitationDto, WishlistShareInviteInput, WishlistShareInviteResponseDto } from "./dto/wishlist.dto";
 
 const TITLE_MAX_LENGTH = 120;
 const DESCRIPTION_MAX_LENGTH = 1000;
@@ -9,6 +11,8 @@ const LINK_MAX_LENGTH = 2048;
 const IMAGE_URL_MAX_LENGTH = 2048;
 const ICON_MAX_LENGTH = 80;
 const POSITION_STEP = 1000;
+const INVITE_TOKEN_BYTES = 32;
+const ACTIVE_SHARE_STATUSES = ["pending", "accepted"];
 
 type FamilyMemberRecord = {
   id: string;
@@ -33,6 +37,35 @@ type PrismaClientWithWishlistReservations = typeof PrismaService.prototype.clien
     update(input: unknown): Promise<unknown>;
     findFirst(input: unknown): Promise<unknown>;
   };
+  wishlistShareInvitation: {
+    create(input: unknown): Promise<unknown>;
+    update(input: unknown): Promise<unknown>;
+    findFirst(input: unknown): Promise<unknown>;
+    findMany(input: unknown): Promise<unknown[]>;
+  };
+};
+
+type UserRecord = { id: string; email: string; name: string };
+
+type WishlistShareInvitationRecord = {
+  id: string;
+  wishlistOwnerUserId: string;
+  wishlistOwnerFamilyMemberId: string | null;
+  familyId: string;
+  invitedEmail: string;
+  invitedUserId: string | null;
+  tokenHash: string;
+  status: "pending" | "accepted" | "declined" | "removed" | "revoked";
+  createdByUserId: string;
+  acceptedAt: Date | null;
+  declinedAt: Date | null;
+  removedAt: Date | null;
+  revokedAt: Date | null;
+  expiresAt: Date | null;
+  createdAt: Date;
+  updatedAt: Date;
+  wishlistOwnerFamilyMember?: FamilyMemberRecord | null;
+  createdByUser?: UserRecord | null;
 };
 
 type WishlistItemRecord = {
@@ -57,7 +90,8 @@ type WishlistItemRecord = {
 export class WishlistsService {
   constructor(
     private readonly prisma: PrismaService,
-    private readonly familyAuthorization: FamilyAuthorizationService
+    private readonly familyAuthorization: FamilyAuthorizationService,
+    private readonly emailService: EmailService
   ) {}
 
   async listMyItems(userId: string, familyId: string): Promise<WishlistItemListResponseDto> {
@@ -67,6 +101,166 @@ export class WishlistsService {
     return { items: items.map((item) => this.toWishlistItemDto(item)) };
   }
 
+
+  async listShareInvitations(userId: string, familyId: string): Promise<WishlistShareInvitationDto[]> {
+    await this.requireCurrentMember(userId, familyId);
+    const invitations = await (this.prisma.client as PrismaClientWithWishlistReservations).wishlistShareInvitation.findMany({
+      where: { wishlistOwnerUserId: userId, familyId },
+      orderBy: [{ createdAt: "desc" }]
+    }) as WishlistShareInvitationRecord[];
+
+    return invitations.map((invitation) => this.toShareInvitationDto(invitation));
+  }
+
+  async inviteByEmail(userId: string, familyId: string, input: WishlistShareInviteInput = {}): Promise<WishlistShareInviteResponseDto> {
+    const membership = await this.requireCurrentMember(userId, familyId);
+    const invitedEmail = this.validateEmail(this.pickAlias(input.email, this.pickAlias(input.invitedEmail, input.invited_email)));
+    const inviter = await this.prisma.client.user.findUnique({ where: { id: userId } }) as UserRecord | null;
+
+    if (!inviter) {
+      throw new NotFoundException("User was not found");
+    }
+
+    if (inviter.email.trim().toLowerCase() === invitedEmail) {
+      throw new BadRequestException("Du kan ikke invitere deg selv");
+    }
+
+    const familyMemberWithEmail = await this.prisma.client.familyMember.findFirst({
+      where: {
+        familyId,
+        user: { email: { equals: invitedEmail, mode: "insensitive" } }
+      }
+    });
+
+    if (familyMemberWithEmail) {
+      throw new ConflictException("Familiemedlemmer har allerede tilgang til ønskelisten");
+    }
+
+    const existingActiveInvite = await (this.prisma.client as PrismaClientWithWishlistReservations).wishlistShareInvitation.findFirst({
+      where: {
+        wishlistOwnerUserId: userId,
+        invitedEmail: { equals: invitedEmail, mode: "insensitive" },
+        status: { in: ACTIVE_SHARE_STATUSES }
+      }
+    }) as WishlistShareInvitationRecord | null;
+
+    if (existingActiveInvite) {
+      throw new ConflictException("Denne e-postadressen har allerede en aktiv invitasjon");
+    }
+
+    const invitedUser = await this.prisma.client.user.findUnique({ where: { email: invitedEmail } }) as UserRecord | null;
+    const token = this.generateRawToken();
+    const invitation = await (this.prisma.client as PrismaClientWithWishlistReservations).wishlistShareInvitation.create({
+      data: {
+        wishlistOwnerUserId: userId,
+        wishlistOwnerFamilyMemberId: membership.id,
+        familyId,
+        invitedEmail,
+        invitedUserId: invitedUser?.id ?? null,
+        tokenHash: this.hashToken(token),
+        createdByUserId: userId
+      }
+    }) as WishlistShareInvitationRecord;
+    const email = await this.sendWishlistInviteEmail(invitedEmail, token, inviter.name, membership.displayName);
+
+    return { invitation: this.toShareInvitationDto(invitation), email: { ok: email.ok, mode: email.mode } };
+  }
+
+  async resendInvitation(userId: string, familyId: string, inviteId: string): Promise<WishlistShareInviteResponseDto> {
+    const membership = await this.requireCurrentMember(userId, familyId);
+    const invitation = await this.getOwnedInvitationOrThrow(userId, familyId, inviteId);
+
+    if (invitation.status !== "pending") {
+      throw new BadRequestException("Bare ventende invitasjoner kan sendes på nytt");
+    }
+
+    const inviter = await this.prisma.client.user.findUnique({ where: { id: userId } }) as UserRecord | null;
+    const token = this.generateRawToken();
+    const updated = await (this.prisma.client as PrismaClientWithWishlistReservations).wishlistShareInvitation.update({
+      where: { id: invitation.id },
+      data: { tokenHash: this.hashToken(token), wishlistOwnerFamilyMemberId: membership.id }
+    }) as WishlistShareInvitationRecord;
+    const email = await this.sendWishlistInviteEmail(invitation.invitedEmail, token, inviter?.name ?? membership.displayName, membership.displayName);
+
+    return { invitation: this.toShareInvitationDto(updated), email: { ok: email.ok, mode: email.mode } };
+  }
+
+  async revokeInvitation(userId: string, familyId: string, inviteId: string): Promise<WishlistShareInvitationDto> {
+    await this.requireCurrentMember(userId, familyId);
+    const invitation = await this.getOwnedInvitationOrThrow(userId, familyId, inviteId);
+
+    if (invitation.status === "revoked") {
+      return this.toShareInvitationDto(invitation);
+    }
+
+    const updated = await (this.prisma.client as PrismaClientWithWishlistReservations).wishlistShareInvitation.update({
+      where: { id: invitation.id },
+      data: { status: "revoked", revokedAt: new Date() }
+    }) as WishlistShareInvitationRecord;
+
+    return this.toShareInvitationDto(updated);
+  }
+
+  async getInvitePreview(token: string): Promise<WishlistInvitePreviewDto> {
+    const invitation = await this.getInvitationByTokenOrThrow(token);
+    const ownerName = invitation.wishlistOwnerFamilyMember?.displayName ?? "Eier";
+    const inviterName = invitation.createdByUser?.name ?? ownerName;
+
+    return {
+      id: invitation.id,
+      invitedEmail: invitation.invitedEmail,
+      ownerName,
+      inviterName,
+      status: invitation.status,
+      expiresAt: invitation.expiresAt?.toISOString() ?? null,
+      requiresAuth: true
+    };
+  }
+
+  async acceptInvite(userId: string, token: string): Promise<WishlistShareInvitationDto> {
+    const invitation = await this.getInvitationByTokenOrThrow(token);
+
+    this.assertInviteCanBeChanged(invitation);
+    await this.assertRecipientCanUseInvite(userId, invitation);
+
+    const updated = await (this.prisma.client as PrismaClientWithWishlistReservations).wishlistShareInvitation.update({
+      where: { id: invitation.id },
+      data: { status: "accepted", invitedUserId: userId, acceptedAt: new Date(), declinedAt: null, removedAt: null, revokedAt: null }
+    }) as WishlistShareInvitationRecord;
+
+    return this.toShareInvitationDto(updated);
+  }
+
+  async declineInvite(userId: string, token: string): Promise<WishlistShareInvitationDto> {
+    const invitation = await this.getInvitationByTokenOrThrow(token);
+
+    this.assertInviteCanBeChanged(invitation);
+    await this.assertRecipientCanUseInvite(userId, invitation);
+
+    const updated = await (this.prisma.client as PrismaClientWithWishlistReservations).wishlistShareInvitation.update({
+      where: { id: invitation.id },
+      data: { status: "declined", invitedUserId: userId, declinedAt: new Date() }
+    }) as WishlistShareInvitationRecord;
+
+    return this.toShareInvitationDto(updated);
+  }
+
+  async removeSharedWishlist(userId: string, shareId: string): Promise<WishlistShareInvitationDto> {
+    const invitation = await (this.prisma.client as PrismaClientWithWishlistReservations).wishlistShareInvitation.findFirst({
+      where: { id: shareId, invitedUserId: userId, status: "accepted" }
+    }) as WishlistShareInvitationRecord | null;
+
+    if (!invitation) {
+      throw new NotFoundException("Shared wishlist was not found");
+    }
+
+    const updated = await (this.prisma.client as PrismaClientWithWishlistReservations).wishlistShareInvitation.update({
+      where: { id: invitation.id },
+      data: { status: "removed", removedAt: new Date() }
+    }) as WishlistShareInvitationRecord;
+
+    return this.toShareInvitationDto(updated);
+  }
 
   async listSharedWishlists(userId: string, familyId: string): Promise<SharedWishlistSummaryDto[]> {
     const membership = await this.requireCurrentMember(userId, familyId);
@@ -112,15 +306,28 @@ export class WishlistsService {
         ownerAvatarUrl: null,
         ownerColor: this.getOwnerColor(owner.id),
         itemCount: 1,
-        updatedAt: item.updatedAt.toISOString()
+        updatedAt: item.updatedAt.toISOString(),
+        isExternal: false
       });
     }
 
-    return Array.from(summaries.values()).sort((a, b) => a.ownerName.localeCompare(b.ownerName, "nb"));
+    const familySummaries = Array.from(summaries.values()).sort((a, b) => a.ownerName.localeCompare(b.ownerName, "nb"));
+    const externalSummaries = await this.listAcceptedExternalWishlistSummaries(userId);
+
+    return [...familySummaries, ...externalSummaries];
   }
 
   async listSharedWishlistItems(userId: string, familyId: string, memberId: string): Promise<SharedWishlistItemsResponseDto> {
     const membership = await this.requireCurrentMember(userId, familyId);
+    const externalInvitation = await (this.prisma.client as PrismaClientWithWishlistReservations).wishlistShareInvitation.findFirst({
+      where: { id: memberId, invitedUserId: userId, status: "accepted" },
+      include: { wishlistOwnerFamilyMember: true }
+    }) as WishlistShareInvitationRecord | null;
+
+    if (externalInvitation) {
+      return this.listExternalWishlistItems(userId, externalInvitation);
+    }
+
     const owner = await this.prisma.client.familyMember.findFirst({
       where: {
         id: memberId,
@@ -152,7 +359,8 @@ export class WishlistsService {
       ownerName: owner.displayName,
       ownerAvatarUrl: null,
       ownerColor: this.getOwnerColor(owner.id),
-      items: items.map((item) => this.toSharedWishlistItemDto(item, userId, false))
+      items: items.map((item) => this.toSharedWishlistItemDto(item, userId, false)),
+      isExternal: false
     };
   }
 
@@ -323,7 +531,6 @@ export class WishlistsService {
     const item = await this.prisma.client.wishlistItem.findFirst({
       where: {
         id: itemId,
-        familyId,
         deletedAt: null
       }
     });
@@ -336,6 +543,23 @@ export class WishlistsService {
 
     if (wishlistItem.ownerUserId === userId || wishlistItem.ownerFamilyMemberId === currentMemberId) {
       throw new ForbiddenException("Du kan ikke reservere egne ønsker");
+    }
+
+    if (wishlistItem.familyId === familyId) {
+      return wishlistItem;
+    }
+
+    const externalAccess = await (this.prisma.client as PrismaClientWithWishlistReservations).wishlistShareInvitation.findFirst({
+      where: {
+        familyId: wishlistItem.familyId,
+        wishlistOwnerUserId: wishlistItem.ownerUserId,
+        invitedUserId: userId,
+        status: "accepted"
+      }
+    });
+
+    if (!externalAccess) {
+      throw new NotFoundException("Wishlist item was not found");
     }
 
     return wishlistItem;
@@ -357,6 +581,170 @@ export class WishlistsService {
       familyId,
       ownerUserId: userId,
       deletedAt: null
+    };
+  }
+
+  private async listAcceptedExternalWishlistSummaries(userId: string): Promise<SharedWishlistSummaryDto[]> {
+    const invitations = await (this.prisma.client as PrismaClientWithWishlistReservations).wishlistShareInvitation.findMany({
+      where: { invitedUserId: userId, status: "accepted" },
+      include: { wishlistOwnerFamilyMember: true },
+      orderBy: [{ acceptedAt: "desc" }, { createdAt: "desc" }]
+    }) as WishlistShareInvitationRecord[];
+    const summaries: SharedWishlistSummaryDto[] = [];
+
+    for (const invitation of invitations) {
+      const owner = invitation.wishlistOwnerFamilyMember;
+      if (!owner) continue;
+
+      const items = await this.prisma.client.wishlistItem.findMany({
+        where: { familyId: invitation.familyId, ownerUserId: invitation.wishlistOwnerUserId, deletedAt: null },
+        orderBy: [{ updatedAt: "desc" }]
+      }) as WishlistItemRecord[];
+      const latest = items[0]?.updatedAt ?? invitation.updatedAt;
+
+      summaries.push({
+        ownerFamilyMemberId: invitation.id,
+        ownerName: owner.displayName,
+        ownerAvatarUrl: null,
+        ownerColor: this.getOwnerColor(owner.id),
+        itemCount: items.length,
+        updatedAt: latest.toISOString(),
+        shareId: invitation.id,
+        isExternal: true
+      });
+    }
+
+    return summaries.sort((a, b) => a.ownerName.localeCompare(b.ownerName, "nb"));
+  }
+
+  private async listExternalWishlistItems(userId: string, invitation: WishlistShareInvitationRecord): Promise<SharedWishlistItemsResponseDto> {
+    const owner = invitation.wishlistOwnerFamilyMember;
+    if (!owner || invitation.wishlistOwnerUserId === userId) {
+      throw new NotFoundException("Shared wishlist was not found");
+    }
+
+    const items = await this.prisma.client.wishlistItem.findMany({
+      where: { familyId: invitation.familyId, ownerUserId: invitation.wishlistOwnerUserId, deletedAt: null },
+      include: { reservations: { where: { releasedAt: null }, take: 1 } },
+      orderBy: [{ position: "asc" }, { createdAt: "asc" }]
+    }) as WishlistItemRecord[];
+
+    return {
+      ownerFamilyMemberId: invitation.id,
+      ownerName: owner.displayName,
+      ownerAvatarUrl: null,
+      ownerColor: this.getOwnerColor(owner.id),
+      items: items.map((item) => this.toSharedWishlistItemDto(item, userId, false)),
+      shareId: invitation.id,
+      isExternal: true
+    };
+  }
+
+  private async getOwnedInvitationOrThrow(userId: string, familyId: string, inviteId: string): Promise<WishlistShareInvitationRecord> {
+    const invitation = await (this.prisma.client as PrismaClientWithWishlistReservations).wishlistShareInvitation.findFirst({
+      where: { id: inviteId, wishlistOwnerUserId: userId, familyId }
+    }) as WishlistShareInvitationRecord | null;
+
+    if (!invitation) {
+      throw new NotFoundException("Invitation was not found");
+    }
+
+    return invitation;
+  }
+
+  private async getInvitationByTokenOrThrow(token: string): Promise<WishlistShareInvitationRecord> {
+    if (typeof token !== "string" || token.trim().length < 32) {
+      throw new NotFoundException("Invitation was not found");
+    }
+
+    const invitation = await (this.prisma.client as PrismaClientWithWishlistReservations).wishlistShareInvitation.findFirst({
+      where: { tokenHash: this.hashToken(token.trim()) },
+      include: { wishlistOwnerFamilyMember: true, createdByUser: true }
+    }) as WishlistShareInvitationRecord | null;
+
+    if (!invitation) {
+      throw new NotFoundException("Invitation was not found");
+    }
+
+    return invitation;
+  }
+
+  private assertInviteCanBeChanged(invitation: WishlistShareInvitationRecord): void {
+    if (invitation.status === "revoked" || invitation.status === "removed") {
+      throw new ForbiddenException("Invitasjonen er ikke lenger tilgjengelig");
+    }
+
+    if (invitation.expiresAt && invitation.expiresAt.getTime() < Date.now()) {
+      throw new ForbiddenException("Invitasjonen er utløpt");
+    }
+  }
+
+  private async assertRecipientCanUseInvite(userId: string, invitation: WishlistShareInvitationRecord): Promise<void> {
+    if (invitation.wishlistOwnerUserId === userId) {
+      throw new BadRequestException("Du kan ikke invitere deg selv");
+    }
+
+    const user = await this.prisma.client.user.findUnique({ where: { id: userId } }) as UserRecord | null;
+    if (!user) {
+      throw new NotFoundException("User was not found");
+    }
+
+    if (invitation.invitedUserId && invitation.invitedUserId !== userId) {
+      throw new ForbiddenException("Invitasjonen tilhører en annen bruker");
+    }
+
+    if (user.email.trim().toLowerCase() !== invitation.invitedEmail.trim().toLowerCase()) {
+      throw new ForbiddenException("Logg inn med e-postadressen som ble invitert");
+    }
+  }
+
+  private async sendWishlistInviteEmail(invitedEmail: string, token: string, inviterName: string, ownerName: string) {
+    const appBaseUrl = process.env.APP_BASE_URL?.trim() || "http://localhost:3000";
+    const inviteUrl = `${appBaseUrl.replace(/\/$/, "")}/wishlist/invite/${encodeURIComponent(token)}`;
+
+    return this.emailService.sendEmail({
+      to: invitedEmail,
+      template: "wishlist-invite",
+      subject: "Du er invitert til en ønskeliste",
+      data: { inviterName, ownerName, inviteUrl }
+    });
+  }
+
+  private generateRawToken(): string {
+    return randomBytes(INVITE_TOKEN_BYTES).toString("base64url");
+  }
+
+  private hashToken(token: string): string {
+    return createHash("sha256").update(token).digest("hex");
+  }
+
+  private validateEmail(value: unknown): string {
+    const email = this.validateRequiredText(value, "E-postadresse", 320).toLowerCase();
+
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+      throw new BadRequestException("Skriv inn en gyldig e-postadresse");
+    }
+
+    return email;
+  }
+
+  private toShareInvitationDto(invitation: WishlistShareInvitationRecord): WishlistShareInvitationDto {
+    return {
+      id: invitation.id,
+      wishlistOwnerUserId: invitation.wishlistOwnerUserId,
+      wishlistOwnerFamilyMemberId: invitation.wishlistOwnerFamilyMemberId,
+      familyId: invitation.familyId,
+      invitedEmail: invitation.invitedEmail,
+      invitedUserId: invitation.invitedUserId,
+      status: invitation.status,
+      createdByUserId: invitation.createdByUserId,
+      acceptedAt: invitation.acceptedAt?.toISOString() ?? null,
+      declinedAt: invitation.declinedAt?.toISOString() ?? null,
+      removedAt: invitation.removedAt?.toISOString() ?? null,
+      revokedAt: invitation.revokedAt?.toISOString() ?? null,
+      expiresAt: invitation.expiresAt?.toISOString() ?? null,
+      createdAt: invitation.createdAt.toISOString(),
+      updatedAt: invitation.updatedAt.toISOString()
     };
   }
 

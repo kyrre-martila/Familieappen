@@ -1,6 +1,6 @@
 "use client";
 
-import type { MouseEvent, PointerEvent } from "react";
+import type { PointerEvent } from "react";
 import { Suspense, useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
@@ -18,10 +18,11 @@ import {
 import { AppShell } from "../../components/AppShell";
 import { LockedFeatureState } from "../../components/PendingAccess";
 import { useFamilyAccess } from "../../components/ProtectedFamilyRoute";
+import { useFamilyMembers } from "../../features/family/hooks/useFamilyMembers";
 import { PageContainer } from "../../components/ui";
 import { useSharedWishlists } from "../../features/wishlist/hooks/useSharedWishlists";
 import { useWishlist } from "../../features/wishlist/hooks/useWishlist";
-import type { SharedWishlistSummary, WishlistItem } from "../../lib/api";
+import { getWishlistShareInvitations, inviteToWishlistByEmail, resendWishlistShareInvitation, revokeWishlistShareInvitation, type SharedWishlistSummary, type WishlistItem, type WishlistShareInvitation } from "../../lib/api";
 
 const priceFormatter = new Intl.NumberFormat("nb-NO", {
   maximumFractionDigits: 0,
@@ -37,22 +38,131 @@ function formatPrice(price: number | null) {
   return priceFormatter.format(price).replace("NOK", "kr").trim();
 }
 
-function handleUnavailableAction(event: MouseEvent<HTMLButtonElement>) {
-  event.preventDefault();
-}
+const shareStatusLabels: Record<WishlistShareInvitation["status"], string> = {
+  pending: "Venter",
+  accepted: "Har tilgang",
+  declined: "Ikke lagt til",
+  removed: "Fjernet",
+  revoked: "Tilgang fjernet",
+};
 
 function WishlistShareButton() {
+  const { family } = useFamilyMembers();
+  const [open, setOpen] = useState(false);
+  const [email, setEmail] = useState("");
+  const [invitations, setInvitations] = useState<WishlistShareInvitation[]>([]);
+  const [message, setMessage] = useState<string | null>(null);
+  const [busy, setBusy] = useState(false);
+  const familyId = family?.id ?? null;
+
+  async function refreshInvitations() {
+    if (!familyId) return;
+    setInvitations(await getWishlistShareInvitations(familyId));
+  }
+
+  useEffect(() => {
+    if (open) void refreshInvitations().catch(() => setMessage("Kunne ikke hente invitasjoner akkurat nå."));
+  }, [open, familyId]);
+
+  async function handleInvite() {
+    if (!familyId || !email.trim()) return;
+    setBusy(true);
+    setMessage(null);
+    try {
+      await inviteToWishlistByEmail(familyId, email);
+      setEmail("");
+      setMessage("Invitasjonen er sendt.");
+      await refreshInvitations();
+    } catch (error) {
+      setMessage(error instanceof Error ? error.message : "Kunne ikke sende invitasjonen.");
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  async function handleResend(inviteId: string) {
+    if (!familyId) return;
+    setBusy(true);
+    setMessage(null);
+    try {
+      await resendWishlistShareInvitation(familyId, inviteId);
+      setMessage("Invitasjonen er sendt på nytt.");
+      await refreshInvitations();
+    } catch (error) {
+      setMessage(error instanceof Error ? error.message : "Kunne ikke sende på nytt.");
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  async function handleRevoke(inviteId: string) {
+    if (!familyId) return;
+    setBusy(true);
+    setMessage(null);
+    try {
+      await revokeWishlistShareInvitation(familyId, inviteId);
+      setMessage("Tilgangen er trukket tilbake.");
+      await refreshInvitations();
+    } catch (error) {
+      setMessage(error instanceof Error ? error.message : "Kunne ikke trekke tilbake tilgangen.");
+    } finally {
+      setBusy(false);
+    }
+  }
+
   return (
-    <button
-      className="wishlist-share-button"
-      type="button"
-      aria-disabled="true"
-      onClick={handleUnavailableAction}
-      title="Deling kommer senere"
-    >
-      <Share2 aria-hidden="true" size={18} />
-      <span>Del</span>
-    </button>
+    <>
+      <button className="wishlist-share-button" type="button" onClick={() => setOpen(true)}>
+        <Share2 aria-hidden="true" size={18} />
+        <span>Del</span>
+      </button>
+      {open ? (
+        <div className="wishlist-share-sheet" role="dialog" aria-modal="true" aria-labelledby="wishlist-share-title">
+          <button className="wishlist-share-sheet__backdrop" type="button" aria-label="Lukk deling" onClick={() => setOpen(false)} />
+          <section className="wishlist-share-sheet__panel">
+            <div className="wishlist-share-sheet__handle" aria-hidden="true" />
+            <div className="wishlist-share-sheet__header">
+              <div>
+                <h2 id="wishlist-share-title">Del ønskeliste</h2>
+                <p>Familien din har automatisk tilgang.</p>
+              </div>
+              <button type="button" onClick={() => setOpen(false)}>Lukk</button>
+            </div>
+            <label className="wishlist-share-sheet__field">
+              <span className="sr-only">E-postadresse</span>
+              <input
+                type="email"
+                placeholder="E-postadresse"
+                value={email}
+                onChange={(event) => setEmail(event.target.value)}
+              />
+            </label>
+            <button className="wishlist-share-sheet__primary" type="button" disabled={busy || !email.trim()} onClick={() => void handleInvite()}>
+              Send invitasjon
+            </button>
+            {message ? <p className="wishlist-share-sheet__message" role="status">{message}</p> : null}
+            <div className="wishlist-share-sheet__list" aria-label="Inviterte personer">
+              {invitations.map((invitation) => (
+                <article className="wishlist-share-sheet__invite" key={invitation.id}>
+                  <span>
+                    <strong>{invitation.invitedEmail}</strong>
+                    <small>{shareStatusLabels[invitation.status]}</small>
+                  </span>
+                  <span className="wishlist-share-sheet__actions">
+                    {invitation.status === "pending" ? (
+                      <button type="button" disabled={busy} onClick={() => void handleResend(invitation.id)}>Send på nytt</button>
+                    ) : null}
+                    {invitation.status === "pending" || invitation.status === "accepted" ? (
+                      <button type="button" disabled={busy} onClick={() => void handleRevoke(invitation.id)}>Trekk tilbake</button>
+                    ) : null}
+                  </span>
+                </article>
+              ))}
+            </div>
+          </section>
+        </div>
+      ) : null}
+    </>
   );
 }
 
@@ -305,7 +415,7 @@ function SharedWishlistCard({ summary }: { summary: SharedWishlistSummary }) {
   return (
     <Link
       className="wishlist-shared-card"
-      href={`/wishlist/shared/${encodeURIComponent(summary.ownerFamilyMemberId)}`}
+      href={`/wishlist/shared/${encodeURIComponent(summary.shareId ?? summary.ownerFamilyMemberId)}`}
       aria-label={`${summary.ownerName} sin ønskeliste, ${wishText}`}
     >
       <SharedWishlistAvatar summary={summary} />
@@ -340,8 +450,11 @@ function SharedWishlistList() {
           {error}
         </p>
       ) : null}
-      {sharedWishlistSummaries.map((summary) => (
-        <SharedWishlistCard key={summary.ownerFamilyMemberId} summary={summary} />
+      {sharedWishlistSummaries.map((summary, index) => (
+        <div key={summary.shareId ?? summary.ownerFamilyMemberId}>
+          {index > 0 && summary.isExternal && !sharedWishlistSummaries[index - 1]?.isExternal ? <div className="wishlist-shared-divider" aria-hidden="true" /> : null}
+          <SharedWishlistCard summary={summary} />
+        </div>
       ))}
     </div>
   );
