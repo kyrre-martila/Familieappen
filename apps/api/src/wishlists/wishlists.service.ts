@@ -101,7 +101,7 @@ export class WishlistsService {
   }
 
   async listSharedWishlistItems(userId: string, familyId: string, memberId: string): Promise<SharedWishlistItemsResponseDto> {
-    await this.requireCurrentMember(userId, familyId);
+    const membership = await this.requireCurrentMember(userId, familyId);
     const owner = await this.prisma.client.familyMember.findFirst({
       where: {
         id: memberId,
@@ -109,7 +109,7 @@ export class WishlistsService {
       }
     }) as FamilyMemberRecord | null;
 
-    if (!owner) {
+    if (!owner || owner.id === membership.id) {
       throw new NotFoundException("Shared wishlist was not found");
     }
 
