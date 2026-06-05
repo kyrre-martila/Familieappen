@@ -13,19 +13,57 @@ import type {
   ShoppingList,
   ShoppingListItem,
   Task,
-  Wishlist,
   WishlistItem,
-  WishlistShare,
   WishlistSummary,
-  PublicWishlist,
-  PublicWishlistItem,
   Reminder,
   HuskList,
   HuskListItem,
   SchoolWeekReminder
 } from "@familieappen/shared";
 
-export type { CalendarEvent, Family, FamilyDashboardResponse, FamilyMember, FamilyMemberRole, ManualFamilyMemberRole, MealPlan, MealPlanDay, MoveMealResult, ShoppingList, ShoppingListItem, Task, Wishlist, WishlistItem, WishlistShare, WishlistSummary, PublicWishlist, PublicWishlistItem, Reminder, HuskList, HuskListItem, SchoolWeekReminder };
+export type { CalendarEvent, Family, FamilyDashboardResponse, FamilyMember, FamilyMemberRole, ManualFamilyMemberRole, MealPlan, MealPlanDay, MoveMealResult, ShoppingList, ShoppingListItem, Task, WishlistItem, WishlistSummary, Reminder, HuskList, HuskListItem, SchoolWeekReminder };
+
+
+type LegacyWishlistItem = WishlistItem & {
+  productUrl?: string | null;
+  estimatedPrice?: string | null;
+  purchased?: boolean;
+  unavailable?: boolean;
+  reserved?: boolean;
+};
+
+export interface Wishlist {
+  id: string;
+  familyId: string;
+  ownerFamilyMemberId: string;
+  title: string;
+  description: string | null;
+  createdByUserId: string | null;
+  createdAt: string;
+  updatedAt: string;
+  items: LegacyWishlistItem[];
+}
+
+export interface WishlistShare {
+  token: string;
+  shareUrl: string;
+  expiresAt: string | null;
+}
+
+export type PublicWishlistItem = Pick<WishlistItem, "id" | "title" | "description" | "imageUrl"> & {
+  productUrl?: string | null;
+  estimatedPrice?: string | null;
+  purchased?: boolean;
+  unavailable?: boolean;
+  reserved?: boolean;
+};
+
+export interface PublicWishlist {
+  id: string;
+  title: string;
+  description: string | null;
+  items: PublicWishlistItem[];
+}
 
 export interface AuthUser {
   id: string;

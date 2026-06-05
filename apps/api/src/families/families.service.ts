@@ -83,22 +83,14 @@ type CalendarEventRecord = {
   participants: CalendarEventParticipantRecord[];
 };
 
-type WishlistReservationRecord = {
-  purchased: boolean;
-};
-
 type WishlistItemRecord = {
-  purchased: boolean;
-  reservations: WishlistReservationRecord[];
-};
-
-type WishlistRecord = {
   id: string;
-  ownerFamilyMemberId: string;
+  ownerUserId: string;
+  ownerFamilyMemberId: string | null;
   title: string;
   description: string | null;
   updatedAt: Date;
-  items: WishlistItemRecord[];
+  deletedAt: Date | null;
 };
 
 type FamilyMemberRecord = {
@@ -265,35 +257,45 @@ export class FamiliesService {
 
 
   private async getWishlistSummary(familyId: string): Promise<FamilyDashboardDto["wishlistSummary"]> {
-    const recentlyUpdated = await this.prisma.client.wishlist.findMany({
-      where: { familyId },
-      include: { items: { include: { reservations: true } } },
-      orderBy: { updatedAt: "desc" },
-      take: 3
-    });
-    const wishlistCount = await this.prisma.client.wishlist.count({ where: { familyId } });
+    const activeItems = await this.prisma.client.wishlistItem.findMany({
+      where: { familyId, deletedAt: null },
+      orderBy: [{ updatedAt: "desc" }, { createdAt: "desc" }]
+    }) as WishlistItemRecord[];
+    const summariesByOwner = new Map<string, {
+      id: string;
+      ownerFamilyMemberId: string;
+      title: string;
+      description: string | null;
+      itemCount: number;
+      unavailableCount: number;
+      updatedAt: string;
+    }>();
+
+    for (const item of activeItems) {
+      const ownerKey = item.ownerFamilyMemberId ?? item.ownerUserId;
+      const existing = summariesByOwner.get(ownerKey);
+
+      if (existing) {
+        existing.itemCount += 1;
+        continue;
+      }
+
+      summariesByOwner.set(ownerKey, {
+        id: ownerKey,
+        ownerFamilyMemberId: item.ownerFamilyMemberId ?? "",
+        title: "Wishlist",
+        description: null,
+        itemCount: 1,
+        unavailableCount: 0,
+        updatedAt: item.updatedAt.toISOString()
+      });
+    }
 
     return {
-      wishlistCount,
+      wishlistCount: summariesByOwner.size,
       upcomingPlaceholder: "Add birthdays or holidays later to connect wishlists to dates.",
-      recentlyUpdated: recentlyUpdated.map((wishlist: WishlistRecord) => {
-        const unavailableCount = wishlist.items.filter((item) => this.isWishlistItemUnavailable(item)).length;
-
-        return {
-          id: wishlist.id,
-          ownerFamilyMemberId: wishlist.ownerFamilyMemberId,
-          title: wishlist.title,
-          description: wishlist.description,
-          itemCount: wishlist.items.length,
-          unavailableCount,
-          updatedAt: wishlist.updatedAt.toISOString()
-        };
-      })
+      recentlyUpdated: Array.from(summariesByOwner.values()).slice(0, 3)
     };
-  }
-
-  private isWishlistItemUnavailable(item: WishlistItemRecord): boolean {
-    return item.purchased || item.reservations.length > 0;
   }
 
   private async getTodayEvents(familyId: string): Promise<FamilyDashboardDto["todayEvents"]> {
