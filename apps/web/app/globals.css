@@ -11347,3 +11347,144 @@ button.calendar-chip {
     padding-inline: var(--space-s);
   }
 }
+
+.wishlist-share-sheet {
+  position: fixed;
+  inset: 0;
+  z-index: 80;
+  display: grid;
+  align-items: end;
+}
+
+.wishlist-share-sheet__backdrop {
+  position: absolute;
+  inset: 0;
+  border: 0;
+  background: rgb(47 42 37 / 0.28);
+}
+
+.wishlist-share-sheet__panel {
+  position: relative;
+  margin: 0 auto;
+  width: min(100%, 42rem);
+  max-height: min(84vh, 46rem);
+  overflow: auto;
+  border: 1px solid var(--color-border);
+  border-radius: 28px 28px 0 0;
+  background: var(--color-surface);
+  padding: var(--space-m);
+  box-shadow: var(--shadow-sheet);
+}
+
+.wishlist-share-sheet__handle {
+  width: 3rem;
+  height: 0.28rem;
+  margin: 0 auto var(--space-m);
+  border-radius: 999px;
+  background: var(--color-border);
+}
+
+.wishlist-share-sheet__header,
+.wishlist-share-sheet__invite,
+.wishlist-share-sheet__actions {
+  display: flex;
+  gap: var(--space-s);
+}
+
+.wishlist-share-sheet__header,
+.wishlist-share-sheet__invite {
+  align-items: center;
+  justify-content: space-between;
+}
+
+.wishlist-share-sheet__header h2 {
+  margin: 0 0 0.25rem;
+}
+
+.wishlist-share-sheet__header p,
+.wishlist-share-sheet__message,
+.wishlist-invite-page__note {
+  color: var(--color-text-muted);
+}
+
+.wishlist-share-sheet__field input {
+  width: 100%;
+  margin-top: var(--space-m);
+  border: 1px solid var(--color-border);
+  border-radius: 16px;
+  padding: 0.9rem 1rem;
+  font: inherit;
+}
+
+.wishlist-share-sheet__primary,
+.wishlist-invite-page__actions a,
+.wishlist-invite-page__actions button {
+  border: 0;
+  border-radius: 999px;
+  background: var(--color-primary);
+  color: var(--color-primary-contrast);
+  padding: 0.8rem 1rem;
+  font-weight: 700;
+  text-decoration: none;
+}
+
+.wishlist-share-sheet__primary {
+  width: 100%;
+  margin-top: var(--space-s);
+}
+
+.wishlist-share-sheet__list {
+  display: grid;
+  gap: var(--space-xs);
+  margin-top: var(--space-m);
+}
+
+.wishlist-share-sheet__invite {
+  border-top: 1px solid var(--color-border);
+  padding-top: var(--space-s);
+}
+
+.wishlist-share-sheet__invite strong,
+.wishlist-share-sheet__invite small {
+  display: block;
+}
+
+.wishlist-share-sheet__actions button,
+.wishlist-share-sheet__header button {
+  border: 1px solid var(--color-border);
+  border-radius: 999px;
+  background: var(--color-surface-muted);
+  color: inherit;
+  padding: 0.5rem 0.75rem;
+}
+
+.wishlist-shared-divider {
+  height: 1px;
+  margin: var(--space-s) 0;
+  background: var(--color-border);
+}
+
+.wishlist-invite-page {
+  display: grid;
+  gap: var(--space-m);
+  border: 1px solid var(--color-border);
+  border-radius: 24px;
+  background: var(--color-surface);
+  padding: var(--space-l);
+}
+
+.wishlist-invite-page__actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-s);
+}
+
+.wishlist-remove-shared-button {
+  justify-self: start;
+  border: 1px solid var(--color-border);
+  border-radius: 999px;
+  background: var(--color-surface-muted);
+  color: inherit;
+  padding: 0.65rem 0.9rem;
+  font-weight: 700;
+}

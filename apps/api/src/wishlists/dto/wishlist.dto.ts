@@ -25,6 +25,50 @@ export interface WishlistReorderInput {
   positions?: unknown;
 }
 
+export interface WishlistShareInviteInput {
+  email?: unknown;
+  invitedEmail?: unknown;
+  invited_email?: unknown;
+}
+
+export type WishlistShareInvitationStatus = "pending" | "accepted" | "declined" | "removed" | "revoked";
+
+export interface WishlistShareInvitationDto {
+  id: string;
+  wishlistOwnerUserId: string;
+  wishlistOwnerFamilyMemberId: string | null;
+  familyId: string;
+  invitedEmail: string;
+  invitedUserId: string | null;
+  status: WishlistShareInvitationStatus;
+  createdByUserId: string;
+  acceptedAt: string | null;
+  declinedAt: string | null;
+  removedAt: string | null;
+  revokedAt: string | null;
+  expiresAt: string | null;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface WishlistInvitePreviewDto {
+  id: string;
+  invitedEmail: string;
+  ownerName: string;
+  inviterName: string;
+  status: WishlistShareInvitationStatus;
+  expiresAt: string | null;
+  requiresAuth: true;
+}
+
+export interface WishlistShareInviteResponseDto {
+  invitation: WishlistShareInvitationDto;
+  email: {
+    ok: boolean;
+    mode: "provider" | "dev-log";
+  };
+}
+
 export interface WishlistItemDto {
   id: string;
   familyId: string;
@@ -60,7 +104,6 @@ export interface WishlistItemListResponseDto {
   items: WishlistItemDto[];
 }
 
-
 export interface SharedWishlistSummaryDto {
   ownerFamilyMemberId: string;
   ownerName: string;
@@ -68,6 +111,8 @@ export interface SharedWishlistSummaryDto {
   ownerColor: string;
   itemCount: number;
   updatedAt: string;
+  shareId?: string;
+  isExternal?: boolean;
 }
 
 export interface SharedWishlistItemsResponseDto {
@@ -76,4 +121,6 @@ export interface SharedWishlistItemsResponseDto {
   ownerAvatarUrl: string | null;
   ownerColor: string;
   items: SharedWishlistItemDto[];
+  shareId?: string;
+  isExternal?: boolean;
 }
