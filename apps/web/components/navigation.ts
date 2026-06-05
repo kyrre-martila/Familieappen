@@ -1,9 +1,8 @@
 export const bottomNavigationItems = [
   { href: "/dashboard", label: "Hjem", icon: "home" },
   { href: "/calendar", label: "Kalender", icon: "calendar" },
-  { href: "/wishlist", label: "Ønskeliste", icon: "gift" },
   { href: "/husk", label: "Husk", icon: "check" },
-  { href: "/menu", label: "Meny", icon: "menu" }
+  { href: "/settings", label: "Meny", icon: "menu" }
 ] as const;
 
 export const defaultCreateOptions = [

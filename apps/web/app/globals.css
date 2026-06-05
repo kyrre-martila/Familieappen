@@ -4376,7 +4376,7 @@ select {
   left: var(--gutter);
   z-index: 40;
   display: grid;
-  grid-template-columns: repeat(6, minmax(0, 1fr));
+  grid-template-columns: repeat(5, minmax(0, 1fr));
   gap: 0;
   width: min(calc(100% - (var(--gutter) * 2)), calc(var(--page-width) * 0.68));
   margin: 0 auto;
@@ -11529,5 +11529,234 @@ button.calendar-chip {
 
   .wishlist-form-shell {
     padding-bottom: calc(var(--space-xl) + env(safe-area-inset-bottom));
+  }
+}
+
+/* Run 6 settings MVP shell */
+.settings-shell {
+  display: grid;
+  gap: var(--space-l);
+  width: min(100%, 46rem);
+  margin: 0 auto;
+  padding: calc(var(--space-xl) + env(safe-area-inset-top)) 0
+    calc(var(--space-xl) * 3 + env(safe-area-inset-bottom));
+}
+
+.settings-shell--detail {
+  position: relative;
+  min-height: 70vh;
+  align-content: start;
+}
+
+.settings-hero {
+  display: grid;
+  gap: var(--space-s);
+  justify-items: center;
+  text-align: center;
+}
+
+.settings-hero h1 {
+  margin: 0;
+  color: var(--color-primary-strong);
+  font-size: clamp(2.1rem, 1.75rem + 1.75vw, 3rem);
+  font-weight: 850;
+  line-height: 1.05;
+  letter-spacing: -0.06em;
+}
+
+.settings-hero p {
+  max-width: 31rem;
+  margin: 0;
+  color: color-mix(in srgb, var(--color-muted) 92%, var(--color-primary-strong));
+  font-size: clamp(1.02rem, 0.95rem + 0.35vw, 1.28rem);
+  font-weight: 560;
+  line-height: 1.45;
+}
+
+.settings-hero--detail {
+  padding-inline: calc(var(--space-xl) + var(--space-m));
+}
+
+.settings-section {
+  display: grid;
+  gap: var(--space-s);
+}
+
+.settings-section__title {
+  margin: 0;
+  color: var(--color-muted);
+  font-size: var(--text-body);
+  font-weight: 760;
+  letter-spacing: -0.03em;
+}
+
+.settings-card,
+.settings-placeholder-card {
+  overflow: hidden;
+  border: 1px solid color-mix(in srgb, var(--color-border) 76%, transparent);
+  border-radius: calc(var(--radius-l) + var(--space-xs));
+  background:
+    linear-gradient(
+      145deg,
+      color-mix(in srgb, var(--color-surface) 98%, transparent),
+      color-mix(in srgb, var(--color-surface-warm) 78%, var(--color-surface))
+    );
+  box-shadow:
+    0 1rem 2.5rem color-mix(in srgb, var(--color-text) 7%, transparent),
+    inset 0 1px 0 color-mix(in srgb, white 86%, transparent);
+}
+
+.settings-row {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  align-items: center;
+  gap: var(--space-m);
+  padding: clamp(1.15rem, 1rem + 0.75vw, 1.75rem);
+  color: var(--color-text);
+  transition:
+    background 160ms ease,
+    transform 160ms ease;
+}
+
+.settings-row:not(:last-child) {
+  border-bottom: 1px solid color-mix(in srgb, var(--color-border) 74%, transparent);
+}
+
+.settings-row:hover,
+.settings-row:focus-visible {
+  background: color-mix(in srgb, var(--color-primary-soft) 18%, transparent);
+}
+
+.settings-row:active {
+  transform: scale(0.992);
+}
+
+.settings-row__icon {
+  display: grid;
+  width: clamp(4rem, 3.3rem + 2vw, 5.8rem);
+  height: clamp(4rem, 3.3rem + 2vw, 5.8rem);
+  place-items: center;
+  border-radius: var(--radius-pill);
+  background: linear-gradient(
+    145deg,
+    color-mix(in srgb, var(--color-success-soft) 92%, white),
+    color-mix(in srgb, var(--color-primary-soft) 58%, white)
+  );
+  color: #0b6b2f;
+}
+
+.settings-row__icon svg {
+  width: clamp(1.8rem, 1.55rem + 0.8vw, 2.45rem);
+  height: clamp(1.8rem, 1.55rem + 0.8vw, 2.45rem);
+  stroke-width: 1.85;
+}
+
+.settings-row__copy {
+  display: grid;
+  gap: calc(var(--space-xs) * 0.8);
+  min-width: 0;
+}
+
+.settings-row__title {
+  color: #111111;
+  font-size: clamp(1.35rem, 1.08rem + 1vw, 1.85rem);
+  font-weight: 850;
+  line-height: 1.15;
+  letter-spacing: -0.055em;
+}
+
+.settings-row__description {
+  color: color-mix(in srgb, var(--color-muted) 90%, var(--color-primary-strong));
+  font-size: clamp(0.96rem, 0.9rem + 0.35vw, 1.22rem);
+  font-weight: 560;
+  line-height: 1.42;
+}
+
+.settings-row__chevron {
+  display: grid;
+  place-items: center;
+  color: color-mix(in srgb, var(--color-muted) 88%, var(--color-text));
+}
+
+.settings-row__chevron svg {
+  width: 1.7rem;
+  height: 1.7rem;
+  stroke: currentColor;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  stroke-width: 2.25;
+}
+
+.settings-footer {
+  display: flex;
+  justify-content: center;
+  gap: var(--space-m);
+  color: color-mix(in srgb, var(--color-primary-strong) 76%, var(--color-muted));
+  font-size: var(--text-small);
+  font-weight: 720;
+}
+
+.settings-footer a {
+  text-decoration: none;
+}
+
+.settings-footer a:hover,
+.settings-footer a:focus-visible {
+  color: var(--color-primary-strong);
+  text-decoration: underline;
+  text-underline-offset: 0.24em;
+}
+
+.settings-back-link {
+  position: absolute;
+  top: calc(var(--space-xl) + env(safe-area-inset-top));
+  left: 0;
+  display: grid;
+  width: calc(var(--space-xl) + var(--space-s));
+  height: calc(var(--space-xl) + var(--space-s));
+  place-items: center;
+  border-radius: var(--radius-pill);
+  color: var(--color-primary-strong);
+}
+
+.settings-back-link svg {
+  width: calc(var(--space-l) + var(--space-xs));
+  height: calc(var(--space-l) + var(--space-xs));
+  stroke-width: 2.25;
+}
+
+.settings-placeholder-card {
+  display: grid;
+  min-height: 12rem;
+  place-items: center;
+  padding: var(--space-xl);
+  text-align: center;
+}
+
+.settings-placeholder-card p {
+  margin: 0;
+  color: var(--color-muted);
+  font-size: var(--text-body);
+  font-weight: 720;
+}
+
+@media (max-width: 38rem) {
+  .settings-shell {
+    gap: var(--space-l);
+    padding-top: calc(var(--space-l) + env(safe-area-inset-top));
+  }
+
+  .settings-row {
+    grid-template-columns: auto minmax(0, 1fr) auto;
+    gap: var(--space-m);
+  }
+
+  .settings-row__icon {
+    width: 4.25rem;
+    height: 4.25rem;
+  }
+
+  .settings-row__description {
+    max-width: 14.5rem;
   }
 }
