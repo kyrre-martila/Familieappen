@@ -93,12 +93,18 @@ function SharedWishlistItemCard({ item }: { item: WishlistItem }) {
 }
 
 function SharedWishlistContent({ memberId }: { memberId: string }) {
-  const { getSharedWishlistItems, loadingItemsForMemberId, error } = useSharedWishlists();
+  const { getSharedWishlistItems, loading, loadingItemsForMemberId, error } = useSharedWishlists();
   const [wishlist, setWishlist] = useState<SharedWishlistItemsResponse | null>(null);
   const [loadError, setLoadError] = useState<string | null>(null);
 
   useEffect(() => {
     let isMounted = true;
+
+    if (loading) {
+      return () => {
+        isMounted = false;
+      };
+    }
 
     setLoadError(null);
     void getSharedWishlistItems(memberId)
@@ -116,9 +122,16 @@ function SharedWishlistContent({ memberId }: { memberId: string }) {
     return () => {
       isMounted = false;
     };
-  }, [getSharedWishlistItems, memberId]);
+  }, [getSharedWishlistItems, loading, memberId]);
 
-  const isLoading = !wishlist && loadingItemsForMemberId === memberId;
+  const retryLoad = () => {
+    setLoadError(null);
+    void getSharedWishlistItems(memberId).then(setWishlist).catch(() => {
+      setLoadError("Kunne ikke hente ønskelisten akkurat nå");
+    });
+  };
+
+  const isLoading = !wishlist && !loadError && (loading || loadingItemsForMemberId === memberId);
   const title = wishlist ? `${wishlist.ownerName} sin ønskeliste` : "Delt ønskeliste";
 
   return (
@@ -127,7 +140,7 @@ function SharedWishlistContent({ memberId }: { memberId: string }) {
         <div className="wishlist-page wishlist-page--shared-detail">
           {isLoading ? <SharedWishlistSkeleton /> : null}
           {!isLoading && (loadError || (error && !wishlist)) ? (
-            <SharedWishlistErrorState onRetry={() => void getSharedWishlistItems(memberId).then(setWishlist)} />
+            <SharedWishlistErrorState onRetry={retryLoad} />
           ) : null}
           {wishlist && wishlist.items.length === 0 ? (
             <section className="wishlist-empty" aria-live="polite">

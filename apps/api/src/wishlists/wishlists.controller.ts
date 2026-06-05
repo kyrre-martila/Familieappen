@@ -1,7 +1,7 @@
 import { Body, Controller, Delete, Get, Headers, HttpStatus, Param, Patch, Post, Req, UseGuards } from "@nestjs/common";
 import { AuthGuard } from "../auth/guards/auth.guard";
 import { API_ERROR_CODES, ApiException, ApiResponse, createApiResponse } from "../common";
-import { WishlistItemCreateInput, WishlistItemDto, WishlistItemListResponseDto, WishlistItemUpdateInput, WishlistReorderInput } from "./dto/wishlist.dto";
+import { SharedWishlistItemsResponseDto, SharedWishlistSummaryDto, WishlistItemCreateInput, WishlistItemDto, WishlistItemListResponseDto, WishlistItemUpdateInput, WishlistReorderInput } from "./dto/wishlist.dto";
 import { WishlistsService } from "./wishlists.service";
 
 type AuthenticatedRequest = {
@@ -29,7 +29,7 @@ export class WishlistsController {
   async getSharedWishlists(
     @Req() request: AuthenticatedRequest,
     @Headers("x-family-id") familyId: string
-  ) {
+  ): Promise<ApiResponse<SharedWishlistSummaryDto[]>> {
     return createApiResponse(await this.wishlistsService.listSharedWishlists(request.user.id, requireFamilyId(familyId)));
   }
 
@@ -38,7 +38,7 @@ export class WishlistsController {
     @Req() request: AuthenticatedRequest,
     @Headers("x-family-id") familyId: string,
     @Param("memberId") memberId: string
-  ) {
+  ): Promise<ApiResponse<SharedWishlistItemsResponseDto>> {
     return createApiResponse(await this.wishlistsService.listSharedWishlistItems(request.user.id, requireFamilyId(familyId), memberId));
   }
 
