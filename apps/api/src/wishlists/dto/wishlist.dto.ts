@@ -45,3 +45,21 @@ export interface WishlistItemDto {
 export interface WishlistItemListResponseDto {
   items: WishlistItemDto[];
 }
+
+
+export interface SharedWishlistSummaryDto {
+  ownerFamilyMemberId: string;
+  ownerName: string;
+  ownerAvatarUrl: string | null;
+  ownerColor: string;
+  itemCount: number;
+  updatedAt: string;
+}
+
+export interface SharedWishlistItemsResponseDto {
+  ownerFamilyMemberId: string;
+  ownerName: string;
+  ownerAvatarUrl: string | null;
+  ownerColor: string;
+  items: WishlistItemDto[];
+}

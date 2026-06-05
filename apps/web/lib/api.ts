@@ -12,6 +12,8 @@ import type {
   MoveMealResult,
   ShoppingList,
   ShoppingListItem,
+  SharedWishlistItemsResponse,
+  SharedWishlistSummary,
   Task,
   WishlistItem,
   WishlistItemCreateInput,
@@ -24,7 +26,7 @@ import type {
   SchoolWeekReminder
 } from "@familieappen/shared";
 
-export type { CalendarEvent, Family, FamilyDashboardResponse, FamilyMember, FamilyMemberRole, ManualFamilyMemberRole, MealPlan, MealPlanDay, MoveMealResult, ShoppingList, ShoppingListItem, Task, WishlistItem, WishlistItemCreateInput, WishlistItemListResponse, WishlistItemUpdateInput, WishlistSummary, Reminder, HuskList, HuskListItem, SchoolWeekReminder };
+export type { CalendarEvent, Family, FamilyDashboardResponse, FamilyMember, FamilyMemberRole, ManualFamilyMemberRole, MealPlan, MealPlanDay, MoveMealResult, ShoppingList, ShoppingListItem, SharedWishlistItemsResponse, SharedWishlistSummary, Task, WishlistItem, WishlistItemCreateInput, WishlistItemListResponse, WishlistItemUpdateInput, WishlistSummary, Reminder, HuskList, HuskListItem, SchoolWeekReminder };
 
 
 type LegacyWishlistItem = WishlistItem & {
@@ -173,6 +175,15 @@ export async function removeFamilyMember(familyId: string, memberId: string): Pr
 
 export async function getMyWishlistItems(familyId: string): Promise<WishlistItemListResponse> {
   return apiRequest<WishlistItemListResponse>("/wishlist", { familyId });
+}
+
+
+export async function getSharedWishlistSummaries(familyId: string): Promise<SharedWishlistSummary[]> {
+  return apiRequest<SharedWishlistSummary[]>("/wishlist/shared", { familyId });
+}
+
+export async function getSharedWishlistItems(familyId: string, memberId: string): Promise<SharedWishlistItemsResponse> {
+  return apiRequest<SharedWishlistItemsResponse>(`/wishlist/shared/${encodeURIComponent(memberId)}`, { familyId });
 }
 
 export async function createWishlistItem(

@@ -1,9 +1,11 @@
 "use client";
 
 import type { MouseEvent, PointerEvent } from "react";
-import { useEffect, useRef, useState } from "react";
+import { Suspense, useEffect, useRef, useState } from "react";
 import Link from "next/link";
+import { useSearchParams } from "next/navigation";
 import {
+  ChevronRight,
   Gift,
   GripVertical,
   Image as ImageIcon,
@@ -17,8 +19,9 @@ import { AppShell } from "../../components/AppShell";
 import { LockedFeatureState } from "../../components/PendingAccess";
 import { useFamilyAccess } from "../../components/ProtectedFamilyRoute";
 import { PageContainer } from "../../components/ui";
+import { useSharedWishlists } from "../../features/wishlist/hooks/useSharedWishlists";
 import { useWishlist } from "../../features/wishlist/hooks/useWishlist";
-import type { WishlistItem } from "../../lib/api";
+import type { SharedWishlistSummary, WishlistItem } from "../../lib/api";
 
 const priceFormatter = new Intl.NumberFormat("nb-NO", {
   maximumFractionDigits: 0,
@@ -53,32 +56,29 @@ function WishlistShareButton() {
   );
 }
 
-function WishlistTabs() {
+function WishlistTabs({ activeTab }: { activeTab: "mine" | "shared" }) {
   return (
     <div
       className="wishlist-tabs"
       role="tablist"
       aria-label="Ønskelistevisning"
     >
-      <button
-        className="wishlist-tabs__tab wishlist-tabs__tab--active"
-        type="button"
+      <Link
+        className={`wishlist-tabs__tab${activeTab === "mine" ? " wishlist-tabs__tab--active" : ""}`}
+        href="/wishlist"
         role="tab"
-        aria-selected="true"
+        aria-selected={activeTab === "mine"}
       >
         Min ønskeliste
-      </button>
-      <button
-        className="wishlist-tabs__tab"
-        type="button"
+      </Link>
+      <Link
+        className={`wishlist-tabs__tab${activeTab === "shared" ? " wishlist-tabs__tab--active" : ""}`}
+        href="/wishlist?tab=shared"
         role="tab"
-        aria-selected="false"
-        aria-disabled="true"
-        onClick={handleUnavailableAction}
-        title="Kommer snart"
+        aria-selected={activeTab === "shared"}
       >
         Delt med meg
-      </button>
+      </Link>
     </div>
   );
 }
@@ -261,6 +261,92 @@ function AddWishButton() {
   );
 }
 
+
+function SharedWishlistEmptyState() {
+  return (
+    <section className="wishlist-empty wishlist-empty--shared" aria-live="polite">
+      <h2>Ingen delte ønskelister enda</h2>
+      <p>Når noen i familien legger til ønsker, vises de her.</p>
+    </section>
+  );
+}
+
+function SharedWishlistAvatar({ summary }: { summary: SharedWishlistSummary }) {
+  if (summary.ownerAvatarUrl) {
+    return (
+      <span className="wishlist-shared-card__avatar">
+        <img alt="" src={summary.ownerAvatarUrl} loading="lazy" />
+      </span>
+    );
+  }
+
+  const initials = summary.ownerName
+    .split(" ")
+    .filter(Boolean)
+    .map((part) => part[0])
+    .join("")
+    .slice(0, 2)
+    .toUpperCase();
+
+  return (
+    <span
+      className="wishlist-shared-card__avatar wishlist-shared-card__avatar--initials"
+      style={{ backgroundColor: summary.ownerColor }}
+      aria-hidden="true"
+    >
+      {initials}
+    </span>
+  );
+}
+
+function SharedWishlistCard({ summary }: { summary: SharedWishlistSummary }) {
+  const wishText = `${summary.itemCount} ${summary.itemCount === 1 ? "ønske" : "ønsker"}`;
+
+  return (
+    <Link
+      className="wishlist-shared-card"
+      href={`/wishlist/shared/${encodeURIComponent(summary.ownerFamilyMemberId)}`}
+      aria-label={`${summary.ownerName} sin ønskeliste, ${wishText}`}
+    >
+      <SharedWishlistAvatar summary={summary} />
+      <span className="wishlist-shared-card__body">
+        <strong>{summary.ownerName}</strong>
+        <small>{wishText}</small>
+      </span>
+      <ChevronRight aria-hidden="true" size={28} />
+    </Link>
+  );
+}
+
+function SharedWishlistList() {
+  const { sharedWishlistSummaries, loading, error, refresh } = useSharedWishlists();
+
+  if (loading) {
+    return <WishlistSkeleton />;
+  }
+
+  if (error && sharedWishlistSummaries.length === 0) {
+    return <WishlistErrorState onRetry={() => void refresh()} />;
+  }
+
+  if (sharedWishlistSummaries.length === 0) {
+    return <SharedWishlistEmptyState />;
+  }
+
+  return (
+    <div className="wishlist-shared-list" aria-label="Ønskelister delt med meg">
+      {error ? (
+        <p className="wishlist-move-note" role="status">
+          {error}
+        </p>
+      ) : null}
+      {sharedWishlistSummaries.map((summary) => (
+        <SharedWishlistCard key={summary.ownerFamilyMemberId} summary={summary} />
+      ))}
+    </div>
+  );
+}
+
 function WishlistToast() {
   const [message, setMessage] = useState<string | null>(null);
 
@@ -299,7 +385,7 @@ function moveItem(items: WishlistItem[], fromIndex: number, toIndex: number) {
   return nextItems;
 }
 
-function WishlistContent() {
+function WishlistContent({ activeTab }: { activeTab: "mine" | "shared" }) {
   const { items, loading, error, refresh, deleteItem, reorderItems } =
     useWishlist();
   const [isMoveMode, setIsMoveMode] = useState(false);
@@ -428,31 +514,29 @@ function WishlistContent() {
   return (
     <div className="wishlist-page">
       <WishlistToast />
-      <WishlistTabs />
-      <p className="wishlist-coming-soon" aria-live="polite">
-        Delt med meg: Kommer snart
-      </p>
-      {isMoveMode ? (
+      <WishlistTabs activeTab={activeTab} />
+      {activeTab === "shared" ? <SharedWishlistList /> : null}
+      {activeTab === "mine" && isMoveMode ? (
         <p className="wishlist-move-helper">
           Flytt ønskene ved å dra dem opp eller ned.
         </p>
       ) : null}
-      {moveMessage ? (
+      {activeTab === "mine" && moveMessage ? (
         <p className="wishlist-move-note" role="status">
           {moveMessage}
         </p>
       ) : null}
-      {loading ? <WishlistSkeleton /> : null}
-      {!loading && error && items.length === 0 ? (
+      {activeTab === "mine" && loading ? <WishlistSkeleton /> : null}
+      {activeTab === "mine" && !loading && error && items.length === 0 ? (
         <WishlistErrorState onRetry={() => void refresh()} />
       ) : null}
-      {!loading && error && items.length > 0 ? (
+      {activeTab === "mine" && !loading && error && items.length > 0 ? (
         <p className="wishlist-move-note" role="status">
           {error}
         </p>
       ) : null}
-      {!loading && !error && items.length === 0 ? <WishlistEmptyState /> : null}
-      {!loading && items.length > 0 ? (
+      {activeTab === "mine" && !loading && !error && items.length === 0 ? <WishlistEmptyState /> : null}
+      {activeTab === "mine" && !loading && items.length > 0 ? (
         <>
           <div
             className="wishlist-list"
@@ -489,8 +573,10 @@ function WishlistContent() {
   );
 }
 
-export default function WishlistPage() {
+function WishlistPageInner() {
   const familyAccess = useFamilyAccess();
+  const searchParams = useSearchParams();
+  const activeTab = searchParams.get("tab") === "shared" ? "shared" : "mine";
 
   if (familyAccess.status === "pending") {
     return <LockedFeatureState />;
@@ -498,7 +584,7 @@ export default function WishlistPage() {
 
   if (familyAccess.status !== "approved") {
     return (
-      <AppShell title="Ønskeliste" titleAction={<WishlistShareButton />}>
+      <AppShell title="Ønskeliste" titleAction={activeTab === "mine" ? <WishlistShareButton /> : undefined}>
         <PageContainer>
           <WishlistSkeleton />
         </PageContainer>
@@ -507,10 +593,25 @@ export default function WishlistPage() {
   }
 
   return (
-    <AppShell title="Ønskeliste" titleAction={<WishlistShareButton />}>
+    <AppShell title="Ønskeliste" titleAction={activeTab === "mine" ? <WishlistShareButton /> : undefined}>
       <PageContainer>
-        <WishlistContent />
+        <WishlistContent activeTab={activeTab} />
       </PageContainer>
     </AppShell>
+  );
+}
+
+
+export default function WishlistPage() {
+  return (
+    <Suspense fallback={
+      <AppShell title="Ønskeliste" titleAction={<WishlistShareButton />}>
+        <PageContainer>
+          <WishlistSkeleton />
+        </PageContainer>
+      </AppShell>
+    }>
+      <WishlistPageInner />
+    </Suspense>
   );
 }

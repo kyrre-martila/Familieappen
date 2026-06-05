@@ -222,6 +222,23 @@ export interface WishlistReorderInput {
   positions?: Record<string, number>;
 }
 
+export interface SharedWishlistSummary {
+  ownerFamilyMemberId: string;
+  ownerName: string;
+  ownerAvatarUrl: string | null;
+  ownerColor: string;
+  itemCount: number;
+  updatedAt: string;
+}
+
+export interface SharedWishlistItemsResponse {
+  ownerFamilyMemberId: string;
+  ownerName: string;
+  ownerAvatarUrl: string | null;
+  ownerColor: string;
+  items: WishlistItem[];
+}
+
 export interface WishlistSummary {
   id: string;
   ownerFamilyMemberId: string;
