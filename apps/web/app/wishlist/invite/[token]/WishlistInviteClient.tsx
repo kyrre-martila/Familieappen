@@ -16,11 +16,16 @@ export function WishlistInviteClient({ token }: { token: string }) {
   const [message, setMessage] = useState<string | null>(null);
   const isLoggedIn = Boolean(getAccessToken());
   const returnUrl = `/wishlist/invite/${encodeURIComponent(token)}`;
+  const previewUnavailableMessage = preview ? getUnavailableInviteMessage(preview.status) : null;
+  const canRespond = preview?.status === "pending";
 
   useEffect(() => {
     void getWishlistInvitePreview(token)
-      .then(setPreview)
-      .catch(() => setMessage("Invitasjonen er ikke tilgjengelig."))
+      .then((nextPreview) => {
+        setPreview(nextPreview);
+        setMessage(getUnavailableInviteMessage(nextPreview.status));
+      })
+      .catch(() => setMessage("Invitasjonen er utløpt eller ikke lenger tilgjengelig."))
       .finally(() => setLoading(false));
   }, [token]);
 
@@ -38,7 +43,8 @@ export function WishlistInviteClient({ token }: { token: string }) {
   async function handleDecline() {
     setMessage(null);
     try {
-      await declineWishlistInvite(token);
+      const updated = await declineWishlistInvite(token);
+      setPreview((currentPreview) => currentPreview ? { ...currentPreview, status: updated.status } : currentPreview);
       setMessage("Helt i orden. Invitasjonen er ikke lagt til.");
     } catch (error) {
       setMessage(error instanceof Error ? error.message : "Kunne ikke oppdatere invitasjonen.");
@@ -49,20 +55,27 @@ export function WishlistInviteClient({ token }: { token: string }) {
     <AppShell title="Ønskelisteinvitasjon">
       <PageContainer>
         <section className="wishlist-invite-page">
-          {loading ? <p>Laster invitasjon …</p> : null}
+          {loading ? <p role="status">Laster invitasjon …</p> : null}
           {!loading && !preview ? <p>{message ?? "Invitasjonen er ikke tilgjengelig."}</p> : null}
-          {preview && !isLoggedIn ? (
+          {preview && !canRespond ? (
+            <>
+              <h1>Invitasjonen er ikke tilgjengelig</h1>
+              <p>{previewUnavailableMessage ?? "Denne invitasjonen kan ikke brukes lenger."}</p>
+              <Link className="wishlist-invite-page__secondary-link" href="/wishlist?tab=shared">Gå til Delt med meg</Link>
+            </>
+          ) : null}
+          {preview && canRespond && !isLoggedIn ? (
             <>
               <h1>Du er invitert til en ønskeliste</h1>
-              <p>Logg inn eller opprett konto for å legge til listen.</p>
+              <p>Logg inn eller opprett konto for å legge til listen. Innholdet vises først etter innlogging.</p>
               <div className="wishlist-invite-page__actions">
                 <Link href={`/login?returnUrl=${encodeURIComponent(returnUrl)}`}>Logg inn</Link>
                 <Link href={`/register?returnUrl=${encodeURIComponent(returnUrl)}&email=${encodeURIComponent(preview.invitedEmail)}`}>Opprett konto</Link>
               </div>
-              <p className="wishlist-invite-page__note">Invitasjonen er sendt til {preview.invitedEmail}. TODO: Bruk e-post som forhåndsutfylling hvis auth-flyten utvides.</p>
+              <p className="wishlist-invite-page__note">Invitasjonen er sendt til {preview.invitedEmail}.</p>
             </>
           ) : null}
-          {preview && isLoggedIn ? (
+          {preview && canRespond && isLoggedIn ? (
             <>
               <h1>Vil du legge til {preview.ownerName} sin ønskeliste?</h1>
               <p>{preview.inviterName} har invitert deg til å følge denne ønskelisten.</p>
@@ -77,4 +90,19 @@ export function WishlistInviteClient({ token }: { token: string }) {
       </PageContainer>
     </AppShell>
   );
+}
+
+function getUnavailableInviteMessage(status: WishlistInvitePreview["status"]): string | null {
+  switch (status) {
+    case "accepted":
+      return "Denne ønskelisten er allerede lagt til.";
+    case "declined":
+      return "Invitasjonen ble avslått.";
+    case "removed":
+      return "Ønskelisten er fjernet fra Delt med meg.";
+    case "revoked":
+      return "Tilgangen er fjernet av den som delte ønskelisten.";
+    case "pending":
+      return null;
+  }
 }

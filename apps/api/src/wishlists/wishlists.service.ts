@@ -35,6 +35,7 @@ type PrismaClientWithWishlistReservations = typeof PrismaService.prototype.clien
   wishlistItemReservation: {
     create(input: unknown): Promise<unknown>;
     update(input: unknown): Promise<unknown>;
+    updateMany(input: unknown): Promise<unknown>;
     findFirst(input: unknown): Promise<unknown>;
   };
   wishlistShareInvitation: {
@@ -144,12 +145,27 @@ export class WishlistsService {
       }
     }) as WishlistShareInvitationRecord | null;
 
-    if (existingActiveInvite) {
-      throw new ConflictException("Denne e-postadressen har allerede en aktiv invitasjon");
-    }
-
     const invitedUser = await this.prisma.client.user.findUnique({ where: { email: invitedEmail } }) as UserRecord | null;
     const token = this.generateRawToken();
+
+    if (existingActiveInvite?.status === "accepted") {
+      throw new ConflictException("Denne e-postadressen har allerede tilgang");
+    }
+
+    if (existingActiveInvite?.status === "pending") {
+      const updated = await (this.prisma.client as PrismaClientWithWishlistReservations).wishlistShareInvitation.update({
+        where: { id: existingActiveInvite.id },
+        data: {
+          wishlistOwnerFamilyMemberId: membership.id,
+          invitedUserId: invitedUser?.id ?? existingActiveInvite.invitedUserId,
+          tokenHash: this.hashToken(token)
+        }
+      }) as WishlistShareInvitationRecord;
+      const email = await this.sendWishlistInviteEmail(invitedEmail, token, inviter.name, membership.displayName);
+
+      return { invitation: this.toShareInvitationDto(updated), email: { ok: email.ok, mode: email.mode } };
+    }
+
     const invitation = await (this.prisma.client as PrismaClientWithWishlistReservations).wishlistShareInvitation.create({
       data: {
         wishlistOwnerUserId: userId,
@@ -461,9 +477,17 @@ export class WishlistsService {
   async deleteItem(userId: string, familyId: string, itemId: string): Promise<WishlistItemDto> {
     await this.requireCurrentMember(userId, familyId);
     const item = await this.getMyActiveItemOrThrow(userId, familyId, itemId);
-    const deletedItem = await this.prisma.client.wishlistItem.update({
-      where: { id: item.id },
-      data: { deletedAt: new Date() }
+    const deletedAt = new Date();
+    const deletedItem = await this.prisma.client.$transaction(async (transaction) => {
+      await (transaction as unknown as PrismaClientWithWishlistReservations).wishlistItemReservation.updateMany({
+        where: { wishlistItemId: item.id, releasedAt: null },
+        data: { releasedAt: deletedAt }
+      });
+
+      return transaction.wishlistItem.update({
+        where: { id: item.id },
+        data: { deletedAt }
+      });
     });
 
     return this.toWishlistItemDto(deletedItem as WishlistItemRecord);
