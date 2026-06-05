@@ -28,6 +28,7 @@ model User {
   createdCalendarEvents CalendarEvent[] @relation("CalendarEventCreatedBy")
   createdReminders Reminder[] @relation("ReminderCreatedBy")
   wishlistItems WishlistItem[] @relation("WishlistItemOwnerUser")
+  wishlistItemReservations WishlistItemReservation[] @relation("WishlistItemReservationReservedByUser")
 
   @@map("users")
 }
@@ -300,6 +301,23 @@ model ListItem {
   @@map("husk_list_items")
 }
 
+model WishlistItemReservation {
+  id                 String       @id @default(cuid())
+  wishlistItemId     String       @map("wishlist_item_id")
+  reservedByUserId   String       @map("reserved_by_user_id")
+  reservedAt         DateTime     @default(now()) @map("reserved_at")
+  releasedAt         DateTime?    @map("released_at")
+  createdAt          DateTime     @default(now()) @map("created_at")
+  updatedAt          DateTime     @updatedAt @map("updated_at")
+  wishlistItem       WishlistItem @relation(fields: [wishlistItemId], references: [id], onDelete: Cascade)
+  reservedByUser     User         @relation("WishlistItemReservationReservedByUser", fields: [reservedByUserId], references: [id], onDelete: Cascade)
+
+  @@index([wishlistItemId])
+  @@index([reservedByUserId])
+  @@index([wishlistItemId, releasedAt])
+  @@map("wishlist_item_reservations")
+}
+
 model SchoolWeekReminder {
   id                    String                @id @default(cuid())
   familyId              String
@@ -348,6 +366,7 @@ model WishlistItem {
   family                Family        @relation(fields: [familyId], references: [id], onDelete: Cascade)
   ownerUser             User          @relation("WishlistItemOwnerUser", fields: [ownerUserId], references: [id], onDelete: Cascade)
   ownerFamilyMember     FamilyMember? @relation(fields: [ownerFamilyMemberId], references: [id], onDelete: SetNull)
+  reservations          WishlistItemReservation[]
 
   @@index([familyId])
   @@index([ownerUserId])

@@ -1,14 +1,14 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { Image as ImageIcon, RefreshCw } from "lucide-react";
+import { CheckCircle2, Image as ImageIcon, RefreshCw } from "lucide-react";
 
 import { AppShell } from "../../../../components/AppShell";
 import { LockedFeatureState } from "../../../../components/PendingAccess";
 import { useFamilyAccess } from "../../../../components/ProtectedFamilyRoute";
 import { PageContainer } from "../../../../components/ui";
 import { useSharedWishlists } from "../../../../features/wishlist/hooks/useSharedWishlists";
-import type { SharedWishlistItemsResponse, WishlistItem } from "../../../../lib/api";
+import { ApiError, type SharedWishlistItem, type SharedWishlistItemsResponse } from "../../../../lib/api";
 
 const priceFormatter = new Intl.NumberFormat("nb-NO", {
   maximumFractionDigits: 0,
@@ -22,6 +22,18 @@ function formatPrice(price: number | null) {
   }
 
   return priceFormatter.format(price).replace("NOK", "kr").trim();
+}
+
+function getReservationErrorMessage(error: unknown, fallback: string) {
+  if (error instanceof ApiError && error.status === 409) {
+    return "Dette ønsket er allerede reservert";
+  }
+
+  if (error instanceof ApiError && error.message) {
+    return error.message;
+  }
+
+  return fallback;
 }
 
 function SharedWishlistSkeleton() {
@@ -55,7 +67,7 @@ function SharedWishlistErrorState({ onRetry }: { onRetry: () => void }) {
   );
 }
 
-function SharedWishlistMedia({ item }: { item: WishlistItem }) {
+function SharedWishlistMedia({ item }: { item: SharedWishlistItem }) {
   if (item.imageUrl) {
     return (
       <span className="wishlist-card__media">
@@ -71,7 +83,26 @@ function SharedWishlistMedia({ item }: { item: WishlistItem }) {
   );
 }
 
-function SharedWishlistItemCard({ item }: { item: WishlistItem }) {
+function ReservationBadge() {
+  return (
+    <span className="wishlist-reservation-badge">
+      <CheckCircle2 size={16} aria-hidden="true" />
+      Reservert
+    </span>
+  );
+}
+
+function SharedWishlistItemCard({
+  item,
+  onOpenReserve,
+  onUnreserve,
+  isBusy,
+}: {
+  item: SharedWishlistItem;
+  onOpenReserve: (item: SharedWishlistItem) => void;
+  onUnreserve: (item: SharedWishlistItem) => void;
+  isBusy: boolean;
+}) {
   const price = formatPrice(item.price);
 
   return (
@@ -87,15 +118,54 @@ function SharedWishlistItemCard({ item }: { item: WishlistItem }) {
           {item.storeOrLink ? <span className="wishlist-card__store">{item.storeOrLink}</span> : null}
         </p>
       </div>
-      <span className="wishlist-card__future-action" aria-hidden="true" />
+      <div className="wishlist-reservation-action">
+        {item.isReserved ? (
+          <>
+            <ReservationBadge />
+            {item.reservedByMe ? (
+              <button className="wishlist-reservation-undo" type="button" onClick={() => onUnreserve(item)} disabled={isBusy}>
+                Angre
+              </button>
+            ) : null}
+          </>
+        ) : (
+          <button className="wishlist-reservation-button" type="button" onClick={() => onOpenReserve(item)} disabled={isBusy}>
+            Reserver
+          </button>
+        )}
+      </div>
     </article>
   );
 }
 
+function ReserveSheet({ item, onCancel, onConfirm, isBusy }: { item: SharedWishlistItem; onCancel: () => void; onConfirm: () => void; isBusy: boolean }) {
+  return (
+    <div className="wishlist-reserve-sheet" role="presentation">
+      <button className="wishlist-reserve-sheet__backdrop" type="button" aria-label="Avbryt reservasjon" onClick={onCancel} />
+      <section className="wishlist-reserve-sheet__panel" role="dialog" aria-modal="true" aria-labelledby="wishlist-reserve-title">
+        <p className="wishlist-reserve-sheet__eyebrow">{item.title}</p>
+        <h2 id="wishlist-reserve-title">Reservere gave?</h2>
+        <p>Andre vil se at ønsket er reservert, men ikke hvem som reserverte det.</p>
+        <div className="wishlist-reserve-sheet__actions">
+          <button className="wishlist-reserve-sheet__button wishlist-reserve-sheet__button--ghost" type="button" onClick={onCancel} disabled={isBusy}>
+            Avbryt
+          </button>
+          <button className="wishlist-reserve-sheet__button wishlist-reserve-sheet__button--primary" type="button" onClick={onConfirm} disabled={isBusy}>
+            Reserver
+          </button>
+        </div>
+      </section>
+    </div>
+  );
+}
+
 function SharedWishlistContent({ memberId }: { memberId: string }) {
-  const { getSharedWishlistItems, loading, loadingItemsForMemberId, error } = useSharedWishlists();
+  const { getSharedWishlistItems, reserveSharedWishlistItem, unreserveSharedWishlistItem, loading, loadingItemsForMemberId, error } = useSharedWishlists();
   const [wishlist, setWishlist] = useState<SharedWishlistItemsResponse | null>(null);
   const [loadError, setLoadError] = useState<string | null>(null);
+  const [pendingReserveItem, setPendingReserveItem] = useState<SharedWishlistItem | null>(null);
+  const [busyItemId, setBusyItemId] = useState<string | null>(null);
+  const [toast, setToast] = useState<string | null>(null);
 
   useEffect(() => {
     let isMounted = true;
@@ -124,11 +194,70 @@ function SharedWishlistContent({ memberId }: { memberId: string }) {
     };
   }, [getSharedWishlistItems, loading, memberId]);
 
+  useEffect(() => {
+    if (!toast) {
+      return;
+    }
+
+    const timeout = window.setTimeout(() => setToast(null), 2600);
+    return () => window.clearTimeout(timeout);
+  }, [toast]);
+
   const retryLoad = () => {
     setLoadError(null);
     void getSharedWishlistItems(memberId).then(setWishlist).catch(() => {
       setLoadError("Kunne ikke hente ønskelisten akkurat nå");
     });
+  };
+
+  const replaceLocalItem = (item: SharedWishlistItem) => {
+    setWishlist((currentWishlist) => {
+      if (!currentWishlist) {
+        return currentWishlist;
+      }
+
+      return {
+        ...currentWishlist,
+        items: currentWishlist.items.map((currentItem) => currentItem.id === item.id ? { ...currentItem, ...item } : currentItem)
+      };
+    });
+  };
+
+  const handleReserve = async () => {
+    if (!pendingReserveItem) {
+      return;
+    }
+
+    setBusyItemId(pendingReserveItem.id);
+
+    try {
+      const item = await reserveSharedWishlistItem(memberId, pendingReserveItem.id);
+      replaceLocalItem(item);
+      setPendingReserveItem(null);
+      setToast("Ønske reservert");
+    } catch (reserveError) {
+      setToast(getReservationErrorMessage(reserveError, "Kunne ikke reservere ønsket akkurat nå"));
+    } finally {
+      setBusyItemId(null);
+    }
+  };
+
+  const handleUnreserve = async (item: SharedWishlistItem) => {
+    const previousItem = { ...item };
+    const optimisticItem = { ...item, isReserved: false, reservedByMe: false };
+    setBusyItemId(item.id);
+    replaceLocalItem(optimisticItem);
+
+    try {
+      const releasedItem = await unreserveSharedWishlistItem(memberId, item.id);
+      replaceLocalItem(releasedItem);
+      setToast("Reservasjon fjernet");
+    } catch (unreserveError) {
+      replaceLocalItem(previousItem);
+      setToast(getReservationErrorMessage(unreserveError, "Kunne ikke fjerne reservasjonen akkurat nå"));
+    } finally {
+      setBusyItemId(null);
+    }
   };
 
   const isLoading = !wishlist && !loadError && (loading || loadingItemsForMemberId === memberId);
@@ -148,14 +277,27 @@ function SharedWishlistContent({ memberId }: { memberId: string }) {
             </section>
           ) : null}
           {wishlist && wishlist.items.length > 0 ? (
-            <div className="wishlist-list" aria-label={`${wishlist.ownerName} sin ønskeliste`}>
-              {wishlist.items.map((item) => (
-                <SharedWishlistItemCard item={item} key={item.id} />
-              ))}
-            </div>
+            <>
+              <div className="wishlist-list" aria-label={`${wishlist.ownerName} sin ønskeliste`}>
+                {wishlist.items.map((item) => (
+                  <SharedWishlistItemCard
+                    item={item}
+                    key={item.id}
+                    onOpenReserve={setPendingReserveItem}
+                    onUnreserve={handleUnreserve}
+                    isBusy={busyItemId === item.id}
+                  />
+                ))}
+              </div>
+              <p className="wishlist-reservation-note">Reservasjoner er private. Bare du ser det du reserverer.</p>
+            </>
           ) : null}
         </div>
       </PageContainer>
+      {pendingReserveItem ? <ReserveSheet item={pendingReserveItem} onCancel={() => setPendingReserveItem(null)} onConfirm={handleReserve} isBusy={busyItemId === pendingReserveItem.id} /> : null}
+      <p className={`wishlist-toast${toast ? " wishlist-toast--visible" : ""}`} role="status" aria-live="polite">
+        {toast}
+      </p>
     </AppShell>
   );
 }

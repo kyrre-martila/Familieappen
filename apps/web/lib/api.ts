@@ -12,6 +12,7 @@ import type {
   MoveMealResult,
   ShoppingList,
   ShoppingListItem,
+  SharedWishlistItem,
   SharedWishlistItemsResponse,
   SharedWishlistSummary,
   Task,
@@ -26,7 +27,7 @@ import type {
   SchoolWeekReminder
 } from "@familieappen/shared";
 
-export type { CalendarEvent, Family, FamilyDashboardResponse, FamilyMember, FamilyMemberRole, ManualFamilyMemberRole, MealPlan, MealPlanDay, MoveMealResult, ShoppingList, ShoppingListItem, SharedWishlistItemsResponse, SharedWishlistSummary, Task, WishlistItem, WishlistItemCreateInput, WishlistItemListResponse, WishlistItemUpdateInput, WishlistSummary, Reminder, HuskList, HuskListItem, SchoolWeekReminder };
+export type { CalendarEvent, Family, FamilyDashboardResponse, FamilyMember, FamilyMemberRole, ManualFamilyMemberRole, MealPlan, MealPlanDay, MoveMealResult, ShoppingList, ShoppingListItem, SharedWishlistItem, SharedWishlistItemsResponse, SharedWishlistSummary, Task, WishlistItem, WishlistItemCreateInput, WishlistItemListResponse, WishlistItemUpdateInput, WishlistSummary, Reminder, HuskList, HuskListItem, SchoolWeekReminder };
 
 
 type LegacyWishlistItem = WishlistItem & {
@@ -186,6 +187,21 @@ export async function getSharedWishlistItems(familyId: string, memberId: string)
   return apiRequest<SharedWishlistItemsResponse>(`/wishlist/shared/${encodeURIComponent(memberId)}`, { familyId });
 }
 
+
+export async function reserveWishlistItem(familyId: string, itemId: string): Promise<SharedWishlistItem> {
+  return apiRequest<SharedWishlistItem>(`/wishlist/items/${encodeURIComponent(itemId)}/reserve`, {
+    method: "POST",
+    familyId
+  });
+}
+
+export async function unreserveWishlistItem(familyId: string, itemId: string): Promise<SharedWishlistItem> {
+  return apiRequest<SharedWishlistItem>(`/wishlist/items/${encodeURIComponent(itemId)}/unreserve`, {
+    method: "POST",
+    familyId
+  });
+}
+
 export async function createWishlistItem(
   familyId: string,
   input: WishlistItemCreateInput
@@ -275,7 +291,7 @@ export async function deleteWishlistItem(familyId: string, itemId: string): Prom
   });
 }
 
-export async function reserveWishlistItem(familyId: string, itemId: string): Promise<WishlistItem> {
+export async function reserveLegacyWishlistItem(familyId: string, itemId: string): Promise<WishlistItem> {
   return apiRequest<WishlistItem>(`/wishlists/items/${encodeURIComponent(itemId)}/reserve`, {
     method: "POST",
     familyId

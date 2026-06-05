@@ -40,6 +40,20 @@ export interface WishlistItemDto {
   createdAt: string;
   updatedAt: string;
   deletedAt: string | null;
+  isReserved?: boolean;
+  reservedByMe?: boolean;
+}
+
+export interface SharedWishlistItemDto {
+  id: string;
+  title: string;
+  description: string | null;
+  price: number | null;
+  storeOrLink: string | null;
+  imageUrl: string | null;
+  icon: string | null;
+  isReserved: boolean;
+  reservedByMe: boolean;
 }
 
 export interface WishlistItemListResponseDto {
@@ -61,5 +75,5 @@ export interface SharedWishlistItemsResponseDto {
   ownerName: string;
   ownerAvatarUrl: string | null;
   ownerColor: string;
-  items: WishlistItemDto[];
+  items: SharedWishlistItemDto[];
 }

@@ -1,7 +1,7 @@
-import { BadRequestException, Injectable, NotFoundException } from "@nestjs/common";
+import { BadRequestException, ConflictException, ForbiddenException, Injectable, NotFoundException } from "@nestjs/common";
 import { FamilyAuthorizationService } from "../families";
 import { PrismaService } from "../prisma";
-import { SharedWishlistItemsResponseDto, SharedWishlistSummaryDto, WishlistItemCreateInput, WishlistItemDto, WishlistItemListResponseDto, WishlistItemUpdateInput, WishlistReorderInput } from "./dto/wishlist.dto";
+import { SharedWishlistItemDto, SharedWishlistItemsResponseDto, SharedWishlistSummaryDto, WishlistItemCreateInput, WishlistItemDto, WishlistItemListResponseDto, WishlistItemUpdateInput, WishlistReorderInput } from "./dto/wishlist.dto";
 
 const TITLE_MAX_LENGTH = 120;
 const DESCRIPTION_MAX_LENGTH = 1000;
@@ -15,6 +15,24 @@ type FamilyMemberRecord = {
   userId: string | null;
   familyId: string;
   displayName: string;
+};
+
+type WishlistItemReservationRecord = {
+  id: string;
+  wishlistItemId: string;
+  reservedByUserId: string;
+  reservedAt: Date;
+  releasedAt: Date | null;
+  createdAt: Date;
+  updatedAt: Date;
+};
+
+type PrismaClientWithWishlistReservations = typeof PrismaService.prototype.client & {
+  wishlistItemReservation: {
+    create(input: unknown): Promise<unknown>;
+    update(input: unknown): Promise<unknown>;
+    findFirst(input: unknown): Promise<unknown>;
+  };
 };
 
 type WishlistItemRecord = {
@@ -32,6 +50,7 @@ type WishlistItemRecord = {
   createdAt: Date;
   updatedAt: Date;
   deletedAt: Date | null;
+  reservations?: WishlistItemReservationRecord[];
 };
 
 @Injectable()
@@ -119,6 +138,12 @@ export class WishlistsService {
         ownerFamilyMemberId: owner.id,
         deletedAt: null
       },
+      include: {
+        reservations: {
+          where: { releasedAt: null },
+          take: 1
+        }
+      },
       orderBy: [{ position: "asc" }, { createdAt: "asc" }]
     }) as WishlistItemRecord[];
 
@@ -127,8 +152,60 @@ export class WishlistsService {
       ownerName: owner.displayName,
       ownerAvatarUrl: null,
       ownerColor: this.getOwnerColor(owner.id),
-      items: items.map((item) => this.toWishlistItemDto(item))
+      items: items.map((item) => this.toSharedWishlistItemDto(item, userId, false))
     };
+  }
+
+  async reserveItem(userId: string, familyId: string, itemId: string): Promise<SharedWishlistItemDto> {
+    const membership = await this.requireCurrentMember(userId, familyId);
+    const item = await this.getAccessibleSharedItemOrThrow(userId, familyId, membership.id, itemId);
+    const activeReservation = await this.findActiveReservation(item.id);
+
+    if (activeReservation) {
+      throw new ConflictException("Dette ønsket er allerede reservert");
+    }
+
+    try {
+      await (this.prisma.client as PrismaClientWithWishlistReservations).wishlistItemReservation.create({
+        data: {
+          wishlistItemId: item.id,
+          reservedByUserId: userId
+        }
+      });
+    } catch (error) {
+      if (this.isUniqueConstraintError(error)) {
+        throw new ConflictException("Dette ønsket er allerede reservert");
+      }
+
+      throw error;
+    }
+
+    return this.toSharedWishlistItemDto({ ...item, reservations: [{
+      id: "",
+      wishlistItemId: item.id,
+      reservedByUserId: userId,
+      reservedAt: new Date(),
+      releasedAt: null,
+      createdAt: new Date(),
+      updatedAt: new Date()
+    }] }, userId, false);
+  }
+
+  async unreserveItem(userId: string, familyId: string, itemId: string): Promise<SharedWishlistItemDto> {
+    const membership = await this.requireCurrentMember(userId, familyId);
+    const item = await this.getAccessibleSharedItemOrThrow(userId, familyId, membership.id, itemId);
+    const activeReservation = await this.findActiveReservation(item.id);
+
+    if (!activeReservation || activeReservation.reservedByUserId !== userId) {
+      throw new ForbiddenException("Du kan bare angre din egen reservasjon");
+    }
+
+    await (this.prisma.client as PrismaClientWithWishlistReservations).wishlistItemReservation.update({
+      where: { id: activeReservation.id },
+      data: { releasedAt: new Date() }
+    });
+
+    return this.toSharedWishlistItemDto({ ...item, reservations: [] }, userId, false);
   }
 
   async createItem(userId: string, familyId: string, input: WishlistItemCreateInput = {}): Promise<WishlistItemDto> {
@@ -239,6 +316,40 @@ export class WishlistsService {
     }
 
     return item as WishlistItemRecord;
+  }
+
+
+  private async getAccessibleSharedItemOrThrow(userId: string, familyId: string, currentMemberId: string, itemId: string): Promise<WishlistItemRecord> {
+    const item = await this.prisma.client.wishlistItem.findFirst({
+      where: {
+        id: itemId,
+        familyId,
+        deletedAt: null
+      }
+    });
+
+    if (!item) {
+      throw new NotFoundException("Wishlist item was not found");
+    }
+
+    const wishlistItem = item as WishlistItemRecord;
+
+    if (wishlistItem.ownerUserId === userId || wishlistItem.ownerFamilyMemberId === currentMemberId) {
+      throw new ForbiddenException("Du kan ikke reservere egne ønsker");
+    }
+
+    return wishlistItem;
+  }
+
+  private async findActiveReservation(itemId: string): Promise<WishlistItemReservationRecord | null> {
+    const reservation = await (this.prisma.client as PrismaClientWithWishlistReservations).wishlistItemReservation.findFirst({
+      where: {
+        wishlistItemId: itemId,
+        releasedAt: null
+      }
+    });
+
+    return reservation as WishlistItemReservationRecord | null;
   }
 
   private myActiveWhere(userId: string, familyId: string) {
@@ -426,5 +537,25 @@ export class WishlistsService {
       updatedAt: item.updatedAt.toISOString(),
       deletedAt: item.deletedAt?.toISOString() ?? null
     };
+  }
+
+  private toSharedWishlistItemDto(item: WishlistItemRecord, userId: string, isOwner: boolean): SharedWishlistItemDto {
+    const activeReservation = item.reservations?.find((reservation) => reservation.releasedAt === null) ?? null;
+
+    return {
+      id: item.id,
+      title: item.title,
+      description: item.description,
+      price: item.price === null ? null : Number(item.price),
+      storeOrLink: item.storeOrLink,
+      imageUrl: item.imageUrl,
+      icon: item.icon,
+      isReserved: isOwner ? false : Boolean(activeReservation),
+      reservedByMe: isOwner ? false : activeReservation?.reservedByUserId === userId
+    };
+  }
+
+  private isUniqueConstraintError(error: unknown): boolean {
+    return typeof error === "object" && error !== null && "code" in error && (error as { code?: string }).code === "P2002";
   }
 }

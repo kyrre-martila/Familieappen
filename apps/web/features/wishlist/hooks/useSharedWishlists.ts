@@ -5,21 +5,17 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import {
   getSharedWishlistItems,
   getSharedWishlistSummaries,
+  reserveWishlistItem,
+  unreserveWishlistItem,
   type SharedWishlistItemsResponse,
   type SharedWishlistSummary,
-  type WishlistItem,
+  type SharedWishlistItem,
 } from "../../../lib/api";
 import { getUserFacingApiMessage } from "../../../lib/auth-family";
 import { useFamilyMembers } from "../../family/hooks/useFamilyMembers";
 
-function sortWishlistItems(items: WishlistItem[]) {
-  return [...items].sort((a, b) => {
-    if (a.position !== b.position) {
-      return a.position - b.position;
-    }
-
-    return new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime();
-  });
+function sortWishlistItems(items: SharedWishlistItem[]) {
+  return [...items];
 }
 
 export function useSharedWishlists() {
@@ -87,16 +83,57 @@ export function useSharedWishlists() {
     }
   }, [activeFamilyId, itemsByMemberId]);
 
+
+  const replaceWishlistItem = useCallback((memberId: string, item: SharedWishlistItem) => {
+    setItemsByMemberId((currentItems) => {
+      const wishlist = currentItems[memberId];
+
+      if (!wishlist) {
+        return currentItems;
+      }
+
+      return {
+        ...currentItems,
+        [memberId]: {
+          ...wishlist,
+          items: sortWishlistItems(wishlist.items.map((currentItem) => currentItem.id === item.id ? { ...currentItem, ...item } : currentItem))
+        }
+      };
+    });
+  }, []);
+
+  const reserveSharedWishlistItem = useCallback(async (memberId: string, itemId: string) => {
+    if (!activeFamilyId) {
+      throw new Error("Velg en familie før du fortsetter.");
+    }
+
+    const item = await reserveWishlistItem(activeFamilyId, itemId);
+    replaceWishlistItem(memberId, item);
+    return item;
+  }, [activeFamilyId, replaceWishlistItem]);
+
+  const unreserveSharedWishlistItem = useCallback(async (memberId: string, itemId: string) => {
+    if (!activeFamilyId) {
+      throw new Error("Velg en familie før du fortsetter.");
+    }
+
+    const item = await unreserveWishlistItem(activeFamilyId, itemId);
+    replaceWishlistItem(memberId, item);
+    return item;
+  }, [activeFamilyId, replaceWishlistItem]);
+
   const status = familyLoading || loading ? "loading" as const : error || familyError ? "error" as const : "ready" as const;
 
   return useMemo(() => ({
     sharedWishlistSummaries,
     getSharedWishlistItems: getSharedWishlistItemsForMember,
+    reserveSharedWishlistItem,
+    unreserveSharedWishlistItem,
     itemsByMemberId,
     loading: familyLoading || loading,
     loadingItemsForMemberId,
     error: familyError ?? error,
     status,
     refresh,
-  }), [error, familyError, familyLoading, getSharedWishlistItemsForMember, itemsByMemberId, loading, loadingItemsForMemberId, refresh, sharedWishlistSummaries, status]);
+  }), [error, familyError, familyLoading, getSharedWishlistItemsForMember, itemsByMemberId, loading, loadingItemsForMemberId, refresh, reserveSharedWishlistItem, sharedWishlistSummaries, status, unreserveSharedWishlistItem]);
 }
