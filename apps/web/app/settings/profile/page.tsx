@@ -1,10 +1,10 @@
 import { ProtectedFamilyRoute } from "../../../components/ProtectedFamilyRoute";
-import { SettingsPlaceholderPage } from "../../../components/settings";
+import { ProfileSettingsClient } from "./ProfileSettingsClient";
 
 export default function SettingsProfilePage() {
   return (
     <ProtectedFamilyRoute>
-      <SettingsPlaceholderPage description="Min konto og informasjon." title="Profil" />
+      <ProfileSettingsClient />
     </ProtectedFamilyRoute>
   );
 }
