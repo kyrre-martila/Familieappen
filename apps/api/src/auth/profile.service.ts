@@ -1,8 +1,11 @@
-import { BadRequestException, ConflictException, Injectable, NotFoundException } from "@nestjs/common";
+import { BadRequestException, ConflictException, HttpStatus, Injectable, NotFoundException } from "@nestjs/common";
+import { API_ERROR_CODES, ApiException } from "../common";
 import { PrismaService } from "../prisma";
-import { UpdateUserProfileRequestDto, UserProfileDto } from "./dto/profile.dto";
+import { AuthService } from "./auth.service";
+import { ChangePasswordRequestDto, ChangePasswordResponseDto, UpdateUserProfileRequestDto, UserProfileDto } from "./dto/profile.dto";
 
 const UPDATE_PROFILE_FIELDS = new Set(["name", "email", "phone"]);
+const CHANGE_PASSWORD_FIELDS = new Set(["currentPassword", "newPassword", "confirmPassword"]);
 
 type DatabaseProfileUser = {
   id: string;
@@ -15,7 +18,10 @@ type DatabaseProfileUser = {
 
 @Injectable()
 export class ProfileService {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly authService: AuthService
+  ) {}
 
   async getCurrentUserProfile(userId: string): Promise<UserProfileDto> {
     const user = await this.prisma.client.user.findUnique({ where: { id: userId } });
@@ -25,6 +31,39 @@ export class ProfileService {
     }
 
     return this.toProfileDto(user);
+  }
+
+  async changeCurrentUserPassword(userId: string, input: ChangePasswordRequestDto = {}): Promise<ChangePasswordResponseDto> {
+    this.rejectUnknownPasswordFields(input);
+
+    const currentPassword = this.validateRequiredPassword(input.currentPassword, "Current password is required");
+    const newPassword = this.authService.validatePassword(input.newPassword);
+    const confirmPassword = this.validateRequiredPassword(input.confirmPassword, "Confirm password is required");
+
+    if (newPassword !== confirmPassword) {
+      throw new BadRequestException("Passordene er ikke like.");
+    }
+
+    if (currentPassword === newPassword) {
+      throw new BadRequestException("Nytt passord må være forskjellig fra nåværende passord.");
+    }
+
+    const user = await this.prisma.client.user.findUnique({ where: { id: userId } });
+
+    if (!user) {
+      throw new NotFoundException("User profile was not found");
+    }
+
+    if (!(await this.authService.verifyPassword(currentPassword, user.passwordHash))) {
+      throw new ApiException(HttpStatus.UNAUTHORIZED, API_ERROR_CODES.AUTH_INVALID_CREDENTIALS, "Nåværende passord stemmer ikke.");
+    }
+
+    await this.prisma.client.user.update({
+      where: { id: userId },
+      data: { passwordHash: await this.authService.hashPassword(newPassword) }
+    });
+
+    return { message: "Passordet ble oppdatert" };
   }
 
   async updateCurrentUserProfile(userId: string, input: UpdateUserProfileRequestDto = {}): Promise<UserProfileDto> {
@@ -74,6 +113,26 @@ export class ProfileService {
 
       throw error;
     }
+  }
+
+  private rejectUnknownPasswordFields(input: ChangePasswordRequestDto): void {
+    if (typeof input !== "object" || input === null || Array.isArray(input)) {
+      throw new BadRequestException("Password change must be an object");
+    }
+
+    const unknownFields = Object.keys(input).filter((field) => !CHANGE_PASSWORD_FIELDS.has(field));
+
+    if (unknownFields.length > 0) {
+      throw new BadRequestException(`Unknown password field: ${unknownFields[0]}`);
+    }
+  }
+
+  private validateRequiredPassword(value: unknown, message: string): string {
+    if (typeof value !== "string" || value.length === 0) {
+      throw new BadRequestException(message);
+    }
+
+    return value;
   }
 
   private rejectUnknownFields(input: UpdateUserProfileRequestDto): void {

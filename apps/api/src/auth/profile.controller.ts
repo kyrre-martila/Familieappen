@@ -1,7 +1,7 @@
-import { Body, Controller, Get, Patch, Req, UseGuards } from "@nestjs/common";
+import { Body, Controller, Get, Patch, Post, Req, UseGuards } from "@nestjs/common";
 import { ApiResponse, createApiResponse } from "../common";
 import { AuthGuard } from "./guards/auth.guard";
-import { UpdateUserProfileRequestDto, UserProfileDto } from "./dto/profile.dto";
+import { ChangePasswordRequestDto, ChangePasswordResponseDto, UpdateUserProfileRequestDto, UserProfileDto } from "./dto/profile.dto";
 import { ProfileService } from "./profile.service";
 
 type AuthenticatedRequest = {
@@ -19,6 +19,14 @@ export class ProfileController {
   @Get()
   async getCurrentUserProfile(@Req() request: AuthenticatedRequest): Promise<ApiResponse<UserProfileDto>> {
     return createApiResponse(await this.profileService.getCurrentUserProfile(request.user.id));
+  }
+
+  @Post("change-password")
+  async changeCurrentUserPassword(
+    @Req() request: AuthenticatedRequest,
+    @Body() body: ChangePasswordRequestDto
+  ): Promise<ApiResponse<ChangePasswordResponseDto>> {
+    return createApiResponse(await this.profileService.changeCurrentUserPassword(request.user.id, body));
   }
 
   @Patch()

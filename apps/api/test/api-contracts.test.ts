@@ -73,7 +73,7 @@ class InMemoryPrismaService {
         this.users.set(user.email, user);
         return user;
       },
-      update: async ({ where, data }: { where: { id: string }; data: { name?: string; email?: string; phone?: string | null } }): Promise<UserRecord> => {
+      update: async ({ where, data }: { where: { id: string }; data: { name?: string; email?: string; phone?: string | null; passwordHash?: string } }): Promise<UserRecord> => {
         const user = [...this.users.values()].find((candidate) => candidate.id === where.id);
 
         if (!user) {
@@ -280,6 +280,53 @@ async function run(): Promise<void> {
     assertErrorEnvelope(await request("PATCH", "/me", { token: alpha.token, body: { email: "not-an-email" } }), 400, API_ERROR_CODES.VALIDATION_INVALID_INPUT);
     assertErrorEnvelope(await request("PATCH", "/me", { token: alpha.token, body: { email: "beta-contract@example.com" } }), 409, API_ERROR_CODES.AUTH_EMAIL_ALREADY_EXISTS);
     assertErrorEnvelope(await request("PATCH", "/me", { token: alpha.token, body: { displayName: "Nope" } }), 400, API_ERROR_CODES.VALIDATION_INVALID_INPUT);
+
+
+    assertErrorEnvelope(await request("POST", "/me/change-password"), 401, API_ERROR_CODES.AUTH_REQUIRES_AUTH);
+    assertErrorEnvelope(await request("POST", "/me/change-password", {
+      token: alpha.token,
+      body: { newPassword: "new-password", confirmPassword: "new-password" }
+    }), 400, API_ERROR_CODES.VALIDATION_MISSING_FIELD);
+    assertErrorEnvelope(await request("POST", "/me/change-password", {
+      token: alpha.token,
+      body: { currentPassword: "correct-password", confirmPassword: "new-password" }
+    }), 400, API_ERROR_CODES.VALIDATION_MISSING_FIELD);
+    assertErrorEnvelope(await request("POST", "/me/change-password", {
+      token: alpha.token,
+      body: { currentPassword: "correct-password", newPassword: "new-password" }
+    }), 400, API_ERROR_CODES.VALIDATION_MISSING_FIELD);
+    assertErrorEnvelope(await request("POST", "/me/change-password", {
+      token: alpha.token,
+      body: { currentPassword: "wrong-password", newPassword: "new-password", confirmPassword: "new-password" }
+    }), 401, API_ERROR_CODES.AUTH_INVALID_CREDENTIALS);
+    assertErrorEnvelope(await request("POST", "/me/change-password", {
+      token: alpha.token,
+      body: { currentPassword: "correct-password", newPassword: "new-password", confirmPassword: "other-password" }
+    }), 400, API_ERROR_CODES.VALIDATION_INVALID_INPUT);
+    assertErrorEnvelope(await request("POST", "/me/change-password", {
+      token: alpha.token,
+      body: { currentPassword: "correct-password", newPassword: "short", confirmPassword: "short" }
+    }), 400, API_ERROR_CODES.VALIDATION_INVALID_INPUT);
+    assertErrorEnvelope(await request("POST", "/me/change-password", {
+      token: alpha.token,
+      body: { currentPassword: "correct-password", newPassword: "correct-password", confirmPassword: "correct-password" }
+    }), 400, API_ERROR_CODES.VALIDATION_INVALID_INPUT);
+    assertErrorEnvelope(await request("POST", "/me/change-password", {
+      token: alpha.token,
+      body: { currentPassword: "correct-password", newPassword: "new-password", confirmPassword: "new-password", unexpected: true }
+    }), 400, API_ERROR_CODES.VALIDATION_INVALID_INPUT);
+
+    const changedPassword = assertSuccessEnvelope(await request("POST", "/me/change-password", {
+      token: alpha.token,
+      body: { currentPassword: "correct-password", newPassword: "new-password", confirmPassword: "new-password" }
+    }), 201);
+    assert.equal(changedPassword.message, "Passordet ble oppdatert");
+    assertErrorEnvelope(await request("POST", "/auth/login", {
+      body: { email: "alpha-new@example.com", password: "correct-password" }
+    }), 401, API_ERROR_CODES.AUTH_INVALID_CREDENTIALS);
+    assertSuccessEnvelope(await request("POST", "/auth/login", {
+      body: { email: "alpha-new@example.com", password: "new-password" }
+    }), 201);
 
     assertSuccessEnvelope(await request("GET", "/shopping", { token: alpha.token, familyId: "family-alpha" }), 200);
     assertErrorEnvelope(await request("GET", "/shopping"), 401, API_ERROR_CODES.AUTH_REQUIRES_AUTH);

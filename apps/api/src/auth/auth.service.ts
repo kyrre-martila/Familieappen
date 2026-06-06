@@ -145,7 +145,7 @@ export class AuthService {
     return email;
   }
 
-  private validatePassword(value: unknown): string {
+  validatePassword(value: unknown): string {
     if (typeof value !== "string") {
       throw new BadRequestException("Password is required");
     }
@@ -157,14 +157,14 @@ export class AuthService {
     return value;
   }
 
-  private async hashPassword(password: string): Promise<string> {
+  async hashPassword(password: string): Promise<string> {
     const salt = randomBytes(16).toString("base64url");
     const derivedKey = (await scrypt(password, salt, PASSWORD_KEY_LENGTH)) as Buffer;
 
     return `${PASSWORD_HASH_PREFIX}:${salt}:${derivedKey.toString("base64url")}`;
   }
 
-  private async verifyPassword(password: string, storedHash: string): Promise<boolean> {
+  async verifyPassword(password: string, storedHash: string): Promise<boolean> {
     const [prefix, salt, hash] = storedHash.split(":");
 
     if (prefix !== PASSWORD_HASH_PREFIX || !salt || !hash) {
