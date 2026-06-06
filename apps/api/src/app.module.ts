@@ -3,6 +3,7 @@ import { AuthModule } from "./auth";
 import { CalendarModule } from "./calendar";
 import { ConfigModule } from "./config";
 import { FamiliesModule } from "./families";
+import { FeedbackModule } from "./feedback";
 import { HealthModule } from "./health";
 import { HuskModule } from "./husk";
 import { MealsModule } from "./meals";
@@ -20,6 +21,7 @@ import { WishlistsModule } from "./wishlists";
     HealthModule,
     AuthModule,
     FamiliesModule,
+    FeedbackModule,
     ShoppingModule,
     TasksModule,
     MealsModule,

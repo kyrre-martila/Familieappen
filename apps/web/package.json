@@ -8,7 +8,8 @@
     "build": "next build",
     "start": "next start",
     "typecheck": "tsc -p tsconfig.json --noEmit",
-    "test:email": "tsx --conditions react-server --test lib/email/email-service.test.ts"
+    "test:email": "tsx --conditions react-server --test lib/email/email-service.test.ts",
+    "test:app-info": "tsx --test app/settings/about/app-info-settings-client.test.ts"
   },
   "dependencies": {
     "@familieappen/shared": "workspace:*",

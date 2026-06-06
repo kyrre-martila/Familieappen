@@ -12530,3 +12530,20 @@ button.family-settings-row:focus-visible:not(:disabled) {
   cursor: wait;
   opacity: 0.72;
 }
+
+.app-info-sheet__privacy-note {
+  margin: 0;
+  color: var(--color-muted);
+  font-size: var(--text-small);
+  font-weight: 650;
+}
+
+.app-info-settings__success {
+  margin: calc(-1 * var(--space-s)) 0 0;
+  border-radius: var(--radius-m);
+  background: color-mix(in srgb, var(--color-primary-soft) 54%, transparent);
+  color: var(--color-primary-strong);
+  padding: 0.75rem 0.9rem;
+  font-size: var(--text-small);
+  font-weight: 780;
+}
