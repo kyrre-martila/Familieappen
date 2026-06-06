@@ -19,6 +19,7 @@ type DatabaseUser = {
   id: string;
   name: string;
   email: string;
+  phone?: string | null;
   passwordHash: string;
   createdAt: Date;
   updatedAt: Date;
@@ -192,6 +193,7 @@ export class AuthService {
       id: user.id,
       name: user.name,
       email: user.email,
+      phone: user.phone ?? null,
       createdAt: user.createdAt.toISOString(),
       updatedAt: user.updatedAt.toISOString()
     };
