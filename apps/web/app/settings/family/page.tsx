@@ -1,10 +1,10 @@
 import { ProtectedFamilyRoute } from "../../../components/ProtectedFamilyRoute";
-import { SettingsPlaceholderPage } from "../../../components/settings";
+import { FamilySettingsClient } from "./FamilySettingsClient";
 
 export default function SettingsFamilyPage() {
   return (
     <ProtectedFamilyRoute>
-      <SettingsPlaceholderPage description="Familie, medlemmer og invitasjoner." title="Familie" />
+      <FamilySettingsClient />
     </ProtectedFamilyRoute>
   );
 }
