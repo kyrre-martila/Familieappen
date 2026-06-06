@@ -28,6 +28,11 @@ enum FamilyInvitationStatus {
   revoked
 }
 
+enum FeedbackSubmissionType {
+  feedback
+  bug
+}
+
 model User {
   id           String         @id @default(cuid())
   email        String         @unique
@@ -51,10 +56,28 @@ model User {
   sentFamilyInvitations FamilyInvitation[] @relation("FamilyInvitationCreatedByUser")
   receivedFamilyInvitations FamilyInvitation[] @relation("FamilyInvitationInvitedUser")
   notificationPreferences NotificationPreference?
+  feedbackSubmissions FeedbackSubmission[]
 
   @@map("users")
 }
 
+
+model FeedbackSubmission {
+  id         String                 @id @default(cuid())
+  type       FeedbackSubmissionType
+  message    String
+  userId     String
+  familyId   String?
+  userAgent  String?
+  appVersion String?
+  createdAt  DateTime               @default(now())
+  user       User                   @relation(fields: [userId], references: [id], onDelete: Cascade)
+  family     Family?                @relation(fields: [familyId], references: [id], onDelete: SetNull)
+
+  @@index([userId, createdAt])
+  @@index([familyId])
+  @@map("feedback_submissions")
+}
 
 model NotificationPreference {
   id                String   @id @default(cuid())
@@ -90,6 +113,7 @@ model Family {
   familyInvitations FamilyInvitation[]
   schoolWeekReminders SchoolWeekReminder[]
   createdMealPlanDays MealPlanDay[]
+  feedbackSubmissions FeedbackSubmission[]
 
   @@map("families")
 }

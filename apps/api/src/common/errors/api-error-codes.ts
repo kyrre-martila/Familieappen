@@ -16,6 +16,7 @@ export const API_ERROR_CODES = {
   WISHLIST_ITEM_MISMATCH: "wishlist.item_mismatch",
   VALIDATION_INVALID_INPUT: "validation.invalid_input",
   VALIDATION_MISSING_FIELD: "validation.missing_field",
+  RATE_LIMITED: "rate_limited",
   SERVER_INTERNAL_ERROR: "server.internal_error"
 } as const;
 

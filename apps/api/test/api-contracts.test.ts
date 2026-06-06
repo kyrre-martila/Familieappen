@@ -8,6 +8,8 @@ import { AuthService } from "../src/auth/auth.service";
 import { ProfileController } from "../src/auth/profile.controller";
 import { ProfileService } from "../src/auth/profile.service";
 import { AuthGuard } from "../src/auth/guards/auth.guard";
+import { FeedbackController } from "../src/feedback/feedback.controller";
+import { FeedbackService } from "../src/feedback/feedback.service";
 import { API_ERROR_CODES, ApiException, HttpExceptionFilter } from "../src/common";
 import { ConfigService } from "../src/config";
 import { HealthController } from "../src/health/health.controller";
@@ -31,6 +33,7 @@ type FamilyRecord = { id: string; name: string };
 type FamilyMemberRecord = { id: string; userId: string | null; familyId: string; role: "OWNER" | "PARENT" | "CHILD" | "GUEST"; displayName: string };
 type InvitationRecord = { id: string; createdByUserId: string; familyId: string; status: "pending" | "accepted" | "declined" | "revoked"; revokedAt: Date | null };
 type WishlistShareRecord = { id: string; createdByUserId: string; familyId: string; status: "pending" | "accepted" | "declined" | "removed" | "revoked"; revokedAt: Date | null };
+type FeedbackRecord = { id: string; type: "feedback" | "bug"; message: string; userId: string; familyId: string | null; userAgent: string | null; appVersion: string | null; createdAt: Date };
 
 type HttpResponse<T = Record<string, unknown>> = {
   status: number;
@@ -38,7 +41,7 @@ type HttpResponse<T = Record<string, unknown>> = {
 };
 
 const AUTH_SECRET = "familieappen-test-auth-secret-for-contracts";
-const NOW = new Date("2026-05-30T00:00:00.000Z");
+const NOW = new Date();
 
 class TestConfigService {
   readonly authJwtSecret = AUTH_SECRET;
@@ -50,7 +53,9 @@ class InMemoryPrismaService {
   private familyMembers = new Map<string, FamilyMemberRecord>();
   private familyInvitations = new Map<string, InvitationRecord>();
   private wishlistShareInvitations = new Map<string, WishlistShareRecord>();
+  private feedbackSubmissions = new Map<string, FeedbackRecord>();
   private nextUserId = 1;
+  private nextFeedbackId = 1;
   private nextMemberId = 1;
   readonly isConfigured = false;
 
@@ -90,6 +95,10 @@ class InMemoryPrismaService {
 
   pendingInvitesBy(userId: string): number {
     return [...this.familyInvitations.values(), ...this.wishlistShareInvitations.values()].filter((invite) => invite.createdByUserId === userId && invite.status === "pending").length;
+  }
+
+  feedbackFor(userId: string): FeedbackRecord[] {
+    return [...this.feedbackSubmissions.values()].filter((submission) => submission.userId === userId);
   }
 
   private createClient(): any {
@@ -170,6 +179,10 @@ class InMemoryPrismaService {
       },
       familyMember: {
         findMany: async ({ where }: { where: { userId: string } }): Promise<FamilyMemberRecord[]> => [...this.familyMembers.values()].filter((member) => member.userId === where.userId),
+        findFirst: async ({ where, select }: { where: { userId: string; familyId?: string }, orderBy?: unknown, select?: { familyId?: boolean } }): Promise<FamilyMemberRecord | { familyId: string } | null> => {
+          const member = [...this.familyMembers.values()].find((candidate) => candidate.userId === where.userId && (!where.familyId || candidate.familyId === where.familyId)) ?? null;
+          return member && select?.familyId ? { familyId: member.familyId } : member;
+        },
         count: async ({ where }: { where: { familyId: string; id?: { not: string }; role?: { in: readonly string[] } } }): Promise<number> => [...this.familyMembers.values()].filter((member) => member.familyId === where.familyId && (!where.id || member.id !== where.id.not) && (!where.role || where.role.in.includes(member.role))).length,
         delete: async ({ where }: { where: { id: string } }): Promise<FamilyMemberRecord> => {
           const member = this.familyMembers.get(where.id);
@@ -186,6 +199,19 @@ class InMemoryPrismaService {
           [...this.familyMembers].forEach(([id, member]) => { if (member.familyId === where.id) this.familyMembers.delete(id); });
           return family;
         }
+      },
+
+      feedbackSubmission: {
+        create: async ({ data }: { data: Omit<FeedbackRecord, "id" | "createdAt"> }): Promise<FeedbackRecord> => {
+          const submission: FeedbackRecord = {
+            id: `feedback-${this.nextFeedbackId++}`,
+            ...data,
+            createdAt: new Date(NOW.getTime() + this.nextFeedbackId * 1000)
+          };
+          this.feedbackSubmissions.set(submission.id, submission);
+          return submission;
+        },
+        count: async ({ where }: { where: { userId: string; createdAt: { gte: Date } } }): Promise<number> => [...this.feedbackSubmissions.values()].filter((submission) => submission.userId === where.userId && submission.createdAt >= where.createdAt.gte).length
       },
       familyInvitation: {
         updateMany: async ({ where, data }: { where: { createdByUserId: string; status: "pending" }; data: { status: "revoked"; revokedAt: Date } }) => {
@@ -267,11 +293,12 @@ async function createContractHarness() {
   const services = createContractServices();
   const prisma = new InMemoryPrismaService();
   const moduleRef = await Test.createTestingModule({
-    controllers: [AuthController, ProfileController, HealthController, ShoppingController, WishlistsController],
+    controllers: [AuthController, ProfileController, HealthController, ShoppingController, WishlistsController, FeedbackController],
     providers: [
       AuthService,
       ProfileService,
       AuthGuard,
+      FeedbackService,
       { provide: ConfigService, useClass: TestConfigService },
       { provide: PrismaService, useValue: prisma },
       { provide: ShoppingService, useValue: services.shoppingService },
@@ -370,6 +397,7 @@ async function run(): Promise<void> {
 
     const alpha = await register(request);
     services.grant(alpha.userId, "family-alpha");
+    prisma.createFamily("family-alpha", [{ userId: alpha.userId, role: "OWNER", displayName: "Alpha" }]);
 
     const profile = assertSuccessEnvelope(await request("GET", "/me", { token: alpha.token }), 200);
     assert.equal(profile.id, alpha.userId);
@@ -466,6 +494,65 @@ async function run(): Promise<void> {
       token: alpha.token,
       body: { password: "new-password", confirmationText: "SLETT", keepData: true }
     }), 400, API_ERROR_CODES.VALIDATION_INVALID_INPUT);
+
+    assertErrorEnvelope(await request("POST", "/feedback", {
+      body: { type: "feedback", message: "Hei fra test" }
+    }), 401, API_ERROR_CODES.AUTH_REQUIRES_AUTH);
+
+    const acceptedFeedback = assertSuccessEnvelope(await request("POST", "/feedback", {
+      token: alpha.token,
+      body: { type: "feedback", message: "  Veldig fin app  ", appVersion: "0.1.0" }
+    }), 201);
+    assert.equal(acceptedFeedback.type, "feedback");
+    assert.equal(acceptedFeedback.message, "Veldig fin app");
+    assert.equal(acceptedFeedback.userId, alpha.userId);
+    assert.equal(acceptedFeedback.familyId, "family-alpha");
+    assert.equal(acceptedFeedback.appVersion, "0.1.0");
+    assert.equal(prisma.feedbackFor(alpha.userId).at(-1)?.userId, alpha.userId);
+    assert.equal(prisma.feedbackFor(alpha.userId).at(-1)?.familyId, "family-alpha");
+
+    const acceptedBug = assertSuccessEnvelope(await request("POST", "/feedback", {
+      token: alpha.token,
+      familyId: "family-alpha",
+      body: { type: "bug", message: "Buggen skjer ved lagring" }
+    }), 201);
+    assert.equal(acceptedBug.type, "bug");
+    assert.equal(acceptedBug.familyId, "family-alpha");
+
+    assertErrorEnvelope(await request("POST", "/feedback", {
+      token: alpha.token,
+      body: { type: "question", message: "Dette er ukjent" }
+    }), 400, API_ERROR_CODES.VALIDATION_INVALID_INPUT);
+    assertErrorEnvelope(await request("POST", "/feedback", {
+      token: alpha.token,
+      body: { type: "feedback", message: "   " }
+    }), 400, API_ERROR_CODES.VALIDATION_INVALID_INPUT);
+    assertErrorEnvelope(await request("POST", "/feedback", {
+      token: alpha.token,
+      body: { type: "feedback", message: "abcd" }
+    }), 400, API_ERROR_CODES.VALIDATION_INVALID_INPUT);
+    assertErrorEnvelope(await request("POST", "/feedback", {
+      token: alpha.token,
+      body: { type: "feedback", message: "x".repeat(2001) }
+    }), 400, API_ERROR_CODES.VALIDATION_INVALID_INPUT);
+    assertErrorEnvelope(await request("POST", "/feedback", {
+      token: alpha.token,
+      body: { type: "feedback", message: "Denne har et ukjent felt", unexpected: true }
+    }), 400, API_ERROR_CODES.VALIDATION_INVALID_INPUT);
+
+    const limited = await register(request, { name: "Limited", email: "limited-feedback@example.com", password: "limited-password" });
+    for (let index = 0; index < 5; index += 1) {
+      assertSuccessEnvelope(await request("POST", "/feedback", {
+        token: limited.token,
+        body: { type: "feedback", message: `Melding nummer ${index}` }
+      }), 201);
+    }
+    const rateLimited = await request("POST", "/feedback", {
+      token: limited.token,
+      body: { type: "feedback", message: "En melding for mye" }
+    });
+    assertErrorEnvelope(rateLimited, 429, API_ERROR_CODES.RATE_LIMITED);
+    assert.equal((rateLimited.body.error as Record<string, unknown>).message, "Du har sendt flere meldinger på kort tid. Prøv igjen litt senere.");
 
     const memberUser = await register(request, { name: "Member", email: "member-delete@example.com", password: "member-password" });
     const memberAdmin = await register(request, { name: "Member Admin", email: "member-admin@example.com", password: "member-admin-password" });

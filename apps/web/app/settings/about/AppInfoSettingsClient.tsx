@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useState, type ReactNode } from "react";
 import { Bug, ChevronLeft, ChevronRight, FileText, Info, Mail, MessageSquare } from "lucide-react";
 import { SettingsCard, SettingsSection } from "../../../components/settings";
+import { ApiError, submitFeedback } from "../../../lib/api";
 
 type SheetMode = "feedback" | "bug" | "contact" | "license" | null;
 type FeedbackType = "feedback" | "bug";
@@ -49,7 +50,7 @@ function AppInfoRow({ description, icon, label, onClick, value }: AppInfoRowProp
   );
 }
 
-function FeedbackSheet({ type, onCancel, onSent }: { type: FeedbackType; onCancel: () => void; onSent: () => void }) {
+function FeedbackSheet({ type, version, onCancel, onSent }: { type: FeedbackType; version: string; onCancel: () => void; onSent: (message: string) => void }) {
   const [message, setMessage] = useState("");
   const [status, setStatus] = useState<"idle" | "sending" | "sent" | "error">("idle");
   const [error, setError] = useState("");
@@ -67,25 +68,18 @@ function FeedbackSheet({ type, onCancel, onSent }: { type: FeedbackType; onCance
     setError("");
 
     try {
-      const response = await fetch("/api/feedback", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          type,
-          message: trimmedMessage
-        })
+      await submitFeedback({
+        type,
+        message: trimmedMessage,
+        appVersion: version
       });
-
-      if (!response.ok) {
-        throw new Error("Kunne ikke sende.");
-      }
 
       setStatus("sent");
       setMessage("");
-      window.setTimeout(onSent, 700);
-    } catch {
+      onSent(isBug ? "Takk, feilen er rapportert." : "Takk for tilbakemeldingen.");
+    } catch (error) {
       setStatus("error");
-      setError("Kunne ikke sende nå. Prøv igjen senere.");
+      setError(error instanceof ApiError ? error.message : "Kunne ikke sende nå. Prøv igjen senere.");
     }
   }
 
@@ -111,12 +105,12 @@ function FeedbackSheet({ type, onCancel, onSent }: { type: FeedbackType; onCance
             }}
           />
         </label>
-        {status === "sent" ? <p className="app-info-sheet__success">Sendt.</p> : null}
+        <p className="app-info-sheet__privacy-note">Ikke del sensitive opplysninger her.</p>
         {error ? <p className="profile-edit-sheet__error">{error}</p> : null}
         <div className="profile-edit-sheet__actions">
-          <button className="profile-edit-sheet__button profile-edit-sheet__button--secondary" type="button" onClick={onCancel}>Avbryt</button>
+          <button className="profile-edit-sheet__button profile-edit-sheet__button--secondary" type="button" disabled={status === "sending"} onClick={onCancel}>Avbryt</button>
           <button className="profile-edit-sheet__button profile-edit-sheet__button--primary" type="button" disabled={status === "sending"} onClick={handleSend}>
-            {status === "sending" ? "Sender" : "Send"}
+            {status === "sending" ? "Sender…" : "Send"}
           </button>
         </div>
       </section>
@@ -164,6 +158,7 @@ function LicenseSheet({ onClose }: { onClose: () => void }) {
 
 export function AppInfoSettingsClient({ supportEmail, version }: AppInfoSettingsClientProps) {
   const [sheet, setSheet] = useState<SheetMode>(null);
+  const [successMessage, setSuccessMessage] = useState("");
 
   return (
     <main className="settings-shell settings-shell--detail app-info-settings" aria-labelledby="settings-detail-title">
@@ -177,8 +172,8 @@ export function AppInfoSettingsClient({ supportEmail, version }: AppInfoSettings
 
       <SettingsSection title="Hjelp">
         <SettingsCard>
-          <AppInfoRow icon={<MessageSquare />} label="Send tilbakemelding" onClick={() => setSheet("feedback")} />
-          <AppInfoRow icon={<Bug />} label="Rapporter feil" onClick={() => setSheet("bug")} />
+          <AppInfoRow icon={<MessageSquare />} label="Send tilbakemelding" onClick={() => { setSuccessMessage(""); setSheet("feedback"); }} />
+          <AppInfoRow icon={<Bug />} label="Rapporter feil" onClick={() => { setSuccessMessage(""); setSheet("bug"); }} />
           <AppInfoRow icon={<Mail />} label="Kontakt oss" onClick={() => setSheet("contact")} />
         </SettingsCard>
       </SettingsSection>
@@ -190,14 +185,16 @@ export function AppInfoSettingsClient({ supportEmail, version }: AppInfoSettings
         </SettingsCard>
       </SettingsSection>
 
+      {successMessage ? <p className="app-info-settings__success" role="status">{successMessage}</p> : null}
+
       <footer className="settings-footer" aria-label="Juridiske lenker">
         <Link href="/privacy">Personvern</Link>
         <span aria-hidden="true">|</span>
         <Link href="/terms">Vilkår</Link>
       </footer>
 
-      {sheet === "feedback" ? <FeedbackSheet type="feedback" onCancel={() => setSheet(null)} onSent={() => setSheet(null)} /> : null}
-      {sheet === "bug" ? <FeedbackSheet type="bug" onCancel={() => setSheet(null)} onSent={() => setSheet(null)} /> : null}
+      {sheet === "feedback" ? <FeedbackSheet type="feedback" version={version} onCancel={() => setSheet(null)} onSent={(message) => { setSheet(null); setSuccessMessage(message); }} /> : null}
+      {sheet === "bug" ? <FeedbackSheet type="bug" version={version} onCancel={() => setSheet(null)} onSent={(message) => { setSheet(null); setSuccessMessage(message); }} /> : null}
       {sheet === "contact" ? <ContactSheet supportEmail={supportEmail} onClose={() => setSheet(null)} /> : null}
       {sheet === "license" ? <LicenseSheet onClose={() => setSheet(null)} /> : null}
     </main>

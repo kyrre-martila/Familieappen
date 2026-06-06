@@ -46,6 +46,7 @@ interface PrismaClientConnection {
   wishlistItem: PrismaDelegate;
   wishlistShareInvitation: PrismaDelegate;
   familyInvitation: PrismaDelegate;
+  feedbackSubmission: PrismaDelegate;
   $connect(): Promise<void>;
   $disconnect(): Promise<void>;
   $queryRaw<T = unknown>(query: TemplateStringsArray): Promise<T>;

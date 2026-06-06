@@ -107,6 +107,26 @@ export interface DeleteAccountResponse {
   message: string;
 }
 
+
+export type FeedbackSubmissionType = "feedback" | "bug";
+
+export interface FeedbackSubmission {
+  id: string;
+  type: FeedbackSubmissionType;
+  message: string;
+  userId: string;
+  familyId: string | null;
+  userAgent: string | null;
+  appVersion: string | null;
+  createdAt: string;
+}
+
+export interface SubmitFeedbackInput {
+  type: FeedbackSubmissionType;
+  message: string;
+  appVersion?: string;
+}
+
 export interface NotificationPreferences {
   id: string;
   userId: string;
@@ -747,6 +767,14 @@ export async function deleteSchoolWeekReminder(familyId: string, reminderId: str
   return apiRequest<SchoolWeekReminder>(`/school-week/${encodeURIComponent(reminderId)}${suffix}`, { method: "DELETE", familyId });
 }
 
+
+
+export async function submitFeedback(input: SubmitFeedbackInput): Promise<FeedbackSubmission> {
+  return apiRequest<FeedbackSubmission>("/feedback", {
+    method: "POST",
+    body: input
+  });
+}
 
 export async function getNotificationPreferences(): Promise<NotificationPreferences> {
   return apiRequest<NotificationPreferences>("/notification-preferences");
