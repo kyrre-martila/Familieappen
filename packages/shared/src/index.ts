@@ -19,6 +19,32 @@ export interface FamilyMember {
   updatedAt: string;
 }
 
+
+export type FamilyInvitationStatus = "pending" | "accepted" | "declined" | "revoked";
+
+export interface FamilyInvitation {
+  id: string;
+  familyId: string;
+  invitedEmail: string;
+  role: ManualFamilyMemberRole;
+  status: FamilyInvitationStatus;
+  createdByUserId: string;
+  invitedUserId: string | null;
+  acceptedAt: string | null;
+  declinedAt: string | null;
+  revokedAt: string | null;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface FamilyInviteResponse {
+  invitation: FamilyInvitation;
+  email: {
+    ok: boolean;
+    mode: "provider" | "dev-log";
+  };
+}
+
 export interface Task {
   id: string;
   familyId: string;

@@ -1,6 +1,6 @@
 import { Injectable } from "@nestjs/common";
 
-export type EmailTemplate = "wishlist-invite";
+export type EmailTemplate = "wishlist-invite" | "family-invite";
 
 export type SendEmailInput = {
   to: string | string[];
@@ -8,7 +8,8 @@ export type SendEmailInput = {
   template: EmailTemplate;
   data: {
     inviterName: string;
-    ownerName: string;
+    ownerName?: string;
+    familyName?: string;
     inviteUrl: string;
   };
 };
@@ -29,7 +30,8 @@ type ProviderEmailPayload = {
 };
 
 const TEMPLATE_SUBJECTS: Record<EmailTemplate, string> = {
-  "wishlist-invite": "Du er invitert til en ønskeliste"
+  "wishlist-invite": "Du er invitert til en ønskeliste",
+  "family-invite": "Du er invitert til en familie"
 };
 
 function escapeHtml(value: string): string {
@@ -61,9 +63,9 @@ function formatFromAddress(): string {
 function renderWishlistInvite(data: SendEmailInput["data"]): { subject: string; html: string; text: string; link: string } {
   const subject = TEMPLATE_SUBJECTS["wishlist-invite"];
   const safeInviterName = escapeHtml(data.inviterName);
-  const safeOwnerName = escapeHtml(data.ownerName);
+  const safeOwnerName = escapeHtml(data.ownerName ?? "Eier");
   const safeInviteUrl = escapeHtml(data.inviteUrl);
-  const body = `${data.inviterName} har invitert deg til å følge ønskelisten til ${data.ownerName}.`;
+  const body = `${data.inviterName} har invitert deg til å følge ønskelisten til ${data.ownerName ?? "Eier"}.`;
 
   return {
     subject,
@@ -73,12 +75,28 @@ function renderWishlistInvite(data: SendEmailInput["data"]): { subject: string; 
   };
 }
 
+
+function renderFamilyInvite(data: SendEmailInput["data"]): { subject: string; html: string; text: string; link: string } {
+  const subject = TEMPLATE_SUBJECTS["family-invite"];
+  const safeInviterName = escapeHtml(data.inviterName);
+  const safeFamilyName = escapeHtml(data.familyName ?? "familien");
+  const safeInviteUrl = escapeHtml(data.inviteUrl);
+  const body = `${data.inviterName} har invitert deg til ${data.familyName ?? "familien"} i FamilieAppen.`;
+
+  return {
+    subject,
+    html: `<!doctype html><html lang="no"><body style="margin:0;background:#f7f2ea;color:#2f2a25;font-family:Arial,sans-serif;"><main style="max-width:560px;margin:0 auto;padding:32px 20px;"><section style="background:#fff;border-radius:20px;padding:28px;border:1px solid #eadfce;"><h1 style="margin:0 0 16px;font-size:24px;">${escapeHtml(subject)}</h1><p style="font-size:16px;line-height:1.5;">${safeInviterName} har invitert deg til ${safeFamilyName} i FamilieAppen.</p><p style="margin:28px 0;"><a href="${safeInviteUrl}" style="display:inline-block;background:#0b6b2f;color:#fff;text-decoration:none;border-radius:999px;padding:12px 20px;font-weight:700;">Åpne invitasjon</a></p><p style="font-size:13px;color:#6f6258;">Logg inn eller opprett konto for å bli med.</p></section></main></body></html>`,
+    text: [subject, "", body, "", "Åpne invitasjon:", data.inviteUrl].join("\n"),
+    link: data.inviteUrl
+  };
+}
+
 @Injectable()
 export class EmailService {
   async sendEmail(input: SendEmailInput): Promise<EmailSendResult> {
     try {
       const recipients = normalizeRecipients(input.to);
-      const rendered = renderWishlistInvite(input.data);
+      const rendered = input.template === "family-invite" ? renderFamilyInvite(input.data) : renderWishlistInvite(input.data);
       const payload: ProviderEmailPayload = {
         to: recipients,
         from: formatFromAddress(),

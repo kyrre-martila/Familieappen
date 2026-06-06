@@ -5,9 +5,49 @@ export interface CreateFamilyRequestDto {
   name?: unknown;
 }
 
+export interface UpdateFamilyRequestDto {
+  name?: unknown;
+}
+
 export interface AddFamilyMemberRequestDto {
   displayName?: unknown;
   role?: unknown;
+}
+
+export interface UpdateFamilyMemberRequestDto {
+  displayName?: unknown;
+  role?: unknown;
+}
+
+export type FamilyInvitationStatusDto = "pending" | "accepted" | "declined" | "revoked";
+
+export interface FamilyInviteRequestDto {
+  email?: unknown;
+  invitedEmail?: unknown;
+  role?: unknown;
+}
+
+export interface FamilyInvitationDto {
+  id: string;
+  familyId: string;
+  invitedEmail: string;
+  role: AddFamilyMemberRoleDto;
+  status: FamilyInvitationStatusDto;
+  createdByUserId: string;
+  invitedUserId: string | null;
+  acceptedAt: string | null;
+  declinedAt: string | null;
+  revokedAt: string | null;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface FamilyInviteResponseDto {
+  invitation: FamilyInvitationDto;
+  email: {
+    ok: boolean;
+    mode: "provider" | "dev-log";
+  };
 }
 
 export interface FamilyMemberDto {

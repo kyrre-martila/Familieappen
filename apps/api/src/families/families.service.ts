@@ -1,4 +1,6 @@
-import { BadRequestException, Injectable, NotFoundException } from "@nestjs/common";
+import { BadRequestException, ConflictException, Injectable, NotFoundException } from "@nestjs/common";
+import { createHash, randomBytes } from "crypto";
+import { EmailService } from "../email";
 import { PrismaService } from "../prisma";
 import { FamilyDashboardDto } from "./dto/dashboard.dto";
 import {
@@ -7,9 +9,14 @@ import {
   CreateFamilyRequestDto,
   FamilyDetailsDto,
   FamilyDto,
+  FamilyInvitationDto,
+  FamilyInviteRequestDto,
+  FamilyInviteResponseDto,
   FamilyMemberDto,
   FamilyMemberRoleDto,
-  FamilyWithMembershipDto
+  FamilyWithMembershipDto,
+  UpdateFamilyMemberRequestDto,
+  UpdateFamilyRequestDto
 } from "./dto/family.dto";
 import { FamilyAuthorizationService } from "./family-authorization.service";
 
@@ -103,11 +110,36 @@ type FamilyMemberRecord = {
   updatedAt: Date;
 };
 
+type FamilyInvitationRecord = {
+  id: string;
+  familyId: string;
+  invitedEmail: string;
+  role: AddFamilyMemberRoleDto;
+  status: "pending" | "accepted" | "declined" | "revoked";
+  createdByUserId: string;
+  invitedUserId: string | null;
+  acceptedAt: Date | null;
+  declinedAt: Date | null;
+  revokedAt: Date | null;
+  createdAt: Date;
+  updatedAt: Date;
+};
+
+type PrismaClientWithFamilyInvitations = typeof PrismaService.prototype.client & {
+  familyInvitation: {
+    findMany(args: unknown): Promise<FamilyInvitationRecord[]>;
+    findFirst(args: unknown): Promise<FamilyInvitationRecord | null>;
+    create(args: unknown): Promise<FamilyInvitationRecord>;
+    update(args: unknown): Promise<FamilyInvitationRecord>;
+  };
+};
+
 @Injectable()
 export class FamiliesService {
   constructor(
     private readonly prisma: PrismaService,
-    private readonly familyAuthorization: FamilyAuthorizationService
+    private readonly familyAuthorization: FamilyAuthorizationService,
+    private readonly emailService: EmailService
   ) {}
 
   async createFamily(userId: string, input: CreateFamilyRequestDto = {}): Promise<FamilyDetailsDto> {
@@ -178,6 +210,18 @@ export class FamiliesService {
     };
   }
 
+
+  async updateFamily(userId: string, familyId: string, input: UpdateFamilyRequestDto = {}): Promise<FamilyDto> {
+    await this.familyAuthorization.requireFamilyRole(userId, familyId, FAMILY_MANAGER_ROLES);
+    const name = this.validateFamilyName(input.name);
+    const family = await this.prisma.client.family.update({
+      where: { id: familyId },
+      data: { name }
+    });
+
+    return this.toFamilyDto(family);
+  }
+
   async getFamilyDashboard(userId: string, familyId: string): Promise<FamilyDashboardDto> {
     const details = await this.getFamilyDetails(userId, familyId);
 
@@ -221,6 +265,114 @@ export class FamiliesService {
     return this.toFamilyMemberDto(member);
   }
 
+
+  async updateFamilyMember(userId: string, familyId: string, memberId: string, input: UpdateFamilyMemberRequestDto = {}): Promise<FamilyMemberDto> {
+    await this.familyAuthorization.requireFamilyRole(userId, familyId, FAMILY_MANAGER_ROLES);
+    const member = await this.getFamilyMemberOrThrow(familyId, memberId);
+    const displayName = input.displayName === undefined ? member.displayName : this.validateDisplayName(input.displayName);
+    const role = input.role === undefined ? member.role : this.validateManualMemberRole(input.role);
+
+    if (this.isAdminRole(member.role) && !this.isAdminRole(role)) {
+      await this.assertAnotherAdministratorExists(familyId, member.id);
+    }
+
+    const updated = await this.prisma.client.familyMember.update({
+      where: { id: member.id },
+      data: { displayName, role }
+    });
+
+    return this.toFamilyMemberDto(updated);
+  }
+
+  async listFamilyInvitations(userId: string, familyId: string): Promise<FamilyInvitationDto[]> {
+    await this.familyAuthorization.requireFamilyMember(userId, familyId);
+    const invitations = await (this.prisma.client as PrismaClientWithFamilyInvitations).familyInvitation.findMany({
+      where: { familyId },
+      orderBy: [{ createdAt: "desc" }]
+    });
+
+    return invitations.map((invitation) => this.toFamilyInvitationDto(invitation));
+  }
+
+  async inviteFamilyMember(userId: string, familyId: string, input: FamilyInviteRequestDto = {}): Promise<FamilyInviteResponseDto> {
+    const membership = await this.familyAuthorization.requireFamilyRole(userId, familyId, FAMILY_MANAGER_ROLES);
+    const family = await this.prisma.client.family.findUnique({ where: { id: familyId } }) as FamilyRecord | null;
+    const inviter = await this.prisma.client.user.findUnique({ where: { id: userId } }) as (UserRecord & { email?: string }) | null;
+    const invitedEmail = this.validateEmail(input.email ?? input.invitedEmail);
+    const role = this.validateManualMemberRole(input.role);
+
+    if (!family || !inviter) {
+      throw new NotFoundException("Family or user was not found");
+    }
+
+    const invitedUser = await this.prisma.client.user.findUnique({ where: { email: invitedEmail } }) as (UserRecord & { email?: string }) | null;
+    if (inviter.email?.trim().toLowerCase() === invitedEmail) {
+      throw new BadRequestException("Du kan ikke invitere deg selv");
+    }
+
+    const existingMember = await this.prisma.client.familyMember.findFirst({
+      where: { familyId, user: { email: { equals: invitedEmail, mode: "insensitive" } } }
+    });
+
+    if (existingMember) {
+      throw new ConflictException("Denne personen er allerede familiemedlem");
+    }
+
+    const token = this.generateRawToken();
+    const existingPending = await (this.prisma.client as PrismaClientWithFamilyInvitations).familyInvitation.findFirst({
+      where: { familyId, invitedEmail: { equals: invitedEmail, mode: "insensitive" }, status: "pending" }
+    });
+
+    const invitation = existingPending
+      ? await (this.prisma.client as PrismaClientWithFamilyInvitations).familyInvitation.update({
+        where: { id: existingPending.id },
+        data: { role, tokenHash: this.hashToken(token), invitedUserId: invitedUser?.id ?? existingPending.invitedUserId }
+      })
+      : await (this.prisma.client as PrismaClientWithFamilyInvitations).familyInvitation.create({
+        data: { familyId, invitedEmail, invitedUserId: invitedUser?.id ?? null, role, tokenHash: this.hashToken(token), createdByUserId: userId }
+      });
+    const email = await this.sendFamilyInviteEmail(invitedEmail, token, inviter.name, family.name);
+
+    void membership;
+    return { invitation: this.toFamilyInvitationDto(invitation), email: { ok: email.ok, mode: email.mode } };
+  }
+
+  async resendFamilyInvitation(userId: string, familyId: string, inviteId: string): Promise<FamilyInviteResponseDto> {
+    await this.familyAuthorization.requireFamilyRole(userId, familyId, FAMILY_MANAGER_ROLES);
+    const invitation = await this.getFamilyInvitationOrThrow(familyId, inviteId);
+
+    if (invitation.status !== "pending") {
+      throw new BadRequestException("Bare ventende invitasjoner kan sendes på nytt");
+    }
+
+    const family = await this.prisma.client.family.findUnique({ where: { id: familyId } }) as FamilyRecord | null;
+    const inviter = await this.prisma.client.user.findUnique({ where: { id: userId } }) as UserRecord | null;
+    const token = this.generateRawToken();
+    const updated = await (this.prisma.client as PrismaClientWithFamilyInvitations).familyInvitation.update({
+      where: { id: invitation.id },
+      data: { tokenHash: this.hashToken(token) }
+    });
+    const email = await this.sendFamilyInviteEmail(invitation.invitedEmail, token, inviter?.name ?? "FamilieAppen", family?.name ?? "familien");
+
+    return { invitation: this.toFamilyInvitationDto(updated), email: { ok: email.ok, mode: email.mode } };
+  }
+
+  async revokeFamilyInvitation(userId: string, familyId: string, inviteId: string): Promise<FamilyInvitationDto> {
+    await this.familyAuthorization.requireFamilyRole(userId, familyId, FAMILY_MANAGER_ROLES);
+    const invitation = await this.getFamilyInvitationOrThrow(familyId, inviteId);
+
+    if (invitation.status === "revoked") {
+      return this.toFamilyInvitationDto(invitation);
+    }
+
+    const updated = await (this.prisma.client as PrismaClientWithFamilyInvitations).familyInvitation.update({
+      where: { id: invitation.id },
+      data: { status: "revoked", revokedAt: new Date() }
+    });
+
+    return this.toFamilyInvitationDto(updated);
+  }
+
   async removeFamilyMember(userId: string, familyId: string, memberId: string): Promise<FamilyMemberDto> {
     await this.familyAuthorization.requireFamilyRole(userId, familyId, FAMILY_MANAGER_ROLES);
 
@@ -235,17 +387,8 @@ export class FamiliesService {
       throw new NotFoundException("Family member was not found");
     }
 
-    if (member.role === "OWNER") {
-      const ownerCount = await this.prisma.client.familyMember.count({
-        where: {
-          familyId,
-          role: "OWNER"
-        }
-      });
-
-      if (ownerCount <= 1) {
-        throw new BadRequestException("The last owner cannot be removed");
-      }
+    if (this.isAdminRole(member.role)) {
+      await this.assertAnotherAdministratorExists(familyId, member.id);
     }
 
     const deletedMember = await this.prisma.client.familyMember.delete({
@@ -453,6 +596,57 @@ export class FamiliesService {
     return { uncheckedCount, totalItems };
   }
 
+
+  private async getFamilyMemberOrThrow(familyId: string, memberId: string): Promise<FamilyMemberRecord> {
+    const member = await this.prisma.client.familyMember.findFirst({ where: { id: memberId, familyId } });
+
+    if (!member) {
+      throw new NotFoundException("Family member was not found");
+    }
+
+    return member;
+  }
+
+  private async assertAnotherAdministratorExists(familyId: string, excludedMemberId: string): Promise<void> {
+    const adminCount = await this.prisma.client.familyMember.count({
+      where: {
+        familyId,
+        id: { not: excludedMemberId },
+        role: { in: FAMILY_MANAGER_ROLES }
+      }
+    });
+
+    if (adminCount < 1) {
+      throw new BadRequestException("Det siste administratormedlemmet kan ikke fjernes");
+    }
+  }
+
+  private async getFamilyInvitationOrThrow(familyId: string, inviteId: string): Promise<FamilyInvitationRecord> {
+    const invitation = await (this.prisma.client as PrismaClientWithFamilyInvitations).familyInvitation.findFirst({
+      where: { id: inviteId, familyId }
+    });
+
+    if (!invitation) {
+      throw new NotFoundException("Family invitation was not found");
+    }
+
+    return invitation;
+  }
+
+  private async sendFamilyInviteEmail(invitedEmail: string, token: string, inviterName: string, familyName: string) {
+    const appUrl = process.env.APP_PUBLIC_URL?.replace(/\/$/, "") || "http://localhost:3000";
+
+    return this.emailService.sendEmail({
+      to: invitedEmail,
+      template: "family-invite",
+      data: {
+        inviterName,
+        familyName,
+        inviteUrl: `${appUrl}/invite/${encodeURIComponent(token)}`
+      }
+    });
+  }
+
   private async getUserOrThrow(userId: string): Promise<UserRecord> {
     const user = await this.prisma.client.user.findUnique({
       where: { id: userId },
@@ -505,12 +699,56 @@ export class FamiliesService {
     return value as AddFamilyMemberRoleDto;
   }
 
+
+  private validateEmail(value: unknown): string {
+    if (typeof value !== "string") {
+      throw new BadRequestException("E-post må fylles ut");
+    }
+
+    const email = value.trim().toLowerCase();
+
+    if (!/^\S+@\S+\.\S+$/.test(email)) {
+      throw new BadRequestException("Skriv inn en gyldig e-postadresse");
+    }
+
+    return email;
+  }
+
+  private isAdminRole(role: FamilyMemberRoleDto): boolean {
+    return FAMILY_MANAGER_ROLES.includes(role);
+  }
+
+  private generateRawToken(): string {
+    return randomBytes(24).toString("base64url");
+  }
+
+  private hashToken(token: string): string {
+    return createHash("sha256").update(token).digest("hex");
+  }
+
   private toFamilyDto(family: FamilyRecord): FamilyDto {
     return {
       id: family.id,
       name: family.name,
       createdAt: family.createdAt.toISOString(),
       updatedAt: family.updatedAt.toISOString()
+    };
+  }
+
+  private toFamilyInvitationDto(invitation: FamilyInvitationRecord): FamilyInvitationDto {
+    return {
+      id: invitation.id,
+      familyId: invitation.familyId,
+      invitedEmail: invitation.invitedEmail,
+      role: invitation.role,
+      status: invitation.status,
+      createdByUserId: invitation.createdByUserId,
+      invitedUserId: invitation.invitedUserId,
+      acceptedAt: invitation.acceptedAt?.toISOString() ?? null,
+      declinedAt: invitation.declinedAt?.toISOString() ?? null,
+      revokedAt: invitation.revokedAt?.toISOString() ?? null,
+      createdAt: invitation.createdAt.toISOString(),
+      updatedAt: invitation.updatedAt.toISOString()
     };
   }
 

@@ -4,6 +4,8 @@ import type {
   CalendarEvent,
   Family,
   FamilyDashboardResponse,
+  FamilyInvitation,
+  FamilyInviteResponse,
   FamilyMember,
   FamilyMemberRole,
   ManualFamilyMemberRole,
@@ -30,7 +32,7 @@ import type {
   SchoolWeekReminder
 } from "@familieappen/shared";
 
-export type { CalendarEvent, Family, FamilyDashboardResponse, FamilyMember, FamilyMemberRole, ManualFamilyMemberRole, MealPlan, MealPlanDay, MoveMealResult, ShoppingList, ShoppingListItem, SharedWishlistItem, SharedWishlistItemsResponse, SharedWishlistSummary, Task, WishlistItem, WishlistItemCreateInput, WishlistItemListResponse, WishlistItemUpdateInput, WishlistSummary, WishlistInvitePreview, WishlistShareInvitation, WishlistShareInviteResponse, Reminder, HuskList, HuskListItem, SchoolWeekReminder };
+export type { CalendarEvent, Family, FamilyDashboardResponse, FamilyInvitation, FamilyInviteResponse, FamilyMember, FamilyMemberRole, ManualFamilyMemberRole, MealPlan, MealPlanDay, MoveMealResult, ShoppingList, ShoppingListItem, SharedWishlistItem, SharedWishlistItemsResponse, SharedWishlistSummary, Task, WishlistItem, WishlistItemCreateInput, WishlistItemListResponse, WishlistItemUpdateInput, WishlistSummary, WishlistInvitePreview, WishlistShareInvitation, WishlistShareInviteResponse, Reminder, HuskList, HuskListItem, SchoolWeekReminder };
 
 
 type LegacyWishlistItem = WishlistItem & {
@@ -156,6 +158,13 @@ export async function getFamily(familyId: string): Promise<FamilyDetails> {
   return apiRequest<FamilyDetails>(`/families/${encodeURIComponent(familyId)}`);
 }
 
+export async function updateFamily(familyId: string, input: { name: string }): Promise<Family> {
+  return apiRequest<Family>(`/families/${encodeURIComponent(familyId)}`, {
+    method: "PATCH",
+    body: input
+  });
+}
+
 export async function getFamilyDashboard(familyId: string): Promise<FamilyDashboardResponse> {
   return apiRequest<FamilyDashboardResponse>(`/families/${encodeURIComponent(familyId)}/dashboard`);
 }
@@ -168,6 +177,36 @@ export async function addFamilyMember(
     method: "POST",
     body: input
   });
+}
+
+export async function updateFamilyMember(
+  familyId: string,
+  memberId: string,
+  input: { displayName?: string; role?: ManualFamilyMemberRole }
+): Promise<FamilyMember> {
+  return apiRequest<FamilyMember>(`/families/${encodeURIComponent(familyId)}/members/${encodeURIComponent(memberId)}`, {
+    method: "PATCH",
+    body: input
+  });
+}
+
+export async function getFamilyInvitations(familyId: string): Promise<FamilyInvitation[]> {
+  return apiRequest<FamilyInvitation[]>(`/families/${encodeURIComponent(familyId)}/invitations`);
+}
+
+export async function inviteFamilyMemberByEmail(familyId: string, input: { email: string; role: ManualFamilyMemberRole }): Promise<FamilyInviteResponse> {
+  return apiRequest<FamilyInviteResponse>(`/families/${encodeURIComponent(familyId)}/invitations`, {
+    method: "POST",
+    body: input
+  });
+}
+
+export async function resendFamilyInvitation(familyId: string, inviteId: string): Promise<FamilyInviteResponse> {
+  return apiRequest<FamilyInviteResponse>(`/families/${encodeURIComponent(familyId)}/invitations/${encodeURIComponent(inviteId)}/resend`, { method: "POST" });
+}
+
+export async function revokeFamilyInvitation(familyId: string, inviteId: string): Promise<FamilyInvitation> {
+  return apiRequest<FamilyInvitation>(`/families/${encodeURIComponent(familyId)}/invitations/${encodeURIComponent(inviteId)}/revoke`, { method: "POST" });
 }
 
 export async function removeFamilyMember(familyId: string, memberId: string): Promise<FamilyMember> {
