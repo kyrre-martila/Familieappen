@@ -27,6 +27,11 @@ type UserRecord = {
   updatedAt: Date;
 };
 
+type FamilyRecord = { id: string; name: string };
+type FamilyMemberRecord = { id: string; userId: string | null; familyId: string; role: "OWNER" | "PARENT" | "CHILD" | "GUEST"; displayName: string };
+type InvitationRecord = { id: string; createdByUserId: string; familyId: string; status: "pending" | "accepted" | "declined" | "revoked"; revokedAt: Date | null };
+type WishlistShareRecord = { id: string; createdByUserId: string; familyId: string; status: "pending" | "accepted" | "declined" | "removed" | "revoked"; revokedAt: Date | null };
+
 type HttpResponse<T = Record<string, unknown>> = {
   status: number;
   body: T;
@@ -41,65 +46,175 @@ class TestConfigService {
 
 class InMemoryPrismaService {
   private users = new Map<string, UserRecord>();
+  private families = new Map<string, FamilyRecord>();
+  private familyMembers = new Map<string, FamilyMemberRecord>();
+  private familyInvitations = new Map<string, InvitationRecord>();
+  private wishlistShareInvitations = new Map<string, WishlistShareRecord>();
   private nextUserId = 1;
+  private nextMemberId = 1;
   readonly isConfigured = false;
 
-  readonly client = {
-    user: {
-      findUnique: async ({ where }: { where: { email?: string; id?: string } }): Promise<UserRecord | null> => {
-        if (where.email) {
-          return this.users.get(where.email) ?? null;
-        }
+  readonly client = this.createClient();
 
-        return [...this.users.values()].find((user) => user.id === where.id) ?? null;
-      },
-      create: async ({ data }: { data: { name: string; email: string; passwordHash: string; phone?: string | null } }): Promise<UserRecord> => {
-        if (this.users.has(data.email)) {
-          const error = new Error("Unique constraint failed") as Error & { code: string };
-          error.code = "P2002";
-          throw error;
-        }
+  createFamily(familyId: string, members: Array<{ userId: string; role: FamilyMemberRecord["role"]; displayName?: string }>): void {
+    this.families.set(familyId, { id: familyId, name: familyId });
 
-        const user: UserRecord = {
-          id: `user-${this.nextUserId++}`,
-          name: data.name,
-          email: data.email,
-          passwordHash: data.passwordHash,
-          phone: data.phone ?? null,
-          createdAt: NOW,
-          updatedAt: NOW
-        };
-
-        this.users.set(user.email, user);
-        return user;
-      },
-      update: async ({ where, data }: { where: { id: string }; data: { name?: string; email?: string; phone?: string | null; passwordHash?: string } }): Promise<UserRecord> => {
-        const user = [...this.users.values()].find((candidate) => candidate.id === where.id);
-
-        if (!user) {
-          const error = new Error("Record not found") as Error & { code: string };
-          error.code = "P2025";
-          throw error;
-        }
-
-        if (data.email && data.email !== user.email && this.users.has(data.email)) {
-          const error = new Error("Unique constraint failed") as Error & { code: string };
-          error.code = "P2002";
-          throw error;
-        }
-
-        this.users.delete(user.email);
-        const updatedUser = {
-          ...user,
-          ...data,
-          updatedAt: new Date(NOW.getTime() + 1000)
-        };
-        this.users.set(updatedUser.email, updatedUser);
-
-        return updatedUser;
-      }
+    for (const member of members) {
+      const id = `member-${this.nextMemberId++}`;
+      this.familyMembers.set(id, {
+        id,
+        userId: member.userId,
+        familyId,
+        role: member.role,
+        displayName: member.displayName ?? member.role
+      });
     }
-  };
+  }
+
+  createPendingInvites(userId: string, familyId: string): void {
+    this.familyInvitations.set(`invite-${userId}-${familyId}`, { id: `invite-${userId}-${familyId}`, createdByUserId: userId, familyId, status: "pending", revokedAt: null });
+    this.wishlistShareInvitations.set(`share-${userId}-${familyId}`, { id: `share-${userId}-${familyId}`, createdByUserId: userId, familyId, status: "pending", revokedAt: null });
+  }
+
+  hasUser(userId: string): boolean {
+    return [...this.users.values()].some((user) => user.id === userId);
+  }
+
+  hasFamily(familyId: string): boolean {
+    return this.families.has(familyId);
+  }
+
+  memberCount(familyId: string): number {
+    return [...this.familyMembers.values()].filter((member) => member.familyId === familyId).length;
+  }
+
+  pendingInvitesBy(userId: string): number {
+    return [...this.familyInvitations.values(), ...this.wishlistShareInvitations.values()].filter((invite) => invite.createdByUserId === userId && invite.status === "pending").length;
+  }
+
+  private createClient(): any {
+    return {
+      $transaction: async <T>(callback: (tx: any) => Promise<T>): Promise<T> => callback(this.client),
+      user: {
+        findUnique: async ({ where }: { where: { email?: string; id?: string } }): Promise<UserRecord | null> => {
+          if (where.email) {
+            return this.users.get(where.email) ?? null;
+          }
+
+          return [...this.users.values()].find((user) => user.id === where.id) ?? null;
+        },
+        create: async ({ data }: { data: { name: string; email: string; passwordHash: string; phone?: string | null } }): Promise<UserRecord> => {
+          if (this.users.has(data.email)) {
+            const error = new Error("Unique constraint failed") as Error & { code: string };
+            error.code = "P2002";
+            throw error;
+          }
+
+          const user: UserRecord = {
+            id: `user-${this.nextUserId++}`,
+            name: data.name,
+            email: data.email,
+            passwordHash: data.passwordHash,
+            phone: data.phone ?? null,
+            createdAt: NOW,
+            updatedAt: NOW
+          };
+
+          this.users.set(user.email, user);
+          return user;
+        },
+        update: async ({ where, data }: { where: { id: string }; data: { name?: string; email?: string; phone?: string | null; passwordHash?: string } }): Promise<UserRecord> => {
+          const user = [...this.users.values()].find((candidate) => candidate.id === where.id);
+
+          if (!user) {
+            const error = new Error("Record not found") as Error & { code: string };
+            error.code = "P2025";
+            throw error;
+          }
+
+          if (data.email && data.email !== user.email && this.users.has(data.email)) {
+            const error = new Error("Unique constraint failed") as Error & { code: string };
+            error.code = "P2002";
+            throw error;
+          }
+
+          this.users.delete(user.email);
+          const updatedUser = {
+            ...user,
+            ...data,
+            updatedAt: new Date(NOW.getTime() + 1000)
+          };
+          this.users.set(updatedUser.email, updatedUser);
+
+          return updatedUser;
+        },
+        delete: async ({ where }: { where: { id: string } }): Promise<UserRecord> => {
+          const user = [...this.users.values()].find((candidate) => candidate.id === where.id);
+
+          if (!user) {
+            throw new Error("Record not found");
+          }
+
+          this.users.delete(user.email);
+          this.familyMembers.forEach((member) => {
+            if (member.userId === user.id) member.userId = null;
+          });
+          [...this.familyInvitations].forEach(([id, invite]) => {
+            if (invite.createdByUserId === user.id) this.familyInvitations.delete(id);
+          });
+          [...this.wishlistShareInvitations].forEach(([id, invite]) => {
+            if (invite.createdByUserId === user.id) this.wishlistShareInvitations.delete(id);
+          });
+          return user;
+        }
+      },
+      familyMember: {
+        findMany: async ({ where }: { where: { userId: string } }): Promise<FamilyMemberRecord[]> => [...this.familyMembers.values()].filter((member) => member.userId === where.userId),
+        count: async ({ where }: { where: { familyId: string; id?: { not: string }; role?: { in: readonly string[] } } }): Promise<number> => [...this.familyMembers.values()].filter((member) => member.familyId === where.familyId && (!where.id || member.id !== where.id.not) && (!where.role || where.role.in.includes(member.role))).length,
+        delete: async ({ where }: { where: { id: string } }): Promise<FamilyMemberRecord> => {
+          const member = this.familyMembers.get(where.id);
+          if (!member) throw new Error("Record not found");
+          this.familyMembers.delete(where.id);
+          return member;
+        }
+      },
+      family: {
+        delete: async ({ where }: { where: { id: string } }): Promise<FamilyRecord> => {
+          const family = this.families.get(where.id);
+          if (!family) throw new Error("Record not found");
+          this.families.delete(where.id);
+          [...this.familyMembers].forEach(([id, member]) => { if (member.familyId === where.id) this.familyMembers.delete(id); });
+          return family;
+        }
+      },
+      familyInvitation: {
+        updateMany: async ({ where, data }: { where: { createdByUserId: string; status: "pending" }; data: { status: "revoked"; revokedAt: Date } }) => {
+          let count = 0;
+          this.familyInvitations.forEach((invite) => {
+            if (invite.createdByUserId === where.createdByUserId && invite.status === where.status) {
+              invite.status = data.status;
+              invite.revokedAt = data.revokedAt;
+              count += 1;
+            }
+          });
+          return { count };
+        }
+      },
+      wishlistShareInvitation: {
+        updateMany: async ({ where, data }: { where: { createdByUserId: string; status: "pending" }; data: { status: "revoked"; revokedAt: Date } }) => {
+          let count = 0;
+          this.wishlistShareInvitations.forEach((invite) => {
+            if (invite.createdByUserId === where.createdByUserId && invite.status === where.status) {
+              invite.status = data.status;
+              invite.revokedAt = data.revokedAt;
+              count += 1;
+            }
+          });
+          return { count };
+        }
+      }
+    };
+  }
 
   async checkConnection(): Promise<boolean> {
     return false;
@@ -199,7 +314,7 @@ async function createContractHarness() {
     };
   }
 
-  return { app, services, request };
+  return { app, services, prisma, request };
 }
 
 function assertSuccessEnvelope(response: HttpResponse, expectedStatus: number): Record<string, unknown> {
@@ -221,15 +336,21 @@ function assertErrorEnvelope(response: HttpResponse, expectedStatus: number, exp
   assert(!("statusCode" in response.body), JSON.stringify(response.body));
 }
 
-async function register(request: Awaited<ReturnType<typeof createContractHarness>>["request"]): Promise<{ userId: string; token: string }> {
+async function register(
+  request: Awaited<ReturnType<typeof createContractHarness>>["request"],
+  input: { name?: string; email?: string; password?: string } = {}
+): Promise<{ userId: string; token: string; email: string; password: string }> {
+  const name = input.name ?? "Alpha";
+  const email = input.email ?? "alpha-contract@example.com";
+  const password = input.password ?? "correct-password";
   const response = await request("POST", "/auth/register", {
-    body: { name: "Alpha", email: "alpha-contract@example.com", password: "correct-password" }
+    body: { name, email, password }
   });
   const data = assertSuccessEnvelope(response, 201);
   const user = data.user as Record<string, unknown>;
   const tokens = data.tokens as Record<string, unknown>;
 
-  return { userId: user.id as string, token: tokens.accessToken as string };
+  return { userId: user.id as string, token: tokens.accessToken as string, email, password };
 }
 
 function createJwt(payload: Record<string, unknown>, secret = AUTH_SECRET): string {
@@ -241,7 +362,7 @@ function createJwt(payload: Record<string, unknown>, secret = AUTH_SECRET): stri
 }
 
 async function run(): Promise<void> {
-  const { app, services, request } = await createContractHarness();
+  const { app, services, prisma, request } = await createContractHarness();
 
   try {
     const health = await request("GET", "/health");
@@ -327,6 +448,79 @@ async function run(): Promise<void> {
     assertSuccessEnvelope(await request("POST", "/auth/login", {
       body: { email: "alpha-new@example.com", password: "new-password" }
     }), 201);
+
+    assertErrorEnvelope(await request("DELETE", "/me"), 401, API_ERROR_CODES.AUTH_REQUIRES_AUTH);
+    assertErrorEnvelope(await request("DELETE", "/me", {
+      token: alpha.token,
+      body: { confirmationText: "SLETT" }
+    }), 400, API_ERROR_CODES.VALIDATION_MISSING_FIELD);
+    assertErrorEnvelope(await request("DELETE", "/me", {
+      token: alpha.token,
+      body: { password: "wrong-password", confirmationText: "SLETT" }
+    }), 401, API_ERROR_CODES.AUTH_INVALID_CREDENTIALS);
+    assertErrorEnvelope(await request("DELETE", "/me", {
+      token: alpha.token,
+      body: { password: "new-password", confirmationText: "slett" }
+    }), 400, API_ERROR_CODES.VALIDATION_INVALID_INPUT);
+    assertErrorEnvelope(await request("DELETE", "/me", {
+      token: alpha.token,
+      body: { password: "new-password", confirmationText: "SLETT", keepData: true }
+    }), 400, API_ERROR_CODES.VALIDATION_INVALID_INPUT);
+
+    const memberUser = await register(request, { name: "Member", email: "member-delete@example.com", password: "member-password" });
+    const memberAdmin = await register(request, { name: "Member Admin", email: "member-admin@example.com", password: "member-admin-password" });
+    prisma.createFamily("family-member-delete", [
+      { userId: memberAdmin.userId, role: "OWNER" },
+      { userId: memberUser.userId, role: "CHILD" }
+    ]);
+    prisma.createPendingInvites(memberUser.userId, "family-member-delete");
+    assertSuccessEnvelope(await request("DELETE", "/me", {
+      token: memberUser.token,
+      body: { password: memberUser.password, confirmationText: "SLETT" }
+    }), 200);
+    assert.equal(prisma.hasUser(memberUser.userId), false);
+    assert.equal(prisma.memberCount("family-member-delete"), 1);
+    assert.equal(prisma.pendingInvitesBy(memberUser.userId), 0);
+
+    const coAdmin = await register(request, { name: "Co Admin", email: "co-admin-delete@example.com", password: "co-admin-password" });
+    const otherAdmin = await register(request, { name: "Other Admin", email: "other-admin-delete@example.com", password: "other-admin-password" });
+    prisma.createFamily("family-admin-delete", [
+      { userId: coAdmin.userId, role: "OWNER" },
+      { userId: otherAdmin.userId, role: "PARENT" }
+    ]);
+    assertSuccessEnvelope(await request("DELETE", "/me", {
+      token: coAdmin.token,
+      body: { password: coAdmin.password, confirmationText: "SLETT" }
+    }), 200);
+    assert.equal(prisma.hasUser(coAdmin.userId), false);
+    assert.equal(prisma.hasFamily("family-admin-delete"), true);
+    assert.equal(prisma.memberCount("family-admin-delete"), 1);
+
+    const lastAdmin = await register(request, { name: "Last Admin", email: "last-admin-delete@example.com", password: "last-admin-password" });
+    const child = await register(request, { name: "Child", email: "child-delete@example.com", password: "child-password" });
+    prisma.createFamily("family-last-admin", [
+      { userId: lastAdmin.userId, role: "OWNER" },
+      { userId: child.userId, role: "CHILD" }
+    ]);
+    assertErrorEnvelope(await request("DELETE", "/me", {
+      token: lastAdmin.token,
+      body: { password: lastAdmin.password, confirmationText: "SLETT" }
+    }), 400, API_ERROR_CODES.VALIDATION_INVALID_INPUT);
+    assert.equal(prisma.hasUser(lastAdmin.userId), true);
+    assert.equal(prisma.memberCount("family-last-admin"), 2);
+
+    const solo = await register(request, { name: "Solo", email: "solo-delete@example.com", password: "solo-password" });
+    prisma.createFamily("family-solo-delete", [{ userId: solo.userId, role: "OWNER" }]);
+    assertSuccessEnvelope(await request("DELETE", "/me", {
+      token: solo.token,
+      body: { password: solo.password, confirmationText: "SLETT" }
+    }), 200);
+    assert.equal(prisma.hasUser(solo.userId), false);
+    assert.equal(prisma.hasFamily("family-solo-delete"), false);
+    assertErrorEnvelope(await request("POST", "/auth/login", {
+      body: { email: solo.email, password: solo.password }
+    }), 401, API_ERROR_CODES.AUTH_INVALID_CREDENTIALS);
+    assertErrorEnvelope(await request("GET", "/me", { token: solo.token }), 401, API_ERROR_CODES.AUTH_INVALID_TOKEN);
 
     assertSuccessEnvelope(await request("GET", "/shopping", { token: alpha.token, familyId: "family-alpha" }), 200);
     assertErrorEnvelope(await request("GET", "/shopping"), 401, API_ERROR_CODES.AUTH_REQUIRES_AUTH);

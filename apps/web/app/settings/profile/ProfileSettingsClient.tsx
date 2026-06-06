@@ -10,10 +10,11 @@ import {
   KeyRound,
   LogOut,
   Mail,
-  Phone
+  Phone,
+  Trash2
 } from "lucide-react";
 import { SettingsCard, SettingsSection } from "../../../components/settings";
-import { ApiError, changeCurrentUserPassword, getCurrentUserProfile, updateCurrentUserProfile, type ChangePasswordInput, type UserProfile } from "../../../lib/api";
+import { ApiError, changeCurrentUserPassword, deleteCurrentUserAccount, getCurrentUserProfile, updateCurrentUserProfile, type ChangePasswordInput, type DeleteAccountInput, type UserProfile } from "../../../lib/api";
 import { clearAuthSession } from "../../../lib/session";
 
 type EditableField = "name" | "email" | "phone";
@@ -84,9 +85,9 @@ function EditableProfileRow({ field, icon, label, value, onEdit }: { field: Edit
   );
 }
 
-function AccountRow({ icon, label, onClick }: { icon: ReactNode; label: string; onClick: () => void }) {
+function AccountRow({ icon, label, onClick, destructive = false }: { icon: ReactNode; label: string; onClick: () => void; destructive?: boolean }) {
   return (
-    <button className="profile-settings-row" type="button" onClick={onClick}>
+    <button className={`profile-settings-row${destructive ? " profile-settings-row--destructive" : ""}`} type="button" onClick={onClick}>
       <span className="profile-settings-row__icon" aria-hidden="true">{icon}</span>
       <span className="profile-settings-row__label">{label}</span>
       <ChevronRight className="profile-settings-row__chevron" aria-hidden="true" />
@@ -274,6 +275,82 @@ function PasswordChangeSheet({
   );
 }
 
+function DeleteAccountSheet({
+  error,
+  isSaving,
+  onCancel,
+  onDelete
+}: {
+  error: string;
+  isSaving: boolean;
+  onCancel: () => void;
+  onDelete: (input: DeleteAccountInput) => Promise<void>;
+}) {
+  const [password, setPassword] = useState("");
+  const [confirmationText, setConfirmationText] = useState("");
+  const [localError, setLocalError] = useState("");
+  const visibleError = localError || error;
+
+  async function handleDelete() {
+    if (!password) {
+      setLocalError("Passord må fylles ut.");
+      return;
+    }
+
+    if (confirmationText !== "SLETT") {
+      setLocalError("Skriv SLETT for å bekrefte.");
+      return;
+    }
+
+    setLocalError("");
+    await onDelete({ password, confirmationText });
+  }
+
+  function clearAndSet(setValue: (value: string) => void, value: string) {
+    setValue(value);
+    setLocalError("");
+  }
+
+  return (
+    <div className="profile-edit-sheet" role="presentation">
+      <button className="profile-edit-sheet__backdrop" type="button" aria-label="Lukk sletting av konto" onClick={onCancel} disabled={isSaving} />
+      <section className="profile-edit-sheet__panel" role="dialog" aria-modal="true" aria-labelledby="delete-account-title">
+        <div className="profile-edit-sheet__handle" aria-hidden="true" />
+        <h2 id="delete-account-title">Slett konto</h2>
+        <p className="profile-edit-sheet__placeholder-text">Når du sletter kontoen mister du tilgang til familien, hendelser og innhold knyttet til kontoen din.</p>
+        <label className="profile-edit-sheet__field">
+          <span>Passord</span>
+          <input
+            autoFocus
+            autoComplete="current-password"
+            type="password"
+            value={password}
+            onChange={(event) => clearAndSet(setPassword, event.target.value)}
+            disabled={isSaving}
+          />
+        </label>
+        <label className="profile-edit-sheet__field">
+          <span>Skriv SLETT for å bekrefte</span>
+          <input
+            autoComplete="off"
+            type="text"
+            value={confirmationText}
+            onChange={(event) => clearAndSet(setConfirmationText, event.target.value)}
+            disabled={isSaving}
+          />
+        </label>
+        {visibleError ? <p className="profile-edit-sheet__error" role="alert">{visibleError}</p> : null}
+        <div className="profile-edit-sheet__actions">
+          <button className="profile-edit-sheet__button profile-edit-sheet__button--secondary" type="button" onClick={onCancel} disabled={isSaving}>Avbryt</button>
+          <button className="profile-edit-sheet__button profile-edit-sheet__button--danger" type="button" onClick={handleDelete} disabled={isSaving}>
+            {isSaving ? "Sletter…" : "Slett konto"}
+          </button>
+        </div>
+      </section>
+    </div>
+  );
+}
+
 export function ProfileSettingsClient() {
   const router = useRouter();
   const [profile, setProfile] = useState<Profile | null>(null);
@@ -286,6 +363,9 @@ export function ProfileSettingsClient() {
   const [isPasswordSheetOpen, setIsPasswordSheetOpen] = useState(false);
   const [passwordError, setPasswordError] = useState("");
   const [isPasswordSaving, setIsPasswordSaving] = useState(false);
+  const [isDeleteSheetOpen, setIsDeleteSheetOpen] = useState(false);
+  const [deleteError, setDeleteError] = useState("");
+  const [isDeletingAccount, setIsDeletingAccount] = useState(false);
 
   const loadProfile = useCallback(async () => {
     setIsLoading(true);
@@ -343,6 +423,35 @@ export function ProfileSettingsClient() {
     } finally {
       setIsPasswordSaving(false);
     }
+  }
+
+
+  async function deleteAccount(input: DeleteAccountInput) {
+    setIsDeletingAccount(true);
+    setDeleteError("");
+    setSuccessMessage("");
+
+    try {
+      await deleteCurrentUserAccount(input);
+      clearAuthSession();
+      setIsDeleteSheetOpen(false);
+      router.replace("/login?accountDeleted=1");
+    } catch (error) {
+      setDeleteError(getProfileErrorMessage(error, "Kontoen ble ikke slettet. Prøv igjen."));
+    } finally {
+      setIsDeletingAccount(false);
+    }
+  }
+
+  function openDeleteSheet() {
+    setDeleteError("");
+    setSuccessMessage("");
+    setIsDeleteSheetOpen(true);
+  }
+
+  function closeDeleteSheet() {
+    setDeleteError("");
+    setIsDeleteSheetOpen(false);
   }
 
   function openPasswordSheet() {
@@ -403,6 +512,7 @@ export function ProfileSettingsClient() {
           <SettingsSection title="Konto">
             <SettingsCard>
               <AccountRow icon={<KeyRound />} label="Endre passord" onClick={openPasswordSheet} />
+              <AccountRow icon={<Trash2 />} label="Slett konto" onClick={openDeleteSheet} destructive />
               <AccountRow icon={<LogOut />} label="Logg ut" onClick={handleLogout} />
             </SettingsCard>
           </SettingsSection>
@@ -410,6 +520,9 @@ export function ProfileSettingsClient() {
           <EditSheet field={editingField} profile={profile} error={saveError} isSaving={isSaving} onCancel={() => setEditingField(null)} onSave={saveProfile} />
           {isPasswordSheetOpen ? (
             <PasswordChangeSheet error={passwordError} isSaving={isPasswordSaving} onCancel={closePasswordSheet} onSave={savePassword} />
+          ) : null}
+          {isDeleteSheetOpen ? (
+            <DeleteAccountSheet error={deleteError} isSaving={isDeletingAccount} onCancel={closeDeleteSheet} onDelete={deleteAccount} />
           ) : null}
         </>
       ) : null}

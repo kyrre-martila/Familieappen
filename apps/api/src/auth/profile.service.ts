@@ -2,10 +2,12 @@ import { BadRequestException, ConflictException, HttpStatus, Injectable, NotFoun
 import { API_ERROR_CODES, ApiException } from "../common";
 import { PrismaService } from "../prisma";
 import { AuthService } from "./auth.service";
-import { ChangePasswordRequestDto, ChangePasswordResponseDto, UpdateUserProfileRequestDto, UserProfileDto } from "./dto/profile.dto";
+import { ChangePasswordRequestDto, ChangePasswordResponseDto, DeleteAccountRequestDto, DeleteAccountResponseDto, UpdateUserProfileRequestDto, UserProfileDto } from "./dto/profile.dto";
 
 const UPDATE_PROFILE_FIELDS = new Set(["name", "email", "phone"]);
 const CHANGE_PASSWORD_FIELDS = new Set(["currentPassword", "newPassword", "confirmPassword"]);
+const DELETE_ACCOUNT_FIELDS = new Set(["password", "confirmationText"]);
+const FAMILY_ADMIN_ROLES = ["OWNER", "PARENT"] as const;
 
 type DatabaseProfileUser = {
   id: string;
@@ -66,6 +68,78 @@ export class ProfileService {
     return { message: "Passordet ble oppdatert" };
   }
 
+
+  async deleteCurrentUserAccount(userId: string, input: DeleteAccountRequestDto = {}): Promise<DeleteAccountResponseDto> {
+    this.rejectUnknownDeleteAccountFields(input);
+
+    const password = this.validateRequiredPassword(input.password, "Password is required");
+    const confirmationText = this.validateConfirmationText(input.confirmationText);
+
+    if (confirmationText !== "SLETT") {
+      throw new BadRequestException("Skriv SLETT for å bekrefte.");
+    }
+
+    const user = await this.prisma.client.user.findUnique({ where: { id: userId } });
+
+    if (!user) {
+      throw new NotFoundException("User profile was not found");
+    }
+
+    if (!(await this.authService.verifyPassword(password, user.passwordHash))) {
+      throw new ApiException(HttpStatus.UNAUTHORIZED, API_ERROR_CODES.AUTH_INVALID_CREDENTIALS, "Passordet stemmer ikke.");
+    }
+
+    await this.prisma.client.$transaction(async (tx) => {
+      const memberships = await tx.familyMember.findMany({
+        where: { userId },
+        select: { id: true, familyId: true, role: true }
+      });
+
+      for (const membership of memberships) {
+        const [memberCount, otherAdminCount] = await Promise.all([
+          tx.familyMember.count({ where: { familyId: membership.familyId } }),
+          tx.familyMember.count({
+            where: {
+              familyId: membership.familyId,
+              id: { not: membership.id },
+              role: { in: [...FAMILY_ADMIN_ROLES] }
+            }
+          })
+        ]);
+
+        if (memberCount > 1 && this.isFamilyAdminRole(membership.role) && otherAdminCount < 1) {
+          throw new BadRequestException("Du må gi administratorrollen til noen andre før du kan slette kontoen.");
+        }
+      }
+
+      const revokedAt = new Date();
+
+      await tx.familyInvitation.updateMany({
+        where: { createdByUserId: userId, status: "pending" },
+        data: { status: "revoked", revokedAt }
+      });
+
+      await tx.wishlistShareInvitation.updateMany({
+        where: { createdByUserId: userId, status: "pending" },
+        data: { status: "revoked", revokedAt }
+      });
+
+      for (const membership of memberships) {
+        const memberCount = await tx.familyMember.count({ where: { familyId: membership.familyId } });
+
+        if (memberCount <= 1) {
+          await tx.family.delete({ where: { id: membership.familyId } });
+        } else {
+          await tx.familyMember.delete({ where: { id: membership.id } });
+        }
+      }
+
+      await tx.user.delete({ where: { id: userId } });
+    });
+
+    return { message: "Kontoen ble slettet." };
+  }
+
   async updateCurrentUserProfile(userId: string, input: UpdateUserProfileRequestDto = {}): Promise<UserProfileDto> {
     this.rejectUnknownFields(input);
 
@@ -113,6 +187,31 @@ export class ProfileService {
 
       throw error;
     }
+  }
+
+
+  private rejectUnknownDeleteAccountFields(input: DeleteAccountRequestDto): void {
+    if (typeof input !== "object" || input === null || Array.isArray(input)) {
+      throw new BadRequestException("Account deletion must be an object");
+    }
+
+    const unknownFields = Object.keys(input).filter((field) => !DELETE_ACCOUNT_FIELDS.has(field));
+
+    if (unknownFields.length > 0) {
+      throw new BadRequestException(`Unknown account deletion field: ${unknownFields[0]}`);
+    }
+  }
+
+  private validateConfirmationText(value: unknown): string {
+    if (typeof value !== "string" || value.length === 0) {
+      throw new BadRequestException("Confirmation text is required");
+    }
+
+    return value;
+  }
+
+  private isFamilyAdminRole(role: string): boolean {
+    return FAMILY_ADMIN_ROLES.some((adminRole) => adminRole === role);
   }
 
   private rejectUnknownPasswordFields(input: ChangePasswordRequestDto): void {

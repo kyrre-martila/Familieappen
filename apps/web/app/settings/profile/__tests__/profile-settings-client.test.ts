@@ -70,3 +70,45 @@ test("password success closes the dialog and shows calm feedback", () => {
   assert(tryBlock.includes("setIsPasswordSheetOpen(false)"));
   assert(tryBlock.includes("Passordet ble oppdatert"));
 });
+
+test("delete account dialog opens with required confirmation copy", () => {
+  assert(source.includes('label="Slett konto"'));
+  assert(source.includes("onClick={openDeleteSheet}"));
+  assert(source.includes("<DeleteAccountSheet"));
+  assert(source.includes("Når du sletter kontoen mister du tilgang til familien, hendelser og innhold knyttet til kontoen din."));
+  assert(source.includes("Skriv SLETT for å bekrefte"));
+});
+
+test("delete account validation and backend errors keep the dialog open", () => {
+  const sheetIndex = source.indexOf("function DeleteAccountSheet");
+  assert.notEqual(sheetIndex, -1);
+  assert.notEqual(source.indexOf('setLocalError("Skriv SLETT for å bekrefte.")', sheetIndex), -1);
+
+  const deleteAccountIndex = source.indexOf("async function deleteAccount");
+  assert.notEqual(deleteAccountIndex, -1);
+  const catchIndex = source.indexOf("} catch (error) {", deleteAccountIndex);
+  assert.notEqual(catchIndex, -1);
+  const finallyIndex = source.indexOf("} finally {", catchIndex);
+  assert.notEqual(finallyIndex, -1);
+  const catchBlock = source.slice(catchIndex, finallyIndex);
+
+  assert.equal(catchBlock.includes("setIsDeleteSheetOpen(false)"), false);
+  assert(catchBlock.includes("setDeleteError"));
+});
+
+test("delete account submit disables while loading and logs out after success", () => {
+  const sheetIndex = source.indexOf("function DeleteAccountSheet");
+  assert.notEqual(sheetIndex, -1);
+  assert.notEqual(source.indexOf('isSaving ? "Sletter…" : "Slett konto"', sheetIndex), -1);
+  assert.notEqual(source.indexOf('disabled={isSaving}', sheetIndex), -1);
+
+  const deleteAccountIndex = source.indexOf("async function deleteAccount");
+  assert.notEqual(deleteAccountIndex, -1);
+  const tryIndex = source.indexOf("try {", deleteAccountIndex);
+  const catchIndex = source.indexOf("} catch (error) {", tryIndex);
+  const tryBlock = source.slice(tryIndex, catchIndex);
+
+  assert(tryBlock.includes("deleteCurrentUserAccount(input)"));
+  assert(tryBlock.includes("clearAuthSession()"));
+  assert(tryBlock.includes('router.replace("/login?accountDeleted=1")'));
+});

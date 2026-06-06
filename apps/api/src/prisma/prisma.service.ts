@@ -19,6 +19,7 @@ type PrismaDelegate = {
   delete(args: Record<string, unknown>): Promise<any>;
   deleteMany(args: Record<string, unknown>): Promise<any>;
   update(args: Record<string, unknown>): Promise<any>;
+  updateMany(args: Record<string, unknown>): Promise<{ count: number }>;
   count(args: Record<string, unknown>): Promise<number>;
 };
 
@@ -43,6 +44,8 @@ interface PrismaClientConnection {
   reminder: PrismaDelegate;
   reminderAudienceMember: PrismaDelegate;
   wishlistItem: PrismaDelegate;
+  wishlistShareInvitation: PrismaDelegate;
+  familyInvitation: PrismaDelegate;
   $connect(): Promise<void>;
   $disconnect(): Promise<void>;
   $queryRaw<T = unknown>(query: TemplateStringsArray): Promise<T>;
