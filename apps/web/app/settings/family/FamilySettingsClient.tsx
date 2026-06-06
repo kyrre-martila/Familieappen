@@ -87,17 +87,24 @@ function inviteEmailDeliveryFailed(response: unknown) {
   if (!response || typeof response !== "object") return false;
 
   const payload = response as {
+    email?: {
+      ok?: boolean;
+    };
     emailSent?: boolean;
     emailDelivered?: boolean;
     emailDeliveryStatus?: string;
     emailDeliveryState?: string;
     deliveryStatus?: string;
   };
+
+  if (payload.email?.ok === false) return true;
+
   const deliveryState = payload.emailDeliveryStatus ?? payload.emailDeliveryState ?? payload.deliveryStatus;
 
   if (payload.emailSent === false || payload.emailDelivered === false) return true;
   return typeof deliveryState === "string" && ["failed", "failure", "error", "not_sent"].includes(deliveryState.toLowerCase());
 }
+
 
 function FamilyNameSheet({ name, isPending, onCancel, onSave }: { name: string; isPending: boolean; onCancel: () => void; onSave: (name: string) => void }) {
   const [value, setValue] = useState(name);
