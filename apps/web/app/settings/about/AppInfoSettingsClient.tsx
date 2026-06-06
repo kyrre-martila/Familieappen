@@ -4,7 +4,6 @@ import Link from "next/link";
 import { useState, type ReactNode } from "react";
 import { Bug, ChevronLeft, ChevronRight, FileText, Info, Mail, MessageSquare } from "lucide-react";
 import { SettingsCard, SettingsSection } from "../../../components/settings";
-import { useFamilyAccess } from "../../../components/ProtectedFamilyRoute";
 
 type SheetMode = "feedback" | "bug" | "contact" | "license" | null;
 type FeedbackType = "feedback" | "bug";
@@ -51,10 +50,6 @@ function AppInfoRow({ description, icon, label, onClick, value }: AppInfoRowProp
 }
 
 function FeedbackSheet({ type, onCancel, onSent }: { type: FeedbackType; onCancel: () => void; onSent: () => void }) {
-  const access = useFamilyAccess();
-  const activeFamilyId = access.familyContext?.activeFamilyId ?? null;
-  const activeFamily = access.familyContext?.families.find((item) => item.family.id === activeFamilyId) ?? null;
-  const userId = activeFamily?.membership.userId ?? null;
   const [message, setMessage] = useState("");
   const [status, setStatus] = useState<"idle" | "sending" | "sent" | "error">("idle");
   const [error, setError] = useState("");
@@ -77,9 +72,7 @@ function FeedbackSheet({ type, onCancel, onSent }: { type: FeedbackType; onCance
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           type,
-          message: trimmedMessage,
-          userId,
-          familyId: activeFamilyId
+          message: trimmedMessage
         })
       });
 
@@ -140,10 +133,10 @@ function ContactSheet({ supportEmail, onClose }: { supportEmail: string | null; 
         <h2 id="app-info-contact-title">Kontakt oss</h2>
         {supportEmail ? (
           <p className="profile-edit-sheet__placeholder-text">
-            <a className="app-info-email-link" href={`mailto:${supportEmail}`}>{supportEmail}</a>
+            Vi hjelper deg på <a className="app-info-email-link" href={`mailto:${supportEmail}`}>{supportEmail}</a>.
           </p>
         ) : (
-          <p className="profile-edit-sheet__placeholder-text">Kontaktinformasjon kommer her.</p>
+          <p className="profile-edit-sheet__placeholder-text">Bruk kontaktadressen i app-butikken hvis e-post ikke er satt opp.</p>
         )}
         <div className="profile-edit-sheet__actions profile-edit-sheet__actions--single">
           <button className="profile-edit-sheet__button profile-edit-sheet__button--primary" type="button" onClick={onClose}>Lukk</button>
@@ -160,7 +153,7 @@ function LicenseSheet({ onClose }: { onClose: () => void }) {
       <section className="profile-edit-sheet__panel profile-edit-sheet__panel--compact" role="dialog" aria-modal="true" aria-labelledby="app-info-license-title">
         <div className="profile-edit-sheet__handle" aria-hidden="true" />
         <h2 id="app-info-license-title">Lisensinformasjon</h2>
-        <p className="profile-edit-sheet__placeholder-text">Lisensinformasjon kommer her.</p>
+        <p className="profile-edit-sheet__placeholder-text">Tredjepartslisenser publiseres sammen med endelig app-pakke.</p>
         <div className="profile-edit-sheet__actions profile-edit-sheet__actions--single">
           <button className="profile-edit-sheet__button profile-edit-sheet__button--primary" type="button" onClick={onClose}>Lukk</button>
         </div>
