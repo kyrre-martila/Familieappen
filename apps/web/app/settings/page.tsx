@@ -47,9 +47,9 @@ export default function SettingsPage() {
         </SettingsSection>
 
         <footer className="settings-footer" aria-label="Juridiske lenker">
-          <a href="#personvern">Personvern</a>
+          <a href="/privacy">Personvern</a>
           <span aria-hidden="true">|</span>
-          <a href="#vilkar">Vilkår</a>
+          <a href="/terms">Vilkår</a>
         </footer>
       </main>
     </ProtectedFamilyRoute>
