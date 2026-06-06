@@ -5,6 +5,8 @@ import { HttpStatus, INestApplication, NotFoundException } from "@nestjs/common"
 import { Test } from "@nestjs/testing";
 import { AuthController } from "../src/auth/auth.controller";
 import { AuthService } from "../src/auth/auth.service";
+import { ProfileController } from "../src/auth/profile.controller";
+import { ProfileService } from "../src/auth/profile.service";
 import { AuthGuard } from "../src/auth/guards/auth.guard";
 import { API_ERROR_CODES, ApiException, HttpExceptionFilter } from "../src/common";
 import { ConfigService } from "../src/config";
@@ -12,7 +14,7 @@ import { HealthController } from "../src/health/health.controller";
 import { PrismaService } from "../src/prisma";
 import { ShoppingController } from "../src/shopping/shopping.controller";
 import { ShoppingService } from "../src/shopping/shopping.service";
-import { PublicWishlistsController } from "../src/wishlists/wishlists.controller";
+import { WishlistsController } from "../src/wishlists/wishlists.controller";
 import { WishlistsService } from "../src/wishlists/wishlists.service";
 
 type UserRecord = {
@@ -20,6 +22,7 @@ type UserRecord = {
   name: string;
   email: string;
   passwordHash: string;
+  phone: string | null;
   createdAt: Date;
   updatedAt: Date;
 };
@@ -50,7 +53,7 @@ class InMemoryPrismaService {
 
         return [...this.users.values()].find((user) => user.id === where.id) ?? null;
       },
-      create: async ({ data }: { data: { name: string; email: string; passwordHash: string } }): Promise<UserRecord> => {
+      create: async ({ data }: { data: { name: string; email: string; passwordHash: string; phone?: string | null } }): Promise<UserRecord> => {
         if (this.users.has(data.email)) {
           const error = new Error("Unique constraint failed") as Error & { code: string };
           error.code = "P2002";
@@ -62,12 +65,38 @@ class InMemoryPrismaService {
           name: data.name,
           email: data.email,
           passwordHash: data.passwordHash,
+          phone: data.phone ?? null,
           createdAt: NOW,
           updatedAt: NOW
         };
 
         this.users.set(user.email, user);
         return user;
+      },
+      update: async ({ where, data }: { where: { id: string }; data: { name?: string; email?: string; phone?: string | null } }): Promise<UserRecord> => {
+        const user = [...this.users.values()].find((candidate) => candidate.id === where.id);
+
+        if (!user) {
+          const error = new Error("Record not found") as Error & { code: string };
+          error.code = "P2025";
+          throw error;
+        }
+
+        if (data.email && data.email !== user.email && this.users.has(data.email)) {
+          const error = new Error("Unique constraint failed") as Error & { code: string };
+          error.code = "P2002";
+          throw error;
+        }
+
+        this.users.delete(user.email);
+        const updatedUser = {
+          ...user,
+          ...data,
+          updatedAt: new Date(NOW.getTime() + 1000)
+        };
+        this.users.set(updatedUser.email, updatedUser);
+
+        return updatedUser;
       }
     }
   };
@@ -108,7 +137,7 @@ function createContractServices() {
       }
     },
     wishlistsService: {
-      getPublicWishlist: async (token: string) => {
+      getInvitePreview: async (token: string) => {
         if (!shares.has(token)) {
           throw new NotFoundException("Shared wishlist was not found");
         }
@@ -123,9 +152,10 @@ async function createContractHarness() {
   const services = createContractServices();
   const prisma = new InMemoryPrismaService();
   const moduleRef = await Test.createTestingModule({
-    controllers: [AuthController, HealthController, ShoppingController, PublicWishlistsController],
+    controllers: [AuthController, ProfileController, HealthController, ShoppingController, WishlistsController],
     providers: [
       AuthService,
+      ProfileService,
       AuthGuard,
       { provide: ConfigService, useClass: TestConfigService },
       { provide: PrismaService, useValue: prisma },
@@ -220,6 +250,37 @@ async function run(): Promise<void> {
     const alpha = await register(request);
     services.grant(alpha.userId, "family-alpha");
 
+    const profile = assertSuccessEnvelope(await request("GET", "/me", { token: alpha.token }), 200);
+    assert.equal(profile.id, alpha.userId);
+    assert.equal(profile.name, "Alpha");
+    assert.equal(profile.email, "alpha-contract@example.com");
+    assert.equal(profile.phone, null);
+
+    assertErrorEnvelope(await request("GET", "/me"), 401, API_ERROR_CODES.AUTH_REQUIRES_AUTH);
+
+    const beta = await request("POST", "/auth/register", {
+      body: { name: "Beta", email: "beta-contract@example.com", password: "correct-password" }
+    });
+    assertSuccessEnvelope(beta, 201);
+
+    const updatedProfile = assertSuccessEnvelope(await request("PATCH", "/me", {
+      token: alpha.token,
+      body: { name: "Alpha Oppdatert", email: "alpha-new@example.com", phone: "+47 123 45 678" }
+    }), 200);
+    assert.equal(updatedProfile.name, "Alpha Oppdatert");
+    assert.equal(updatedProfile.email, "alpha-new@example.com");
+    assert.equal(updatedProfile.phone, "+47 123 45 678");
+    assertSuccessEnvelope(await request("POST", "/auth/login", {
+      body: { email: "alpha-new@example.com", password: "correct-password" }
+    }), 201);
+    assertErrorEnvelope(await request("POST", "/auth/login", {
+      body: { email: "alpha-contract@example.com", password: "correct-password" }
+    }), 401, API_ERROR_CODES.AUTH_INVALID_CREDENTIALS);
+
+    assertErrorEnvelope(await request("PATCH", "/me", { token: alpha.token, body: { email: "not-an-email" } }), 400, API_ERROR_CODES.VALIDATION_INVALID_INPUT);
+    assertErrorEnvelope(await request("PATCH", "/me", { token: alpha.token, body: { email: "beta-contract@example.com" } }), 409, API_ERROR_CODES.AUTH_EMAIL_ALREADY_EXISTS);
+    assertErrorEnvelope(await request("PATCH", "/me", { token: alpha.token, body: { displayName: "Nope" } }), 400, API_ERROR_CODES.VALIDATION_INVALID_INPUT);
+
     assertSuccessEnvelope(await request("GET", "/shopping", { token: alpha.token, familyId: "family-alpha" }), 200);
     assertErrorEnvelope(await request("GET", "/shopping"), 401, API_ERROR_CODES.AUTH_REQUIRES_AUTH);
     assertErrorEnvelope(await request("GET", "/shopping", { token: "not-a-jwt", familyId: "family-alpha" }), 401, API_ERROR_CODES.AUTH_INVALID_TOKEN);
@@ -232,7 +293,7 @@ async function run(): Promise<void> {
     assertErrorEnvelope(await request("POST", "/auth/login", {
       body: { email: "alpha-contract@example.com", password: "wrong-password" }
     }), 401, API_ERROR_CODES.AUTH_INVALID_CREDENTIALS);
-    assertErrorEnvelope(await request("GET", "/public/wishlists/invalid-share-token"), 404, API_ERROR_CODES.WISHLIST_INVALID_SHARE_TOKEN);
+    assertErrorEnvelope(await request("GET", "/wishlist/invites/invalid-share-token"), 404, API_ERROR_CODES.WISHLIST_INVALID_SHARE_TOKEN);
   } finally {
     await app.close();
   }

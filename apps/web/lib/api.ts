@@ -80,10 +80,13 @@ export interface AuthUser {
   id: string;
   name: string;
   email: string;
+  phone: string | null;
   createdAt: string;
   updatedAt: string;
 }
 
+export type UserProfile = AuthUser;
+export type UserProfileUpdate = Partial<Pick<UserProfile, "name" | "email" | "phone">>;
 
 export interface NotificationPreferences {
   id: string;
@@ -155,6 +158,17 @@ export async function login(input: { email: string; password: string }): Promise
     method: "POST",
     body: input,
     includeAuth: false
+  });
+}
+
+export async function getCurrentUserProfile(): Promise<UserProfile> {
+  return apiRequest<UserProfile>("/me");
+}
+
+export async function updateCurrentUserProfile(input: UserProfileUpdate): Promise<UserProfile> {
+  return apiRequest<UserProfile>("/me", {
+    method: "PATCH",
+    body: input
   });
 }
 
