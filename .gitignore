@@ -36,3 +36,7 @@ yarn-error.log*
 *.p12
 *.key
 *.mobileprovision
+
+# runtime scratch storage
+var/
+apps/web/var/

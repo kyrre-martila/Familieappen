@@ -12456,3 +12456,77 @@ button.family-settings-row:focus-visible:not(:disabled) {
     min-height: 4.25rem;
   }
 }
+
+/* Run 6 app-info settings screen */
+.app-info-settings {
+  gap: clamp(var(--space-l), 4vw, var(--section-gap));
+}
+
+.app-info-row {
+  width: 100%;
+  border: 0;
+  background: transparent;
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+
+.app-info-row--static {
+  cursor: default;
+}
+
+.app-info-row--static:hover,
+.app-info-row--static:focus-visible {
+  background: transparent;
+}
+
+.app-info-row__value {
+  color: color-mix(in srgb, var(--color-muted) 92%, var(--color-primary-strong));
+  font-size: clamp(1rem, 0.92rem + 0.35vw, 1.18rem);
+  font-weight: 700;
+  line-height: 1.35;
+}
+
+.app-info-textarea {
+  width: 100%;
+  min-height: 8rem;
+  resize: vertical;
+  border: 1px solid color-mix(in srgb, var(--color-border) 88%, transparent);
+  border-radius: var(--radius-m);
+  padding: 0.95rem 1rem;
+  background: var(--color-surface-warm);
+  color: var(--color-text);
+  font: inherit;
+  font-size: var(--text-body);
+  font-weight: 650;
+  line-height: 1.45;
+}
+
+.app-info-textarea:focus {
+  border-color: color-mix(in srgb, var(--color-primary) 60%, var(--color-border));
+  outline: 3px solid color-mix(in srgb, var(--color-primary-soft) 72%, transparent);
+}
+
+.app-info-sheet__success {
+  margin: 0;
+  color: var(--color-primary-strong);
+  font-size: var(--text-small);
+  font-weight: 780;
+}
+
+.app-info-email-link {
+  color: var(--color-primary-strong);
+  font-weight: 850;
+  text-decoration: none;
+}
+
+.app-info-email-link:hover,
+.app-info-email-link:focus-visible {
+  text-decoration: underline;
+  text-underline-offset: 0.24em;
+}
+
+.profile-edit-sheet__button:disabled {
+  cursor: wait;
+  opacity: 0.72;
+}
