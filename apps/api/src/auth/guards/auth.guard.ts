@@ -1,4 +1,5 @@
 import { CanActivate, ExecutionContext, Injectable, UnauthorizedException } from "@nestjs/common";
+import { PrismaService } from "../../prisma";
 import { AuthService } from "../auth.service";
 
 type RequestWithAuthUser = {
@@ -13,16 +14,27 @@ type RequestWithAuthUser = {
 
 @Injectable()
 export class AuthGuard implements CanActivate {
-  constructor(private readonly authService: AuthService) {}
+  constructor(
+    private readonly authService: AuthService,
+    private readonly prisma: PrismaService
+  ) {}
 
-  canActivate(context: ExecutionContext): boolean {
+  async canActivate(context: ExecutionContext): Promise<boolean> {
     const request = context.switchToHttp().getRequest<RequestWithAuthUser>();
     const token = this.getBearerToken(request.headers?.authorization);
     const payload = this.authService.verifyAccessToken(token);
+    const user = await this.prisma.client.user.findUnique({
+      where: { id: payload.sub },
+      select: { id: true, email: true }
+    });
+
+    if (!user) {
+      throw new UnauthorizedException("Account is no longer active");
+    }
 
     request.user = {
-      id: payload.sub,
-      email: payload.email
+      id: user.id,
+      email: user.email
     };
 
     return true;

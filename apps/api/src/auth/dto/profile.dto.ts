@@ -22,3 +22,13 @@ export interface ChangePasswordRequestDto {
 export interface ChangePasswordResponseDto {
   message: string;
 }
+
+
+export interface DeleteAccountRequestDto {
+  password?: unknown;
+  confirmationText?: unknown;
+}
+
+export interface DeleteAccountResponseDto {
+  message: string;
+}

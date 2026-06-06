@@ -1,7 +1,7 @@
-import { Body, Controller, Get, Patch, Post, Req, UseGuards } from "@nestjs/common";
+import { Body, Controller, Delete, Get, Patch, Post, Req, UseGuards } from "@nestjs/common";
 import { ApiResponse, createApiResponse } from "../common";
 import { AuthGuard } from "./guards/auth.guard";
-import { ChangePasswordRequestDto, ChangePasswordResponseDto, UpdateUserProfileRequestDto, UserProfileDto } from "./dto/profile.dto";
+import { ChangePasswordRequestDto, ChangePasswordResponseDto, DeleteAccountRequestDto, DeleteAccountResponseDto, UpdateUserProfileRequestDto, UserProfileDto } from "./dto/profile.dto";
 import { ProfileService } from "./profile.service";
 
 type AuthenticatedRequest = {
@@ -27,6 +27,14 @@ export class ProfileController {
     @Body() body: ChangePasswordRequestDto
   ): Promise<ApiResponse<ChangePasswordResponseDto>> {
     return createApiResponse(await this.profileService.changeCurrentUserPassword(request.user.id, body));
+  }
+
+  @Delete()
+  async deleteCurrentUserAccount(
+    @Req() request: AuthenticatedRequest,
+    @Body() body: DeleteAccountRequestDto
+  ): Promise<ApiResponse<DeleteAccountResponseDto>> {
+    return createApiResponse(await this.profileService.deleteCurrentUserAccount(request.user.id, body));
   }
 
   @Patch()

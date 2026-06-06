@@ -98,6 +98,15 @@ export interface ChangePasswordResponse {
   message: string;
 }
 
+export interface DeleteAccountInput {
+  password: string;
+  confirmationText: string;
+}
+
+export interface DeleteAccountResponse {
+  message: string;
+}
+
 export interface NotificationPreferences {
   id: string;
   userId: string;
@@ -185,6 +194,13 @@ export async function updateCurrentUserProfile(input: UserProfileUpdate): Promis
 export async function changeCurrentUserPassword(input: ChangePasswordInput): Promise<ChangePasswordResponse> {
   return apiRequest<ChangePasswordResponse>("/me/change-password", {
     method: "POST",
+    body: input
+  });
+}
+
+export async function deleteCurrentUserAccount(input: DeleteAccountInput): Promise<DeleteAccountResponse> {
+  return apiRequest<DeleteAccountResponse>("/me", {
+    method: "DELETE",
     body: input
   });
 }
