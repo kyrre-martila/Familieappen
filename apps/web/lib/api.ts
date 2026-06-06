@@ -84,6 +84,21 @@ export interface AuthUser {
   updatedAt: string;
 }
 
+
+export interface NotificationPreferences {
+  id: string;
+  userId: string;
+  calendar_events: boolean;
+  calendar_reminders: boolean;
+  husk_reminders: boolean;
+  wishlist_shared: boolean;
+  family_invites: boolean;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export type NotificationPreferenceUpdate = Partial<Pick<NotificationPreferences, "calendar_events" | "calendar_reminders" | "husk_reminders" | "wishlist_shared" | "family_invites">>;
+
 export interface AuthResponse {
   user: AuthUser;
   tokens: {
@@ -683,6 +698,18 @@ export async function deleteSchoolWeekReminder(familyId: string, reminderId: str
   if (input.occurrenceDate) params.set("occurrenceDate", input.occurrenceDate);
   const suffix = params.toString() ? `?${params.toString()}` : "";
   return apiRequest<SchoolWeekReminder>(`/school-week/${encodeURIComponent(reminderId)}${suffix}`, { method: "DELETE", familyId });
+}
+
+
+export async function getNotificationPreferences(): Promise<NotificationPreferences> {
+  return apiRequest<NotificationPreferences>("/notification-preferences");
+}
+
+export async function updateNotificationPreferences(input: NotificationPreferenceUpdate): Promise<NotificationPreferences> {
+  return apiRequest<NotificationPreferences>("/notification-preferences", {
+    method: "PATCH",
+    body: input
+  });
 }
 
 export async function getTasks(familyId: string): Promise<Task[]> {

@@ -12388,3 +12388,71 @@ button.family-settings-row:focus-visible:not(:disabled) {
     flex-direction: column;
   }
 }
+
+/* Run 6 notification settings screen */
+.notification-settings {
+  gap: clamp(var(--space-l), 4vw, var(--section-gap));
+}
+
+.notification-settings__hero {
+  padding-block: var(--space-xs);
+}
+
+.notification-settings__sections {
+  display: grid;
+  gap: var(--space-l);
+}
+
+.notification-settings-row {
+  display: flex;
+  min-height: clamp(4.35rem, 3.9rem + 1.5vw, 5.35rem);
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-m);
+  padding: clamp(1.05rem, 0.95rem + 0.65vw, 1.55rem);
+  cursor: pointer;
+}
+
+.notification-settings-row:not(:last-child) {
+  border-bottom: 1px solid color-mix(in srgb, var(--color-border) 74%, transparent);
+}
+
+.notification-settings-row:hover,
+.notification-settings-row:focus-within {
+  background: color-mix(in srgb, var(--color-primary-soft) 14%, transparent);
+}
+
+.notification-settings-row__label {
+  color: #111111;
+  font-size: clamp(1.04rem, 3vw, 1.3rem);
+  font-weight: 840;
+  letter-spacing: -0.045em;
+  line-height: 1.2;
+}
+
+.notification-settings-row__toggle:focus-visible {
+  outline: 3px solid color-mix(in srgb, var(--color-primary) 34%, transparent);
+  outline-offset: 0.18rem;
+}
+
+.notification-settings-row__toggle:disabled {
+  cursor: wait;
+  opacity: 0.72;
+}
+
+.notification-settings__error {
+  margin: 0;
+  border: 1px solid color-mix(in srgb, var(--color-danger, #b42318) 24%, var(--color-border));
+  border-radius: var(--radius-m);
+  padding: var(--space-s) var(--space-m);
+  background: color-mix(in srgb, var(--color-danger, #b42318) 8%, var(--color-surface));
+  color: color-mix(in srgb, var(--color-danger, #b42318) 82%, #111111);
+  font-size: var(--text-small);
+  font-weight: 760;
+}
+
+@media (max-width: 38rem) {
+  .notification-settings-row {
+    min-height: 4.25rem;
+  }
+}

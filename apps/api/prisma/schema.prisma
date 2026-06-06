@@ -49,8 +49,26 @@ model User {
   receivedWishlistShareInvitations WishlistShareInvitation[] @relation("WishlistShareInvitationInvitedUser")
   sentFamilyInvitations FamilyInvitation[] @relation("FamilyInvitationCreatedByUser")
   receivedFamilyInvitations FamilyInvitation[] @relation("FamilyInvitationInvitedUser")
+  notificationPreferences NotificationPreference?
 
   @@map("users")
+}
+
+
+model NotificationPreference {
+  id                String   @id @default(cuid())
+  userId            String   @unique
+  calendarEvents    Boolean  @default(true)
+  calendarReminders Boolean  @default(true)
+  huskReminders     Boolean  @default(true)
+  wishlistShared    Boolean  @default(true)
+  familyInvites     Boolean  @default(true)
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
+  user              User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@map("notification_preferences")
 }
 
 model Family {
