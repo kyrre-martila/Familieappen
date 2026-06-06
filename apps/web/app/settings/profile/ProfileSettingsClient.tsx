@@ -7,12 +7,13 @@ import {
   ChevronLeft,
   ChevronRight,
   CircleUserRound,
+  KeyRound,
   LogOut,
   Mail,
   Phone
 } from "lucide-react";
 import { SettingsCard, SettingsSection } from "../../../components/settings";
-import { ApiError, getCurrentUserProfile, updateCurrentUserProfile, type UserProfile } from "../../../lib/api";
+import { ApiError, changeCurrentUserPassword, getCurrentUserProfile, updateCurrentUserProfile, type ChangePasswordInput, type UserProfile } from "../../../lib/api";
 import { clearAuthSession } from "../../../lib/session";
 
 type EditableField = "name" | "email" | "phone";
@@ -177,6 +178,102 @@ function EditSheet({
   );
 }
 
+function PasswordChangeSheet({
+  error,
+  isSaving,
+  onCancel,
+  onSave
+}: {
+  error: string;
+  isSaving: boolean;
+  onCancel: () => void;
+  onSave: (input: ChangePasswordInput) => Promise<void>;
+}) {
+  const [currentPassword, setCurrentPassword] = useState("");
+  const [newPassword, setNewPassword] = useState("");
+  const [confirmPassword, setConfirmPassword] = useState("");
+  const [localError, setLocalError] = useState("");
+  const visibleError = localError || error;
+
+  async function handleSave() {
+    if (!currentPassword) {
+      setLocalError("Nåværende passord må fylles ut.");
+      return;
+    }
+
+    if (!newPassword) {
+      setLocalError("Nytt passord må fylles ut.");
+      return;
+    }
+
+    if (!confirmPassword) {
+      setLocalError("Gjenta nytt passord.");
+      return;
+    }
+
+    if (newPassword !== confirmPassword) {
+      setLocalError("Passordene er ikke like.");
+      return;
+    }
+
+    setLocalError("");
+    await onSave({ currentPassword, newPassword, confirmPassword });
+  }
+
+  function updatePasswordValue(setValue: (value: string) => void, value: string) {
+    setValue(value);
+    setLocalError("");
+  }
+
+  return (
+    <div className="profile-edit-sheet" role="presentation">
+      <button className="profile-edit-sheet__backdrop" type="button" aria-label="Lukk passordendring" onClick={onCancel} disabled={isSaving} />
+      <section className="profile-edit-sheet__panel" role="dialog" aria-modal="true" aria-labelledby="password-change-title">
+        <div className="profile-edit-sheet__handle" aria-hidden="true" />
+        <h2 id="password-change-title">Endre passord</h2>
+        <label className="profile-edit-sheet__field">
+          <span>Nåværende passord</span>
+          <input
+            autoFocus
+            autoComplete="current-password"
+            type="password"
+            value={currentPassword}
+            onChange={(event) => updatePasswordValue(setCurrentPassword, event.target.value)}
+            disabled={isSaving}
+          />
+        </label>
+        <label className="profile-edit-sheet__field">
+          <span>Nytt passord</span>
+          <input
+            autoComplete="new-password"
+            type="password"
+            value={newPassword}
+            onChange={(event) => updatePasswordValue(setNewPassword, event.target.value)}
+            disabled={isSaving}
+          />
+        </label>
+        <label className="profile-edit-sheet__field">
+          <span>Gjenta nytt passord</span>
+          <input
+            autoComplete="new-password"
+            type="password"
+            value={confirmPassword}
+            onChange={(event) => updatePasswordValue(setConfirmPassword, event.target.value)}
+            disabled={isSaving}
+          />
+        </label>
+        {visibleError ? <p className="profile-edit-sheet__error" role="alert">{visibleError}</p> : null}
+        <div className="profile-edit-sheet__actions">
+          <button className="profile-edit-sheet__button profile-edit-sheet__button--secondary" type="button" onClick={onCancel} disabled={isSaving}>Avbryt</button>
+          <button className="profile-edit-sheet__button profile-edit-sheet__button--primary" type="button" onClick={handleSave} disabled={isSaving}>
+            {isSaving ? "Oppdaterer…" : "Oppdater passord"}
+          </button>
+        </div>
+      </section>
+    </div>
+  );
+}
+
 export function ProfileSettingsClient() {
   const router = useRouter();
   const [profile, setProfile] = useState<Profile | null>(null);
@@ -186,6 +283,9 @@ export function ProfileSettingsClient() {
   const [saveError, setSaveError] = useState("");
   const [isSaving, setIsSaving] = useState(false);
   const [successMessage, setSuccessMessage] = useState("");
+  const [isPasswordSheetOpen, setIsPasswordSheetOpen] = useState(false);
+  const [passwordError, setPasswordError] = useState("");
+  const [isPasswordSaving, setIsPasswordSaving] = useState(false);
 
   const loadProfile = useCallback(async () => {
     setIsLoading(true);
@@ -227,6 +327,33 @@ export function ProfileSettingsClient() {
     } finally {
       setIsSaving(false);
     }
+  }
+
+  async function savePassword(input: ChangePasswordInput) {
+    setIsPasswordSaving(true);
+    setPasswordError("");
+    setSuccessMessage("");
+
+    try {
+      const response = await changeCurrentUserPassword(input);
+      setIsPasswordSheetOpen(false);
+      setSuccessMessage(response.message || "Passordet ble oppdatert");
+    } catch (error) {
+      setPasswordError(getProfileErrorMessage(error, "Passordet ble ikke oppdatert. Prøv igjen."));
+    } finally {
+      setIsPasswordSaving(false);
+    }
+  }
+
+  function openPasswordSheet() {
+    setPasswordError("");
+    setSuccessMessage("");
+    setIsPasswordSheetOpen(true);
+  }
+
+  function closePasswordSheet() {
+    setPasswordError("");
+    setIsPasswordSheetOpen(false);
   }
 
   function handleLogout() {
@@ -275,11 +402,15 @@ export function ProfileSettingsClient() {
 
           <SettingsSection title="Konto">
             <SettingsCard>
+              <AccountRow icon={<KeyRound />} label="Endre passord" onClick={openPasswordSheet} />
               <AccountRow icon={<LogOut />} label="Logg ut" onClick={handleLogout} />
             </SettingsCard>
           </SettingsSection>
 
           <EditSheet field={editingField} profile={profile} error={saveError} isSaving={isSaving} onCancel={() => setEditingField(null)} onSave={saveProfile} />
+          {isPasswordSheetOpen ? (
+            <PasswordChangeSheet error={passwordError} isSaving={isPasswordSaving} onCancel={closePasswordSheet} onSave={savePassword} />
+          ) : null}
         </>
       ) : null}
     </main>

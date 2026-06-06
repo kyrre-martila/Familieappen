@@ -12,3 +12,13 @@ export interface UpdateUserProfileRequestDto {
   email?: unknown;
   phone?: unknown;
 }
+
+export interface ChangePasswordRequestDto {
+  currentPassword?: unknown;
+  newPassword?: unknown;
+  confirmPassword?: unknown;
+}
+
+export interface ChangePasswordResponseDto {
+  message: string;
+}

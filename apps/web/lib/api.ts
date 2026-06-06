@@ -88,6 +88,16 @@ export interface AuthUser {
 export type UserProfile = AuthUser;
 export type UserProfileUpdate = Partial<Pick<UserProfile, "name" | "email" | "phone">>;
 
+export interface ChangePasswordInput {
+  currentPassword: string;
+  newPassword: string;
+  confirmPassword: string;
+}
+
+export interface ChangePasswordResponse {
+  message: string;
+}
+
 export interface NotificationPreferences {
   id: string;
   userId: string;
@@ -168,6 +178,13 @@ export async function getCurrentUserProfile(): Promise<UserProfile> {
 export async function updateCurrentUserProfile(input: UserProfileUpdate): Promise<UserProfile> {
   return apiRequest<UserProfile>("/me", {
     method: "PATCH",
+    body: input
+  });
+}
+
+export async function changeCurrentUserPassword(input: ChangePasswordInput): Promise<ChangePasswordResponse> {
+  return apiRequest<ChangePasswordResponse>("/me/change-password", {
+    method: "POST",
     body: input
   });
 }
