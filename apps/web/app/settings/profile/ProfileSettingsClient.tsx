@@ -89,7 +89,7 @@ function ProfileSkeleton() {
   );
 }
 
-function ProfileAvatar({ profile }: { profile: Profile }) {
+function ProfileAvatar({ profile, onEdit }: { profile: Profile; onEdit: () => void }) {
   const initials = useMemo(() => getInitials(profile.name), [profile.name]);
 
   return (
@@ -97,7 +97,7 @@ function ProfileAvatar({ profile }: { profile: Profile }) {
       <div className="profile-settings__avatar" aria-label="Profilbilde">
         {profile.avatarUrl ? <img alt="" src={profile.avatarUrl} /> : <span>{initials}</span>}
       </div>
-      <button className="profile-settings__avatar-edit" type="button" aria-label="Endre profilbilde">
+      <button className="profile-settings__avatar-edit" type="button" aria-label="Endre profilbilde" onClick={onEdit}>
         <Camera aria-hidden="true" />
       </button>
     </div>
@@ -201,7 +201,7 @@ function PlaceholderSheet({ title, onClose }: { title: string | null; onClose: (
       <section className="profile-edit-sheet__panel profile-edit-sheet__panel--compact" role="dialog" aria-modal="true" aria-labelledby="profile-placeholder-title">
         <div className="profile-edit-sheet__handle" aria-hidden="true" />
         <h2 id="profile-placeholder-title">{title}</h2>
-        <p className="profile-edit-sheet__placeholder-text">Kommer snart</p>
+        <p className="profile-edit-sheet__placeholder-text">Dette kobles til kontoen din senere.</p>
         <div className="profile-edit-sheet__actions profile-edit-sheet__actions--single">
           <button className="profile-edit-sheet__button profile-edit-sheet__button--primary" type="button" onClick={onClose}>OK</button>
         </div>
@@ -247,7 +247,7 @@ export function ProfileSettingsClient() {
           <ProfileSkeleton />
         ) : (
           <div className="profile-settings__identity">
-            <ProfileAvatar profile={profile} />
+            <ProfileAvatar profile={profile} onEdit={() => setPlaceholderTitle("Profilbilde")} />
             <p className="profile-settings__name">{profile.name}</p>
             <p className="profile-settings__email">{profile.email}</p>
           </div>

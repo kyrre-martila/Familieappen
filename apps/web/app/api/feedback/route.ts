@@ -7,10 +7,8 @@ export const runtime = "nodejs";
 type FeedbackType = "feedback" | "bug";
 
 interface FeedbackPayload {
-  familyId?: unknown;
   message?: unknown;
   type?: unknown;
-  userId?: unknown;
 }
 
 function isFeedbackType(type: unknown): type is FeedbackType {
@@ -32,18 +30,14 @@ export async function POST(request: Request) {
 
   const type = payload.type;
   const message = normalizeOptionalString(payload.message);
-  const userId = normalizeOptionalString(payload.userId);
-  const familyId = normalizeOptionalString(payload.familyId);
 
-  if (!isFeedbackType(type) || !message) {
+  if (!isFeedbackType(type) || !message || message.length > 4000) {
     return NextResponse.json({ error: { code: "validation.invalid_input", message: "Feedback type and message are required." } }, { status: 400 });
   }
 
   const feedback = {
     type,
     message,
-    userId,
-    familyId,
     createdAt: new Date().toISOString()
   };
 

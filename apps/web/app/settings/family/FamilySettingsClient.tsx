@@ -29,25 +29,6 @@ type SheetMode =
 
 type RoleChoice = "ADMIN" | "MEMBER" | "CHILD";
 
-const exampleMembers: FamilyMember[] = [
-  mockMember("demo-admin", "Elisabeth Martila", "PARENT"),
-  mockMember("demo-member", "Thomas Martila", "GUEST"),
-  mockMember("demo-child-fiona", "Fiona Martila", "CHILD"),
-  mockMember("demo-child-even", "Even-Olai Martila", "CHILD")
-];
-
-function mockMember(id: string, displayName: string, role: FamilyMember["role"]): FamilyMember {
-  return {
-    id,
-    userId: null,
-    familyId: "demo",
-    displayName,
-    role,
-    createdAt: new Date().toISOString(),
-    updatedAt: new Date().toISOString()
-  };
-}
-
 function isAdminRole(role: FamilyMember["role"]) {
   return role === "OWNER" || role === "PARENT";
 }
@@ -85,8 +66,6 @@ function formatDate(value: string | null) {
 
 function getRoleLine(member: FamilyMember) {
   if (member.role === "CHILD") {
-    if (member.displayName.includes("Fiona")) return "Barn · 9 år";
-    if (member.displayName.includes("Even-Olai")) return "Barn · 14 år";
     return "Barn";
   }
 
@@ -165,7 +144,6 @@ function MemberEditSheet({ member, onCancel, onSave }: { member: FamilyMember; o
             <option value="CHILD">Barn</option>
           </select>
         </label>
-        <p className="family-settings__hint">Fødselsår/alder støttes ikke av familiemedlemsmodellen ennå.</p>
         {error ? <p className="profile-edit-sheet__error">{error}</p> : null}
         <div className="profile-edit-sheet__actions">
           <button className="profile-edit-sheet__button profile-edit-sheet__button--secondary" type="button" onClick={onCancel}>Avbryt</button>
@@ -329,6 +307,17 @@ export function FamilySettingsClient() {
     }
   }
 
+  async function copyFamilyCode() {
+    if (!family) return;
+
+    try {
+      await navigator.clipboard?.writeText(getFamilyCode(family));
+      setMessage("Familiekoden er kopiert.");
+    } catch {
+      setMessage("Kunne ikke kopiere koden akkurat nå.");
+    }
+  }
+
   async function revokeInvite(invitation: FamilyInvitation) {
     if (!family) return;
     try {
@@ -355,8 +344,6 @@ export function FamilySettingsClient() {
     );
   }
 
-  const visibleMembers = members.length ? members : exampleMembers;
-
   return (
     <FamilySettingsShell>
       {message ? <p className="family-settings__notice">{message}<button type="button" onClick={() => setMessage("")}>Lukk</button></p> : null}
@@ -365,20 +352,19 @@ export function FamilySettingsClient() {
         <SettingsCard>
           <button className="family-settings-row" type="button" onClick={() => isAdmin && setSheet({ type: "family-name" })} disabled={!isAdmin}>
             <span className="family-settings-row__label">Familienavn</span>
-            <span className="family-settings-row__value">{family.name || "Martila-familien"}</span>
+            <span className="family-settings-row__value">{family.name}</span>
             {isAdmin ? <Pencil aria-hidden="true" /> : null}
           </button>
           <div className="family-settings-row">
             <span className="family-settings-row__label">Familienøkkel / familiekode</span>
             <span className="family-settings-row__value">{getFamilyCode(family)}</span>
-            <button className="family-settings__copy" type="button" onClick={() => void navigator.clipboard?.writeText(getFamilyCode(family))}>Kopier</button>
+            <button className="family-settings__copy" type="button" onClick={() => void copyFamilyCode()}>Kopier</button>
           </div>
           <div className="family-settings-row">
             <span className="family-settings-row__label">Opprettet av</span>
             <span className="family-settings-row__value">{creatorName}</span>
           </div>
         </SettingsCard>
-        <p className="family-settings__hint">Familiekoden er en stabil visningskode laget fra familie-ID fordi backend ikke har egen familiekode ennå.</p>
       </SettingsSection>
 
       <SettingsSection title="Familiemedlemmer">
@@ -387,7 +373,7 @@ export function FamilySettingsClient() {
             <h2>Familiemedlemmer</h2>
             {isAdmin ? <button className="family-settings__small-button" type="button" onClick={() => setSheet({ type: "invite" })}><Plus aria-hidden="true" /> Inviter medlem</button> : null}
           </div>
-          {visibleMembers.length ? visibleMembers.map((member) => {
+          {members.length ? members.map((member) => {
             const isSelf = member.id === currentMembership?.id;
             const cannotRemoveLastAdmin = isAdminRole(member.role) && administratorCount <= 1;
             return (
@@ -397,7 +383,7 @@ export function FamilySettingsClient() {
                   <span className="family-settings-member__name">{member.displayName}</span>
                   <span className="family-settings-member__role">{getRoleLine(member)}</span>
                 </span>
-                {isAdmin && member.familyId !== "demo" ? (
+                {isAdmin ? (
                   <span className="family-settings-menu">
                     <button className="family-settings__icon-button" type="button" aria-label={`Handlinger for ${member.displayName}`} onClick={() => setOpenMemberMenu(openMemberMenu === member.id ? null : member.id)}><MoreHorizontal aria-hidden="true" /></button>
                     {openMemberMenu === member.id ? (

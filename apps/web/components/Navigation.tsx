@@ -8,6 +8,10 @@ import { bottomNavigationItems, getCreateOptions } from "./navigation";
 type BottomNavigationItem = (typeof bottomNavigationItems)[number];
 
 function isActiveRoute(pathname: string, href: string) {
+  if (href === "/settings" && (pathname === "/privacy" || pathname === "/terms")) {
+    return true;
+  }
+
   return pathname === href || pathname.startsWith(`${href}/`);
 }
 
