@@ -437,7 +437,7 @@ async function run(): Promise<void> {
     assertStatus(await request("PATCH", "/calendar/events/calendar-beta-event", { token: alpha.token, familyId: "family-alpha", body: { title: "Nope" } }), 404, "foreign calendar event cannot be mutated");
 
     assertStatus(await request("GET", "/wishlist/invites/share-alpha-token"), 200, "valid public wishlist invite token returns wishlist preview");
-assertErrorCode(await request("GET", "/wishlist/invites/invalid-share-token"), 404, API_ERROR_CODES.WISHLIST_INVALID_SHARE_TOKEN, "invalid public wishlist invite token is rejected");
+    assertErrorCode(await request("GET", "/wishlist/invites/invalid-share-token"), 404, API_ERROR_CODES.WISHLIST_INVALID_SHARE_TOKEN, "invalid public wishlist invite token is rejected");
   } finally {
     await app.close();
   }
