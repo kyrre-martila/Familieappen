@@ -17,7 +17,7 @@ import { ShoppingService } from "../src/shopping/shopping.service";
 import { TasksController } from "../src/tasks/tasks.controller";
 import { TasksService } from "../src/tasks/tasks.service";
 import { PrismaService } from "../src/prisma";
-import { PublicWishlistsController, WishlistsController } from "../src/wishlists/wishlists.controller";
+import { WishlistsController } from "../src/wishlists/wishlists.controller";
 import { WishlistsService } from "../src/wishlists/wishlists.service";
 
 type UserRecord = {
@@ -293,7 +293,6 @@ async function createSecurityHarness() {
       ShoppingController,
       TasksController,
       WishlistsController,
-      PublicWishlistsController,
       CalendarController
     ],
     providers: [
