@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useEffect, useId, useState } from "react";
-import { bottomNavigationItems, getCreateOptions } from "./navigation";
+import { bottomNavigationItems, getCreateOptions } from "./navigation-options";
 
 type BottomNavigationItem = (typeof bottomNavigationItems)[number];
 
