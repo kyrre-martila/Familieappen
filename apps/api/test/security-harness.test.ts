@@ -436,12 +436,8 @@ async function run(): Promise<void> {
     assertStatus(await request("GET", "/tasks", { token: alpha.token, familyId: "family-beta" }), 404, "user cannot read another family's tasks");
     assertStatus(await request("PATCH", "/calendar/events/calendar-beta-event", { token: alpha.token, familyId: "family-alpha", body: { title: "Nope" } }), 404, "foreign calendar event cannot be mutated");
 
-    assertStatus(await request("GET", "/public/wishlists/share-alpha-token"), 200, "valid public wishlist token returns shared wishlist");
-    assertErrorCode(await request("GET", "/public/wishlists/invalid-share-token"), 404, API_ERROR_CODES.WISHLIST_INVALID_SHARE_TOKEN, "invalid public wishlist token is rejected");
-    assertStatus(await request("POST", "/public/wishlists/share-alpha-token/items/wishlist-beta-item/reserve", { body: { reservedByName: "Guest" } }), 404, "public token cannot reserve another wishlist's item");
-    assertStatus(await request("POST", "/public/wishlists/share-alpha-token/items/wishlist-alpha-item/reserve", { body: { reservedByName: "Guest" } }), 201, "public reserve works for matching shared item");
-    assertStatus(await request("POST", "/public/wishlists/share-alpha-token/items/wishlist-beta-item/mark-purchased", { body: { reservedByName: "Guest" } }), 404, "public token cannot mark another wishlist's item purchased");
-    assertStatus(await request("POST", "/public/wishlists/share-alpha-token/items/wishlist-alpha-item/mark-purchased", { body: { reservedByName: "Guest" } }), 201, "public mark-purchased works for matching shared item");
+    assertStatus(await request("GET", "/wishlist/invites/share-alpha-token"), 200, "valid public wishlist invite token returns wishlist preview");
+assertErrorCode(await request("GET", "/wishlist/invites/invalid-share-token"), 404, API_ERROR_CODES.WISHLIST_INVALID_SHARE_TOKEN, "invalid public wishlist invite token is rejected");
   } finally {
     await app.close();
   }
