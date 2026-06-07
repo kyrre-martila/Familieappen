@@ -114,6 +114,11 @@ export class ProfileService {
 
       const revokedAt = new Date();
 
+      await (tx as any).userSession.updateMany({
+        where: { userId, revokedAt: null },
+        data: { revokedAt }
+      });
+
       await tx.familyInvitation.updateMany({
         where: { createdByUserId: userId, status: "pending" },
         data: { status: "revoked", revokedAt }

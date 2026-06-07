@@ -4,16 +4,18 @@ import {
   Injectable,
   UnauthorizedException
 } from "@nestjs/common";
-import { createHmac, randomBytes, scrypt as scryptCallback, timingSafeEqual } from "node:crypto";
+import { createHash, createHmac, randomBytes, scrypt as scryptCallback, timingSafeEqual } from "node:crypto";
 import { promisify } from "node:util";
 import { ConfigService } from "../config";
 import { PrismaService } from "../prisma";
-import { AuthResponseDto, LoginRequestDto, RegisterRequestDto, SafeUserDto } from "./dto/auth.dto";
+import { AuthResponseDto, LoginRequestDto, RefreshRequestDto, RefreshResponseDto, RegisterRequestDto, SafeUserDto } from "./dto/auth.dto";
 
 const scrypt = promisify(scryptCallback);
 const PASSWORD_HASH_PREFIX = "scrypt";
 const PASSWORD_KEY_LENGTH = 64;
-const ACCESS_TOKEN_EXPIRES_IN_SECONDS = 60 * 60 * 24 * 7;
+const ACCESS_TOKEN_EXPIRES_IN_SECONDS = 60 * 15;
+const REFRESH_TOKEN_EXPIRES_IN_SECONDS = 60 * 60 * 24 * 30;
+const REFRESH_TOKEN_BYTE_LENGTH = 48;
 
 type DatabaseUser = {
   id: string;
@@ -25,11 +27,26 @@ type DatabaseUser = {
   updatedAt: Date;
 };
 
+type DatabaseSession = {
+  id: string;
+  userId: string;
+  refreshTokenHash: string;
+  revokedAt?: Date | null;
+  expiresAt: Date;
+};
+
 interface AuthTokenPayload {
   sub: string;
+  userId: string;
   email: string;
+  sessionId: string;
   iat: number;
   exp: number;
+}
+
+export interface SessionMetadata {
+  userAgent?: string | null;
+  ipAddress?: string | null;
 }
 
 @Injectable()
@@ -39,7 +56,7 @@ export class AuthService {
     private readonly config: ConfigService
   ) {}
 
-  async register(input: RegisterRequestDto = {}): Promise<AuthResponseDto> {
+  async register(input: RegisterRequestDto = {}, metadata: SessionMetadata = {}): Promise<AuthResponseDto> {
     const name = this.validateName(input.name);
     const email = this.validateEmail(input.email);
     const password = this.validatePassword(input.password);
@@ -63,7 +80,7 @@ export class AuthService {
         }
       });
 
-      return this.createAuthResponse(user);
+      return this.createAuthResponse(user, metadata);
     } catch (error) {
       if (this.isUniqueConstraintError(error)) {
         throw new ConflictException("An account with this email already exists");
@@ -73,7 +90,7 @@ export class AuthService {
     }
   }
 
-  async login(input: LoginRequestDto = {}): Promise<AuthResponseDto> {
+  async login(input: LoginRequestDto = {}, metadata: SessionMetadata = {}): Promise<AuthResponseDto> {
     const email = this.validateEmail(input.email);
     const password = this.validatePassword(input.password);
 
@@ -85,29 +102,58 @@ export class AuthService {
       throw new UnauthorizedException("Invalid email or password");
     }
 
-    return this.createAuthResponse(user);
+    return this.createAuthResponse(user, metadata);
+  }
+
+  async refresh(input: RefreshRequestDto = {}): Promise<RefreshResponseDto> {
+    const refreshToken = this.validateRefreshToken(input.refreshToken);
+    const session = await (this.prisma.client as any).userSession.findUnique({
+      where: { refreshTokenHash: this.hashRefreshToken(refreshToken) },
+      include: { user: true }
+    });
+
+    if (!session || !this.isSessionActive(session)) {
+      throw new UnauthorizedException("Refresh session is no longer active");
+    }
+
+    return {
+      tokens: {
+        accessToken: this.createAccessToken(session.user, session.id),
+        refreshToken,
+        tokenType: "Bearer",
+        expiresIn: ACCESS_TOKEN_EXPIRES_IN_SECONDS
+      }
+    };
+  }
+
+  async logout(accessToken: string): Promise<{ message: string }> {
+    const payload = this.verifyAccessTokenSignature(accessToken);
+    const session = await (this.prisma.client as any).userSession.findUnique({
+      where: { id: payload.sessionId },
+      select: { id: true, userId: true }
+    });
+
+    if (!session || session.userId !== payload.sub) {
+      throw new UnauthorizedException("Session is no longer active");
+    }
+
+    await (this.prisma.client as any).userSession.updateMany({
+      where: { id: payload.sessionId, revokedAt: null },
+      data: { revokedAt: new Date() }
+    });
+
+    return { message: "Logged out" };
+  }
+
+  async revokeAllUserSessions(userId: string): Promise<void> {
+    await (this.prisma.client as any).userSession.updateMany({
+      where: { userId, revokedAt: null },
+      data: { revokedAt: new Date() }
+    });
   }
 
   verifyAccessToken(token: string): AuthTokenPayload {
-    const tokenParts = token.split(".");
-
-    if (tokenParts.length !== 3) {
-      throw new UnauthorizedException("Invalid access token");
-    }
-
-    const [encodedHeader, encodedPayload, signature] = tokenParts;
-
-    if (!encodedHeader || !encodedPayload || !signature) {
-      throw new UnauthorizedException("Invalid access token");
-    }
-
-    const expectedSignature = this.signJwtParts(encodedHeader, encodedPayload);
-
-    if (!this.safeEqual(signature, expectedSignature)) {
-      throw new UnauthorizedException("Invalid access token");
-    }
-
-    const payload = this.parseTokenPayload(encodedPayload);
+    const payload = this.verifyAccessTokenSignature(token);
     const now = Math.floor(Date.now() / 1000);
 
     if (payload.exp <= now) {
@@ -115,6 +161,19 @@ export class AuthService {
     }
 
     return payload;
+  }
+
+  async validateActiveSession(sessionId: string, userId: string): Promise<DatabaseSession> {
+    const session = await (this.prisma.client as any).userSession.findUnique({
+      where: { id: sessionId },
+      select: { id: true, userId: true, refreshTokenHash: true, revokedAt: true, expiresAt: true }
+    });
+
+    if (!session || session.userId !== userId || !this.isSessionActive(session)) {
+      throw new UnauthorizedException("Session is no longer active");
+    }
+
+    return session;
   }
 
   private validateName(value: unknown): string {
@@ -177,11 +236,23 @@ export class AuthService {
     return expectedHash.length === derivedKey.length && timingSafeEqual(expectedHash, derivedKey);
   }
 
-  private createAuthResponse(user: DatabaseUser): AuthResponseDto {
+  private async createAuthResponse(user: DatabaseUser, metadata: SessionMetadata): Promise<AuthResponseDto> {
+    const refreshToken = this.createRefreshToken();
+    const session = await (this.prisma.client as any).userSession.create({
+      data: {
+        userId: user.id,
+        refreshTokenHash: this.hashRefreshToken(refreshToken),
+        userAgent: metadata.userAgent ?? null,
+        ipAddress: metadata.ipAddress ?? null,
+        expiresAt: new Date(Date.now() + REFRESH_TOKEN_EXPIRES_IN_SECONDS * 1000)
+      }
+    });
+
     return {
       user: this.toSafeUser(user),
       tokens: {
-        accessToken: this.createAccessToken(user),
+        accessToken: this.createAccessToken(user, session.id),
+        refreshToken,
         tokenType: "Bearer",
         expiresIn: ACCESS_TOKEN_EXPIRES_IN_SECONDS
       }
@@ -199,18 +270,62 @@ export class AuthService {
     };
   }
 
-  private createAccessToken(user: DatabaseUser): string {
+  private createAccessToken(user: DatabaseUser, sessionId: string): string {
     const now = Math.floor(Date.now() / 1000);
     const header = this.base64UrlEncode({ alg: "HS256", typ: "JWT" });
     const payload = this.base64UrlEncode({
       sub: user.id,
+      userId: user.id,
       email: user.email,
+      sessionId,
       iat: now,
       exp: now + ACCESS_TOKEN_EXPIRES_IN_SECONDS
     });
     const signature = this.signJwtParts(header, payload);
 
     return `${header}.${payload}.${signature}`;
+  }
+
+  private createRefreshToken(): string {
+    return randomBytes(REFRESH_TOKEN_BYTE_LENGTH).toString("base64url");
+  }
+
+  private validateRefreshToken(value: unknown): string {
+    if (typeof value !== "string" || value.trim().length < 32) {
+      throw new UnauthorizedException("Refresh token is required");
+    }
+
+    return value.trim();
+  }
+
+  private hashRefreshToken(refreshToken: string): string {
+    return createHash("sha256").update(refreshToken, "utf8").digest("base64url");
+  }
+
+  private isSessionActive(session: { revokedAt?: Date | null; expiresAt: Date }): boolean {
+    return !session.revokedAt && session.expiresAt > new Date();
+  }
+
+  private verifyAccessTokenSignature(token: string): AuthTokenPayload {
+    const tokenParts = token.split(".");
+
+    if (tokenParts.length !== 3) {
+      throw new UnauthorizedException("Invalid access token");
+    }
+
+    const [encodedHeader, encodedPayload, signature] = tokenParts;
+
+    if (!encodedHeader || !encodedPayload || !signature) {
+      throw new UnauthorizedException("Invalid access token");
+    }
+
+    const expectedSignature = this.signJwtParts(encodedHeader, encodedPayload);
+
+    if (!this.safeEqual(signature, expectedSignature)) {
+      throw new UnauthorizedException("Invalid access token");
+    }
+
+    return this.parseTokenPayload(encodedPayload);
   }
 
   private signJwtParts(encodedHeader: string, encodedPayload: string): string {
@@ -229,7 +344,10 @@ export class AuthService {
 
       if (
         typeof payload.sub !== "string" ||
+        typeof payload.userId !== "string" ||
+        payload.userId !== payload.sub ||
         typeof payload.email !== "string" ||
+        typeof payload.sessionId !== "string" ||
         typeof payload.iat !== "number" ||
         typeof payload.exp !== "number"
       ) {
