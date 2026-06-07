@@ -53,6 +53,7 @@ const NOW = new Date("2026-05-30T00:00:00.000Z");
 
 class TestConfigService {
   readonly authJwtSecret = AUTH_SECRET;
+  readonly nodeEnv = "test";
 }
 
 class InMemoryPrismaService {
@@ -418,7 +419,7 @@ async function run(): Promise<void> {
       familyId: "family-alpha"
     }), 401, "invalid signature is rejected");
     assertErrorCode(await request("GET", "/shopping", {
-      token: createJwt({ sub: alpha.userId, email: "alpha@example.com", iat: 1, exp: 2 }),
+      token: createJwt({ sub: alpha.userId, userId: alpha.userId, email: "alpha@example.com", sessionId: "expired-session", iat: 1, exp: 2 }),
       familyId: "family-alpha"
     }), 401, API_ERROR_CODES.AUTH_EXPIRED_TOKEN, "expired token is rejected");
     assertStatus(await request("GET", "/families/family-alpha/dashboard"), 401, "protected dashboard denies unauthenticated access");

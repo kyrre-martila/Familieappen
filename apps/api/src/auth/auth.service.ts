@@ -8,7 +8,7 @@ import { createHash, createHmac, randomBytes, scrypt as scryptCallback, timingSa
 import { promisify } from "node:util";
 import { ConfigService } from "../config";
 import { PrismaService } from "../prisma";
-import { AuthResponseDto, LoginRequestDto, RefreshRequestDto, RefreshResponseDto, RegisterRequestDto, SafeUserDto } from "./dto/auth.dto";
+import { AuthResponseDto, LoginRequestDto, RefreshResponseDto, RegisterRequestDto, SafeUserDto } from "./dto/auth.dto";
 
 const scrypt = promisify(scryptCallback);
 const PASSWORD_HASH_PREFIX = "scrypt";
@@ -49,6 +49,16 @@ export interface SessionMetadata {
   ipAddress?: string | null;
 }
 
+export interface AuthSessionResponse extends AuthResponseDto {
+  refreshToken: string;
+  refreshTokenExpiresAt: Date;
+}
+
+export interface RefreshSessionResponse extends RefreshResponseDto {
+  refreshToken: string;
+  refreshTokenExpiresAt: Date;
+}
+
 @Injectable()
 export class AuthService {
   constructor(
@@ -56,7 +66,7 @@ export class AuthService {
     private readonly config: ConfigService
   ) {}
 
-  async register(input: RegisterRequestDto = {}, metadata: SessionMetadata = {}): Promise<AuthResponseDto> {
+  async register(input: RegisterRequestDto = {}, metadata: SessionMetadata = {}): Promise<AuthSessionResponse> {
     const name = this.validateName(input.name);
     const email = this.validateEmail(input.email);
     const password = this.validatePassword(input.password);
@@ -90,7 +100,7 @@ export class AuthService {
     }
   }
 
-  async login(input: LoginRequestDto = {}, metadata: SessionMetadata = {}): Promise<AuthResponseDto> {
+  async login(input: LoginRequestDto = {}, metadata: SessionMetadata = {}): Promise<AuthSessionResponse> {
     const email = this.validateEmail(input.email);
     const password = this.validatePassword(input.password);
 
@@ -105,10 +115,11 @@ export class AuthService {
     return this.createAuthResponse(user, metadata);
   }
 
-  async refresh(input: RefreshRequestDto = {}): Promise<RefreshResponseDto> {
-    const refreshToken = this.validateRefreshToken(input.refreshToken);
+  async refresh(refreshTokenValue: unknown): Promise<RefreshSessionResponse> {
+    const refreshToken = this.validateRefreshToken(refreshTokenValue);
+    const currentRefreshTokenHash = this.hashRefreshToken(refreshToken);
     const session = await (this.prisma.client as any).userSession.findUnique({
-      where: { refreshTokenHash: this.hashRefreshToken(refreshToken) },
+      where: { refreshTokenHash: currentRefreshTokenHash },
       include: { user: true }
     });
 
@@ -116,13 +127,24 @@ export class AuthService {
       throw new UnauthorizedException("Refresh session is no longer active");
     }
 
+    const rotatedRefreshToken = this.createRefreshToken();
+    const rotation = await (this.prisma.client as any).userSession.updateMany({
+      where: { id: session.id, refreshTokenHash: currentRefreshTokenHash, revokedAt: null },
+      data: { refreshTokenHash: this.hashRefreshToken(rotatedRefreshToken) }
+    });
+
+    if (rotation.count !== 1) {
+      throw new UnauthorizedException("Refresh session is no longer active");
+    }
+
     return {
       tokens: {
         accessToken: this.createAccessToken(session.user, session.id),
-        refreshToken,
         tokenType: "Bearer",
         expiresIn: ACCESS_TOKEN_EXPIRES_IN_SECONDS
-      }
+      },
+      refreshToken: rotatedRefreshToken,
+      refreshTokenExpiresAt: session.expiresAt
     };
   }
 
@@ -236,7 +258,7 @@ export class AuthService {
     return expectedHash.length === derivedKey.length && timingSafeEqual(expectedHash, derivedKey);
   }
 
-  private async createAuthResponse(user: DatabaseUser, metadata: SessionMetadata): Promise<AuthResponseDto> {
+  private async createAuthResponse(user: DatabaseUser, metadata: SessionMetadata): Promise<AuthSessionResponse> {
     const refreshToken = this.createRefreshToken();
     const session = await (this.prisma.client as any).userSession.create({
       data: {
@@ -252,10 +274,11 @@ export class AuthService {
       user: this.toSafeUser(user),
       tokens: {
         accessToken: this.createAccessToken(user, session.id),
-        refreshToken,
         tokenType: "Bearer",
         expiresIn: ACCESS_TOKEN_EXPIRES_IN_SECONDS
-      }
+      },
+      refreshToken,
+      refreshTokenExpiresAt: session.expiresAt
     };
   }
 

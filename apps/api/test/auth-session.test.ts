@@ -33,6 +33,7 @@ type SessionRecord = {
 
 class TestConfigService {
   readonly authJwtSecret = AUTH_SECRET;
+  readonly nodeEnv = "test";
 }
 
 class InMemoryPrismaService {
@@ -122,15 +123,21 @@ class InMemoryPrismaService {
 
           return session;
         },
-        updateMany: async ({ where, data }: { where: { id?: string; userId?: string; revokedAt?: null }; data: { revokedAt: Date } }): Promise<{ count: number }> => {
+        updateMany: async ({ where, data }: { where: { id?: string; userId?: string; refreshTokenHash?: string; revokedAt?: null }; data: { revokedAt?: Date; refreshTokenHash?: string } }): Promise<{ count: number }> => {
           let count = 0;
           this.sessions.forEach((session) => {
             const matchesId = !where.id || session.id === where.id;
             const matchesUser = !where.userId || session.userId === where.userId;
+            const matchesRefreshTokenHash = !where.refreshTokenHash || session.refreshTokenHash === where.refreshTokenHash;
             const matchesRevoked = where.revokedAt === undefined || session.revokedAt === where.revokedAt;
 
-            if (matchesId && matchesUser && matchesRevoked) {
-              session.revokedAt = data.revokedAt;
+            if (matchesId && matchesUser && matchesRefreshTokenHash && matchesRevoked) {
+              if (data.revokedAt !== undefined) {
+                session.revokedAt = data.revokedAt;
+              }
+              if (data.refreshTokenHash !== undefined) {
+                session.refreshTokenHash = data.refreshTokenHash;
+              }
               session.updatedAt = new Date();
               count += 1;
             }
@@ -162,7 +169,7 @@ class InMemoryPrismaService {
 function createServices() {
   const prisma = new InMemoryPrismaService();
   const authService = new AuthService(prisma as never, new TestConfigService() as never);
-  const authController = new AuthController(authService);
+  const authController = new AuthController(authService, new TestConfigService() as never);
   const authGuard = new AuthGuard(authService, prisma as never);
   const profileService = new ProfileService(prisma as never, authService);
 
@@ -180,6 +187,45 @@ function createExecutionContext(authorization?: string): { context: ExecutionCon
   };
 }
 
+function createCookieResponse(): CookieResponseRecorder {
+  const headers = new Map<string, number | string | string[]>();
+
+  return {
+    headers,
+    getHeader: (name: string) => headers.get(name),
+    setHeader: (name: string, value: number | string | string[]) => {
+      headers.set(name, value);
+    }
+  };
+}
+
+type CookieResponseRecorder = {
+  headers: Map<string, number | string | string[]>;
+  getHeader: (name: string) => number | string | string[] | undefined;
+  setHeader: (name: string, value: number | string | string[]) => void;
+};
+
+function getSetCookie(response: CookieResponseRecorder): string {
+  const header = response.headers.get("Set-Cookie");
+  const cookie = Array.isArray(header) ? header[0] : header;
+
+  assert.equal(typeof cookie, "string", "response includes Set-Cookie header");
+  return cookie as string;
+}
+
+function getRefreshCookieToken(response: CookieResponseRecorder): string {
+  const cookie = getSetCookie(response);
+  const match = cookie.match(/^familieappen_refresh_token=([^;]+)/);
+
+  assert.ok(match?.[1], "Set-Cookie contains refresh token cookie");
+  assert.match(cookie, /HttpOnly/, "refresh cookie is HttpOnly");
+  assert.match(cookie, /SameSite=Lax/, "refresh cookie uses lax sameSite");
+  assert.match(cookie, /Path=\//, "refresh cookie is scoped to app path");
+  assert.doesNotMatch(cookie, /Secure/, "refresh cookie is not secure in local test environment");
+
+  return decodeURIComponent(match[1]);
+}
+
 async function assertRejectsUnauthorized(action: () => Promise<unknown> | unknown): Promise<void> {
   await assert.rejects(async () => action(), (error: unknown) => error instanceof UnauthorizedException);
 }
@@ -195,8 +241,19 @@ async function main() {
 
     assert.equal(prisma.sessions.size, 1, "register creates one session");
     assert.ok(auth.tokens.accessToken, "register returns an access token");
-    assert.ok(auth.tokens.refreshToken, "register returns a refresh token");
-    assert.notEqual([...prisma.sessions.values()][0].refreshTokenHash, auth.tokens.refreshToken, "refresh token is not stored as plaintext");
+    assert.ok(auth.refreshToken, "register creates a refresh token for the HttpOnly cookie");
+    assert.equal("refreshToken" in auth.tokens, false, "register does not expose refresh token in JSON tokens");
+    assert.notEqual([...prisma.sessions.values()][0].refreshTokenHash, auth.refreshToken, "refresh token is not stored as plaintext");
+  }
+
+  {
+    const { authController } = createServices();
+    const response = createCookieResponse();
+    const auth = await authController.register({ name: "Cookie User", email: "register-cookie@example.com", password: PASSWORD }, { headers: {} }, response);
+
+    assert.ok(auth.data.tokens.accessToken, "controller register returns access token");
+    assert.equal("refreshToken" in auth.data.tokens, false, "controller register JSON does not include refresh token");
+    assert.ok(getRefreshCookieToken(response), "controller register sets refresh cookie");
   }
 
   {
@@ -205,16 +262,56 @@ async function main() {
     const auth = await authService.login({ email: "login@example.com", password: PASSWORD });
 
     assert.equal(prisma.sessions.size, 2, "login creates a new session");
-    assert.ok(auth.tokens.refreshToken, "login returns a refresh token");
+    assert.ok(auth.refreshToken, "login creates a refresh token for the HttpOnly cookie");
+    assert.equal("refreshToken" in auth.tokens, false, "login does not expose refresh token in JSON tokens");
   }
 
   {
-    const { authService } = createServices();
+    const { authController, authService } = createServices();
+    await registerUser(authService, "login-cookie@example.com");
+    const response = createCookieResponse();
+    const auth = await authController.login({ email: "login-cookie@example.com", password: PASSWORD }, { headers: {} }, response);
+
+    assert.ok(auth.data.tokens.accessToken, "controller login returns access token");
+    assert.equal("refreshToken" in auth.data.tokens, false, "controller login JSON does not include refresh token");
+    assert.ok(getRefreshCookieToken(response), "controller login sets refresh cookie");
+  }
+
+  {
+    const { prisma, authService } = createServices();
     const auth = await registerUser(authService, "refresh@example.com");
-    const refreshed = await authService.refresh({ refreshToken: auth.tokens.refreshToken });
+    const originalSessionId = [...prisma.sessions.values()][0].id;
+    const originalHash = [...prisma.sessions.values()][0].refreshTokenHash;
+    const refreshed = await authService.refresh(auth.refreshToken);
 
     assert.ok(refreshed.tokens.accessToken, "refresh returns a new access token");
-    assert.equal(refreshed.tokens.refreshToken, auth.tokens.refreshToken, "refresh keeps the active refresh token when rotation is not enabled");
+    assert.ok(refreshed.refreshToken, "refresh rotates a new refresh token for the HttpOnly cookie");
+    assert.notEqual(refreshed.refreshToken, auth.refreshToken, "refresh token changes on refresh");
+    assert.equal([...prisma.sessions.values()][0].id, originalSessionId, "refresh keeps the same session id");
+    assert.notEqual([...prisma.sessions.values()][0].refreshTokenHash, originalHash, "refresh stores the rotated token hash");
+    assert.equal("refreshToken" in refreshed.tokens, false, "refresh does not expose refresh token in JSON tokens");
+    await assertRejectsUnauthorized(() => authService.refresh(auth.refreshToken));
+    assert.ok((await authService.refresh(refreshed.refreshToken)).tokens.accessToken, "rotated refresh token is accepted");
+  }
+
+  {
+    const { authController } = createServices();
+    const registerResponse = createCookieResponse();
+    const registered = await authController.register({ name: "Cookie Refresh", email: "refresh-cookie@example.com", password: PASSWORD }, { headers: {} }, registerResponse);
+    const firstRefreshToken = getRefreshCookieToken(registerResponse);
+    const refreshResponse = createCookieResponse();
+    const refreshed = await authController.refresh({ headers: { cookie: `familieappen_refresh_token=${encodeURIComponent(firstRefreshToken)}` } }, refreshResponse);
+    const secondRefreshToken = getRefreshCookieToken(refreshResponse);
+
+    assert.ok(refreshed.data.tokens.accessToken, "controller refresh returns access token");
+    assert.equal("refreshToken" in refreshed.data.tokens, false, "controller refresh JSON does not include refresh token");
+    assert.notEqual(secondRefreshToken, firstRefreshToken, "controller refresh rotates refresh cookie");
+    await assertRejectsUnauthorized(() => authController.refresh({ headers: { cookie: `familieappen_refresh_token=${encodeURIComponent(firstRefreshToken)}` } }, createCookieResponse()));
+
+    const logoutResponse = createCookieResponse();
+    await authController.logout(`Bearer ${registered.data.tokens.accessToken}`, logoutResponse);
+    assert.match(getSetCookie(logoutResponse), /Max-Age=0/, "logout clears refresh cookie");
+    await assertRejectsUnauthorized(() => authController.refresh({ headers: { cookie: `familieappen_refresh_token=${encodeURIComponent(secondRefreshToken)}` } }, createCookieResponse()));
   }
 
   {
@@ -222,7 +319,7 @@ async function main() {
     const auth = await registerUser(authService, "revoked-refresh@example.com");
 
     await authService.logout(auth.tokens.accessToken);
-    await assertRejectsUnauthorized(() => authService.refresh({ refreshToken: auth.tokens.refreshToken }));
+    await assertRejectsUnauthorized(() => authService.refresh(auth.refreshToken));
   }
 
   {
@@ -256,7 +353,7 @@ async function main() {
 
   {
     const { authController } = createServices();
-    await assertRejectsUnauthorized(() => authController.logout(undefined));
+    await assertRejectsUnauthorized(() => authController.logout(undefined, createCookieResponse()));
   }
 }
 
