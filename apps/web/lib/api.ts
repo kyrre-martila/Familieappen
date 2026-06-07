@@ -1,4 +1,4 @@
-import { getAccessToken, getRefreshToken, saveAccessToken, saveRefreshToken } from "./session";
+import { clearAuthSession, getAccessToken, saveAccessToken } from "./session";
 
 import type {
   CalendarEvent,
@@ -145,7 +145,6 @@ export interface AuthResponse {
   user: AuthUser;
   tokens: {
     accessToken: string;
-    refreshToken: string;
     tokenType: "Bearer";
     expiresIn: number;
   };
@@ -211,30 +210,26 @@ export async function login(input: { email: string; password: string }): Promise
 }
 
 export async function refreshAuthSession(): Promise<RefreshResponse> {
-  const refreshToken = getRefreshToken();
-
-  if (!refreshToken) {
-    throw new ApiError("Refresh token is missing", 401, "auth.requires_auth");
-  }
-
   const response = await apiRequest<RefreshResponse>("/auth/refresh", {
     method: "POST",
-    body: { refreshToken },
     includeAuth: false,
     retryOnUnauthorized: false
   });
 
   saveAccessToken(response.tokens.accessToken);
-  saveRefreshToken(response.tokens.refreshToken);
 
   return response;
 }
 
 export async function logout(): Promise<LogoutResponse> {
-  return apiRequest<LogoutResponse>("/auth/logout", {
-    method: "POST",
-    retryOnUnauthorized: false
-  });
+  try {
+    return await apiRequest<LogoutResponse>("/auth/logout", {
+      method: "POST",
+      retryOnUnauthorized: false
+    });
+  } finally {
+    clearAuthSession();
+  }
 }
 
 export async function getCurrentUserProfile(): Promise<UserProfile> {
@@ -879,11 +874,12 @@ async function apiRequest<TData>(
   const response = await fetch(`${API_BASE_URL}${path}`, {
     method: options.method ?? "GET",
     headers,
-    body: options.body === undefined ? undefined : JSON.stringify(options.body)
+    body: options.body === undefined ? undefined : JSON.stringify(options.body),
+    credentials: "include"
   });
 
   if (!response.ok) {
-    if (response.status === 401 && includeAuth && (options.retryOnUnauthorized ?? true) && getRefreshToken()) {
+    if (response.status === 401 && includeAuth && (options.retryOnUnauthorized ?? true)) {
       await refreshAuthSession();
       return apiRequest<TData>(path, { ...options, retryOnUnauthorized: false });
     }

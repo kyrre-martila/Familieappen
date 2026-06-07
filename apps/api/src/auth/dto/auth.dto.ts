@@ -9,10 +9,6 @@ export interface LoginRequestDto {
   password?: unknown;
 }
 
-export interface RefreshRequestDto {
-  refreshToken?: unknown;
-}
-
 export interface SafeUserDto {
   id: string;
   name: string;
@@ -24,7 +20,6 @@ export interface SafeUserDto {
 
 export interface AuthTokensDto {
   accessToken: string;
-  refreshToken: string;
   tokenType: "Bearer";
   expiresIn: number;
 }

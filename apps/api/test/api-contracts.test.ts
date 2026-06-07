@@ -34,6 +34,7 @@ type FamilyMemberRecord = { id: string; userId: string | null; familyId: string;
 type InvitationRecord = { id: string; createdByUserId: string; familyId: string; status: "pending" | "accepted" | "declined" | "revoked"; revokedAt: Date | null };
 type WishlistShareRecord = { id: string; createdByUserId: string; familyId: string; status: "pending" | "accepted" | "declined" | "removed" | "revoked"; revokedAt: Date | null };
 type FeedbackRecord = { id: string; type: "feedback" | "bug"; message: string; userId: string; familyId: string | null; userAgent: string | null; appVersion: string | null; createdAt: Date };
+type SessionRecord = { id: string; userId: string; refreshTokenHash: string; userAgent: string | null; ipAddress: string | null; revokedAt: Date | null; expiresAt: Date; createdAt: Date; updatedAt: Date };
 
 type HttpResponse<T = Record<string, unknown>> = {
   status: number;
@@ -45,6 +46,7 @@ const NOW = new Date();
 
 class TestConfigService {
   readonly authJwtSecret = AUTH_SECRET;
+  readonly nodeEnv = "test";
 }
 
 class InMemoryPrismaService {
@@ -54,9 +56,11 @@ class InMemoryPrismaService {
   private familyInvitations = new Map<string, InvitationRecord>();
   private wishlistShareInvitations = new Map<string, WishlistShareRecord>();
   private feedbackSubmissions = new Map<string, FeedbackRecord>();
+  private sessions = new Map<string, SessionRecord>();
   private nextUserId = 1;
   private nextFeedbackId = 1;
   private nextMemberId = 1;
+  private nextSessionId = 1;
   readonly isConfigured = false;
 
   readonly client = this.createClient();
@@ -175,6 +179,58 @@ class InMemoryPrismaService {
             if (invite.createdByUserId === user.id) this.wishlistShareInvitations.delete(id);
           });
           return user;
+        }
+      },
+
+      userSession: {
+        create: async ({ data }: { data: { userId: string; refreshTokenHash: string; userAgent?: string | null; ipAddress?: string | null; expiresAt: Date } }): Promise<SessionRecord> => {
+          const session: SessionRecord = {
+            id: `session-${this.nextSessionId++}`,
+            userId: data.userId,
+            refreshTokenHash: data.refreshTokenHash,
+            userAgent: data.userAgent ?? null,
+            ipAddress: data.ipAddress ?? null,
+            revokedAt: null,
+            expiresAt: data.expiresAt,
+            createdAt: NOW,
+            updatedAt: NOW
+          };
+          this.sessions.set(session.id, session);
+          return session;
+        },
+        findUnique: async ({ where, include, select }: { where: { id?: string; refreshTokenHash?: string }; include?: { user?: boolean }; select?: Record<string, boolean> }): Promise<unknown | null> => {
+          const session = where.id ? this.sessions.get(where.id) : [...this.sessions.values()].find((candidate) => candidate.refreshTokenHash === where.refreshTokenHash);
+
+          if (!session) {
+            return null;
+          }
+
+          if (include?.user) {
+            return { ...session, user: [...this.users.values()].find((user) => user.id === session.userId) };
+          }
+
+          if (select) {
+            return Object.fromEntries(Object.keys(select).map((key) => [key, session[key as keyof SessionRecord]]));
+          }
+
+          return session;
+        },
+        updateMany: async ({ where, data }: { where: { id?: string; userId?: string; refreshTokenHash?: string; revokedAt?: null }; data: { revokedAt?: Date; refreshTokenHash?: string } }): Promise<{ count: number }> => {
+          let count = 0;
+          this.sessions.forEach((session) => {
+            const matchesId = !where.id || session.id === where.id;
+            const matchesUser = !where.userId || session.userId === where.userId;
+            const matchesRefreshTokenHash = !where.refreshTokenHash || session.refreshTokenHash === where.refreshTokenHash;
+            const matchesRevoked = where.revokedAt === undefined || session.revokedAt === where.revokedAt;
+
+            if (matchesId && matchesUser && matchesRefreshTokenHash && matchesRevoked) {
+              if (data.revokedAt !== undefined) session.revokedAt = data.revokedAt;
+              if (data.refreshTokenHash !== undefined) session.refreshTokenHash = data.refreshTokenHash;
+              session.updatedAt = new Date(NOW.getTime() + 1000);
+              count += 1;
+            }
+          });
+          return { count };
         }
       },
       familyMember: {
@@ -613,7 +669,7 @@ async function run(): Promise<void> {
     assertErrorEnvelope(await request("GET", "/shopping"), 401, API_ERROR_CODES.AUTH_REQUIRES_AUTH);
     assertErrorEnvelope(await request("GET", "/shopping", { token: "not-a-jwt", familyId: "family-alpha" }), 401, API_ERROR_CODES.AUTH_INVALID_TOKEN);
     assertErrorEnvelope(await request("GET", "/shopping", {
-      token: createJwt({ sub: alpha.userId, email: "alpha-contract@example.com", iat: 1, exp: 2 }),
+      token: createJwt({ sub: alpha.userId, userId: alpha.userId, email: "alpha-contract@example.com", sessionId: "expired-session", iat: 1, exp: 2 }),
       familyId: "family-alpha"
     }), 401, API_ERROR_CODES.AUTH_EXPIRED_TOKEN);
     assertErrorEnvelope(await request("GET", "/shopping", { token: alpha.token }), 400, API_ERROR_CODES.FAMILY_MISSING_CONTEXT);
