@@ -9,6 +9,7 @@ type RequestWithAuthUser = {
   user?: {
     id: string;
     email: string;
+    sessionId: string;
   };
 };
 
@@ -23,6 +24,8 @@ export class AuthGuard implements CanActivate {
     const request = context.switchToHttp().getRequest<RequestWithAuthUser>();
     const token = this.getBearerToken(request.headers?.authorization);
     const payload = this.authService.verifyAccessToken(token);
+    await this.authService.validateActiveSession(payload.sessionId, payload.sub);
+
     const user = await this.prisma.client.user.findUnique({
       where: { id: payload.sub },
       select: { id: true, email: true }
@@ -34,7 +37,8 @@ export class AuthGuard implements CanActivate {
 
     request.user = {
       id: user.id,
-      email: user.email
+      email: user.email,
+      sessionId: payload.sessionId
     };
 
     return true;

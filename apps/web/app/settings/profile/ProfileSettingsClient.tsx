@@ -14,7 +14,7 @@ import {
   Trash2
 } from "lucide-react";
 import { SettingsCard, SettingsSection } from "../../../components/settings";
-import { ApiError, changeCurrentUserPassword, deleteCurrentUserAccount, getCurrentUserProfile, updateCurrentUserProfile, type ChangePasswordInput, type DeleteAccountInput, type UserProfile } from "../../../lib/api";
+import { ApiError, changeCurrentUserPassword, deleteCurrentUserAccount, getCurrentUserProfile, logout, updateCurrentUserProfile, type ChangePasswordInput, type DeleteAccountInput, type UserProfile } from "../../../lib/api";
 import { clearAuthSession } from "../../../lib/session";
 
 type EditableField = "name" | "email" | "phone";
@@ -465,9 +465,15 @@ export function ProfileSettingsClient() {
     setIsPasswordSheetOpen(false);
   }
 
-  function handleLogout() {
-    clearAuthSession();
-    router.replace("/login");
+  async function handleLogout() {
+    try {
+      await logout();
+    } catch {
+      // Always clear local state so a failed network logout cannot trap the user in the app.
+    } finally {
+      clearAuthSession();
+      router.replace("/login");
+    }
   }
 
   return (

@@ -29,6 +29,18 @@ type UserRecord = {
   updatedAt: Date;
 };
 
+type SessionRecord = {
+  id: string;
+  userId: string;
+  refreshTokenHash: string;
+  userAgent?: string | null;
+  ipAddress?: string | null;
+  revokedAt?: Date | null;
+  expiresAt: Date;
+  createdAt: Date;
+  updatedAt: Date;
+};
+
 type HttpBody = Record<string, unknown> | undefined;
 
 type HttpResponse<T = Record<string, unknown>> = {
@@ -45,7 +57,9 @@ class TestConfigService {
 
 class InMemoryPrismaService {
   private users = new Map<string, UserRecord>();
+  private sessions = new Map<string, SessionRecord>();
   private nextUserId = 1;
+  private nextSessionId = 1;
 
   readonly client = {
     user: {
@@ -74,6 +88,56 @@ class InMemoryPrismaService {
 
         this.users.set(user.email, user);
         return user;
+      }
+    },
+    userSession: {
+      create: async ({ data }: { data: { userId: string; refreshTokenHash: string; userAgent?: string | null; ipAddress?: string | null; expiresAt: Date } }): Promise<SessionRecord> => {
+        const session: SessionRecord = {
+          id: `session-${this.nextSessionId++}`,
+          userId: data.userId,
+          refreshTokenHash: data.refreshTokenHash,
+          userAgent: data.userAgent ?? null,
+          ipAddress: data.ipAddress ?? null,
+          revokedAt: null,
+          expiresAt: data.expiresAt,
+          createdAt: NOW,
+          updatedAt: NOW
+        };
+
+        this.sessions.set(session.id, session);
+        return session;
+      },
+      findUnique: async ({ where, include, select }: { where: { id?: string; refreshTokenHash?: string }; include?: { user?: boolean }; select?: Record<string, boolean> }): Promise<unknown | null> => {
+        const session = where.id ? this.sessions.get(where.id) : [...this.sessions.values()].find((candidate) => candidate.refreshTokenHash === where.refreshTokenHash);
+
+        if (!session) {
+          return null;
+        }
+
+        if (include?.user) {
+          return { ...session, user: [...this.users.values()].find((user) => user.id === session.userId) };
+        }
+
+        if (select) {
+          return Object.fromEntries(Object.keys(select).map((key) => [key, session[key as keyof SessionRecord]]));
+        }
+
+        return session;
+      },
+      updateMany: async ({ where, data }: { where: { id?: string; userId?: string; revokedAt?: null }; data: { revokedAt: Date } }): Promise<{ count: number }> => {
+        let count = 0;
+        this.sessions.forEach((session) => {
+          const matchesId = !where.id || session.id === where.id;
+          const matchesUser = !where.userId || session.userId === where.userId;
+          const matchesRevoked = where.revokedAt === undefined || session.revokedAt === where.revokedAt;
+
+          if (matchesId && matchesUser && matchesRevoked) {
+            session.revokedAt = data.revokedAt;
+            session.updatedAt = NOW;
+            count += 1;
+          }
+        });
+        return { count };
       }
     }
   };
