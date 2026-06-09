@@ -130,7 +130,6 @@ model Family {
   wishlistShareInvitations WishlistShareInvitation[]
   familyInvitations FamilyInvitation[]
   schoolWeekReminders SchoolWeekReminder[]
-  createdMealPlanDays MealPlanDay[]
   feedbackSubmissions FeedbackSubmission[]
 
   @@map("families")
