@@ -152,7 +152,6 @@ model FamilyMember {
   assignedListItems ListItem[]
   wishlistItems WishlistItem[]
   wishlistShareInvitations WishlistShareInvitation[]
-  familyInvitations FamilyInvitation[]
   schoolWeekReminders SchoolWeekReminder[]
   createdMealPlanDays MealPlanDay[]
 
