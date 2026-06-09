@@ -1,22 +1,39 @@
 :root {
   --font-primary: "Plus Jakarta Sans", sans-serif;
 
-  --space-xs: clamp(0.25rem, 0.22rem + 0.15vw, 0.35rem);
-  --space-s: clamp(0.5rem, 0.45rem + 0.25vw, 0.7rem);
-  --space-m: clamp(1rem, 0.9rem + 0.5vw, 1.25rem);
-  --space-l: clamp(1.5rem, 1.3rem + 0.9vw, 2rem);
-  --space-xl: clamp(2rem, 1.75rem + 1.25vw, 3rem);
+  --space-xs: clamp(0.25rem, 0.23rem + 0.1vw, 0.3125rem);
+  --space-s: clamp(0.5rem, 0.46rem + 0.2vw, 0.625rem);
+  --space-m: clamp(0.875rem, 0.8rem + 0.35vw, 1.125rem);
+  --space-l: clamp(1.25rem, 1.05rem + 1vw, 1.75rem);
+  --space-xl: clamp(1.75rem, 1.45rem + 1.4vw, 2.5rem);
 
-  --text-label: clamp(0.8125rem, 0.78rem + 0.16vw, 0.95rem);
-  --text-body: clamp(1rem, 0.96rem + 0.2vw, 1.125rem);
-  --text-title: clamp(2rem, 1.55rem + 2vw, 3rem);
-  --text-heading: clamp(1.25rem, 1.13rem + 0.6vw, 1.65rem);
-  --text-small: clamp(0.82rem, 0.79rem + 0.12vw, 0.92rem);
+  --small: clamp(0.875rem, 0.84rem + 0.16vw, 0.95rem);
+  --label: clamp(0.9375rem, 0.9rem + 0.18vw, 1rem);
+  --body: clamp(0.96875rem, 0.93rem + 0.2vw, 1.0625rem);
+  --h2: clamp(1.5rem, 1.28rem + 1.05vw, 2rem);
+  --h1: clamp(1.875rem, 1.55rem + 1.6vw, 2.375rem);
+  --display: clamp(2rem, 1.5rem + 2.2vw, 3rem);
+
+  --text-small: var(--small);
+  --text-label: var(--label);
+  --text-body: var(--body);
+  --text-heading: var(--h2);
+  --text-title: var(--display);
+  --text-display: var(--display);
 
   --page-width: 72rem;
-  --gutter: clamp(1rem, 0.75rem + 1.25vw, 2rem);
+  --gutter: clamp(0.875rem, 0.62rem + 1.2vw, 1.75rem);
   --content-gap: var(--space-m);
-  --section-gap: clamp(2rem, 1.65rem + 1.75vw, 3.5rem);
+  --section-gap: clamp(1.5rem, 1.2rem + 1.4vw, 2.75rem);
+  --form-gap: var(--space-m);
+  --field-gap: var(--space-xs);
+  --control-height: clamp(3.125rem, 2.95rem + 0.85vw, 3.75rem);
+  --button-height: clamp(3.25rem, 3rem + 1vw, 3.875rem);
+  --card-padding: clamp(1rem, 0.86rem + 0.7vw, 1.5rem);
+  --panel-padding: clamp(1.125rem, 0.9rem + 1vw, 1.75rem);
+  --icon-size-s: clamp(1.25rem, 1.16rem + 0.45vw, 1.5rem);
+  --icon-size: clamp(1.4rem, 1.28rem + 0.6vw, 1.75rem);
+  --touch-target: clamp(2.25rem, 2.1rem + 0.7vw, 2.75rem);
 
   --radius-s: 0.5rem;
   --radius-m: 1rem;
