@@ -1,11 +1,12 @@
 import { Module } from "@nestjs/common";
+import { AuthModule } from "../auth/auth.module";
 import { FamiliesModule } from "../families";
 import { PrismaModule } from "../prisma";
 import { SchoolWeekController } from "./school-week.controller";
 import { SchoolWeekService } from "./school-week.service";
 
 @Module({
-  imports: [PrismaModule, FamiliesModule],
+  imports: [PrismaModule, FamiliesModule, AuthModule],
   controllers: [SchoolWeekController],
   providers: [SchoolWeekService]
 })
