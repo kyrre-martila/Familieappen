@@ -233,7 +233,7 @@ select {
   min-height: 100%;
   border: 1px solid var(--color-border);
   border-radius: var(--radius-l);
-  padding: var(--space-m);
+  padding: var(--card-padding);
   background: var(--color-surface);
 }
 
@@ -277,7 +277,7 @@ select {
   align-items: end;
   border: 1px solid var(--color-border);
   border-radius: var(--radius-l);
-  padding: var(--space-l);
+  padding: var(--panel-padding);
   background:
     linear-gradient(
       135deg,
@@ -367,6 +367,7 @@ select {
 
 .button {
   display: inline-flex;
+  min-height: var(--button-height);
   align-items: center;
   justify-content: center;
   border: 1px solid transparent;
@@ -812,7 +813,7 @@ select {
 }
 
 .auth-card {
-  padding: var(--space-l);
+  padding: var(--panel-padding);
 }
 
 .auth-card__header {
@@ -864,7 +865,7 @@ select {
 
 .form-field {
   display: grid;
-  gap: var(--space-xs);
+  gap: var(--field-gap);
 }
 
 .form-field__label {
@@ -875,6 +876,7 @@ select {
 
 .form-field__input {
   width: 100%;
+  min-height: var(--control-height);
   border: 1px solid var(--color-border-strong);
   border-radius: var(--radius-m);
   padding: var(--space-s) var(--space-m);
@@ -1054,7 +1056,7 @@ select {
   align-items: end;
   border: 1px solid var(--color-border);
   border-radius: var(--radius-l);
-  padding: var(--space-l);
+  padding: var(--panel-padding);
   background:
     linear-gradient(
       135deg,
@@ -1907,8 +1909,8 @@ select {
   min-height: 100vh;
   overflow: hidden;
   place-items: center;
-  padding: max(var(--space-l), env(safe-area-inset-top)) var(--gutter)
-    max(var(--space-l), env(safe-area-inset-bottom));
+  padding: max(var(--space-m), env(safe-area-inset-top)) var(--gutter)
+    max(var(--space-m), env(safe-area-inset-bottom));
   background: #fffaf4;
   isolation: isolate;
 }
@@ -1941,7 +1943,7 @@ select {
   display: grid;
   width: min(100%, 33.75rem);
   justify-items: center;
-  gap: var(--space-l);
+  gap: var(--section-gap);
   padding-block: var(--space-l);
 }
 
@@ -1959,7 +1961,7 @@ select {
 .login-screen__title {
   margin: 0;
   color: #183f2a;
-  font-size: clamp(2.35rem, 1.6rem + 8vw, 3.45rem);
+  font-size: var(--h1);
   font-weight: 800;
   line-height: 1.02;
   letter-spacing: -0.055em;
@@ -1968,14 +1970,14 @@ select {
 .login-screen__subtitle {
   margin: 0;
   color: #707070;
-  font-size: clamp(1.05rem, 0.98rem + 0.4vw, 1.25rem);
+  font-size: var(--body);
   font-weight: 500;
   line-height: 1.45;
 }
 
 .login-screen .auth-form {
   width: 100%;
-  gap: calc(var(--space-m) * 1.05);
+  gap: var(--form-gap);
 }
 
 .login-field {
@@ -1986,18 +1988,18 @@ select {
 
 .login-field__label {
   color: #244732;
-  font-size: clamp(1rem, 0.94rem + 0.32vw, 1.15rem);
+  font-size: var(--label);
   font-weight: 750;
 }
 
 .login-field__control {
   display: flex;
-  min-height: clamp(4.3rem, 3.9rem + 2vw, 5.1rem);
+  min-height: var(--control-height);
   align-items: center;
   gap: var(--space-s);
   border: 1.5px solid #ded8cf;
   border-radius: 1rem;
-  padding-inline: clamp(1rem, 0.84rem + 0.8vw, 1.35rem);
+  padding-inline: var(--space-m);
   background: color-mix(in srgb, #ffffff 72%, transparent);
   color: #7d7d7d;
   box-shadow: inset 0 1px 0 color-mix(in srgb, #ffffff 86%, transparent);
@@ -2023,13 +2025,13 @@ select {
 }
 
 .login-field__icon {
-  width: 1.8rem;
-  height: 1.8rem;
+  width: var(--icon-size);
+  height: var(--icon-size);
 }
 
 .login-field__toggle-icon {
-  width: 1.65rem;
-  height: 1.65rem;
+  width: var(--icon-size-s);
+  height: var(--icon-size-s);
 }
 
 .login-field__input {
@@ -2039,7 +2041,7 @@ select {
   outline: 0;
   background: transparent;
   color: #1f1f1f;
-  font-size: clamp(1rem, 0.94rem + 0.32vw, 1.15rem);
+  font-size: var(--label);
   font-weight: 500;
 }
 
@@ -2056,15 +2058,15 @@ select {
   max-width: 32rem;
   margin: calc(var(--space-xs) * -0.15) 0 0;
   color: #707070;
-  font-size: clamp(0.95rem, 0.88rem + 0.32vw, 1.08rem);
+  font-size: var(--small);
   font-weight: 500;
   line-height: 1.5;
 }
 
 .login-field__toggle {
   display: inline-grid;
-  width: 2.5rem;
-  height: 2.5rem;
+  width: var(--touch-target);
+  height: var(--touch-target);
   flex: 0 0 auto;
   place-items: center;
   border: 0;
@@ -2084,14 +2086,14 @@ select {
   align-items: center;
   gap: var(--space-xs);
   color: #242424;
-  font-size: clamp(0.98rem, 0.91rem + 0.34vw, 1.1rem);
+  font-size: var(--label);
   font-weight: 500;
   line-height: 1.35;
 }
 
 .register-form__terms input {
-  width: 1.55rem;
-  height: 1.55rem;
+  width: var(--icon-size-s);
+  height: var(--icon-size-s);
   flex: 0 0 auto;
   margin: 0;
   accent-color: #244732;
@@ -2116,7 +2118,7 @@ select {
   justify-self: end;
   margin-top: calc(var(--space-xs) * -0.25);
   color: #244732;
-  font-size: clamp(0.98rem, 0.92rem + 0.3vw, 1.1rem);
+  font-size: var(--label);
   font-weight: 650;
   text-decoration: underline;
   text-underline-offset: 0.14em;
@@ -2125,7 +2127,7 @@ select {
 .login-screen__back-link {
   justify-self: center;
   color: #244732;
-  font-size: clamp(0.98rem, 0.92rem + 0.3vw, 1.1rem);
+  font-size: var(--label);
   font-weight: 750;
   text-decoration: underline;
   text-underline-offset: 0.14em;
@@ -2133,12 +2135,12 @@ select {
 
 .login-screen .auth-form .button--primary {
   width: 100%;
-  min-height: clamp(4.6rem, 4.05rem + 2.5vw, 5.45rem);
+  min-height: var(--button-height);
   margin-top: calc(var(--space-xs) * 0.5);
   border-radius: 1rem;
   background: linear-gradient(135deg, #285a37, #1f4d2f);
   color: #ffffff;
-  font-size: clamp(1.15rem, 1.04rem + 0.55vw, 1.45rem);
+  font-size: var(--body);
   font-weight: 800;
   box-shadow: 0 1rem 2rem color-mix(in srgb, #1f4d2f 16%, transparent);
 }
@@ -2173,7 +2175,7 @@ select {
 
 .login-screen__register {
   color: #242424;
-  font-size: clamp(1rem, 0.94rem + 0.38vw, 1.18rem);
+  font-size: var(--body);
   font-weight: 500;
   text-align: center;
 }
@@ -2254,13 +2256,13 @@ select {
   gap: calc(var(--space-xs) * 0.75);
   border-radius: var(--radius-pill);
   color: #1f5a3a;
-  font-size: clamp(1rem, 0.93rem + 0.34vw, 1.18rem);
+  font-size: var(--label);
   font-weight: 780;
 }
 
 .onboarding-profile-screen__back svg {
-  width: 1.85rem;
-  height: 1.85rem;
+  width: var(--icon-size);
+  height: var(--icon-size);
   stroke: currentColor;
   stroke-width: 2.3;
   stroke-linecap: round;
@@ -2274,8 +2276,8 @@ select {
 
 .onboarding-profile-screen__content {
   width: min(100%, 34rem);
-  gap: clamp(var(--space-m), 3.5vw, var(--space-l));
-  padding-top: clamp(4.5rem, 10svh, 6.5rem);
+  gap: var(--section-gap);
+  padding-top: calc(var(--section-gap) + var(--space-xl));
 }
 
 .onboarding-profile-screen__logo {
@@ -2287,7 +2289,7 @@ select {
 }
 
 .onboarding-profile-screen .login-screen__title {
-  font-size: clamp(2.25rem, 1.5rem + 7.2vw, 3.4rem);
+  font-size: var(--h1);
 }
 
 .onboarding-profile-form {
@@ -2304,7 +2306,7 @@ select {
 .onboarding-profile-form__avatar {
   position: relative;
   display: grid;
-  width: clamp(8.8rem, 38vw, 11rem);
+  width: min(38vw, calc(var(--space-xl) * 4.4));
   aspect-ratio: 1;
   place-items: center;
   border: 1.5px solid #ded8cf;
@@ -2331,7 +2333,7 @@ select {
   right: 0;
   bottom: 0.55rem;
   display: grid;
-  width: clamp(3.25rem, 13vw, 4.3rem);
+  width: min(13vw, calc(var(--touch-target) * 1.55));
   aspect-ratio: 1;
   place-items: center;
   border: 2px solid color-mix(in srgb, #fffaf4 88%, transparent);
@@ -2365,12 +2367,12 @@ select {
   background: transparent;
   color: #1f5a3a;
   cursor: pointer;
-  font-size: clamp(1rem, 0.94rem + 0.32vw, 1.15rem);
+  font-size: var(--label);
   font-weight: 760;
 }
 
 .onboarding-profile-form__phone-control {
-  gap: clamp(0.75rem, 2.4vw, 1rem);
+  gap: var(--space-s);
 }
 
 .onboarding-profile-form__country-code {
@@ -2381,7 +2383,7 @@ select {
   background: transparent;
   color: #1f1f1f;
   cursor: pointer;
-  font-size: clamp(1rem, 0.94rem + 0.32vw, 1.15rem);
+  font-size: var(--label);
   font-weight: 700;
 }
 
@@ -2415,10 +2417,10 @@ select {
 
 .onboarding-profile-form__date-placeholder {
   position: absolute;
-  left: clamp(4rem, 3.5rem + 2.7vw, 4.65rem);
+  left: calc(var(--space-xl) + var(--space-l));
   z-index: 0;
   color: #a0a0a0;
-  font-size: clamp(1rem, 0.94rem + 0.32vw, 1.15rem);
+  font-size: var(--label);
   font-weight: 500;
   pointer-events: none;
 }
