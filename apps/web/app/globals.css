@@ -772,11 +772,27 @@ select {
   }
 }
 
+.app-shell--immersive {
+  min-height: 100vh;
+  min-height: 100svh;
+  background: var(--color-auth-background);
+}
+
 .app-shell--immersive .app-shell__main {
   display: grid;
   min-height: 100vh;
-  align-items: center;
-  padding-block: var(--space-l);
+  min-height: 100svh;
+  width: 100%;
+  align-items: stretch;
+  padding: 0;
+  background: inherit;
+}
+
+.app-shell--immersive .app-shell__content {
+  min-height: 100vh;
+  min-height: 100svh;
+  width: 100%;
+  background: inherit;
 }
 
 .app-shell--immersive.app-shell--splash .app-shell__main {
