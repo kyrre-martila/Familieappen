@@ -13,6 +13,7 @@ import {
   FamilyInviteRequestDto,
   FamilyInviteResponseDto,
   FamilyMemberDto,
+  JoinFamilyByCodeRequestDto,
   FamilyMemberRoleDto,
   FamilyWithMembershipDto,
   UpdateFamilyMemberRequestDto,
@@ -22,15 +23,20 @@ import { FamilyAuthorizationService } from "./family-authorization.service";
 
 const FAMILY_MANAGER_ROLES: FamilyMemberRoleDto[] = ["OWNER", "PARENT"];
 const MANUAL_MEMBER_ROLES: AddFamilyMemberRoleDto[] = ["PARENT", "CHILD", "GUEST"];
+const FAMILY_CODE_ALPHABET = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
+const FAMILY_CODE_LENGTH = 6;
+const FAMILY_CODE_MAX_ATTEMPTS = 10;
 
 type UserRecord = {
   id: string;
   name: string;
+  email?: string;
 };
 
 type FamilyRecord = {
   id: string;
   name: string;
+  code: string | null;
   createdAt: Date;
   updatedAt: Date;
 };
@@ -67,7 +73,6 @@ type MealPlanDayRecord = {
   updatedAt: Date;
   deletedAt?: Date | null;
 };
-
 
 type CalendarEventParticipantRecord = {
   id: string;
@@ -158,28 +163,25 @@ export class FamiliesService {
         return this.ensureOwnerDisplayName(tx, existingOwnedFamily, user.id, user.name);
       }
 
-      return tx.family.create({
-        data: {
-          name,
-          members: {
-            create: {
-              userId: user.id,
-              displayName: user.name,
-              role: "OWNER"
-            }
-          },
-          shoppingLists: {
-            create: {
-              name: "Family Shopping"
-            }
+      return this.createFamilyWithUniqueCode(tx, {
+        name,
+        members: {
+          create: {
+            userId: user.id,
+            displayName: user.name,
+            role: "OWNER"
           }
         },
-        include: {
-          members: {
-            orderBy: [{ createdAt: "asc" }, { id: "asc" }]
+        shoppingLists: {
+          create: {
+            name: "Family Shopping"
           }
         }
-      }) as Promise<FamilyWithMembersRecord>;
+      }, {
+        members: {
+          orderBy: [{ createdAt: "asc" }, { id: "asc" }]
+        }
+      });
     };
 
     const family = await (this.prisma.client as any).$transaction(runIdempotentCreate, {
@@ -222,7 +224,6 @@ export class FamiliesService {
 
     return this.toFamilyDetailsDto(family as FamilyWithMembersRecord);
   }
-
 
   async updateFamily(userId: string, familyId: string, input: UpdateFamilyRequestDto = {}): Promise<FamilyDto> {
     await this.familyAuthorization.requireFamilyRole(userId, familyId, FAMILY_MANAGER_ROLES);
@@ -278,7 +279,6 @@ export class FamiliesService {
     return this.toFamilyMemberDto(member);
   }
 
-
   async updateFamilyMember(userId: string, familyId: string, memberId: string, input: UpdateFamilyMemberRequestDto = {}): Promise<FamilyMemberDto> {
     await this.familyAuthorization.requireFamilyRole(userId, familyId, FAMILY_MANAGER_ROLES);
     const member = await this.getFamilyMemberOrThrow(familyId, memberId);
@@ -295,6 +295,63 @@ export class FamiliesService {
     });
 
     return this.toFamilyMemberDto(updated);
+  }
+
+  async joinFamilyByCode(userId: string, input: JoinFamilyByCodeRequestDto = {}): Promise<FamilyInvitationDto> {
+    const user = await this.getUserOrThrow(userId);
+    const code = this.normalizeFamilyCode(input.code);
+
+    const family = await this.prisma.client.family.findUnique({
+      where: { code } as any,
+      include: {
+        members: {
+          orderBy: [{ createdAt: "asc" }, { id: "asc" }]
+        }
+      }
+    }) as FamilyWithMembersRecord | null;
+
+    if (!family) {
+      throw new NotFoundException("Family code was not found");
+    }
+
+    if (family.members.some((member) => member.userId === userId)) {
+      throw new ConflictException("User is already a member of this family");
+    }
+
+    const requesterEmail = this.requireUserEmail(user);
+    const existingPending = await (this.prisma.client as PrismaClientWithFamilyInvitations).familyInvitation.findFirst({
+      where: {
+        familyId: family.id,
+        status: "pending",
+        OR: [
+          { invitedUserId: user.id },
+          { invitedEmail: { equals: requesterEmail, mode: "insensitive" } }
+        ]
+      }
+    });
+
+    if (existingPending) {
+      return this.toFamilyInvitationDto(existingPending);
+    }
+    const familyAdministrator = family.members.find((member) => this.isAdminRole(member.role) && member.userId);
+
+    if (!familyAdministrator?.userId) {
+      throw new NotFoundException("Family administrator was not found");
+    }
+
+    const token = this.generateRawToken();
+    const invitation = await (this.prisma.client as PrismaClientWithFamilyInvitations).familyInvitation.create({
+      data: {
+        familyId: family.id,
+        invitedEmail: requesterEmail,
+        invitedUserId: user.id,
+        role: "GUEST",
+        tokenHash: this.hashToken(token),
+        createdByUserId: familyAdministrator.userId
+      }
+    });
+
+    return this.toFamilyInvitationDto(invitation);
   }
 
   async listFamilyInvitations(userId: string, familyId: string): Promise<FamilyInvitationDto[]> {
@@ -410,7 +467,6 @@ export class FamiliesService {
 
     return this.toFamilyMemberDto(deletedMember);
   }
-
 
   private async getWishlistSummary(familyId: string): Promise<FamilyDashboardDto["wishlistSummary"]> {
     const activeItems = await this.prisma.client.wishlistItem.findMany({
@@ -609,6 +665,65 @@ export class FamiliesService {
     return { uncheckedCount, totalItems };
   }
 
+  private async createFamilyWithUniqueCode(tx: typeof this.prisma.client, data: Record<string, unknown>, include: Record<string, unknown>): Promise<FamilyWithMembersRecord> {
+    for (let attempt = 0; attempt < FAMILY_CODE_MAX_ATTEMPTS; attempt += 1) {
+      const code = this.generateFamilyCode();
+      const existing = await (tx.family as any).findUnique({ where: { code } });
+
+      if (existing) {
+        continue;
+      }
+
+      try {
+        return await (tx.family as any).create({
+          data: { ...data, code },
+          include
+        }) as FamilyWithMembersRecord;
+      } catch (error) {
+        if (this.isUniqueConstraintError(error)) {
+          continue;
+        }
+
+        throw error;
+      }
+    }
+
+    throw new ConflictException("Could not generate a unique family code");
+  }
+
+  private generateFamilyCode(): string {
+    const bytes = randomBytes(FAMILY_CODE_LENGTH);
+    const suffix = Array.from(bytes, (byte) => FAMILY_CODE_ALPHABET[byte % FAMILY_CODE_ALPHABET.length]).join("");
+
+    return `FA-${suffix}`;
+  }
+
+  private normalizeFamilyCode(value: unknown): string {
+    if (typeof value !== "string") {
+      throw new BadRequestException("Family code is required");
+    }
+
+    const compactCode = value.trim().toUpperCase().replace(/[\s-]+/g, "");
+    const normalizedCode = compactCode.startsWith("FA") ? compactCode : `FA${compactCode}`;
+
+    if (!/^FA[A-Z0-9]{6}$/.test(normalizedCode)) {
+      throw new NotFoundException("Family code was not found");
+    }
+
+    return `FA-${normalizedCode.slice(2)}`;
+  }
+
+  private requireUserEmail(user: UserRecord): string {
+    if (!user.email) {
+      throw new NotFoundException("User was not found");
+    }
+
+    return user.email;
+  }
+
+  private isUniqueConstraintError(error: unknown): boolean {
+    return typeof error === "object" && error !== null && "code" in error && (error as { code?: string }).code === "P2002";
+  }
 
   private async findExistingOwnedFamily(tx: typeof this.prisma.client, userId: string): Promise<FamilyWithMembersRecord | null> {
     const existingOwnerMembership = await tx.familyMember.findFirst({
@@ -733,7 +848,8 @@ export class FamiliesService {
       where: { id: userId },
       select: {
         id: true,
-        name: true
+        name: true,
+        email: true
       }
     });
 
@@ -780,7 +896,6 @@ export class FamiliesService {
     return value as AddFamilyMemberRoleDto;
   }
 
-
   private validateEmail(value: unknown): string {
     if (typeof value !== "string") {
       throw new BadRequestException("E-post må fylles ut");
@@ -812,6 +927,7 @@ export class FamiliesService {
       id: family.id,
       name: family.name,
       createdAt: family.createdAt.toISOString(),
+      code: family.code,
       updatedAt: family.updatedAt.toISOString()
     };
   }

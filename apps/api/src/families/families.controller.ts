@@ -11,6 +11,7 @@ import {
   FamilyInviteRequestDto,
   FamilyInviteResponseDto,
   FamilyMemberDto,
+  JoinFamilyByCodeRequestDto,
   FamilyWithMembershipDto,
   UpdateFamilyMemberRequestDto,
   UpdateFamilyRequestDto
@@ -35,6 +36,15 @@ export class FamiliesController {
     @Body() body: CreateFamilyRequestDto
   ): Promise<ApiResponse<FamilyDetailsDto>> {
     return createApiResponse(await this.familiesService.createFamily(request.user.id, body));
+  }
+
+
+  @Post("join-by-code")
+  async joinFamilyByCode(
+    @Req() request: AuthenticatedRequest,
+    @Body() body: JoinFamilyByCodeRequestDto
+  ): Promise<ApiResponse<FamilyInvitationDto>> {
+    return createApiResponse(await this.familiesService.joinFamilyByCode(request.user.id, body));
   }
 
   @Get()

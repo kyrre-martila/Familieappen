@@ -4,23 +4,13 @@ import Image from "next/image";
 import { FormEvent, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import { Button } from "../../../components/ui";
-import { getOnboardingFamilyState } from "../../../lib/onboarding-state";
+import { ApiError, joinFamilyByCode } from "../../../lib/api";
 import { savePendingFamilyRequest } from "../../../lib/session";
 
 type JoinFamilyState = "entry" | "found";
 
 function normalizeFamilyCode(value: string) {
   return value.trim().toUpperCase().replace(/\s+/g, "");
-}
-
-function isFamilyCodeRecognized(code: string) {
-  const savedCode = getOnboardingFamilyState()?.family.code;
-
-  if (savedCode && code === savedCode) {
-    return true;
-  }
-
-  return /^[A-ZÆØÅ0-9]{3,12}-\d{4}$/.test(code);
 }
 
 export function JoinFamilyCodeForm() {
@@ -30,7 +20,7 @@ export function JoinFamilyCodeForm() {
   const [errorMessage, setErrorMessage] = useState("");
   const normalizedCode = useMemo(() => normalizeFamilyCode(code), [code]);
 
-  function validateCode(event: FormEvent<HTMLFormElement>) {
+  async function validateCode(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
 
     if (!normalizedCode) {
@@ -38,13 +28,23 @@ export function JoinFamilyCodeForm() {
       return;
     }
 
-    if (!isFamilyCodeRecognized(normalizedCode)) {
-      setErrorMessage("Vi fant ikke en familie med denne koden. Sjekk koden og prøv igjen.");
-      return;
-    }
+    try {
+      await joinFamilyByCode(normalizedCode);
+      setErrorMessage("");
+      setScreenState("found");
+    } catch (error) {
+      if (error instanceof ApiError && error.status === 404) {
+        setErrorMessage("Vi fant ikke en familie med denne koden. Sjekk koden og prøv igjen.");
+        return;
+      }
 
-    setErrorMessage("");
-    setScreenState("found");
+      if (error instanceof ApiError && error.status === 409) {
+        setErrorMessage("Du er allerede medlem av denne familien.");
+        return;
+      }
+
+      setErrorMessage("Kunne ikke sende forespørselen akkurat nå. Prøv igjen.");
+    }
   }
 
   function useAnotherCode() {
@@ -53,7 +53,7 @@ export function JoinFamilyCodeForm() {
     setErrorMessage("");
   }
 
-  function sendJoinRequest() {
+  function continueAfterJoinRequest() {
     savePendingFamilyRequest(normalizedCode);
     router.push("/dashboard");
   }
@@ -73,8 +73,8 @@ export function JoinFamilyCodeForm() {
         />
 
         <div className="login-screen__header join-family-found__header">
-          <h1 className="login-screen__title" id="join-family-title">Familiekode er gyldig</h1>
-          <p className="login-screen__subtitle">Du kan sende forespørsel om å bli med i familien.</p>
+          <h1 className="login-screen__title" id="join-family-title">Forespørsel sendt</h1>
+          <p className="login-screen__subtitle">Administrator må godkjenne deg før du får tilgang.</p>
         </div>
 
         <article className="join-family-found-card" aria-labelledby="join-family-found-card-title">
@@ -84,8 +84,8 @@ export function JoinFamilyCodeForm() {
         </article>
 
         <div className="join-family-found__actions">
-          <Button className="join-family-found__primary" onClick={sendJoinRequest} variant="primary">
-            Send forespørsel
+          <Button className="join-family-found__primary" onClick={continueAfterJoinRequest} variant="primary">
+            Gå videre
           </Button>
           <button className="join-family-found__secondary" onClick={useAnotherCode} type="button">
             Bruk en annen kode

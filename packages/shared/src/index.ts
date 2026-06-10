@@ -5,6 +5,7 @@ export type ManualFamilyMemberRole = Exclude<FamilyMemberRole, "OWNER">;
 export interface Family {
   id: string;
   name: string;
+  code: string | null;
   createdAt: string;
   updatedAt: string;
 }

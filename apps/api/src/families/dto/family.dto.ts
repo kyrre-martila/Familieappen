@@ -27,6 +27,10 @@ export interface FamilyInviteRequestDto {
   role?: unknown;
 }
 
+export interface JoinFamilyByCodeRequestDto {
+  code?: unknown;
+}
+
 export interface FamilyInvitationDto {
   id: string;
   familyId: string;
@@ -63,6 +67,7 @@ export interface FamilyMemberDto {
 export interface FamilyDto {
   id: string;
   name: string;
+  code: string | null;
   createdAt: string;
   updatedAt: string;
 }
