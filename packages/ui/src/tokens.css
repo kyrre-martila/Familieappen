@@ -35,6 +35,16 @@
   --icon-size: clamp(1.4rem, 1.28rem + 0.6vw, 1.75rem);
   --touch-target: clamp(2.25rem, 2.1rem + 0.7vw, 2.75rem);
 
+  --bottom-nav-height: clamp(4.75rem, 4.35rem + 1.4vw, 5.5rem);
+  --bottom-nav-bottom: clamp(1rem, 0.8rem + 0.9vw, 1.5rem);
+  --bottom-nav-padding: clamp(0.375rem, 0.32rem + 0.25vw, 0.5rem);
+  --bottom-nav-radius: clamp(1.75rem, 1.45rem + 1.2vw, 2.5rem);
+  --bottom-nav-icon-size: clamp(1.55rem, 1.42rem + 0.5vw, 1.875rem);
+  --bottom-nav-label-size: clamp(0.72rem, 0.68rem + 0.18vw, 0.8125rem);
+  --bottom-nav-fab-size: clamp(4.25rem, 3.9rem + 1.35vw, 5rem);
+  --bottom-nav-fab-offset: clamp(1.25rem, 1.05rem + 0.85vw, 1.75rem);
+  --bottom-nav-shadow: 0 1rem 2.5rem color-mix(in srgb, var(--color-primary-strong) 16%, transparent);
+
   --radius-s: 0.5rem;
   --radius-m: 1rem;
   --radius-l: 1.5rem;
