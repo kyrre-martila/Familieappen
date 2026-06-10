@@ -175,9 +175,23 @@ export class ProfileService {
     }
 
     try {
-      const user = await this.prisma.client.user.update({
-        where: { id: userId },
-        data
+      const user = await this.prisma.client.$transaction(async (tx) => {
+        const updatedUser = await tx.user.update({
+          where: { id: userId },
+          data
+        });
+
+        if (data.name) {
+          await tx.familyMember.updateMany({
+            where: {
+              userId,
+              role: "OWNER"
+            },
+            data: { displayName: data.name }
+          });
+        }
+
+        return updatedUser;
       });
 
       return this.toProfileDto(user);

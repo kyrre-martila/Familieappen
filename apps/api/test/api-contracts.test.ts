@@ -240,6 +240,16 @@ class InMemoryPrismaService {
           return member && select?.familyId ? { familyId: member.familyId } : member;
         },
         count: async ({ where }: { where: { familyId: string; id?: { not: string }; role?: { in: readonly string[] } } }): Promise<number> => [...this.familyMembers.values()].filter((member) => member.familyId === where.familyId && (!where.id || member.id !== where.id.not) && (!where.role || where.role.in.includes(member.role))).length,
+        updateMany: async ({ where, data }: { where: { userId?: string; role?: FamilyMemberRecord["role"] }; data: { displayName?: string } }): Promise<{ count: number }> => {
+          let count = 0;
+          this.familyMembers.forEach((member) => {
+            if ((!where.userId || member.userId === where.userId) && (!where.role || member.role === where.role)) {
+              if (data.displayName !== undefined) member.displayName = data.displayName;
+              count += 1;
+            }
+          });
+          return { count };
+        },
         delete: async ({ where }: { where: { id: string } }): Promise<FamilyMemberRecord> => {
           const member = this.familyMembers.get(where.id);
           if (!member) throw new Error("Record not found");

@@ -148,6 +148,7 @@ class InMemoryPrismaService {
       familyMember: {
         findMany: async () => [],
         count: async () => 0,
+        updateMany: async () => ({ count: 0 }),
         delete: async () => ({})
       },
       family: {
