@@ -12567,3 +12567,25 @@ button.family-settings-row:focus-visible:not(:disabled) {
   font-size: var(--text-small);
   font-weight: 780;
 }
+
+.menu-shell {
+  padding-bottom: calc(var(--space-xl) * 4 + env(safe-area-inset-bottom));
+}
+
+.menu-footer {
+  display: grid;
+  justify-items: stretch;
+}
+
+.menu-logout-button {
+  gap: var(--space-s);
+  width: 100%;
+  min-height: calc(var(--button-height) + var(--space-s));
+  color: var(--color-primary-strong);
+}
+
+.menu-logout-button svg {
+  width: 1.25rem;
+  height: 1.25rem;
+  stroke-width: 2.2;
+}
