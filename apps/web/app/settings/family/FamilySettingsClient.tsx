@@ -57,8 +57,7 @@ function getInitials(name: string) {
 }
 
 function getFamilyCode(family: Family | null) {
-  if (!family?.id) return "FAMILIE";
-  return `FA-${family.id.replace(/[^a-z0-9]/gi, "").slice(-6).toLocaleUpperCase("nb-NO") || "FAMILIE"}`;
+  return family?.code ?? "Ikke tilgjengelig";
 }
 
 function formatDate(value: string | null) {

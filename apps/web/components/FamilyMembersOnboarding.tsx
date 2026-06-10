@@ -31,7 +31,7 @@ const roleOptions: Array<{ role: OnboardingInviteRole; description: string; icon
 
 export function FamilyMembersOnboarding() {
   const router = useRouter();
-  const [familyCode, setFamilyCode] = useState("MARTILA-4821");
+  const [familyCode, setFamilyCode] = useState<string | null>(null);
   const [members, setMembers] = useState<OnboardingFamilyInvite[]>([]);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [copyMessage, setCopyMessage] = useState<string | null>(null);
@@ -57,6 +57,11 @@ export function FamilyMembersOnboarding() {
   }
 
   async function copyFamilyCode(feedback = "Kode kopiert") {
+    if (!familyCode) {
+      setCopyMessage("Familiekode er ikke tilgjengelig ennå");
+      return;
+    }
+
     try {
       await navigator.clipboard?.writeText(familyCode);
       setCopyMessage(feedback);
@@ -68,6 +73,11 @@ export function FamilyMembersOnboarding() {
   }
 
   async function shareFamilyCode() {
+    if (!familyCode) {
+      setCopyMessage("Familiekode er ikke tilgjengelig ennå");
+      return;
+    }
+
     const shareData = {
       title: "Familiekode",
       text: `Bli med i familien min i FamilieAppen med koden ${familyCode}.`,
@@ -115,7 +125,7 @@ export function FamilyMembersOnboarding() {
         <span className="family-code-card__icon" aria-hidden="true"><QrIcon /></span>
         <div className="family-code-card__copy">
           <h2 id="family-code-title">Familiekode</h2>
-          <p>{familyCode}</p>
+          <p>{familyCode ?? "Ikke tilgjengelig"}</p>
         </div>
         <Button className="family-code-card__button" onClick={() => void copyFamilyCode()} variant="secondary">
           <CopyIcon />

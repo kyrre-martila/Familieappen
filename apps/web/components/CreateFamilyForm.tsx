@@ -45,7 +45,7 @@ export function CreateFamilyForm() {
     try {
       const family = await createFamily({ name: trimmedFamilyName });
       setActiveFamilyId(family.family.id);
-      saveOnboardingFamilyState(family.family.name);
+      saveOnboardingFamilyState(family.family.name, family.family.code);
       router.push("/onboarding/family-members");
     } catch (createError) {
       setError(getUserFacingApiMessage(createError, "Kunne ikke opprette familien akkurat nå. Prøv igjen."));

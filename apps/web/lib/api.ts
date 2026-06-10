@@ -34,7 +34,6 @@ import type {
 
 export type { CalendarEvent, Family, FamilyDashboardResponse, FamilyInvitation, FamilyInviteResponse, FamilyMember, FamilyMemberRole, ManualFamilyMemberRole, MealPlan, MealPlanDay, MoveMealResult, ShoppingList, ShoppingListItem, SharedWishlistItem, SharedWishlistItemsResponse, SharedWishlistSummary, Task, WishlistItem, WishlistItemCreateInput, WishlistItemListResponse, WishlistItemUpdateInput, WishlistSummary, WishlistInvitePreview, WishlistShareInvitation, WishlistShareInviteResponse, Reminder, HuskList, HuskListItem, SchoolWeekReminder };
 
-
 type LegacyWishlistItem = WishlistItem & {
   productUrl?: string | null;
   estimatedPrice?: string | null;
@@ -107,7 +106,6 @@ export interface DeleteAccountResponse {
   message: string;
 }
 
-
 export type FeedbackSubmissionType = "feedback" | "bug";
 
 export interface FeedbackSubmission {
@@ -149,7 +147,6 @@ export interface AuthResponse {
     expiresIn: number;
   };
 }
-
 
 export interface RefreshResponse {
   tokens: AuthResponse["tokens"];
@@ -268,6 +265,13 @@ export async function listFamilies(): Promise<FamilyWithMembership[]> {
   return apiRequest<FamilyWithMembership[]>("/families");
 }
 
+export async function joinFamilyByCode(code: string): Promise<FamilyInvitation> {
+  return apiRequest<FamilyInvitation>("/families/join-by-code", {
+    method: "POST",
+    body: { code }
+  });
+}
+
 export async function getFamily(familyId: string): Promise<FamilyDetails> {
   return apiRequest<FamilyDetails>(`/families/${encodeURIComponent(familyId)}`);
 }
@@ -376,7 +380,6 @@ export async function removeSharedWishlist(shareId: string): Promise<WishlistSha
   return apiRequest<WishlistShareInvitation>(`/wishlist/shared/${encodeURIComponent(shareId)}/remove`, { method: "POST" });
 }
 
-
 export async function getSharedWishlistSummaries(familyId: string): Promise<SharedWishlistSummary[]> {
   return apiRequest<SharedWishlistSummary[]>("/wishlist/shared", { familyId });
 }
@@ -384,7 +387,6 @@ export async function getSharedWishlistSummaries(familyId: string): Promise<Shar
 export async function getSharedWishlistItems(familyId: string, memberId: string): Promise<SharedWishlistItemsResponse> {
   return apiRequest<SharedWishlistItemsResponse>(`/wishlist/shared/${encodeURIComponent(memberId)}`, { familyId });
 }
-
 
 export async function reserveWishlistItem(familyId: string, itemId: string): Promise<SharedWishlistItem> {
   return apiRequest<SharedWishlistItem>(`/wishlist/items/${encodeURIComponent(itemId)}/reserve`, {
@@ -437,7 +439,6 @@ export async function reorderMyWishlistItems(familyId: string, orderedIds: strin
     familyId
   });
 }
-
 
 export async function getWishlists(familyId: string): Promise<WishlistSummary[]> {
   return apiRequest<WishlistSummary[]>("/wishlists", { familyId });
@@ -663,7 +664,6 @@ export async function deleteCalendarEvent(familyId: string, eventId: string): Pr
   });
 }
 
-
 export async function getHuskReminders(familyId: string): Promise<Reminder[]> {
   return apiRequest<Reminder[]>("/husk/reminders", { familyId });
 }
@@ -768,7 +768,6 @@ export async function uncompleteHuskListItem(familyId: string, listId: string, i
   return apiRequest<HuskListItem>(`/husk/lists/${encodeURIComponent(listId)}/items/${encodeURIComponent(itemId)}/uncomplete`, { method: "PATCH", familyId });
 }
 
-
 export type SchoolWeekMutationScope = "occurrence" | "series";
 
 export async function getSchoolWeekReminders(familyId: string, weekStart: string): Promise<SchoolWeekReminder[]> {
@@ -798,8 +797,6 @@ export async function deleteSchoolWeekReminder(familyId: string, reminderId: str
   const suffix = params.toString() ? `?${params.toString()}` : "";
   return apiRequest<SchoolWeekReminder>(`/school-week/${encodeURIComponent(reminderId)}${suffix}`, { method: "DELETE", familyId });
 }
-
-
 
 export async function submitFeedback(input: SubmitFeedbackInput): Promise<FeedbackSubmission> {
   return apiRequest<FeedbackSubmission>("/feedback", {
