@@ -1924,11 +1924,12 @@ select {
   display: grid;
   width: min(100vw, 100%);
   min-height: 100vh;
+  min-height: 100svh;
   overflow: hidden;
   place-items: center;
   padding: max(var(--space-m), env(safe-area-inset-top)) var(--gutter)
     max(var(--space-m), env(safe-area-inset-bottom));
-  background: #fffaf4;
+  background: var(--color-auth-background);
   isolation: isolate;
 }
 
