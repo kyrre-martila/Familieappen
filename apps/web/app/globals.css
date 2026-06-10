@@ -4275,6 +4275,7 @@ select {
 /* Run 3 shared authenticated app shell */
 .root-app-frame {
   min-height: 100vh;
+  min-height: 100svh;
 }
 
 .root-app-frame__main {
@@ -4282,16 +4283,24 @@ select {
   margin: 0 auto;
 }
 
+.root-app-frame--immersive {
+  min-height: 100vh;
+  min-height: 100svh;
+  background: var(--color-auth-background);
+}
+
 .root-app-frame--immersive .root-app-frame__main {
   display: grid;
   min-height: 100vh;
-  align-items: center;
-  padding-block: var(--space-l);
+  min-height: 100svh;
+  width: 100%;
+  max-width: none;
+  align-items: stretch;
+  padding: 0;
+  background: inherit;
 }
 
 .root-app-frame--immersive.root-app-frame--splash .root-app-frame__main {
-  width: 100%;
-  max-width: none;
   align-items: stretch;
   padding: 0;
 }
