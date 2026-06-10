@@ -8,7 +8,7 @@ import { bottomNavigationItems, getCreateOptions } from "./navigation-options";
 type BottomNavigationItem = (typeof bottomNavigationItems)[number];
 
 function isActiveRoute(pathname: string, href: string) {
-  if (href === "/settings" && (pathname === "/privacy" || pathname === "/terms")) {
+  if (href === "/menu" && (pathname.startsWith("/settings") || pathname === "/privacy" || pathname === "/terms")) {
     return true;
   }
 
