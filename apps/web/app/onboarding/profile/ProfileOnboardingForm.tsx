@@ -4,6 +4,8 @@ import { useRouter } from "next/navigation";
 import type { ChangeEvent, FormEvent } from "react";
 import { useEffect, useRef, useState } from "react";
 import { Button } from "../../../components/ui";
+import { updateCurrentUserProfile } from "../../../lib/api";
+import { getUserFacingApiMessage } from "../../../lib/auth-family";
 import { getInvitationResumeRoute } from "../../../lib/invitation-context";
 import { ONBOARDING_PROFILE_STORAGE_KEY } from "../../../lib/invitation-flow";
 
@@ -29,6 +31,7 @@ export function ProfileOnboardingForm() {
   const [values, setValues] = useState<ProfileFormValues>(initialValues);
   const [avatarPreviewUrl, setAvatarPreviewUrl] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
   useEffect(() => {
     const savedProfile = window.localStorage.getItem(ONBOARDING_PROFILE_STORAGE_KEY);
@@ -79,8 +82,13 @@ export function ProfileOnboardingForm() {
     });
   }
 
-  function handleSubmit(event: FormEvent<HTMLFormElement>) {
+  async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
+
+    if (isSubmitting) {
+      return;
+    }
+
     setError(null);
 
     const trimmedValues = {
@@ -95,16 +103,33 @@ export function ProfileOnboardingForm() {
       return;
     }
 
-    // TODO: Replace this temporary local onboarding state when profile persistence is available in the backend.
-    window.localStorage.setItem(
-      ONBOARDING_PROFILE_STORAGE_KEY,
-      JSON.stringify({
-        ...trimmedValues,
-        countryCode: NORWAY_COUNTRY_CODE,
-      }),
-    );
+    const fullName = `${trimmedValues.firstName} ${trimmedValues.lastName}`.replace(/\s+/g, " ").trim();
+    const phone = `${NORWAY_COUNTRY_CODE} ${trimmedValues.phoneNumber}`.trim();
 
-    router.push(getInvitationResumeRoute() ?? "/onboarding/family-start");
+    setIsSubmitting(true);
+
+    try {
+      await updateCurrentUserProfile({
+        name: fullName,
+        phone,
+      });
+
+      window.localStorage.setItem(
+        ONBOARDING_PROFILE_STORAGE_KEY,
+        JSON.stringify({
+          ...trimmedValues,
+          countryCode: NORWAY_COUNTRY_CODE,
+          fullName,
+          phone,
+        }),
+      );
+
+      router.push(getInvitationResumeRoute() ?? "/onboarding/family-start");
+    } catch (profileError) {
+      setError(getUserFacingApiMessage(profileError, "Kunne ikke lagre profilen akkurat nå. Prøv igjen."));
+    } finally {
+      setIsSubmitting(false);
+    }
   }
 
   return (
@@ -231,7 +256,7 @@ export function ProfileOnboardingForm() {
 
       {error ? <p className="form-message form-message--error" role="alert">{error}</p> : null}
 
-      <Button type="submit" variant="primary">Fortsett</Button>
+      <Button disabled={isSubmitting} type="submit" variant="primary">{isSubmitting ? "Lagrer…" : "Fortsett"}</Button>
     </form>
   );
 }

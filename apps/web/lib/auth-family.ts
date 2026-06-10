@@ -37,7 +37,7 @@ export async function loadAvailableFamilies(preferredFamilyId?: string | null): 
     return { status: "unauthenticated", families: [], activeFamilyId: null, pendingRequest: null };
   }
 
-  const families = await listFamilies();
+  const families = sortFamilies(await listFamilies());
   const pendingRequest = getPendingFamilyRequest();
 
   if (families.length === 0) {
@@ -51,7 +51,7 @@ export async function loadAvailableFamilies(preferredFamilyId?: string | null): 
   }
 
   const requestedFamilyId = preferredFamilyId ?? getActiveFamilyId();
-  const activeFamily = families.find((family) => family.family.id === requestedFamilyId) ?? families[0];
+  const activeFamily = families.find((family) => family.family.id === requestedFamilyId) ?? families.find((family) => getFamilyMembershipStatus(family) === "approved") ?? families[0];
   const membershipStatus = getFamilyMembershipStatus(activeFamily);
 
   setActiveFamilyId(activeFamily.family.id);
@@ -123,4 +123,22 @@ export function getUserFacingApiMessage(error: unknown, fallbackMessage: string)
     default:
       return error.message || fallbackMessage;
   }
+}
+
+function sortFamilies(families: FamilyWithMembership[]): FamilyWithMembership[] {
+  return [...families].sort((left, right) => {
+    const leftTime = Date.parse(left.family.createdAt);
+    const rightTime = Date.parse(right.family.createdAt);
+    const createdAtComparison = normalizeComparableTime(leftTime) - normalizeComparableTime(rightTime);
+
+    if (createdAtComparison !== 0) {
+      return createdAtComparison;
+    }
+
+    return left.family.id.localeCompare(right.family.id);
+  });
+}
+
+function normalizeComparableTime(value: number): number {
+  return Number.isFinite(value) ? value : Number.MAX_SAFE_INTEGER;
 }

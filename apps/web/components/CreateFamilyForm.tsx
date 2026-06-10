@@ -1,7 +1,7 @@
 "use client";
 
 import type { FormEvent } from "react";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { createFamily } from "../lib/api";
 import { getUserFacingApiMessage } from "../lib/auth-family";
@@ -14,6 +14,7 @@ export function CreateFamilyForm() {
   const [error, setError] = useState<string | null>(null);
   const [familyName, setFamilyName] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const submitInFlightRef = useRef(false);
 
   useEffect(() => {
     const savedFamily = getOnboardingFamilyState();
@@ -25,6 +26,11 @@ export function CreateFamilyForm() {
 
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
+
+    if (submitInFlightRef.current) {
+      return;
+    }
+
     const trimmedFamilyName = familyName.trim();
 
     if (!trimmedFamilyName) {
@@ -33,16 +39,18 @@ export function CreateFamilyForm() {
     }
 
     setError(null);
+    submitInFlightRef.current = true;
     setIsSubmitting(true);
 
     try {
       const family = await createFamily({ name: trimmedFamilyName });
       setActiveFamilyId(family.family.id);
-      saveOnboardingFamilyState(trimmedFamilyName);
+      saveOnboardingFamilyState(family.family.name);
       router.push("/onboarding/family-members");
     } catch (createError) {
       setError(getUserFacingApiMessage(createError, "Kunne ikke opprette familien akkurat nå. Prøv igjen."));
     } finally {
+      submitInFlightRef.current = false;
       setIsSubmitting(false);
     }
   }

@@ -35,6 +35,10 @@ type FamilyRecord = {
   updatedAt: Date;
 };
 
+type FamilyWithMembersRecord = FamilyRecord & {
+  members: FamilyMemberRecord[];
+};
+
 type TaskRecord = {
   id: string;
   familyId: string;
@@ -143,49 +147,61 @@ export class FamiliesService {
   ) {}
 
   async createFamily(userId: string, input: CreateFamilyRequestDto = {}): Promise<FamilyDetailsDto> {
+    this.rejectUnknownCreateFamilyFields(input);
     const name = this.validateFamilyName(input.name);
     const user = await this.getUserOrThrow(userId);
 
-    const family = await this.prisma.client.family.create({
-      data: {
-        name,
-        members: {
-          create: {
-            userId: user.id,
-            displayName: user.name,
-            role: "OWNER"
+    const runIdempotentCreate = async (tx: typeof this.prisma.client): Promise<FamilyWithMembersRecord> => {
+      const existingOwnedFamily = await this.findExistingOwnedFamily(tx, user.id);
+
+      if (existingOwnedFamily) {
+        return this.ensureOwnerDisplayName(tx, existingOwnedFamily, user.id, user.name);
+      }
+
+      return tx.family.create({
+        data: {
+          name,
+          members: {
+            create: {
+              userId: user.id,
+              displayName: user.name,
+              role: "OWNER"
+            }
+          },
+          shoppingLists: {
+            create: {
+              name: "Family Shopping"
+            }
           }
         },
-        shoppingLists: {
-          create: {
-            name: "Family Shopping"
+        include: {
+          members: {
+            orderBy: [{ createdAt: "asc" }, { id: "asc" }]
           }
         }
-      },
-      include: {
-        members: {
-          orderBy: { createdAt: "asc" }
-        }
-      }
-    });
-
-    return {
-      family: this.toFamilyDto(family),
-      members: family.members.map((member: FamilyMemberRecord) => this.toFamilyMemberDto(member))
+      }) as Promise<FamilyWithMembersRecord>;
     };
+
+    const family = await (this.prisma.client as any).$transaction(runIdempotentCreate, {
+      isolationLevel: "Serializable"
+    }) as FamilyWithMembersRecord;
+
+    return this.toFamilyDetailsDto(family);
   }
 
   async listUserFamilies(userId: string): Promise<FamilyWithMembershipDto[]> {
     const memberships = await this.prisma.client.familyMember.findMany({
       where: { userId },
       include: { family: true },
-      orderBy: { createdAt: "asc" }
+      orderBy: [{ createdAt: "asc" }, { id: "asc" }]
     });
 
-    return memberships.map((membership: FamilyMemberRecord & { family: FamilyRecord }) => ({
-      family: this.toFamilyDto(membership.family),
-      membership: this.toFamilyMemberDto(membership)
-    }));
+    return memberships
+      .sort((left: FamilyMemberRecord & { family: FamilyRecord }, right: FamilyMemberRecord & { family: FamilyRecord }) => this.compareFamilies(left.family, right.family))
+      .map((membership: FamilyMemberRecord & { family: FamilyRecord }) => ({
+        family: this.toFamilyDto(membership.family),
+        membership: this.toFamilyMemberDto(membership)
+      }));
   }
 
   async getFamilyDetails(userId: string, familyId: string): Promise<FamilyDetailsDto> {
@@ -204,10 +220,7 @@ export class FamiliesService {
       throw new NotFoundException("Family was not found");
     }
 
-    return {
-      family: this.toFamilyDto(family),
-      members: family.members.map((member: FamilyMemberRecord) => this.toFamilyMemberDto(member))
-    };
+    return this.toFamilyDetailsDto(family as FamilyWithMembersRecord);
   }
 
 
@@ -596,6 +609,74 @@ export class FamiliesService {
     return { uncheckedCount, totalItems };
   }
 
+
+  private async findExistingOwnedFamily(tx: typeof this.prisma.client, userId: string): Promise<FamilyWithMembersRecord | null> {
+    const existingOwnerMembership = await tx.familyMember.findFirst({
+      where: {
+        userId,
+        role: "OWNER"
+      },
+      include: {
+        family: {
+          include: {
+            members: {
+              orderBy: [{ createdAt: "asc" }, { id: "asc" }]
+            }
+          }
+        }
+      },
+      orderBy: [{ createdAt: "asc" }, { id: "asc" }]
+    }) as (FamilyMemberRecord & { family: FamilyWithMembersRecord }) | null;
+
+    return existingOwnerMembership?.family ?? null;
+  }
+
+  private async ensureOwnerDisplayName(tx: typeof this.prisma.client, family: FamilyWithMembersRecord, userId: string, userName: string): Promise<FamilyWithMembersRecord> {
+    const ownerMember = family.members.find((member) => member.role === "OWNER" && member.userId === userId);
+
+    if (!ownerMember || ownerMember.displayName === userName) {
+      return family;
+    }
+
+    const updatedOwner = await tx.familyMember.update({
+      where: { id: ownerMember.id },
+      data: { displayName: userName }
+    }) as FamilyMemberRecord;
+
+    return {
+      ...family,
+      members: family.members.map((member) => member.id === updatedOwner.id ? updatedOwner : member)
+    };
+  }
+
+  private toFamilyDetailsDto(family: FamilyWithMembersRecord): FamilyDetailsDto {
+    return {
+      family: this.toFamilyDto(family),
+      members: family.members.map((member: FamilyMemberRecord) => this.toFamilyMemberDto(member))
+    };
+  }
+
+  private compareFamilies(left: FamilyRecord, right: FamilyRecord): number {
+    const createdAtComparison = left.createdAt.getTime() - right.createdAt.getTime();
+
+    if (createdAtComparison !== 0) {
+      return createdAtComparison;
+    }
+
+    return left.id.localeCompare(right.id);
+  }
+
+  private rejectUnknownCreateFamilyFields(input: CreateFamilyRequestDto): void {
+    if (typeof input !== "object" || input === null || Array.isArray(input)) {
+      throw new BadRequestException("Family creation must be an object");
+    }
+
+    const unknownField = Object.keys(input).find((field) => field !== "name");
+
+    if (unknownField) {
+      throw new BadRequestException(`Unknown family field: ${unknownField}`);
+    }
+  }
 
   private async getFamilyMemberOrThrow(familyId: string, memberId: string): Promise<FamilyMemberRecord> {
     const member = await this.prisma.client.familyMember.findFirst({ where: { id: memberId, familyId } });
