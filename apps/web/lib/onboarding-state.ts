@@ -14,6 +14,7 @@ export interface OnboardingFamilyInvite {
 
 export interface OnboardingFamilyState {
   family: {
+    id: string | null;
     name: string;
     code: string | null;
   };
@@ -32,6 +33,10 @@ function getStorage() {
   }
 
   return window.localStorage;
+}
+
+function normalizeFamilyId(value: unknown): string | null {
+  return typeof value === "string" && value.trim() ? value.trim() : null;
 }
 
 function normalizeFamilyName(value: unknown): string | null {
@@ -125,6 +130,7 @@ export function getOnboardingFamilyState(): OnboardingFamilyState | null {
 
     return {
       family: {
+        id: normalizeFamilyId(parsedState.family?.id),
         name: familyName,
         code: normalizeFamilyCode(parsedState.family?.code),
       },
@@ -141,7 +147,11 @@ export function getOnboardingFamilyState(): OnboardingFamilyState | null {
   }
 }
 
-export function saveOnboardingFamilyState(familyName: string, familyCode: string | null = null): OnboardingFamilyState | null {
+export function saveOnboardingFamilyState(
+  familyName: string,
+  familyCode: string | null = null,
+  familyId: string | null = null,
+): OnboardingFamilyState | null {
   const storage = getStorage();
 
   if (!storage) {
@@ -153,6 +163,7 @@ export function saveOnboardingFamilyState(familyName: string, familyCode: string
   const trimmedFamilyName = familyName.trim();
   const nextState: OnboardingFamilyState = {
     family: {
+      id: normalizeFamilyId(familyId) ?? (existingState?.family.name === trimmedFamilyName ? existingState.family.id : null),
       name: trimmedFamilyName,
       code: normalizeFamilyCode(familyCode) ?? (existingState?.family.name === trimmedFamilyName ? existingState.family.code : null),
     },

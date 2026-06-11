@@ -2,13 +2,16 @@
 
 import { useEffect, useId, useRef, useState, type FormEvent, type KeyboardEvent, type ReactNode } from "react";
 import { useRouter } from "next/navigation";
+import { getFamily } from "../lib/api";
+import { getOnboardingCompletionRoute } from "../lib/onboarding-completion";
 import {
   addOnboardingFamilyInvite,
   ensureOnboardingFamilyState,
+  saveOnboardingFamilyState,
   type OnboardingFamilyInvite,
   type OnboardingInviteRole,
 } from "../lib/onboarding-state";
-import { getOnboardingCompletionRoute } from "../lib/onboarding-completion";
+import { getActiveFamilyId } from "../lib/session";
 import { Button } from "./ui";
 
 const roleOptions: Array<{ role: OnboardingInviteRole; description: string; icon: ReactNode }> = [
@@ -37,12 +40,52 @@ export function FamilyMembersOnboarding() {
   const [copyMessage, setCopyMessage] = useState<string | null>(null);
 
   useEffect(() => {
-    const state = ensureOnboardingFamilyState();
+    let isMounted = true;
 
-    if (state) {
-      setFamilyCode(state.family.code);
-      setMembers(state.invitedMembers);
+    async function loadFamilyCode() {
+      const state = ensureOnboardingFamilyState();
+
+      if (!state) {
+        return;
+      }
+
+      if (isMounted) {
+        setFamilyCode(state.family.code);
+        setMembers(state.invitedMembers);
+      }
+
+      if (state.family.code) {
+        return;
+      }
+
+      const familyId = state.family.id ?? getActiveFamilyId();
+
+      if (!familyId) {
+        return;
+      }
+
+      try {
+        const familyDetails = await getFamily(familyId);
+        const nextState = saveOnboardingFamilyState(
+          familyDetails.family.name,
+          familyDetails.family.code,
+          familyDetails.family.id,
+        );
+
+        if (isMounted && nextState) {
+          setFamilyCode(nextState.family.code);
+          setMembers(nextState.invitedMembers);
+        }
+      } catch {
+        // Keep showing the unavailable state instead of inventing a local fallback code.
+      }
     }
+
+    void loadFamilyCode();
+
+    return () => {
+      isMounted = false;
+    };
   }, []);
 
   function handleSave(input: { email: string; role: OnboardingInviteRole }) {
