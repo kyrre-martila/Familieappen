@@ -3,7 +3,7 @@
 import Image from "next/image";
 import { usePathname } from "next/navigation";
 import { useEffect, useState } from "react";
-import { BottomNavigation } from "./Navigation";
+import { AppSidebar, BottomNavigation } from "./Navigation";
 import { OnboardingRouteGuard } from "./OnboardingRouteGuard";
 
 const immersiveRoutes = ["/", "/login", "/register", "/forgot-password", "/invite", "/onboarding"];
@@ -40,6 +40,7 @@ export function RootAppFrame({ children }: Readonly<{ children: React.ReactNode 
   return (
     <div className={shellClassName}>
       {!isImmersive && !isFocus ? <OnboardingRouteGuard mode="app-shell" /> : null}
+      {!isImmersive && !isFocus ? <AppSidebar /> : null}
       <main className="root-app-frame__main">{children}</main>
       {!isImmersive && !isFocus ? <BottomNavigation /> : null}
     </div>

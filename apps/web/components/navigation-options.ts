@@ -5,6 +5,16 @@ export const bottomNavigationItems = [
   { href: "/menu", label: "Meny", icon: "menu" }
 ] as const;
 
+export const menuNavigationItems = [
+  { href: "/dashboard", label: "Hjem", description: "Familiens oversikt", icon: "home" },
+  { href: "/calendar", label: "Kalender", description: "Planer og avtaler", icon: "calendar" },
+  { href: "/husk", label: "Husk", description: "Påminnelser og gjøremål", icon: "check" },
+  { href: "/husk?tab=lister", label: "Lister", description: "Handlelister og felles lister", icon: "list" },
+  { href: "/husk?tab=skoleuka", label: "Skoleuka", description: "Planlegg skoleuka", icon: "school" },
+  { href: "/wishlist", label: "Ønskeliste", description: "Gaver og ønsker", icon: "gift" },
+  { href: "/settings", label: "Innstillinger", description: "Profil, familie og varsler", icon: "settings" }
+] as const;
+
 export const defaultCreateOptions = [
   { emoji: "📅", label: "Ny kalenderhendelse", description: "Opprett en rolig kalenderhendelse", href: "/calendar/events/new", tone: "calendar" },
   { emoji: "📝", label: "Ny husk", description: "Lett påminnelse uten klokkeslett", href: "/husk/reminders/new", tone: "task" },

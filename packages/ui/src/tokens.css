@@ -44,6 +44,9 @@
   --bottom-nav-fab-size: clamp(4.25rem, 3.9rem + 1.35vw, 5rem);
   --bottom-nav-fab-offset: clamp(1.25rem, 1.05rem + 0.85vw, 1.75rem);
   --bottom-nav-shadow: 0 1rem 2.5rem color-mix(in srgb, var(--color-primary-strong) 16%, transparent);
+  --sidebar-width: clamp(15.5rem, 18vw, 18rem);
+  --menu-panel-width: min(100%, calc(var(--page-width) * 0.42));
+  --menu-icon-size: calc(var(--touch-target) * 0.86);
 
   --radius-s: 0.5rem;
   --radius-m: 1rem;
