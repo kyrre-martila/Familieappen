@@ -3,7 +3,7 @@
 import type { FormEvent } from "react";
 import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
-import { createFamily } from "../lib/api";
+import { createFamily, getFamily } from "../lib/api";
 import { getUserFacingApiMessage } from "../lib/auth-family";
 import { getOnboardingFamilyState, saveOnboardingFamilyState } from "../lib/onboarding-state";
 import { setActiveFamilyId } from "../lib/session";
@@ -43,9 +43,11 @@ export function CreateFamilyForm() {
     setIsSubmitting(true);
 
     try {
-      const family = await createFamily({ name: trimmedFamilyName });
-      setActiveFamilyId(family.family.id);
-      saveOnboardingFamilyState(family.family.name, family.family.code);
+      const createdFamily = await createFamily({ name: trimmedFamilyName });
+      const familyDetails = createdFamily.family.code ? createdFamily : await getFamily(createdFamily.family.id);
+
+      setActiveFamilyId(familyDetails.family.id);
+      saveOnboardingFamilyState(familyDetails.family.name, familyDetails.family.code, familyDetails.family.id);
       router.push("/onboarding/family-members");
     } catch (createError) {
       setError(getUserFacingApiMessage(createError, "Kunne ikke opprette familien akkurat nå. Prøv igjen."));
