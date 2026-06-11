@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 
 import { Card } from "../../../components/ui";
 import { useCalendar } from "../hooks/useCalendar";
@@ -10,6 +10,11 @@ import { CalendarListDayGroup } from "./CalendarListDayGroup";
 import { CalendarListFilters } from "./CalendarListFilters";
 import { defaultListFilters } from "./calendarConfig";
 import { buildListDayGroups, countActiveListFilters } from "./calendarFilters";
+import {
+  addDays,
+  formatDateString,
+  parseDateString,
+} from "./calendarFormatters";
 import type { CalendarListFilters as CalendarListFiltersType } from "./calendarTypes";
 
 export function CalendarListView() {
@@ -19,9 +24,24 @@ export function CalendarListView() {
     useState<CalendarListFiltersType>(defaultListFilters);
   const [isFilterOpen, setIsFilterOpen] = useState(false);
   const activeFilterCount = countActiveListFilters(filters);
-  const { events: calendarEvents, mealSummaries: mealPlannerMeals, reminders, today } = useCalendar();
+  const {
+    ensureSchoolWeeksForRange,
+    events: calendarEvents,
+    mealSummaries: mealPlannerMeals,
+    reminders,
+    today,
+  } = useCalendar();
+  useEffect(() => {
+    const todayDate = parseDateString(today);
+    void ensureSchoolWeeksForRange(
+      formatDateString(addDays(todayDate, -30)),
+      formatDateString(addDays(todayDate, 90)),
+    );
+  }, [ensureSchoolWeeksForRange, today]);
+
   const dayGroups = useMemo(
-    () => buildListDayGroups(filters, calendarEvents, reminders, mealPlannerMeals),
+    () =>
+      buildListDayGroups(filters, calendarEvents, reminders, mealPlannerMeals),
     [calendarEvents, filters, mealPlannerMeals, reminders],
   );
 
@@ -81,7 +101,11 @@ export function CalendarListView() {
       {dayGroups.length > 0 ? (
         <div className="calendar-list-view__groups">
           {dayGroups.map((group) => (
-            <CalendarListDayGroup group={group} key={group.date} today={today} />
+            <CalendarListDayGroup
+              group={group}
+              key={group.date}
+              today={today}
+            />
           ))}
         </div>
       ) : (
