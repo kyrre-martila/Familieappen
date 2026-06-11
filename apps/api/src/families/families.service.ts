@@ -125,6 +125,7 @@ type FamilyInvitationRecord = {
   invitedEmail: string;
   role: AddFamilyMemberRoleDto;
   status: "pending" | "accepted" | "declined" | "revoked";
+  source: "admin_invite" | "join_request";
   createdByUserId: string;
   invitedUserId: string | null;
   acceptedAt: Date | null;
@@ -323,6 +324,7 @@ export class FamiliesService {
       where: {
         familyId: family.id,
         status: "pending",
+        source: "join_request",
         OR: [
           { invitedUserId: user.id },
           { invitedEmail: { equals: requesterEmail, mode: "insensitive" } }
@@ -347,6 +349,7 @@ export class FamiliesService {
         invitedUserId: user.id,
         role: "GUEST",
         tokenHash: this.hashToken(token),
+        source: "join_request",
         createdByUserId: familyAdministrator.userId
       }
     });
@@ -390,16 +393,16 @@ export class FamiliesService {
 
     const token = this.generateRawToken();
     const existingPending = await (this.prisma.client as PrismaClientWithFamilyInvitations).familyInvitation.findFirst({
-      where: { familyId, invitedEmail: { equals: invitedEmail, mode: "insensitive" }, status: "pending" }
+      where: { familyId, invitedEmail: { equals: invitedEmail, mode: "insensitive" }, status: "pending", source: "admin_invite" }
     });
 
     const invitation = existingPending
       ? await (this.prisma.client as PrismaClientWithFamilyInvitations).familyInvitation.update({
         where: { id: existingPending.id },
-        data: { role, tokenHash: this.hashToken(token), invitedUserId: invitedUser?.id ?? existingPending.invitedUserId }
+        data: { role, tokenHash: this.hashToken(token), invitedUserId: invitedUser?.id ?? existingPending.invitedUserId, source: "admin_invite" }
       })
       : await (this.prisma.client as PrismaClientWithFamilyInvitations).familyInvitation.create({
-        data: { familyId, invitedEmail, invitedUserId: invitedUser?.id ?? null, role, tokenHash: this.hashToken(token), createdByUserId: userId }
+        data: { familyId, invitedEmail, invitedUserId: invitedUser?.id ?? null, role, tokenHash: this.hashToken(token), source: "admin_invite", createdByUserId: userId }
       });
     const email = await this.sendFamilyInviteEmail(invitedEmail, token, inviter.name, family.name);
 
@@ -438,6 +441,82 @@ export class FamiliesService {
     const updated = await (this.prisma.client as PrismaClientWithFamilyInvitations).familyInvitation.update({
       where: { id: invitation.id },
       data: { status: "revoked", revokedAt: new Date() }
+    });
+
+    return this.toFamilyInvitationDto(updated);
+  }
+
+  async approveFamilyJoinRequest(userId: string, familyId: string, inviteId: string): Promise<FamilyInvitationDto> {
+    await this.familyAuthorization.requireFamilyRole(userId, familyId, FAMILY_MANAGER_ROLES);
+    const invitation = await this.getFamilyInvitationOrThrow(familyId, inviteId);
+
+    if (invitation.source !== "join_request") {
+      throw new BadRequestException("Bare forespørsler om å bli med kan godkjennes");
+    }
+
+    if (invitation.status !== "pending") {
+      throw new BadRequestException("Bare ventende forespørsler kan godkjennes");
+    }
+
+    if (!invitation.invitedUserId) {
+      throw new BadRequestException("Forespørselen mangler bruker");
+    }
+
+    const requester = await this.getUserOrThrow(invitation.invitedUserId);
+    const existingMember = await this.prisma.client.familyMember.findFirst({
+      where: { familyId, userId: invitation.invitedUserId }
+    });
+
+    if (existingMember) {
+      throw new ConflictException("Denne personen er allerede familiemedlem");
+    }
+
+    const updated = await this.prisma.client.$transaction(async (tx) => {
+      const alreadyMember = await tx.familyMember.findFirst({
+        where: { familyId, userId: invitation.invitedUserId }
+      });
+
+      if (alreadyMember) {
+        throw new ConflictException("Denne personen er allerede familiemedlem");
+      }
+
+      await tx.familyMember.create({
+        data: {
+          familyId,
+          userId: invitation.invitedUserId,
+          displayName: requester.name,
+          role: invitation.role
+        }
+      });
+
+      return (tx as PrismaClientWithFamilyInvitations).familyInvitation.update({
+        where: { id: invitation.id },
+        data: { status: "accepted", acceptedAt: new Date() }
+      });
+    });
+
+    return this.toFamilyInvitationDto(updated);
+  }
+
+  async rejectFamilyJoinRequest(userId: string, familyId: string, inviteId: string): Promise<FamilyInvitationDto> {
+    await this.familyAuthorization.requireFamilyRole(userId, familyId, FAMILY_MANAGER_ROLES);
+    const invitation = await this.getFamilyInvitationOrThrow(familyId, inviteId);
+
+    if (invitation.source !== "join_request") {
+      throw new BadRequestException("Bare forespørsler om å bli med kan avslås");
+    }
+
+    if (invitation.status === "declined") {
+      return this.toFamilyInvitationDto(invitation);
+    }
+
+    if (invitation.status !== "pending") {
+      throw new BadRequestException("Bare ventende forespørsler kan avslås");
+    }
+
+    const updated = await (this.prisma.client as PrismaClientWithFamilyInvitations).familyInvitation.update({
+      where: { id: invitation.id },
+      data: { status: "declined", declinedAt: new Date() }
     });
 
     return this.toFamilyInvitationDto(updated);
@@ -939,6 +1018,7 @@ export class FamiliesService {
       invitedEmail: invitation.invitedEmail,
       role: invitation.role,
       status: invitation.status,
+      source: invitation.source ?? "admin_invite",
       createdByUserId: invitation.createdByUserId,
       invitedUserId: invitation.invitedUserId,
       acceptedAt: invitation.acceptedAt?.toISOString() ?? null,

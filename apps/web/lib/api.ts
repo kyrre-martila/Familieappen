@@ -327,6 +327,14 @@ export async function revokeFamilyInvitation(familyId: string, inviteId: string)
   return apiRequest<FamilyInvitation>(`/families/${encodeURIComponent(familyId)}/invitations/${encodeURIComponent(inviteId)}/revoke`, { method: "POST" });
 }
 
+export async function approveFamilyJoinRequest(familyId: string, inviteId: string): Promise<FamilyInvitation> {
+  return apiRequest<FamilyInvitation>(`/families/${encodeURIComponent(familyId)}/invitations/${encodeURIComponent(inviteId)}/approve`, { method: "POST" });
+}
+
+export async function rejectFamilyJoinRequest(familyId: string, inviteId: string): Promise<FamilyInvitation> {
+  return apiRequest<FamilyInvitation>(`/families/${encodeURIComponent(familyId)}/invitations/${encodeURIComponent(inviteId)}/reject`, { method: "POST" });
+}
+
 export async function removeFamilyMember(familyId: string, memberId: string): Promise<FamilyMember> {
   return apiRequest<FamilyMember>(
     `/families/${encodeURIComponent(familyId)}/members/${encodeURIComponent(memberId)}`,

@@ -6,10 +6,12 @@ import { ChevronLeft, MoreHorizontal, Pencil, Plus } from "lucide-react";
 import { SettingsCard, SettingsSection } from "../../../components/settings";
 import { useFamilyAccess } from "../../../components/ProtectedFamilyRoute";
 import {
+  approveFamilyJoinRequest,
   getFamily,
   getFamilyInvitations,
   inviteFamilyMemberByEmail,
   removeFamilyMember,
+  rejectFamilyJoinRequest,
   resendFamilyInvitation,
   revokeFamilyInvitation,
   updateFamily,
@@ -29,7 +31,7 @@ type SheetMode =
   | null;
 
 type RoleChoice = "ADMIN" | "MEMBER" | "CHILD";
-type PendingAction = "save-family-name" | "edit-member" | "remove-member" | "send-invite" | "resend-invite" | "revoke-invite" | null;
+type PendingAction = "save-family-name" | "edit-member" | "remove-member" | "send-invite" | "resend-invite" | "revoke-invite" | "approve-request" | "reject-request" | null;
 
 function isAdminRole(role: FamilyMember["role"]) {
   return role === "OWNER" || role === "PARENT";
@@ -80,6 +82,14 @@ function getStatusLabel(status: FamilyInvitation["status"]) {
     declined: "Avslått",
     revoked: "Tilbaketrukket"
   }[status];
+}
+
+function isJoinRequest(invitation: FamilyInvitation) {
+  return invitation.source === "join_request";
+}
+
+function getInvitationTypeLabel(invitation: FamilyInvitation) {
+  return isJoinRequest(invitation) ? "Forespørsel om å bli med" : "Invitasjon sendt";
 }
 
 function inviteEmailDeliveryFailed(response: unknown) {
@@ -407,6 +417,34 @@ export function FamilySettingsClient() {
     }
   }
 
+  async function approveJoinRequest(invitation: FamilyInvitation) {
+    if (!family || !beginPendingAction("approve-request")) return;
+    try {
+      await approveFamilyJoinRequest(family.id, invitation.id);
+      await loadData(false);
+      setOpenInviteMenu(null);
+      setMessage("Forespørselen er godkjent, og brukeren er lagt til i familien.");
+    } catch {
+      setMessage("Kunne ikke godkjenne forespørselen. Kontroller at brukeren ikke allerede er medlem.");
+    } finally {
+      endPendingAction();
+    }
+  }
+
+  async function rejectJoinRequest(invitation: FamilyInvitation) {
+    if (!family || !beginPendingAction("reject-request")) return;
+    try {
+      await rejectFamilyJoinRequest(family.id, invitation.id);
+      await loadData(false);
+      setOpenInviteMenu(null);
+      setMessage("Forespørselen er avslått.");
+    } catch {
+      setMessage("Kunne ikke avslå forespørselen.");
+    } finally {
+      endPendingAction();
+    }
+  }
+
   if (status === "loading") {
     return <FamilySettingsShell><div className="settings-placeholder-card"><p>Laster familie …</p></div></FamilySettingsShell>;
   }
@@ -481,17 +519,17 @@ export function FamilySettingsClient() {
       </SettingsSection>
 
       {isAdmin ? (
-        <SettingsSection title="Invitasjoner">
+        <SettingsSection title="Invitasjoner og forespørsler">
           <SettingsCard>
             <div className="family-settings__section-head">
-              <h2>Invitasjoner</h2>
+              <h2>Invitasjoner og forespørsler</h2>
               <button className="family-settings__small-button" type="button" onClick={() => setSheet({ type: "invite" })} disabled={Boolean(pendingAction)}>Inviter familiemedlem</button>
             </div>
             {invitations.length ? invitations.map((invitation) => (
               <div className="family-settings-invite" key={invitation.id}>
                 <span className="family-settings-invite__copy">
                   <span className="family-settings-invite__email">{invitation.invitedEmail}</span>
-                  <span className="family-settings-invite__date">{formatDate(invitation.createdAt) ?? "Dato ikke tilgjengelig"}</span>
+                  <span className="family-settings-invite__date">{getInvitationTypeLabel(invitation)} · {formatDate(invitation.createdAt) ?? "Dato ikke tilgjengelig"}</span>
                 </span>
                 <span className={`family-settings-badge family-settings-badge--${invitation.status}`}>{getStatusLabel(invitation.status)}</span>
                 {invitation.status === "pending" ? (
@@ -499,14 +537,23 @@ export function FamilySettingsClient() {
                     <button className="family-settings__icon-button" type="button" aria-label={`Handlinger for ${invitation.invitedEmail}`} onClick={() => setOpenInviteMenu(openInviteMenu === invitation.id ? null : invitation.id)} disabled={Boolean(pendingAction)}><MoreHorizontal aria-hidden="true" /></button>
                     {openInviteMenu === invitation.id ? (
                       <span className="family-settings-menu__panel">
-                        <button type="button" onClick={() => void resendInvite(invitation)} disabled={Boolean(pendingAction)}>Send på nytt</button>
-                        <button type="button" onClick={() => { setSheet({ type: "revoke-invite", invitation }); setOpenInviteMenu(null); }} disabled={Boolean(pendingAction)}>Trekk tilbake</button>
+                        {isJoinRequest(invitation) ? (
+                          <>
+                            <button type="button" onClick={() => void approveJoinRequest(invitation)} disabled={Boolean(pendingAction)}>Godkjenn</button>
+                            <button type="button" onClick={() => void rejectJoinRequest(invitation)} disabled={Boolean(pendingAction)}>Avslå</button>
+                          </>
+                        ) : (
+                          <>
+                            <button type="button" onClick={() => void resendInvite(invitation)} disabled={Boolean(pendingAction)}>Send på nytt</button>
+                            <button type="button" onClick={() => { setSheet({ type: "revoke-invite", invitation }); setOpenInviteMenu(null); }} disabled={Boolean(pendingAction)}>Trekk tilbake</button>
+                          </>
+                        )}
                       </span>
                     ) : null}
                   </span>
                 ) : null}
               </div>
-            )) : <p className="family-settings__empty-text">Ingen invitasjoner ennå.</p>}
+            )) : <p className="family-settings__empty-text">Ingen invitasjoner eller forespørsler ennå.</p>}
           </SettingsCard>
         </SettingsSection>
       ) : null}

@@ -20,6 +20,7 @@ export interface UpdateFamilyMemberRequestDto {
 }
 
 export type FamilyInvitationStatusDto = "pending" | "accepted" | "declined" | "revoked";
+export type FamilyInvitationSourceDto = "admin_invite" | "join_request";
 
 export interface FamilyInviteRequestDto {
   email?: unknown;
@@ -37,6 +38,7 @@ export interface FamilyInvitationDto {
   invitedEmail: string;
   role: AddFamilyMemberRoleDto;
   status: FamilyInvitationStatusDto;
+  source: FamilyInvitationSourceDto;
   createdByUserId: string;
   invitedUserId: string | null;
   acceptedAt: string | null;
