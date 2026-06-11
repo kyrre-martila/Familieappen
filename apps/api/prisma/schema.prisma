@@ -464,7 +464,7 @@ model WishlistShareInvitation {
   @@index([wishlistOwnerUserId])
   @@index([wishlistOwnerFamilyMemberId])
   @@index([familyId])
-  @@index([familyId, status, source])
+  @@index([familyId, status])
   @@index([invitedEmail])
   @@index([invitedUserId])
   @@index([status])
