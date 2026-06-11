@@ -22,6 +22,7 @@ export interface FamilyMember {
 
 
 export type FamilyInvitationStatus = "pending" | "accepted" | "declined" | "revoked";
+export type FamilyInvitationSource = "admin_invite" | "join_request";
 
 export interface FamilyInvitation {
   id: string;
@@ -29,6 +30,7 @@ export interface FamilyInvitation {
   invitedEmail: string;
   role: ManualFamilyMemberRole;
   status: FamilyInvitationStatus;
+  source: FamilyInvitationSource;
   createdByUserId: string;
   invitedUserId: string | null;
   acceptedAt: string | null;

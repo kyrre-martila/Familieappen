@@ -5863,8 +5863,9 @@ button.calendar-chip {
 }
 
 .event-detail-card__meta {
-  display: inline-flex;
+  display: inline-grid;
   align-items: center;
+  justify-items: end;
   gap: var(--space-xs);
   color: var(--color-text);
   font-size: var(--text-body);
@@ -7651,8 +7652,9 @@ button.calendar-chip {
 }
 
 .husk-school-day__focus {
-  display: inline-flex;
+  display: inline-grid;
   align-items: center;
+  justify-items: end;
   gap: var(--space-xs);
 }
 
@@ -8027,8 +8029,9 @@ button.calendar-chip {
 }
 
 .list-detail__scope {
-  display: inline-flex;
+  display: inline-grid;
   align-items: center;
+  justify-items: end;
   gap: var(--space-xs);
   margin: 0;
   color: var(--color-text);
@@ -8124,8 +8127,9 @@ button.calendar-chip {
 }
 
 .list-detail-tabs__button {
-  display: inline-flex;
+  display: inline-grid;
   align-items: center;
+  justify-items: end;
   gap: var(--space-xs);
   border: 0;
   border-bottom: 3px solid transparent;
@@ -8642,8 +8646,9 @@ button.calendar-chip {
 
 .husk-school-item {
   --husk-school-item-accent: var(--color-primary);
-  display: inline-flex;
+  display: inline-grid;
   align-items: center;
+  justify-items: end;
   gap: var(--space-xs);
   border-radius: var(--radius-pill);
   padding: calc(var(--space-xs) * 0.65) var(--space-s)
@@ -12283,15 +12288,14 @@ button.family-settings-row:focus-visible:not(:disabled) {
 
 .family-settings-menu {
   position: relative;
-  display: inline-flex;
+  display: inline-grid;
   align-items: center;
+  justify-items: end;
   gap: var(--space-xs);
 }
 
 .family-settings-menu__panel {
-  position: absolute;
-  top: calc(100% + 0.35rem);
-  right: 0;
+  position: static;
   z-index: 20;
   display: grid;
   min-width: 11rem;

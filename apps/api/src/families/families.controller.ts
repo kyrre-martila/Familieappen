@@ -131,6 +131,24 @@ export class FamiliesController {
     return createApiResponse(await this.familiesService.revokeFamilyInvitation(request.user.id, familyId, inviteId));
   }
 
+  @Post(":familyId/invitations/:inviteId/approve")
+  async approveJoinRequest(
+    @Req() request: AuthenticatedRequest,
+    @Param("familyId") familyId: string,
+    @Param("inviteId") inviteId: string
+  ): Promise<ApiResponse<FamilyInvitationDto>> {
+    return createApiResponse(await this.familiesService.approveFamilyJoinRequest(request.user.id, familyId, inviteId));
+  }
+
+  @Post(":familyId/invitations/:inviteId/reject")
+  async rejectJoinRequest(
+    @Req() request: AuthenticatedRequest,
+    @Param("familyId") familyId: string,
+    @Param("inviteId") inviteId: string
+  ): Promise<ApiResponse<FamilyInvitationDto>> {
+    return createApiResponse(await this.familiesService.rejectFamilyJoinRequest(request.user.id, familyId, inviteId));
+  }
+
   @Delete(":familyId/members/:memberId")
   async removeMember(
     @Req() request: AuthenticatedRequest,

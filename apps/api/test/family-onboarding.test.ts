@@ -36,6 +36,7 @@ type FamilyInvitationRecord = {
   role: FamilyMemberRole;
   tokenHash: string;
   status: "pending" | "accepted" | "declined" | "revoked";
+  source: "admin_invite" | "join_request";
   createdByUserId: string;
   acceptedAt: Date | null;
   declinedAt: Date | null;
@@ -70,6 +71,10 @@ class InMemoryFamilyPrismaService {
     return this.familyInvitations.size;
   }
 
+  hasMember(userId: string, familyId: string): boolean {
+    return [...this.members.values()].some((member) => member.userId === userId && member.familyId === familyId);
+  }
+
   ownerDisplayName(userId: string): string | undefined {
     return [...this.members.values()].find(
       (member) => member.userId === userId && member.role === "OWNER",
@@ -84,8 +89,12 @@ class InMemoryFamilyPrismaService {
         findUnique: async ({
           where,
         }: {
-          where: { id: string };
-        }): Promise<UserRecord | null> => this.users.get(where.id) ?? null,
+          where: { id?: string; email?: string };
+        }): Promise<UserRecord | null> => {
+          if (where.id) return this.users.get(where.id) ?? null;
+          if (where.email) return [...this.users.values()].find((user) => user.email.toLowerCase() === where.email?.toLowerCase()) ?? null;
+          return null;
+        },
       },
       family: {
         findUnique: async ({ where, include }: { where: { id?: string; code?: string }; include?: unknown }): Promise<unknown | null> => {
@@ -163,11 +172,13 @@ class InMemoryFamilyPrismaService {
         findFirst: async ({
           where,
         }: {
-          where: { userId?: string; role?: FamilyMemberRole };
+          where: { userId?: string; familyId?: string; role?: FamilyMemberRole; user?: { email?: { equals: string } } };
         }) => {
           const member = [...this.members.values()].find(
             (candidate) =>
               (!where.userId || candidate.userId === where.userId) &&
+              (!where.familyId || candidate.familyId === where.familyId) &&
+              (!where.user?.email?.equals || this.users.get(candidate.userId ?? "")?.email.toLowerCase() === where.user.email.equals.toLowerCase()) &&
               (!where.role || candidate.role === where.role),
           );
 
@@ -183,6 +194,19 @@ class InMemoryFamilyPrismaService {
           return family
             ? { ...member, family: { ...family, members: familyMembers } }
             : null;
+        },
+        create: async ({ data }: { data: { userId: string; familyId: string; displayName: string; role: FamilyMemberRole } }) => {
+          const member: FamilyMemberRecord = {
+            id: `member-${this.nextMemberId++}`,
+            userId: data.userId,
+            familyId: data.familyId,
+            displayName: data.displayName,
+            role: data.role,
+            createdAt: NOW,
+            updatedAt: NOW,
+          };
+          this.members.set(member.id, member);
+          return member;
         },
         update: async ({
           where,
@@ -233,17 +257,19 @@ class InMemoryFamilyPrismaService {
         findMany: async () => [],
       },
       familyInvitation: {
-        findFirst: async ({ where }: { where: { familyId: string; invitedUserId?: string; invitedEmail?: { equals: string }; status?: FamilyInvitationRecord["status"]; OR?: Array<{ invitedUserId?: string; invitedEmail?: { equals: string } }> } }): Promise<FamilyInvitationRecord | null> => {
+        findFirst: async ({ where }: { where: { id?: string; familyId: string; invitedUserId?: string; invitedEmail?: { equals: string }; status?: FamilyInvitationRecord["status"]; source?: FamilyInvitationRecord["source"]; OR?: Array<{ invitedUserId?: string; invitedEmail?: { equals: string } }> } }): Promise<FamilyInvitationRecord | null> => {
           return [...this.familyInvitations.values()].find((invitation) => {
             const matchesOr = !where.OR || where.OR.some((condition) =>
               (condition.invitedUserId && invitation.invitedUserId === condition.invitedUserId) ||
               (condition.invitedEmail && invitation.invitedEmail.toLowerCase() === condition.invitedEmail.equals.toLowerCase()),
             );
 
-            return invitation.familyId === where.familyId &&
+            return (!where.id || invitation.id === where.id) &&
+              invitation.familyId === where.familyId &&
               (!where.invitedUserId || invitation.invitedUserId === where.invitedUserId) &&
               (!where.invitedEmail || invitation.invitedEmail.toLowerCase() === where.invitedEmail.equals.toLowerCase()) &&
               (!where.status || invitation.status === where.status) &&
+              (!where.source || invitation.source === where.source) &&
               matchesOr;
           }) ?? null;
         },
@@ -252,6 +278,7 @@ class InMemoryFamilyPrismaService {
             id: `invitation-${this.nextInvitationId++}`,
             ...data,
             status: "pending",
+            source: data.source ?? "admin_invite",
             acceptedAt: null,
             declinedAt: null,
             revokedAt: null,
@@ -260,6 +287,15 @@ class InMemoryFamilyPrismaService {
           };
           this.familyInvitations.set(invitation.id, invitation);
           return invitation;
+        },
+        update: async ({ where, data }: { where: { id: string }; data: Partial<FamilyInvitationRecord> }): Promise<FamilyInvitationRecord> => {
+          const invitation = this.familyInvitations.get(where.id);
+          if (!invitation) {
+            throw new Error("Invitation not found");
+          }
+          const updated = { ...invitation, ...data, updatedAt: new Date(NOW.getTime() + 1000) };
+          this.familyInvitations.set(where.id, updated);
+          return updated;
         },
       },
     };
@@ -327,6 +363,7 @@ async function run(): Promise<void> {
   const joinRequest = await service.joinFamilyByCode("user-2", { code: codeWithoutPrefix.toLowerCase() });
   assert.equal(joinRequest.familyId, first.family.id, "join-by-code normalizes codes without prefix");
   assert.equal(joinRequest.status, "pending", "join-by-code creates a pending approval request");
+  assert.equal(joinRequest.source, "join_request", "join-by-code marks the record as an inbound join request");
   assert.equal(joinRequest.invitedEmail, "anne@example.com", "join-by-code records the requesting user email");
 
   const duplicateJoinRequest = await service.joinFamilyByCode("user-2", { code: first.family.code });
@@ -339,11 +376,32 @@ async function run(): Promise<void> {
     "invalid family code returns a not-found error",
   );
 
+  const approvedRequest = await service.approveFamilyJoinRequest("user-1", first.family.id, joinRequest.id);
+  assert.equal(approvedRequest.status, "accepted", "approving a join request marks it accepted");
+  assert.equal(prisma.hasMember("user-2", first.family.id), true, "approving a join request creates a family member");
+
+  await assert.rejects(
+    () => service.approveFamilyJoinRequest("user-1", first.family.id, joinRequest.id),
+    /Bare ventende forespørsler/,
+    "approval rejects already-accepted join requests",
+  );
+
+  await assert.rejects(
+    () => service.joinFamilyByCode("user-2", { code: first.family.code }),
+    /already a member/,
+    "join-by-code rejects users who are already family members after approval",
+  );
+
   await assert.rejects(
     () => service.joinFamilyByCode("user-1", { code: first.family.code }),
     /already a member/,
     "join-by-code rejects users who are already family members",
   );
+
+  const rejectableRequest = await service.joinFamilyByCode("user-3", { code: first.family.code });
+  const rejectedRequest = await service.rejectFamilyJoinRequest("user-1", first.family.id, rejectableRequest.id);
+  assert.equal(rejectedRequest.status, "declined", "rejecting a join request marks it declined");
+  assert.equal(prisma.hasMember("user-3", first.family.id), false, "rejecting a join request does not create a family member");
 
   console.log("family onboarding idempotency and code tests passed");
 }

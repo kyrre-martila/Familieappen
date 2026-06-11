@@ -28,6 +28,11 @@ enum FamilyInvitationStatus {
   revoked
 }
 
+enum FamilyInvitationSource {
+  admin_invite
+  join_request
+}
+
 enum FeedbackSubmissionType {
   feedback
   bug
@@ -414,6 +419,7 @@ model FamilyInvitation {
   role            FamilyMemberRole
   tokenHash       String                 @unique
   status          FamilyInvitationStatus @default(pending)
+  source          FamilyInvitationSource @default(admin_invite)
   createdByUserId String
   acceptedAt      DateTime?
   declinedAt      DateTime?
@@ -425,6 +431,7 @@ model FamilyInvitation {
   createdByUser   User                   @relation("FamilyInvitationCreatedByUser", fields: [createdByUserId], references: [id], onDelete: Cascade)
 
   @@index([familyId])
+  @@index([familyId, status, source])
   @@index([invitedEmail])
   @@index([invitedUserId])
   @@index([status])
@@ -457,6 +464,7 @@ model WishlistShareInvitation {
   @@index([wishlistOwnerUserId])
   @@index([wishlistOwnerFamilyMemberId])
   @@index([familyId])
+  @@index([familyId, status, source])
   @@index([invitedEmail])
   @@index([invitedUserId])
   @@index([status])
