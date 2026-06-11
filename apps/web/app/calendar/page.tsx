@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 
 import { AppShell } from "../../components/AppShell";
 import { LockedFeatureState } from "../../components/PendingAccess";
@@ -12,14 +12,32 @@ import { CalendarHeader } from "../../features/calendar/components/CalendarHeade
 import { CalendarListView } from "../../features/calendar/components/CalendarListView";
 import { CalendarMonthView } from "../../features/calendar/components/CalendarMonthView";
 import { parseDateString } from "../../features/calendar/components/calendarFormatters";
-import { CalendarProvider, useCalendar } from "../../features/calendar/hooks/useCalendar";
+import {
+  CalendarProvider,
+  useCalendar,
+} from "../../features/calendar/hooks/useCalendar";
 
 function CalendarPageContent() {
   const familyAccess = useFamilyAccess();
-  const { error, loading, refresh, selectedDate, selectedView, setSelectedDate, setSelectedView, today } = useCalendar();
+  const {
+    error,
+    loading,
+    refresh,
+    selectedDate,
+    selectedView,
+    setSelectedDate,
+    setSelectedView,
+    today,
+  } = useCalendar();
   const [visibleMonth, setVisibleMonth] = useState(() =>
     parseDateString(today),
   );
+
+  useEffect(() => {
+    if (selectedView === "month") {
+      setVisibleMonth(parseDateString(selectedDate));
+    }
+  }, [selectedDate, selectedView]);
 
   function handleChangeMonth(direction: "previous" | "next") {
     setVisibleMonth(
@@ -70,13 +88,21 @@ function CalendarPageContent() {
       <PageContainer>
         {error ? (
           <Card tone="default">
-            <EmptyState title="Kunne ikke hente kalenderen akkurat nå" description="Kalenderen kan prøves på nytt uten at noe går tapt." />
-            <Button onClick={() => void refresh()} variant="primary">Prøv igjen</Button>
+            <EmptyState
+              title="Kunne ikke hente kalenderen akkurat nå"
+              description="Kalenderen kan prøves på nytt uten at noe går tapt."
+            />
+            <Button onClick={() => void refresh()} variant="primary">
+              Prøv igjen
+            </Button>
           </Card>
         ) : null}
         {loading && !error ? (
           <Card tone="default">
-            <EmptyState title="Henter kalender" description="Vent litt mens vi finner hendelsene deres." />
+            <EmptyState
+              title="Henter kalender"
+              description="Vent litt mens vi finner hendelsene deres."
+            />
           </Card>
         ) : null}
         {selectedView === "day" ? (

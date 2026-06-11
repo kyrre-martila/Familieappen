@@ -12954,3 +12954,38 @@ button.family-settings-row:focus-visible:not(:disabled) {
     display: none;
   }
 }
+
+@media (max-width: 34rem) {
+  .app-shell__title-row:has(.calendar-title-actions) {
+    display: grid;
+    align-items: stretch;
+    gap: var(--space-s);
+  }
+
+  .app-shell__title-row:has(.calendar-title-actions) .app-shell__title-action {
+    width: 100%;
+  }
+
+  .calendar-title-actions {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto auto;
+    gap: var(--space-xs);
+    align-items: center;
+  }
+
+  .calendar-view-switcher {
+    grid-column: 1 / -1;
+    grid-row: 2;
+    width: 100%;
+    justify-content: stretch;
+  }
+
+  .calendar-view-switcher__option {
+    flex: 1 1 0;
+    min-width: 0;
+  }
+
+  .calendar-title-action {
+    min-height: calc(var(--space-xl) + var(--space-xs));
+  }
+}

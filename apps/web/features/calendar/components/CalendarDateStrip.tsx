@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useRef } from "react";
+import { useEffect, useMemo, useRef } from "react";
 import { ChevronLeft, ChevronRight } from "lucide-react";
 
 import { useCalendar } from "../hooks/useCalendar";
@@ -18,9 +18,16 @@ export function CalendarDateStrip({
   selectedDate: string;
   onSelectDate: (date: string) => void;
 }) {
-  const { events: calendarEvents, mealSummaries: mealPlannerMeals, reminders, today } = useCalendar();
-  const dates = useMemo(() => buildDateStrip("2025-06-02"), []);
+  const { ensureSchoolWeeksForRange, normalizedItems, today } = useCalendar();
+  const dates = useMemo(
+    () => buildDateStrip(selectedDate, 14, -3),
+    [selectedDate],
+  );
   const scrollerRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    void ensureSchoolWeeksForRange(dates[0], dates[dates.length - 1]);
+  }, [dates, ensureSchoolWeeksForRange]);
 
   function scrollDates(direction: "back" | "forward") {
     scrollerRef.current?.scrollBy({
@@ -48,10 +55,7 @@ export function CalendarDateStrip({
           const dateObject = parseDateString(date);
           const isToday = date === today;
           const isSelected = date === selectedDate;
-          const hasEvent =
-            calendarEvents.some((event) => event.date === date) ||
-            mealPlannerMeals.some((meal) => meal.date === date) ||
-            reminders.some((reminder) => reminder.date === date);
+          const hasEvent = normalizedItems.some((item) => item.date === date);
 
           return (
             <button

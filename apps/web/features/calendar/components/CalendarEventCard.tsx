@@ -62,12 +62,16 @@ function EventTime({ event }: { event: CalendarMvpEvent }) {
 export function CalendarEventCard({ event }: { event: CalendarMvpEvent }) {
   const Icon = eventIcons[event.icon];
   const tone = eventToneByIcon[event.icon];
+  const href =
+    event.source === "school-week"
+      ? `/husk?tab=skoleuka&date=${event.date}`
+      : `/calendar/events/${event.id}`;
 
   return (
     <Link
       className={`calendar-event-card calendar-event-card--${tone}`}
-      href={`/calendar/events/${event.id}`}
-      aria-label={`Åpne hendelse: ${event.title}. ${event.location ?? "Ingen lokasjon"}.`}
+      href={href}
+      aria-label={`Åpne ${event.source === "school-week" ? "skolehusk" : "hendelse"}: ${event.title}. ${event.location ?? "Ingen lokasjon"}.`}
     >
       <EventTime event={event} />
       <span className="calendar-event-card__content">

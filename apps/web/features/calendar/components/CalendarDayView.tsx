@@ -1,5 +1,7 @@
 "use client";
 
+import { useEffect } from "react";
+
 import { useCalendar } from "../hooks/useCalendar";
 import { CalendarDayChips } from "./CalendarDayChips";
 import { CalendarEmptyState } from "./CalendarEmptyState";
@@ -7,7 +9,11 @@ import { CalendarEventCard } from "./CalendarEventCard";
 import { formatSelectedDate } from "./calendarFormatters";
 
 export function CalendarDayView({ selectedDate }: { selectedDate: string }) {
-  const { events: calendarEvents } = useCalendar();
+  const { ensureSchoolWeeksForRange, events: calendarEvents } = useCalendar();
+  useEffect(() => {
+    void ensureSchoolWeeksForRange(selectedDate, selectedDate);
+  }, [ensureSchoolWeeksForRange, selectedDate]);
+
   const eventsForDate = calendarEvents.filter(
     (event) => event.date === selectedDate,
   );

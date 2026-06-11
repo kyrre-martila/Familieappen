@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo } from "react";
+import { useEffect, useMemo } from "react";
 
 import { useCalendar } from "../hooks/useCalendar";
 import {
@@ -20,9 +20,15 @@ export function CalendarMonthGrid({
   visibleMonth: Date;
   onSelectDate: (date: string) => void;
 }) {
-  const { events: calendarEvents, mealSummaries: mealPlannerMeals, reminders, today } = useCalendar();
+  const { ensureSchoolWeeksForRange, normalizedItems, today } = useCalendar();
   const activeMonth = visibleMonth.getMonth();
   const weeks = useMemo(() => buildMonthWeeks(visibleMonth), [visibleMonth]);
+  const firstVisibleDate = formatDateString(weeks[0].days[0]);
+  const lastVisibleDate = formatDateString(weeks[weeks.length - 1].days[6]);
+
+  useEffect(() => {
+    void ensureSchoolWeeksForRange(firstVisibleDate, lastVisibleDate);
+  }, [ensureSchoolWeeksForRange, firstVisibleDate, lastVisibleDate]);
 
   return (
     <div
@@ -53,14 +59,15 @@ export function CalendarMonthGrid({
           <CalendarWeekNumber weekNumber={week.weekNumber} />
           {week.days.map((day) => {
             const date = formatDateString(day);
-            const eventCount = calendarEvents.filter(
-              (event) => event.date === date,
-            ).length;
-            const hasMeal = mealPlannerMeals.some(
-              (meal) => meal.date === date,
+            const itemsForDate = normalizedItems.filter(
+              (item) => item.date === date,
             );
-            const hasReminder = reminders.some(
-              (reminder) => reminder.date === date,
+            const eventCount = itemsForDate.filter(
+              (item) => item.type === "event" || item.type === "school-week",
+            ).length;
+            const hasMeal = itemsForDate.some((item) => item.type === "meal");
+            const hasReminder = itemsForDate.some(
+              (item) => item.type === "reminder",
             );
 
             return (

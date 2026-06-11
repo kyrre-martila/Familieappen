@@ -1,6 +1,13 @@
-export type CalendarEventSource = "manual" | "ics";
+export type CalendarEventSource = "manual" | "ics" | "school-week";
 
-export type CalendarEventIcon = "sport" | "school" | "birthday" | "health" | "travel" | "family" | "meal";
+export type CalendarEventIcon =
+  | "sport"
+  | "school"
+  | "birthday"
+  | "health"
+  | "travel"
+  | "family"
+  | "meal";
 
 export interface CalendarEventReminder {
   minutesBefore: number;
@@ -50,7 +57,11 @@ export interface FamilyMember {
 
 export type CalendarViewMode = "day" | "month" | "list";
 
-export type CalendarImportSyncFrequency = "automatic" | "daily" | "weekly" | "manual";
+export type CalendarImportSyncFrequency =
+  | "automatic"
+  | "daily"
+  | "weekly"
+  | "manual";
 
 export type CalendarExportScope = "family" | "mine" | "selectedParticipant";
 

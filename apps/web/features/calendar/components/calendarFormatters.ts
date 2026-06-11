@@ -14,7 +14,9 @@ const monthDayLabelFormatter = new Intl.DateTimeFormat("nb-NO", {
   month: "long",
 });
 
-export const dayFormatter = new Intl.DateTimeFormat("nb-NO", { weekday: "short" });
+export const dayFormatter = new Intl.DateTimeFormat("nb-NO", {
+  weekday: "short",
+});
 export const monthTitleFormatter = new Intl.DateTimeFormat("nb-NO", {
   month: "long",
   year: "numeric",
@@ -81,9 +83,10 @@ export function buildMonthWeeks(monthDate: Date) {
   });
 }
 
-export function buildDateStrip(startDate: string, length = 14) {
+export function buildDateStrip(startDate: string, length = 14, offsetDays = 0) {
   const [year, month, day] = startDate.split("-").map(Number);
   const start = new Date(year, month - 1, day);
+  start.setDate(start.getDate() + offsetDays);
 
   return Array.from({ length }, (_, index) => {
     const date = new Date(start);
