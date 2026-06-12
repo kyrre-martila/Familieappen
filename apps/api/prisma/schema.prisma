@@ -68,6 +68,7 @@ model User {
   notificationPreferences NotificationPreference?
   feedbackSubmissions FeedbackSubmission[]
   sessions UserSession[]
+  passwordResetTokens PasswordResetToken[]
 
   @@map("users")
 }
@@ -89,6 +90,25 @@ model UserSession {
   @@map("user_sessions")
 }
 
+
+
+model PasswordResetToken {
+  id        String    @id @default(cuid())
+  userId    String
+  tokenHash String    @unique
+  emailHash String
+  requestIp String?
+  userAgent String?
+  usedAt    DateTime?
+  expiresAt DateTime
+  createdAt DateTime  @default(now())
+  user      User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, usedAt, expiresAt])
+  @@index([emailHash, createdAt])
+  @@index([requestIp, createdAt])
+  @@map("password_reset_tokens")
+}
 
 model FeedbackSubmission {
   id         String                 @id @default(cuid())

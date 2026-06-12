@@ -1026,6 +1026,14 @@ select {
   color: var(--color-text);
 }
 
+.form-message--success {
+  border: 1px solid color-mix(in srgb, var(--color-primary) 35%, var(--color-border));
+  border-radius: var(--radius-m);
+  padding: var(--space-s);
+  background: color-mix(in srgb, var(--color-primary) 10%, var(--color-surface));
+  color: var(--color-text);
+}
+
 .button:disabled,
 .member-list__remove:disabled {
   cursor: not-allowed;

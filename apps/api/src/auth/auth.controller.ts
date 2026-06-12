@@ -2,7 +2,7 @@ import { Body, Controller, Headers, Post, Req, Res, UnauthorizedException } from
 import { ConfigService } from "../config";
 import { createApiResponse, ApiResponse } from "../common";
 import { AuthService, AuthSessionResponse, RefreshSessionResponse, SessionMetadata } from "./auth.service";
-import { AuthResponseDto, LoginRequestDto, LogoutResponseDto, RefreshResponseDto, RegisterRequestDto } from "./dto/auth.dto";
+import { AuthResponseDto, ForgotPasswordRequestDto, LoginRequestDto, LogoutResponseDto, PasswordResetMessageDto, RefreshResponseDto, RegisterRequestDto, ResetPasswordRequestDto } from "./dto/auth.dto";
 
 const REFRESH_TOKEN_COOKIE_NAME = "familieappen_refresh_token";
 
@@ -36,6 +36,16 @@ export class AuthController {
     const auth = await this.authService.login(body, this.getSessionMetadata(request));
     this.setRefreshTokenCookie(response, auth.refreshToken, auth.refreshTokenExpiresAt);
     return createApiResponse(this.toAuthResponse(auth));
+  }
+
+  @Post("forgot-password")
+  async forgotPassword(@Body() body: ForgotPasswordRequestDto, @Req() request: AuthRequest): Promise<ApiResponse<PasswordResetMessageDto>> {
+    return createApiResponse(await this.authService.forgotPassword(body, this.getSessionMetadata(request)));
+  }
+
+  @Post("reset-password")
+  async resetPassword(@Body() body: ResetPasswordRequestDto): Promise<ApiResponse<PasswordResetMessageDto>> {
+    return createApiResponse(await this.authService.resetPassword(body));
   }
 
   @Post("refresh")

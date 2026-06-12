@@ -914,7 +914,7 @@ export class FamiliesService {
   }
 
   private async sendFamilyInviteEmail(invitedEmail: string, token: string, inviterName: string, familyName: string) {
-    const appUrl = process.env.APP_PUBLIC_URL?.replace(/\/$/, "") || "http://localhost:3000";
+    const appUrl = (process.env.APP_BASE_URL || process.env.APP_PUBLIC_URL || "http://localhost:3000").replace(/\/$/, "");
 
     return this.emailService.sendEmail({
       to: invitedEmail,
