@@ -419,6 +419,7 @@ export class CalendarService {
           userId: participant.familyMember.userId,
           familyId: participant.familyMember.familyId,
           displayName: participant.familyMember.displayName,
+          avatarUrl: null,
           role: participant.familyMember.role,
           createdAt: participant.familyMember.createdAt.toISOString(),
           updatedAt: participant.familyMember.updatedAt.toISOString()

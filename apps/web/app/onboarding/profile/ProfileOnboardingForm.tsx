@@ -3,8 +3,9 @@
 import { useRouter } from "next/navigation";
 import type { ChangeEvent, FormEvent } from "react";
 import { useEffect, useRef, useState } from "react";
+import { ProfileImageCropper } from "../../../components/avatar/ProfileImageCropper";
 import { Button } from "../../../components/ui";
-import { updateCurrentUserProfile } from "../../../lib/api";
+import { updateCurrentUserProfile, uploadCurrentUserAvatar } from "../../../lib/api";
 import { getUserFacingApiMessage } from "../../../lib/auth-family";
 import { getInvitationResumeRoute } from "../../../lib/invitation-context";
 import { ONBOARDING_PROFILE_STORAGE_KEY } from "../../../lib/invitation-flow";
@@ -14,6 +15,7 @@ const NORWAY_COUNTRY_CODE = "+47";
 type ProfileFormValues = {
   birthDate: string;
   firstName: string;
+  middleName: string;
   lastName: string;
   phoneNumber: string;
 };
@@ -21,6 +23,7 @@ type ProfileFormValues = {
 const initialValues: ProfileFormValues = {
   birthDate: "",
   firstName: "",
+  middleName: "",
   lastName: "",
   phoneNumber: "",
 };
@@ -30,6 +33,8 @@ export function ProfileOnboardingForm() {
   const avatarInputRef = useRef<HTMLInputElement>(null);
   const [values, setValues] = useState<ProfileFormValues>(initialValues);
   const [avatarPreviewUrl, setAvatarPreviewUrl] = useState<string | null>(null);
+  const [avatarFile, setAvatarFile] = useState<File | null>(null);
+  const [selectedAvatarFile, setSelectedAvatarFile] = useState<File | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
@@ -46,6 +51,7 @@ export function ProfileOnboardingForm() {
       setValues({
         birthDate: parsedProfile.birthDate ?? "",
         firstName: parsedProfile.firstName ?? "",
+        middleName: parsedProfile.middleName ?? "",
         lastName: parsedProfile.lastName ?? "",
         phoneNumber: parsedProfile.phoneNumber ?? "",
       });
@@ -73,11 +79,15 @@ export function ProfileOnboardingForm() {
       return;
     }
 
-    setAvatarPreviewUrl((current) => {
-      if (current) {
-        URL.revokeObjectURL(current);
-      }
+    setError(null);
+    setSelectedAvatarFile(file);
+  }
 
+  function handleCroppedAvatar(file: File) {
+    setAvatarFile(file);
+    setSelectedAvatarFile(null);
+    setAvatarPreviewUrl((current) => {
+      if (current) URL.revokeObjectURL(current);
       return URL.createObjectURL(file);
     });
   }
@@ -94,6 +104,7 @@ export function ProfileOnboardingForm() {
     const trimmedValues = {
       birthDate: values.birthDate,
       firstName: values.firstName.trim(),
+      middleName: values.middleName.trim(),
       lastName: values.lastName.trim(),
       phoneNumber: values.phoneNumber.trim(),
     };
@@ -103,16 +114,22 @@ export function ProfileOnboardingForm() {
       return;
     }
 
-    const fullName = `${trimmedValues.firstName} ${trimmedValues.lastName}`.replace(/\s+/g, " ").trim();
+    const fullName = [trimmedValues.firstName, trimmedValues.middleName, trimmedValues.lastName].filter(Boolean).join(" ").replace(/\s+/g, " ").trim();
     const phone = `${NORWAY_COUNTRY_CODE} ${trimmedValues.phoneNumber}`.trim();
 
     setIsSubmitting(true);
 
     try {
       await updateCurrentUserProfile({
-        name: fullName,
+        firstName: trimmedValues.firstName,
+        middleName: trimmedValues.middleName || null,
+        lastName: trimmedValues.lastName,
         phone,
       });
+
+      if (avatarFile) {
+        await uploadCurrentUserAvatar(avatarFile);
+      }
 
       window.localStorage.setItem(
         ONBOARDING_PROFILE_STORAGE_KEY,
@@ -159,7 +176,7 @@ export function ProfileOnboardingForm() {
         </button>
         <input
           ref={avatarInputRef}
-          accept="image/*"
+          accept="image/*,.heic,.heif"
           className="sr-only"
           id="profile-avatar"
           name="avatar"
@@ -183,6 +200,23 @@ export function ProfileOnboardingForm() {
             required
             type="text"
             value={values.firstName}
+          />
+        </div>
+      </div>
+
+      <div className="login-field">
+        <label className="login-field__label" htmlFor="profile-middle-name">Mellomnavn</label>
+        <div className="login-field__control">
+          <UserIcon />
+          <input
+            autoComplete="additional-name"
+            className="login-field__input"
+            id="profile-middle-name"
+            name="middleName"
+            onChange={(event) => updateValue("middleName", event.target.value)}
+            placeholder="Skriv inn mellomnavn"
+            type="text"
+            value={values.middleName}
           />
         </div>
       </div>
@@ -257,6 +291,7 @@ export function ProfileOnboardingForm() {
       {error ? <p className="form-message form-message--error" role="alert">{error}</p> : null}
 
       <Button disabled={isSubmitting} type="submit" variant="primary">{isSubmitting ? "Lagrer…" : "Fortsett"}</Button>
+      <ProfileImageCropper file={selectedAvatarFile} onCancel={() => setSelectedAvatarFile(null)} onConfirm={handleCroppedAvatar} />
     </form>
   );
 }

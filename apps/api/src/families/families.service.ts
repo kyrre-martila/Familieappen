@@ -114,6 +114,8 @@ type FamilyMemberRecord = {
   userId: string | null;
   familyId: string;
   displayName: string;
+  avatarUrl?: string | null;
+  user?: { avatarUrl?: string | null } | null;
   role: FamilyMemberRoleDto;
   createdAt: Date;
   updatedAt: Date;
@@ -180,6 +182,7 @@ export class FamiliesService {
         }
       }, {
         members: {
+          include: { user: { select: { avatarUrl: true } } },
           orderBy: [{ createdAt: "asc" }, { id: "asc" }]
         }
       });
@@ -214,6 +217,7 @@ export class FamiliesService {
       where: { id: familyId },
       include: {
         members: {
+          include: { user: { select: { avatarUrl: true } } },
           orderBy: { createdAt: "asc" }
         }
       }
@@ -306,6 +310,7 @@ export class FamiliesService {
       where: { code } as any,
       include: {
         members: {
+          include: { user: { select: { avatarUrl: true } } },
           orderBy: [{ createdAt: "asc" }, { id: "asc" }]
         }
       }
@@ -1035,6 +1040,7 @@ export class FamiliesService {
       userId: member.userId,
       familyId: member.familyId,
       displayName: member.displayName,
+      avatarUrl: member.user?.avatarUrl ?? member.avatarUrl ?? null,
       role: member.role,
       createdAt: member.createdAt.toISOString(),
       updatedAt: member.updatedAt.toISOString()

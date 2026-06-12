@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { ChevronLeft, MoreHorizontal, Pencil, Plus } from "lucide-react";
+import { UserAvatar } from "../../../components/avatar/UserAvatar";
 import { SettingsCard, SettingsSection } from "../../../components/settings";
 import { useFamilyAccess } from "../../../components/ProtectedFamilyRoute";
 import {
@@ -47,15 +48,6 @@ function choiceToApiRole(choice: RoleChoice): ManualFamilyMemberRole {
   if (choice === "ADMIN") return "PARENT";
   if (choice === "CHILD") return "CHILD";
   return "GUEST";
-}
-
-function getInitials(name: string) {
-  return name
-    .split(" ")
-    .filter(Boolean)
-    .slice(0, 2)
-    .map((part) => part[0]?.toLocaleUpperCase("nb-NO"))
-    .join("") || "FA";
 }
 
 function getFamilyCode(family: Family | null) {
@@ -494,7 +486,7 @@ export function FamilySettingsClient() {
             const cannotRemoveLastAdmin = isAdminRole(member.role) && administratorCount <= 1;
             return (
               <div className="family-settings-member" key={member.id}>
-                <span className="family-settings-member__avatar" aria-hidden="true">{getInitials(member.displayName)}</span>
+                <UserAvatar identity={{ displayName: member.displayName }} avatarUrl={member.avatarUrl} size="sm" className="family-settings-member__avatar" decorative />
                 <span className="family-settings-member__copy">
                   <span className="family-settings-member__name">{member.displayName}</span>
                   <span className="family-settings-member__role">{getRoleLine(member)}</span>

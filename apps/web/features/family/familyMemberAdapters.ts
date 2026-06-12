@@ -1,4 +1,5 @@
 import type { FamilyMember as BackendFamilyMember } from "../../lib/api";
+import { getInitials } from "../../lib/identity";
 import type { FamilyMember as FeatureFamilyMember } from "../types";
 
 const memberTones = ["green", "blue", "orange", "purple", "pink"] as const;
@@ -19,7 +20,8 @@ export function toFeatureFamilyMember(member: BackendFamilyMember, index: number
     userId: member.userId,
     name: member.displayName,
     displayName: member.displayName,
-    initials: getInitials(member.displayName),
+    initials: getInitials({ displayName: member.displayName }),
+    avatarUrl: member.avatarUrl,
     avatarColor,
     tone,
     role: member.role.toLocaleLowerCase("en-US") as FeatureFamilyMember["role"],
@@ -48,22 +50,6 @@ function getRealMemberId(memberId: string, familyMembers: FeatureFamilyMember[])
   const memberByName = familyMembers.find((member) => normalizeMemberKey(member.name) === normalizedMemberId);
 
   return memberByName?.id ?? null;
-}
-
-function getInitials(displayName: string): string {
-  const parts = displayName
-    .trim()
-    .split(/[\s-]+/)
-    .filter(Boolean);
-
-  if (parts.length === 0) {
-    return "?";
-  }
-
-  return parts
-    .slice(0, 2)
-    .map((part) => part[0]?.toLocaleUpperCase("nb-NO") ?? "")
-    .join("");
 }
 
 function normalizeMemberKey(value: string): string {

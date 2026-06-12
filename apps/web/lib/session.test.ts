@@ -41,6 +41,11 @@ test("auth session helpers store only the access token locally", () => {
     user: {
       id: "user-1",
       name: "Test User",
+      firstName: "Test",
+      middleName: null,
+      lastName: "User",
+      displayName: "Test User",
+      avatarUrl: null,
       email: "test@example.com",
       phone: null,
       createdAt: new Date(0).toISOString(),

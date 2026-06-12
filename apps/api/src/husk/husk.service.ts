@@ -522,6 +522,7 @@ export class HuskService {
       userId: familyMember.userId,
       familyId: familyMember.familyId,
       displayName: familyMember.displayName,
+      avatarUrl: null,
       role: familyMember.role,
       createdAt: familyMember.createdAt.toISOString(),
       updatedAt: familyMember.updatedAt.toISOString()

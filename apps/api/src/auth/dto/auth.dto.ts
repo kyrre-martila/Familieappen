@@ -12,6 +12,11 @@ export interface LoginRequestDto {
 export interface SafeUserDto {
   id: string;
   name: string;
+  firstName: string;
+  middleName: string | null;
+  lastName: string;
+  displayName: string;
+  avatarUrl: string | null;
   email: string;
   phone: string | null;
   createdAt: string;

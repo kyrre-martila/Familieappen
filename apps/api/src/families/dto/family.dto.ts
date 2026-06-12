@@ -61,6 +61,7 @@ export interface FamilyMemberDto {
   userId: string | null;
   familyId: string;
   displayName: string;
+  avatarUrl: string | null;
   role: FamilyMemberRoleDto;
   createdAt: string;
   updatedAt: string;

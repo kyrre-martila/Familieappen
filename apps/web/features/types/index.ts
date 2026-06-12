@@ -15,6 +15,7 @@ export type FamilyMember = {
   name: string;
   displayName?: string;
   initials: string;
+  avatarUrl?: string | null;
   avatarColor?: Exclude<DomainTone, "pink" | "yellow">;
   tone?: Exclude<DomainTone, "yellow">;
   role?: "owner" | "parent" | "child" | "guest";

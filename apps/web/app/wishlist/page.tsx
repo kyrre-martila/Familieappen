@@ -16,6 +16,7 @@ import {
 } from "lucide-react";
 
 import { AppShell } from "../../components/AppShell";
+import { UserAvatar } from "../../components/avatar/UserAvatar";
 import { LockedFeatureState } from "../../components/PendingAccess";
 import { useFamilyAccess } from "../../components/ProtectedFamilyRoute";
 import { useFamilyMembers } from "../../features/family/hooks/useFamilyMembers";
@@ -384,30 +385,14 @@ function SharedWishlistEmptyState() {
 }
 
 function SharedWishlistAvatar({ summary }: { summary: SharedWishlistSummary }) {
-  if (summary.ownerAvatarUrl) {
-    return (
-      <span className="wishlist-shared-card__avatar">
-        <img alt="" src={summary.ownerAvatarUrl} loading="lazy" />
-      </span>
-    );
-  }
-
-  const initials = summary.ownerName
-    .split(" ")
-    .filter(Boolean)
-    .map((part) => part[0])
-    .join("")
-    .slice(0, 2)
-    .toUpperCase();
-
   return (
-    <span
-      className="wishlist-shared-card__avatar wishlist-shared-card__avatar--initials"
-      style={{ backgroundColor: summary.ownerColor }}
-      aria-hidden="true"
-    >
-      {initials}
-    </span>
+    <UserAvatar
+      identity={{ displayName: summary.ownerName }}
+      avatarUrl={summary.ownerAvatarUrl}
+      size="md"
+      className="wishlist-shared-card__avatar"
+      decorative
+    />
   );
 }
 
