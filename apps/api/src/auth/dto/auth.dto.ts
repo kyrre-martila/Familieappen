@@ -9,6 +9,19 @@ export interface LoginRequestDto {
   password?: unknown;
 }
 
+export interface ForgotPasswordRequestDto {
+  email?: unknown;
+}
+
+export interface ResetPasswordRequestDto {
+  token?: unknown;
+  password?: unknown;
+}
+
+export interface PasswordResetMessageDto {
+  message: string;
+}
+
 export interface SafeUserDto {
   id: string;
   name: string;

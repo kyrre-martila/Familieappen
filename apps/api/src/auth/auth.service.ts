@@ -7,8 +7,9 @@ import {
 import { createHash, createHmac, randomBytes, scrypt as scryptCallback, timingSafeEqual } from "node:crypto";
 import { promisify } from "node:util";
 import { ConfigService } from "../config";
+import { EmailService, getAppBaseUrl } from "../email";
 import { PrismaService } from "../prisma";
-import { AuthResponseDto, LoginRequestDto, RefreshResponseDto, RegisterRequestDto, SafeUserDto } from "./dto/auth.dto";
+import { AuthResponseDto, ForgotPasswordRequestDto, LoginRequestDto, PasswordResetMessageDto, RefreshResponseDto, RegisterRequestDto, ResetPasswordRequestDto, SafeUserDto } from "./dto/auth.dto";
 
 const scrypt = promisify(scryptCallback);
 const PASSWORD_HASH_PREFIX = "scrypt";
@@ -16,6 +17,13 @@ const PASSWORD_KEY_LENGTH = 64;
 const ACCESS_TOKEN_EXPIRES_IN_SECONDS = 60 * 15;
 const REFRESH_TOKEN_EXPIRES_IN_SECONDS = 60 * 60 * 24 * 30;
 const REFRESH_TOKEN_BYTE_LENGTH = 48;
+const PASSWORD_RESET_TOKEN_BYTE_LENGTH = 32;
+const PASSWORD_RESET_EXPIRES_IN_MINUTES = 30;
+const PASSWORD_RESET_EXPIRES_IN_MS = PASSWORD_RESET_EXPIRES_IN_MINUTES * 60 * 1000;
+const PASSWORD_RESET_RATE_LIMIT_WINDOW_MS = 15 * 60 * 1000;
+const PASSWORD_RESET_EMAIL_LIMIT = 3;
+const PASSWORD_RESET_IP_LIMIT = 10;
+const PASSWORD_RESET_SUCCESS_MESSAGE = "Hvis e-postadressen finnes hos oss, sender vi en lenke for å tilbakestille passordet.";
 
 type DatabaseUser = {
   id: string;
@@ -68,7 +76,8 @@ export interface RefreshSessionResponse extends RefreshResponseDto {
 export class AuthService {
   constructor(
     private readonly prisma: PrismaService,
-    private readonly config: ConfigService
+    private readonly config: ConfigService,
+    private readonly emailService: EmailService
   ) {}
 
   async register(input: RegisterRequestDto = {}, metadata: SessionMetadata = {}): Promise<AuthSessionResponse> {
@@ -122,6 +131,93 @@ export class AuthService {
     }
 
     return this.createAuthResponse(user, metadata);
+  }
+
+  async forgotPassword(input: ForgotPasswordRequestDto = {}, metadata: SessionMetadata = {}): Promise<PasswordResetMessageDto> {
+    let email: string;
+
+    try {
+      email = this.validateEmail(input.email);
+    } catch {
+      return { message: PASSWORD_RESET_SUCCESS_MESSAGE };
+    }
+
+    const user = await this.prisma.client.user.findUnique({ where: { email } });
+
+    if (!user) {
+      return { message: PASSWORD_RESET_SUCCESS_MESSAGE };
+    }
+
+    const emailHash = this.hashResetEmail(email);
+    const windowStart = new Date(Date.now() - PASSWORD_RESET_RATE_LIMIT_WINDOW_MS);
+    const recentEmailRequests = await (this.prisma.client as any).passwordResetToken.count({
+      where: { emailHash, createdAt: { gte: windowStart } }
+    });
+    const recentIpRequests = metadata.ipAddress
+      ? await (this.prisma.client as any).passwordResetToken.count({
+          where: { requestIp: metadata.ipAddress, createdAt: { gte: windowStart } }
+        })
+      : 0;
+
+    if (recentEmailRequests >= PASSWORD_RESET_EMAIL_LIMIT || recentIpRequests >= PASSWORD_RESET_IP_LIMIT) {
+      return { message: PASSWORD_RESET_SUCCESS_MESSAGE };
+    }
+
+    const rawToken = this.createPasswordResetToken();
+    await (this.prisma.client as any).passwordResetToken.create({
+      data: {
+        userId: user.id,
+        tokenHash: this.hashPasswordResetToken(rawToken),
+        emailHash,
+        requestIp: metadata.ipAddress ?? null,
+        userAgent: metadata.userAgent ?? null,
+        expiresAt: new Date(Date.now() + PASSWORD_RESET_EXPIRES_IN_MS)
+      }
+    });
+
+    await this.emailService.sendEmail({
+      to: user.email,
+      template: "forgot-password",
+      data: {
+        resetUrl: `${getAppBaseUrl()}/reset-password?token=${encodeURIComponent(rawToken)}`,
+        expiresInMinutes: PASSWORD_RESET_EXPIRES_IN_MINUTES
+      }
+    });
+
+    return { message: PASSWORD_RESET_SUCCESS_MESSAGE };
+  }
+
+  async resetPassword(input: ResetPasswordRequestDto = {}): Promise<PasswordResetMessageDto> {
+    const token = this.validatePasswordResetToken(input.token);
+    const password = this.validatePassword(input.password);
+    const tokenHash = this.hashPasswordResetToken(token);
+    const resetRecord = await (this.prisma.client as any).passwordResetToken.findUnique({
+      where: { tokenHash },
+      include: { user: true }
+    });
+
+    if (!resetRecord || resetRecord.usedAt || resetRecord.expiresAt.getTime() <= Date.now()) {
+      throw new BadRequestException("Lenken er ugyldig eller utløpt. Be om en ny lenke.");
+    }
+
+    const passwordHash = await this.hashPassword(password);
+    const now = new Date();
+    const updated = await (this.prisma.client as any).passwordResetToken.updateMany({
+      where: { id: resetRecord.id, usedAt: null, expiresAt: { gt: now } },
+      data: { usedAt: now }
+    });
+
+    if (updated.count !== 1) {
+      throw new BadRequestException("Lenken er ugyldig eller utløpt. Be om en ny lenke.");
+    }
+
+    await this.prisma.client.user.update({
+      where: { id: resetRecord.userId },
+      data: { passwordHash }
+    });
+    await this.revokeAllUserSessions(resetRecord.userId);
+
+    return { message: "Passordet er oppdatert. Du kan logge inn med det nye passordet." };
   }
 
   async refresh(refreshTokenValue: unknown): Promise<RefreshSessionResponse> {
@@ -340,6 +436,32 @@ export class AuthService {
 
   private createRefreshToken(): string {
     return randomBytes(REFRESH_TOKEN_BYTE_LENGTH).toString("base64url");
+  }
+
+  private validatePasswordResetToken(value: unknown): string {
+    if (typeof value !== "string") {
+      throw new BadRequestException("Tilbakestillingslenken er ugyldig.");
+    }
+
+    const token = value.trim();
+
+    if (token.length < 32 || token.length > 256 || !/^[A-Za-z0-9_-]+$/.test(token)) {
+      throw new BadRequestException("Tilbakestillingslenken er ugyldig.");
+    }
+
+    return token;
+  }
+
+  private createPasswordResetToken(): string {
+    return randomBytes(PASSWORD_RESET_TOKEN_BYTE_LENGTH).toString("base64url");
+  }
+
+  private hashPasswordResetToken(token: string): string {
+    return createHash("sha256").update(token, "utf8").digest("base64url");
+  }
+
+  private hashResetEmail(email: string): string {
+    return createHmac("sha256", this.getJwtSecret()).update(email, "utf8").digest("base64url");
   }
 
   private validateRefreshToken(value: unknown): string {

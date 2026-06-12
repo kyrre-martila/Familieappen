@@ -162,6 +162,10 @@ export interface LogoutResponse {
   message: string;
 }
 
+export interface PasswordResetMessageResponse {
+  message: string;
+}
+
 export interface FamilyDetails {
   family: Family;
   members: FamilyMember[];
@@ -206,6 +210,22 @@ export async function register(input: { name: string; email: string; password: s
 
 export async function login(input: { email: string; password: string }): Promise<AuthResponse> {
   return apiRequest<AuthResponse>("/auth/login", {
+    method: "POST",
+    body: input,
+    includeAuth: false
+  });
+}
+
+export async function forgotPassword(input: { email: string }): Promise<PasswordResetMessageResponse> {
+  return apiRequest<PasswordResetMessageResponse>("/auth/forgot-password", {
+    method: "POST",
+    body: input,
+    includeAuth: false
+  });
+}
+
+export async function resetPassword(input: { token: string; password: string }): Promise<PasswordResetMessageResponse> {
+  return apiRequest<PasswordResetMessageResponse>("/auth/reset-password", {
     method: "POST",
     body: input,
     includeAuth: false
