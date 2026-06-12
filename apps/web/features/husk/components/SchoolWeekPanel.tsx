@@ -10,9 +10,17 @@ import {
   RotateCcw,
 } from "lucide-react";
 
-import { FamilyMembersErrorState, FamilyMembersLoadingState } from "../../family/FamilyMembersEmptyState";
+import { UserAvatar } from "../../../components/avatar/UserAvatar";
+import {
+  FamilyMembersErrorState,
+  FamilyMembersLoadingState,
+} from "../../family/FamilyMembersEmptyState";
 import { useSchoolWeek } from "../hooks/useSchoolWeek";
-import type { HuskFamilyMember, HuskSchoolWeekItem, SchoolCreateDraft } from "../types";
+import type {
+  HuskFamilyMember,
+  HuskSchoolWeekItem,
+  SchoolCreateDraft,
+} from "../types";
 import { reminderIcons, schoolWeekdays } from "./huskConfig";
 import {
   formatSchoolDate,
@@ -52,7 +60,8 @@ export function SchoolWeekPanel({
   const [createDraft, setCreateDraft] = useState<SchoolCreateDraft | null>(
     null,
   );
-  const [recurringChoiceItem, setRecurringChoiceItem] = useState<HuskSchoolWeekItem | null>(null);
+  const [recurringChoiceItem, setRecurringChoiceItem] =
+    useState<HuskSchoolWeekItem | null>(null);
   const [schoolFeedback, setSchoolFeedback] = useState<string | null>(null);
   const [showSavedBadge, setShowSavedBadge] = useState(false);
   const selectedWeekStart = useMemo(
@@ -109,7 +118,9 @@ export function SchoolWeekPanel({
     0,
     schoolChildren.findIndex((child) => child.id === selectedChildId),
   );
-  const selectedChild = schoolChildren.find((child) => child.id === selectedChildId) ?? schoolChildren[0];
+  const selectedChild =
+    schoolChildren.find((child) => child.id === selectedChildId) ??
+    schoolChildren[0];
   const selectedPlan = weekItems.find(
     (plan) => plan.childId === selectedChild?.id,
   );
@@ -185,7 +196,9 @@ export function SchoolWeekPanel({
     }
 
     const date = new Date(selectedWeekStart);
-    const weekday = schoolWeekdays.find((option) => option.value === createDraft.weekday);
+    const weekday = schoolWeekdays.find(
+      (option) => option.value === createDraft.weekday,
+    );
     date.setUTCDate(date.getUTCDate() + (weekday?.dayOffset ?? 0));
 
     try {
@@ -196,7 +209,9 @@ export function SchoolWeekPanel({
         title: createDraft.title,
         icon: createDraft.icon,
         isRecurring: createDraft.recurring,
-        recurrenceEndDate: createDraft.recurring ? createDraft.endDate || null : null,
+        recurrenceEndDate: createDraft.recurring
+          ? createDraft.endDate || null
+          : null,
       });
       setCreateDraft(null);
       setSchoolFeedback(null);
@@ -334,12 +349,13 @@ export function SchoolWeekPanel({
             <ChevronLeft aria-hidden="true" size={22} strokeWidth={2.5} />
           </button>
           <div className="husk-school-child__identity">
-            <span
-              className={`husk-avatar husk-avatar--${selectedChild.tone}`}
-              aria-hidden="true"
-            >
-              {selectedChild.initials}
-            </span>
+            <UserAvatar
+              identity={selectedChild}
+              avatarUrl={selectedChild.avatarUrl}
+              size="sm"
+              className="husk-avatar"
+              decorative
+            />
             <span className="husk-school-child__copy">
               <strong>{selectedChild.name}</strong>
               <span>
@@ -368,7 +384,9 @@ export function SchoolWeekPanel({
       ) : null}
 
       {schoolFeedback ? (
-        <p className="husk-school__tip" role="status">{schoolFeedback}</p>
+        <p className="husk-school__tip" role="status">
+          {schoolFeedback}
+        </p>
       ) : null}
 
       <div
@@ -418,7 +436,9 @@ export function SchoolWeekPanel({
                           {isEditing && item.isRecurring ? (
                             <small>
                               <RotateCcw size={12} strokeWidth={2.4} /> Hver uke
-                              {item.recurrenceEndDate ? ` til ${formatSchoolDate(new Date(`${item.recurrenceEndDate}T00:00:00.000Z`))}` : ""}
+                              {item.recurrenceEndDate
+                                ? ` til ${formatSchoolDate(new Date(`${item.recurrenceEndDate}T00:00:00.000Z`))}`
+                                : ""}
                             </small>
                           ) : null}
                         </span>
@@ -435,7 +455,13 @@ export function SchoolWeekPanel({
                         className={`husk-school-item husk-school-item--${item.tone} husk-school-item--editable`}
                         key={item.id}
                         type="button"
-                        onClick={() => item.isRecurring ? setRecurringChoiceItem(item) : setSchoolFeedback("Enkeltstående skolehusk er lagret for denne uka.")}
+                        onClick={() =>
+                          item.isRecurring
+                            ? setRecurringChoiceItem(item)
+                            : setSchoolFeedback(
+                                "Enkeltstående skolehusk er lagret for denne uka.",
+                              )
+                        }
                       >
                         {content}
                       </button>

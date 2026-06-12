@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { ChevronRight } from "lucide-react";
 
+import { UserAvatar } from "../../../components/avatar/UserAvatar";
 import type { HuskFamilyMember, HuskListGroup } from "../types";
 import { listIcons } from "./huskConfig";
 
@@ -14,13 +15,14 @@ function ListCardAvatars({ members }: { members: HuskFamilyMember[] }) {
       aria-label={members.map((member) => member.name).join(", ")}
     >
       {visibleMembers.map((member) => (
-        <span
-          className={`husk-avatar husk-avatar--${member.tone}`}
+        <UserAvatar
+          identity={member}
+          avatarUrl={member.avatarUrl}
+          size="xs"
+          className="husk-avatar"
+          decorative
           key={member.id}
-          aria-hidden="true"
-        >
-          {member.initials}
-        </span>
+        />
       ))}
       {hiddenCount > 0 ? (
         <span className="husk-list-card__avatar-count" aria-hidden="true">
