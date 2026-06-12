@@ -25,7 +25,7 @@ import { normalizeMealTitle } from "../../features/meals/components/mealFormatte
 import { useMeals } from "../../features/meals/hooks/useMeals";
 import type { Meal } from "../../features/types";
 
-const initialPastDays = 10;
+const initialPastDays = 0;
 const initialFutureDays = 21;
 const loadChunkSize = 14;
 
