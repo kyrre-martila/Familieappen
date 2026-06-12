@@ -136,6 +136,19 @@ function MealsPageContent() {
   const hasInitialScrollRef = useRef(false);
   const handledRouteActionRef = useRef<string | null>(null);
 
+  useEffect(() => {
+    const previousScrollRestoration = window.history.scrollRestoration;
+    window.history.scrollRestoration = "manual";
+
+    if (!searchParams.get("date")) {
+      window.scrollTo({ top: 0, behavior: "auto" });
+    }
+
+    return () => {
+      window.history.scrollRestoration = previousScrollRestoration;
+    };
+  }, [searchParams]);
+
   const days = useMemo(
     () =>
       Array.from({ length: endOffset - startOffset + 1 }, (_, index) => {
