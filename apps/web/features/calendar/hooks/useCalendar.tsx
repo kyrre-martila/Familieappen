@@ -252,8 +252,8 @@ function toCalendarEvent(event: BackendCalendarEvent): CalendarEvent {
     participantIds: event.participants.map(
       (participant) => participant.familyMemberId,
     ),
-    source: "manual",
-    isImported: false,
+    source: event.source === "ics" ? "ics" : "manual",
+    isImported: event.source === "ics",
     reminder: event.reminder,
     recurrence: null,
     createdByMemberId: null,

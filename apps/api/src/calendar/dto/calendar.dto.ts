@@ -23,6 +23,9 @@ export interface CalendarEventDto {
   startsAt: string;
   endsAt: string | null;
   allDay: boolean;
+  source: string;
+  icsSourceId: string | null;
+  externalUid: string | null;
   createdByUserId: string | null;
   createdAt: string;
   updatedAt: string;

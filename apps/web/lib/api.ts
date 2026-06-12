@@ -176,6 +176,46 @@ export interface FamilyWithMembership {
   membership: FamilyMember;
 }
 
+export interface CalendarIcsSource {
+  id: string;
+  familyId: string;
+  name: string;
+  url: string;
+  active: boolean;
+  defaultFamilyMemberId: string | null;
+  defaultCategory: string;
+  lastSyncedAt: string | null;
+  lastSyncStatus: string | null;
+  lastSyncError: string | null;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface CalendarIcsSyncResult {
+  source: CalendarIcsSource;
+  imported: number;
+  updated: number;
+  removed: number;
+  skipped: number;
+}
+
+export type CalendarExportScope = "family" | "mine" | "selectedParticipant";
+
+export interface CalendarExportFeedSettings {
+  id: string;
+  familyId: string;
+  enabled: boolean;
+  privateUrl: string;
+  includeEvents: boolean;
+  includeMeals: boolean;
+  includeReminders: boolean;
+  includeSchoolWeekReminders: boolean;
+  scope: CalendarExportScope;
+  selectedFamilyMemberId: string | null;
+  createdAt: string;
+  updatedAt: string;
+}
+
 const API_BASE_URL = (process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:4000/api").replace(/\/$/, "");
 
 interface ApiEnvelope<TData> {
@@ -651,6 +691,49 @@ export async function moveMealPlanDay(
     body: input,
     familyId
   });
+}
+
+
+export async function getCalendarIcsSources(familyId: string): Promise<CalendarIcsSource[]> {
+  return apiRequest<CalendarIcsSource[]>("/calendar/ics-sources", { familyId });
+}
+
+export async function createCalendarIcsSource(
+  familyId: string,
+  input: { name: string; url: string; active?: boolean; defaultFamilyMemberId?: string | null; defaultCategory?: string }
+): Promise<CalendarIcsSource> {
+  return apiRequest<CalendarIcsSource>("/calendar/ics-sources", { method: "POST", body: input, familyId });
+}
+
+export async function updateCalendarIcsSource(
+  familyId: string,
+  sourceId: string,
+  input: { name?: string; url?: string; active?: boolean; defaultFamilyMemberId?: string | null; defaultCategory?: string }
+): Promise<CalendarIcsSource> {
+  return apiRequest<CalendarIcsSource>(`/calendar/ics-sources/${encodeURIComponent(sourceId)}`, { method: "PATCH", body: input, familyId });
+}
+
+export async function deleteCalendarIcsSource(familyId: string, sourceId: string): Promise<CalendarIcsSource> {
+  return apiRequest<CalendarIcsSource>(`/calendar/ics-sources/${encodeURIComponent(sourceId)}`, { method: "DELETE", familyId });
+}
+
+export async function syncCalendarIcsSource(familyId: string, sourceId: string): Promise<CalendarIcsSyncResult> {
+  return apiRequest<CalendarIcsSyncResult>(`/calendar/ics-sources/${encodeURIComponent(sourceId)}/sync`, { method: "POST", familyId });
+}
+
+export async function getCalendarExportFeedSettings(familyId: string): Promise<CalendarExportFeedSettings> {
+  return apiRequest<CalendarExportFeedSettings>("/calendar/feed-settings", { familyId });
+}
+
+export async function updateCalendarExportFeedSettings(
+  familyId: string,
+  input: Partial<Pick<CalendarExportFeedSettings, "enabled" | "includeEvents" | "includeMeals" | "includeReminders" | "includeSchoolWeekReminders" | "scope" | "selectedFamilyMemberId">>
+): Promise<CalendarExportFeedSettings> {
+  return apiRequest<CalendarExportFeedSettings>("/calendar/feed-settings", { method: "PATCH", body: input, familyId });
+}
+
+export async function regenerateCalendarExportFeed(familyId: string): Promise<CalendarExportFeedSettings> {
+  return apiRequest<CalendarExportFeedSettings>("/calendar/feed-settings/regenerate", { method: "POST", familyId });
 }
 
 export async function getCalendarEvents(
