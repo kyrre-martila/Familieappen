@@ -155,6 +155,8 @@ model Family {
   meals MealPlanDay[]
   tasks     Task[]
   calendarEvents CalendarEvent[]
+  calendarIcsSources CalendarIcsSource[]
+  calendarExportFeed CalendarExportFeed?
   reminders Reminder[]
   lists     List[]
   wishlistItems WishlistItem[]
@@ -178,6 +180,7 @@ model FamilyMember {
   family      Family           @relation(fields: [familyId], references: [id], onDelete: Cascade)
   assignedTasks Task[]
   calendarEventParticipants CalendarEventParticipant[]
+  defaultCalendarIcsSources CalendarIcsSource[]
   reminderAudienceMembers ReminderAudienceMember[]
   listAudienceMembers ListAudienceMember[]
   assignedListItems ListItem[]
@@ -299,18 +302,70 @@ model CalendarEvent {
   startsAt        DateTime
   endsAt          DateTime?
   allDay          Boolean                    @default(false)
+  source          String                     @default("manual")
+  icsSourceId     String?
+  externalUid     String?
+  externalLastModified DateTime?
+  externalSequence Int?
+  importedAt      DateTime?
   createdByUserId String?
   createdAt       DateTime                   @default(now())
   updatedAt       DateTime                   @updatedAt
   family          Family                     @relation(fields: [familyId], references: [id], onDelete: Cascade)
+  icsSource       CalendarIcsSource?         @relation(fields: [icsSourceId], references: [id], onDelete: Cascade)
   createdByUser   User?                      @relation("CalendarEventCreatedBy", fields: [createdByUserId], references: [id], onDelete: SetNull)
   participants    CalendarEventParticipant[]
 
   @@index([familyId])
   @@index([startsAt])
   @@index([endsAt])
+  @@unique([icsSourceId, externalUid])
   @@index([createdByUserId])
+  @@index([icsSourceId])
+  @@index([source])
   @@map("calendar_events")
+}
+
+
+model CalendarIcsSource {
+  id                    String          @id @default(cuid())
+  familyId              String
+  name                  String
+  url                   String
+  active                Boolean         @default(true)
+  defaultFamilyMemberId String?
+  defaultCategory       String          @default("family")
+  lastSyncedAt          DateTime?
+  lastSyncStatus        String?
+  lastSyncError         String?
+  createdAt             DateTime        @default(now())
+  updatedAt             DateTime        @updatedAt
+  family                Family          @relation(fields: [familyId], references: [id], onDelete: Cascade)
+  defaultFamilyMember   FamilyMember?   @relation(fields: [defaultFamilyMemberId], references: [id], onDelete: SetNull)
+  events                CalendarEvent[]
+
+  @@index([familyId])
+  @@index([defaultFamilyMemberId])
+  @@map("calendar_ics_sources")
+}
+
+model CalendarExportFeed {
+  id                         String   @id @default(cuid())
+  familyId                   String   @unique
+  token                      String   @unique
+  enabled                    Boolean  @default(false)
+  includeEvents              Boolean  @default(true)
+  includeMeals               Boolean  @default(true)
+  includeReminders           Boolean  @default(true)
+  includeSchoolWeekReminders Boolean  @default(true)
+  scope                      String   @default("family")
+  selectedFamilyMemberId     String?
+  createdAt                  DateTime @default(now())
+  updatedAt                  DateTime @updatedAt
+  family                     Family   @relation(fields: [familyId], references: [id], onDelete: Cascade)
+
+  @@index([token])
+  @@map("calendar_export_feeds")
 }
 
 model CalendarEventParticipant {

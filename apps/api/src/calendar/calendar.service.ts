@@ -38,6 +38,9 @@ type CalendarEventRecord = {
   startsAt: Date;
   endsAt: Date | null;
   allDay: boolean;
+  source: string;
+  icsSourceId: string | null;
+  externalUid: string | null;
   createdByUserId: string | null;
   createdAt: Date;
   updatedAt: Date;
@@ -55,11 +58,12 @@ export class CalendarService {
     await this.familyAuthorization.requireFamilyMember(userId, familyId);
     const { from, to } = this.validateDateRange(query.from, query.to);
 
-    const events = await this.prisma.client.calendarEvent.findMany({
+    const events = await (this.prisma.client as any).calendarEvent.findMany({
       where: {
         familyId,
         startsAt: { lte: to },
-        OR: [{ endsAt: { gte: from } }, { endsAt: null, startsAt: { gte: from } }]
+        OR: [{ endsAt: { gte: from } }, { endsAt: null, startsAt: { gte: from } }],
+        AND: [{ OR: [{ icsSourceId: null }, { icsSource: { active: true } }] }]
       },
       include: this.eventInclude,
       orderBy: [{ startsAt: "asc" }, { createdAt: "asc" }]
@@ -406,6 +410,9 @@ export class CalendarService {
       startsAt: event.startsAt.toISOString(),
       endsAt: event.endsAt?.toISOString() ?? null,
       allDay: event.allDay,
+      source: event.source,
+      icsSourceId: event.icsSourceId,
+      externalUid: event.externalUid,
       createdByUserId: event.createdByUserId,
       createdAt: event.createdAt.toISOString(),
       updatedAt: event.updatedAt.toISOString(),

@@ -93,6 +93,9 @@ type CalendarEventRecord = {
   startsAt: Date;
   endsAt: Date | null;
   allDay: boolean;
+  source: string;
+  icsSourceId: string | null;
+  externalUid: string | null;
   createdByUserId: string | null;
   createdAt: Date;
   updatedAt: Date;
@@ -600,11 +603,12 @@ export class FamiliesService {
     const tomorrowStart = new Date(todayStart);
     tomorrowStart.setUTCDate(tomorrowStart.getUTCDate() + 1);
 
-    const events = await this.prisma.client.calendarEvent.findMany({
+    const events = await (this.prisma.client as any).calendarEvent.findMany({
       where: {
         familyId,
         startsAt: { lt: tomorrowStart },
-        OR: [{ endsAt: { gte: todayStart } }, { endsAt: null, startsAt: { gte: todayStart } }]
+        OR: [{ endsAt: { gte: todayStart } }, { endsAt: null, startsAt: { gte: todayStart } }],
+        AND: [{ OR: [{ icsSourceId: null }, { icsSource: { active: true } }] }]
       },
       include: {
         participants: {
@@ -638,6 +642,9 @@ export class FamiliesService {
       startsAt: event.startsAt.toISOString(),
       endsAt: event.endsAt?.toISOString() ?? null,
       allDay: event.allDay,
+      source: event.source,
+      icsSourceId: event.icsSourceId,
+      externalUid: event.externalUid,
       createdByUserId: event.createdByUserId,
       createdAt: event.createdAt.toISOString(),
       updatedAt: event.updatedAt.toISOString(),
