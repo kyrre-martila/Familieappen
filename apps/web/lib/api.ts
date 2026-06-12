@@ -1,3 +1,4 @@
+import { notifyFamilyCacheReset } from "./family-cache-events";
 import { clearAuthSession, getAccessToken, saveAccessToken } from "./session";
 
 import type {
@@ -274,10 +275,10 @@ export async function deleteCurrentUserAccount(input: DeleteAccountInput): Promi
 }
 
 export async function createFamily(input: { name: string }): Promise<FamilyDetails> {
-  return apiRequest<FamilyDetails>("/families", {
+  return withFamilyCacheInvalidation(apiRequest<FamilyDetails>("/families", {
     method: "POST",
     body: input
-  });
+  }));
 }
 
 export async function listFamilies(): Promise<FamilyWithMembership[]> {
@@ -285,10 +286,10 @@ export async function listFamilies(): Promise<FamilyWithMembership[]> {
 }
 
 export async function joinFamilyByCode(code: string): Promise<FamilyInvitation> {
-  return apiRequest<FamilyInvitation>("/families/join-by-code", {
+  return withFamilyCacheInvalidation(apiRequest<FamilyInvitation>("/families/join-by-code", {
     method: "POST",
     body: { code }
-  });
+  }));
 }
 
 export async function getFamily(familyId: string): Promise<FamilyDetails> {
@@ -296,10 +297,10 @@ export async function getFamily(familyId: string): Promise<FamilyDetails> {
 }
 
 export async function updateFamily(familyId: string, input: { name: string }): Promise<Family> {
-  return apiRequest<Family>(`/families/${encodeURIComponent(familyId)}`, {
+  return withFamilyCacheInvalidation(apiRequest<Family>(`/families/${encodeURIComponent(familyId)}`, {
     method: "PATCH",
     body: input
-  });
+  }));
 }
 
 export async function getFamilyDashboard(familyId: string): Promise<FamilyDashboardResponse> {
@@ -310,10 +311,10 @@ export async function addFamilyMember(
   familyId: string,
   input: { displayName: string; role: ManualFamilyMemberRole }
 ): Promise<FamilyMember> {
-  return apiRequest<FamilyMember>(`/families/${encodeURIComponent(familyId)}/members`, {
+  return withFamilyCacheInvalidation(apiRequest<FamilyMember>(`/families/${encodeURIComponent(familyId)}/members`, {
     method: "POST",
     body: input
-  });
+  }));
 }
 
 export async function updateFamilyMember(
@@ -321,10 +322,10 @@ export async function updateFamilyMember(
   memberId: string,
   input: { displayName?: string; role?: ManualFamilyMemberRole }
 ): Promise<FamilyMember> {
-  return apiRequest<FamilyMember>(`/families/${encodeURIComponent(familyId)}/members/${encodeURIComponent(memberId)}`, {
+  return withFamilyCacheInvalidation(apiRequest<FamilyMember>(`/families/${encodeURIComponent(familyId)}/members/${encodeURIComponent(memberId)}`, {
     method: "PATCH",
     body: input
-  });
+  }));
 }
 
 export async function getFamilyInvitations(familyId: string): Promise<FamilyInvitation[]> {
@@ -332,33 +333,33 @@ export async function getFamilyInvitations(familyId: string): Promise<FamilyInvi
 }
 
 export async function inviteFamilyMemberByEmail(familyId: string, input: { email: string; role: ManualFamilyMemberRole }): Promise<FamilyInviteResponse> {
-  return apiRequest<FamilyInviteResponse>(`/families/${encodeURIComponent(familyId)}/invitations`, {
+  return withFamilyCacheInvalidation(apiRequest<FamilyInviteResponse>(`/families/${encodeURIComponent(familyId)}/invitations`, {
     method: "POST",
     body: input
-  });
+  }));
 }
 
 export async function resendFamilyInvitation(familyId: string, inviteId: string): Promise<FamilyInviteResponse> {
-  return apiRequest<FamilyInviteResponse>(`/families/${encodeURIComponent(familyId)}/invitations/${encodeURIComponent(inviteId)}/resend`, { method: "POST" });
+  return withFamilyCacheInvalidation(apiRequest<FamilyInviteResponse>(`/families/${encodeURIComponent(familyId)}/invitations/${encodeURIComponent(inviteId)}/resend`, { method: "POST" }));
 }
 
 export async function revokeFamilyInvitation(familyId: string, inviteId: string): Promise<FamilyInvitation> {
-  return apiRequest<FamilyInvitation>(`/families/${encodeURIComponent(familyId)}/invitations/${encodeURIComponent(inviteId)}/revoke`, { method: "POST" });
+  return withFamilyCacheInvalidation(apiRequest<FamilyInvitation>(`/families/${encodeURIComponent(familyId)}/invitations/${encodeURIComponent(inviteId)}/revoke`, { method: "POST" }));
 }
 
 export async function approveFamilyJoinRequest(familyId: string, inviteId: string): Promise<FamilyInvitation> {
-  return apiRequest<FamilyInvitation>(`/families/${encodeURIComponent(familyId)}/invitations/${encodeURIComponent(inviteId)}/approve`, { method: "POST" });
+  return withFamilyCacheInvalidation(apiRequest<FamilyInvitation>(`/families/${encodeURIComponent(familyId)}/invitations/${encodeURIComponent(inviteId)}/approve`, { method: "POST" }));
 }
 
 export async function rejectFamilyJoinRequest(familyId: string, inviteId: string): Promise<FamilyInvitation> {
-  return apiRequest<FamilyInvitation>(`/families/${encodeURIComponent(familyId)}/invitations/${encodeURIComponent(inviteId)}/reject`, { method: "POST" });
+  return withFamilyCacheInvalidation(apiRequest<FamilyInvitation>(`/families/${encodeURIComponent(familyId)}/invitations/${encodeURIComponent(inviteId)}/reject`, { method: "POST" }));
 }
 
 export async function removeFamilyMember(familyId: string, memberId: string): Promise<FamilyMember> {
-  return apiRequest<FamilyMember>(
+  return withFamilyCacheInvalidation(apiRequest<FamilyMember>(
     `/families/${encodeURIComponent(familyId)}/members/${encodeURIComponent(memberId)}`,
     { method: "DELETE" }
-  );
+  ));
 }
 
 export async function getMyWishlistItems(familyId: string): Promise<WishlistItemListResponse> {
@@ -872,6 +873,12 @@ export async function deleteTask(familyId: string, taskId: string): Promise<Task
   });
 }
 
+async function withFamilyCacheInvalidation<TData>(operation: Promise<TData>): Promise<TData> {
+  const result = await operation;
+  notifyFamilyCacheReset();
+  return result;
+}
+
 async function apiRequest<TData>(
   path: string,
   options: { method?: string; body?: unknown; includeAuth?: boolean; familyId?: string; retryOnUnauthorized?: boolean } = {}
@@ -906,11 +913,26 @@ async function apiRequest<TData>(
 
   if (!response.ok) {
     if (response.status === 401 && includeAuth && (options.retryOnUnauthorized ?? true)) {
-      await refreshAuthSession();
-      return apiRequest<TData>(path, { ...options, retryOnUnauthorized: false });
+      try {
+        await refreshAuthSession();
+        return apiRequest<TData>(path, { ...options, retryOnUnauthorized: false });
+      } catch {
+        clearAuthSession();
+        throw new ApiError("Your session has expired. Please sign in again.", 401, "auth.expired_token");
+      }
     }
 
-    throw new ApiError(...(await getErrorDetails(response)));
+    const errorDetails = await getErrorDetails(response);
+
+    if (response.status === 401) {
+      clearAuthSession();
+    }
+
+    if (response.status === 403) {
+      notifyFamilyCacheReset();
+    }
+
+    throw new ApiError(...errorDetails);
   }
 
   const envelope = (await response.json()) as ApiEnvelope<TData>;
