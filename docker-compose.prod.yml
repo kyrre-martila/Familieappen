@@ -1,0 +1,53 @@
+services:
+  db:
+    image: postgres:16
+    container_name: familieappen-db
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: familieappen
+      POSTGRES_USER: familieappen
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+    volumes:
+      - familieappen_pgdata:/var/lib/postgresql/data
+    ports:
+      - "5432:5432"
+
+  api:
+    build:
+      context: .
+      dockerfile: infra/Dockerfile.api
+    container_name: familieappen-api
+    restart: unless-stopped
+    depends_on:
+      - db
+    volumes:
+      - familieappen_uploads:/app/uploads
+    environment:
+      NODE_ENV: production
+      PORT: 4000
+      API_PREFIX: api
+      DATABASE_URL: postgresql://familieappen:${POSTGRES_PASSWORD}@db:5432/familieappen?schema=public
+      AUTH_JWT_SECRET: ${AUTH_JWT_SECRET}
+      CORS_ORIGINS: https://familieappen.martila.no, https://api-familieappen.martila.no, http://192.168.1.231:3000, http://localhost:3000
+    ports:
+      - "4000:4000"
+
+  web:
+    build:
+      context: .
+      dockerfile: infra/Dockerfile.web
+      args:
+        NEXT_PUBLIC_API_URL: https://api-familieappen.martila.no/api
+    container_name: familieappen-web
+    restart: unless-stopped
+    depends_on:
+      - api
+    environment:
+      NODE_ENV: production
+      NEXT_PUBLIC_API_URL: https://api-familieappen.martila.no/api
+    ports:
+      - "3000:3000"
+
+volumes:
+  familieappen_pgdata:
+  familieappen_uploads:
