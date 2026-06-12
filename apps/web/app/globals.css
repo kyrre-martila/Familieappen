@@ -5296,8 +5296,9 @@ select {
 
 .calendar-summary-chips {
   display: flex;
+  flex-wrap: wrap;
   gap: var(--space-s);
-  overflow-x: auto;
+  overflow: visible;
   padding-block: var(--space-xs);
   scrollbar-width: none;
 }
@@ -5308,7 +5309,9 @@ select {
 
 .calendar-chip {
   display: inline-flex;
-  flex: 0 0 auto;
+  flex: 0 1 auto;
+  min-width: 0;
+  max-width: 100%;
   min-height: calc(var(--space-xl) + var(--space-s));
   align-items: center;
   gap: var(--space-s);
@@ -5322,6 +5325,11 @@ select {
   text-decoration: none;
 }
 
+.calendar-chip > span {
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+
 a.calendar-chip,
 button.calendar-chip {
   cursor: pointer;
@@ -5333,6 +5341,11 @@ button.calendar-chip {
 }
 
 .calendar-chip--reminder {
+  background: var(--color-primary-soft);
+  color: var(--color-primary-strong);
+}
+
+.calendar-chip--school-week {
   background: var(--color-primary-soft);
   color: var(--color-primary-strong);
 }
