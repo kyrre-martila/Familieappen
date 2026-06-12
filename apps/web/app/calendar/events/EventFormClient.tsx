@@ -7,6 +7,7 @@ import { CalendarCheck, Check, Clock, FileText, MapPin, Repeat, Save, Trash2, Us
 import type { CalendarMvpEvent } from "@familieappen/shared";
 
 import { useCalendar } from "../../../features/calendar/hooks/useCalendar";
+import { UserAvatar } from "../../../components/avatar/UserAvatar";
 import { FamilyMembersEmptyState, FamilyMembersErrorState, FamilyMembersLoadingState } from "../../../features/family/FamilyMembersEmptyState";
 import { remapLegacyMemberIds } from "../../../features/family/familyMemberAdapters";
 import {
@@ -246,8 +247,8 @@ export function CalendarEventFormClient({ mode, event = null }: CalendarEventFor
                     aria-pressed={isSelected}
                     aria-label={`${member.name}. ${isSelected ? "Valgt" : "Ikke valgt"}`}
                   >
-                    <span className={`event-form-avatar-chip__avatar event-form-avatar-chip__avatar--${member.avatarColor}`} aria-hidden="true">
-                      {member.initials}
+                    <span className="event-form-avatar-chip__avatar-wrap">
+                      <UserAvatar identity={{ displayName: member.displayName ?? member.name }} avatarUrl={member.avatarUrl} size="sm" className={`event-form-avatar-chip__avatar event-form-avatar-chip__avatar--${member.avatarColor}`} decorative />
                       {isSelected ? <span className="event-form-avatar-chip__check"><Check size={14} strokeWidth={3.2} /></span> : null}
                     </span>
                     <span>{member.name}</span>

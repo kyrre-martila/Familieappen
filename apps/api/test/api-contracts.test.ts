@@ -494,7 +494,12 @@ async function run(): Promise<void> {
 
     assertErrorEnvelope(await request("PATCH", "/me", { token: alpha.token, body: { email: "not-an-email" } }), 400, API_ERROR_CODES.VALIDATION_INVALID_INPUT);
     assertErrorEnvelope(await request("PATCH", "/me", { token: alpha.token, body: { email: "beta-contract@example.com" } }), 409, API_ERROR_CODES.AUTH_EMAIL_ALREADY_EXISTS);
-    assertErrorEnvelope(await request("PATCH", "/me", { token: alpha.token, body: { displayName: "Nope" } }), 400, API_ERROR_CODES.VALIDATION_INVALID_INPUT);
+    const displayNameProfile = assertSuccessEnvelope(await request("PATCH", "/me", { token: alpha.token, body: { firstName: "Alpha", middleName: "Beta", lastName: "Kontrakt" } }), 200);
+    assert.equal(displayNameProfile.name, "Alpha Beta Kontrakt");
+    assert.equal(displayNameProfile.displayName, "Alpha Beta Kontrakt");
+    assert.equal(displayNameProfile.firstName, "Alpha");
+    assert.equal(displayNameProfile.middleName, "Beta");
+    assert.equal(displayNameProfile.lastName, "Kontrakt");
 
 
     assertErrorEnvelope(await request("POST", "/me/change-password"), 401, API_ERROR_CODES.AUTH_REQUIRES_AUTH);

@@ -1,6 +1,11 @@
 export interface UserProfileDto {
   id: string;
   name: string;
+  firstName: string;
+  middleName: string | null;
+  lastName: string;
+  displayName: string;
+  avatarUrl: string | null;
   email: string;
   phone: string | null;
   createdAt: string;
@@ -9,6 +14,11 @@ export interface UserProfileDto {
 
 export interface UpdateUserProfileRequestDto {
   name?: unknown;
+  firstName?: unknown;
+  middleName?: unknown;
+  lastName?: unknown;
+  displayName?: unknown;
+  avatarUrl?: unknown;
   email?: unknown;
   phone?: unknown;
 }

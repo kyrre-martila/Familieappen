@@ -20,6 +20,11 @@ const REFRESH_TOKEN_BYTE_LENGTH = 48;
 type DatabaseUser = {
   id: string;
   name: string;
+  firstName?: string | null;
+  middleName?: string | null;
+  lastName?: string | null;
+  displayName?: string | null;
+  avatarUrl?: string | null;
   email: string;
   phone?: string | null;
   passwordHash: string;
@@ -85,6 +90,10 @@ export class AuthService {
       const user = await this.prisma.client.user.create({
         data: {
           name,
+          firstName: this.getFirstNameFromDisplayName(name),
+          middleName: null,
+          lastName: this.getLastNameFromDisplayName(name),
+          displayName: name,
           email,
           passwordHash
         }
@@ -283,14 +292,34 @@ export class AuthService {
   }
 
   private toSafeUser(user: DatabaseUser): SafeUserDto {
+    const displayName = this.getResolvedDisplayName(user);
+
     return {
       id: user.id,
-      name: user.name,
+      name: displayName,
+      firstName: user.firstName || this.getFirstNameFromDisplayName(displayName),
+      middleName: user.middleName ?? null,
+      lastName: user.lastName || this.getLastNameFromDisplayName(displayName),
+      displayName,
+      avatarUrl: user.avatarUrl ?? null,
       email: user.email,
       phone: user.phone ?? null,
       createdAt: user.createdAt.toISOString(),
       updatedAt: user.updatedAt.toISOString()
     };
+  }
+
+  private getResolvedDisplayName(user: Pick<DatabaseUser, "name" | "firstName" | "middleName" | "lastName" | "displayName">): string {
+    return user.displayName || [user.firstName, user.middleName, user.lastName].filter(Boolean).join(" ").trim() || user.name;
+  }
+
+  private getFirstNameFromDisplayName(name: string): string {
+    return name.trim().split(/\s+/)[0] ?? name;
+  }
+
+  private getLastNameFromDisplayName(name: string): string {
+    const parts = name.trim().split(/\s+/).filter(Boolean);
+    return parts.length > 1 ? parts[parts.length - 1] : "";
   }
 
   private createAccessToken(user: DatabaseUser, sessionId: string): string {

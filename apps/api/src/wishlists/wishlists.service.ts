@@ -19,6 +19,7 @@ type FamilyMemberRecord = {
   userId: string | null;
   familyId: string;
   displayName: string;
+  user?: { avatarUrl?: string | null } | null;
 };
 
 type WishlistItemReservationRecord = {
@@ -292,7 +293,7 @@ export class WishlistsService {
         }
       },
       include: {
-        ownerFamilyMember: true
+        ownerFamilyMember: { include: { user: { select: { avatarUrl: true } } } }
       },
       orderBy: [{ updatedAt: "desc" }, { createdAt: "desc" }]
     }) as Array<WishlistItemRecord & { ownerFamilyMember: FamilyMemberRecord | null }>;
@@ -319,7 +320,7 @@ export class WishlistsService {
       summaries.set(owner.id, {
         ownerFamilyMemberId: owner.id,
         ownerName: owner.displayName,
-        ownerAvatarUrl: null,
+        ownerAvatarUrl: owner.user?.avatarUrl ?? null,
         ownerColor: this.getOwnerColor(owner.id),
         itemCount: 1,
         updatedAt: item.updatedAt.toISOString(),
@@ -373,7 +374,7 @@ export class WishlistsService {
     return {
       ownerFamilyMemberId: owner.id,
       ownerName: owner.displayName,
-      ownerAvatarUrl: null,
+      ownerAvatarUrl: owner.user?.avatarUrl ?? null,
       ownerColor: this.getOwnerColor(owner.id),
       items: items.map((item) => this.toSharedWishlistItemDto(item, userId, false)),
       isExternal: false
@@ -629,7 +630,7 @@ export class WishlistsService {
       summaries.push({
         ownerFamilyMemberId: invitation.id,
         ownerName: owner.displayName,
-        ownerAvatarUrl: null,
+        ownerAvatarUrl: owner.user?.avatarUrl ?? null,
         ownerColor: this.getOwnerColor(owner.id),
         itemCount: items.length,
         updatedAt: latest.toISOString(),
@@ -656,7 +657,7 @@ export class WishlistsService {
     return {
       ownerFamilyMemberId: invitation.id,
       ownerName: owner.displayName,
-      ownerAvatarUrl: null,
+      ownerAvatarUrl: owner.user?.avatarUrl ?? null,
       ownerColor: this.getOwnerColor(owner.id),
       items: items.map((item) => this.toSharedWishlistItemDto(item, userId, false)),
       shareId: invitation.id,

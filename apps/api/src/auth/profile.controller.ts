@@ -1,4 +1,5 @@
-import { Body, Controller, Delete, Get, Patch, Post, Req, UseGuards } from "@nestjs/common";
+import { Body, Controller, Delete, Get, Patch, Post, Req, UploadedFile, UseGuards, UseInterceptors } from "@nestjs/common";
+import { FileInterceptor } from "@nestjs/platform-express";
 import { ApiResponse, createApiResponse } from "../common";
 import { AuthGuard } from "./guards/auth.guard";
 import { ChangePasswordRequestDto, ChangePasswordResponseDto, DeleteAccountRequestDto, DeleteAccountResponseDto, UpdateUserProfileRequestDto, UserProfileDto } from "./dto/profile.dto";
@@ -27,6 +28,20 @@ export class ProfileController {
     @Body() body: ChangePasswordRequestDto
   ): Promise<ApiResponse<ChangePasswordResponseDto>> {
     return createApiResponse(await this.profileService.changeCurrentUserPassword(request.user.id, body));
+  }
+
+  @Post("avatar")
+  @UseInterceptors(FileInterceptor("avatar", { limits: { fileSize: 2 * 1024 * 1024 } }))
+  async updateCurrentUserAvatar(
+    @Req() request: AuthenticatedRequest,
+    @UploadedFile() file: { buffer?: Buffer; mimetype?: string; originalname?: string; size?: number }
+  ): Promise<ApiResponse<UserProfileDto>> {
+    return createApiResponse(await this.profileService.updateCurrentUserAvatar(request.user.id, file));
+  }
+
+  @Delete("avatar")
+  async removeCurrentUserAvatar(@Req() request: AuthenticatedRequest): Promise<ApiResponse<UserProfileDto>> {
+    return createApiResponse(await this.profileService.removeCurrentUserAvatar(request.user.id));
   }
 
   @Delete()

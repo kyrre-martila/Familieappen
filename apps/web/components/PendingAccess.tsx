@@ -1,6 +1,9 @@
 "use client";
 
 import { useRouter } from "next/navigation";
+import { useEffect, useState } from "react";
+import { getCurrentUserProfile, type UserProfile } from "../lib/api";
+import { UserAvatar } from "./avatar/UserAvatar";
 import { Button, Card, PageContainer } from "./ui";
 
 export const PENDING_APPROVAL_TITLE = "Forespørsel sendt til familien";
@@ -27,6 +30,16 @@ export function PendingApprovalBanner() {
 }
 
 export function PendingDashboard() {
+  const [profile, setProfile] = useState<UserProfile | null>(null);
+
+  useEffect(() => {
+    let cancelled = false;
+    getCurrentUserProfile()
+      .then((userProfile) => { if (!cancelled) setProfile(userProfile); })
+      .catch(() => { if (!cancelled) setProfile(null); });
+    return () => { cancelled = true; };
+  }, []);
+
   return (
     <PageContainer tone="dashboard">
       <section className="pending-home" aria-label="Venter på familiegodkjenning">
@@ -35,7 +48,7 @@ export function PendingDashboard() {
             <span className="pending-home__logo" aria-hidden="true">F</span>
             <span className="pending-home__brand-name">FamilieAppen</span>
           </div>
-          <div className="pending-home__profile" aria-label="Profil">EK</div>
+          <div className="pending-home__profile" aria-label="Profil">{profile ? <UserAvatar identity={profile} avatarUrl={profile.avatarUrl} size="sm" decorative /> : <UserAvatar identity={{ displayName: "FamilieAppen" }} size="sm" decorative />}</div>
         </div>
         <PendingApprovalBanner />
       </section>

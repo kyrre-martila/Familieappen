@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { useCallback, useEffect, useMemo, useState, type ReactNode } from "react";
+import { useCallback, useEffect, useRef, useState, type ChangeEvent, type ReactNode } from "react";
 import {
   ChevronLeft,
   ChevronRight,
@@ -13,28 +13,23 @@ import {
   Phone,
   Trash2
 } from "lucide-react";
+import { ProfileImageCropper } from "../../../components/avatar/ProfileImageCropper";
+import { UserAvatar } from "../../../components/avatar/UserAvatar";
 import { SettingsCard, SettingsSection } from "../../../components/settings";
-import { ApiError, changeCurrentUserPassword, deleteCurrentUserAccount, getCurrentUserProfile, logout, updateCurrentUserProfile, type ChangePasswordInput, type DeleteAccountInput, type UserProfile } from "../../../lib/api";
+import { ApiError, changeCurrentUserPassword, deleteCurrentUserAccount, getCurrentUserProfile, logout, removeCurrentUserAvatar, updateCurrentUserProfile, uploadCurrentUserAvatar, type ChangePasswordInput, type DeleteAccountInput, type UserProfile } from "../../../lib/api";
 import { clearAuthSession } from "../../../lib/session";
 
-type EditableField = "name" | "email" | "phone";
+type EditableField = "firstName" | "middleName" | "lastName" | "email" | "phone";
 
 type Profile = UserProfile;
 
 const fieldLabels: Record<EditableField, string> = {
-  name: "navn",
+  firstName: "fornavn",
+  middleName: "mellomnavn",
+  lastName: "etternavn",
   email: "e-post",
   phone: "telefon"
 };
-
-function getInitials(name: string) {
-  return name
-    .split(" ")
-    .filter(Boolean)
-    .slice(0, 2)
-    .map((part) => part[0]?.toLocaleUpperCase("nb-NO"))
-    .join("") || "FA";
-}
 
 function isValidEmail(email: string) {
   return /^\S+@\S+\.\S+$/.test(email);
@@ -63,13 +58,9 @@ function ProfileSkeleton() {
 }
 
 function ProfileAvatar({ profile }: { profile: Profile }) {
-  const initials = useMemo(() => getInitials(profile.name), [profile.name]);
-
   return (
     <div className="profile-settings__avatar-wrap">
-      <div className="profile-settings__avatar" aria-label="Profilbilde">
-        <span>{initials}</span>
-      </div>
+      <UserAvatar identity={profile} avatarUrl={profile.avatarUrl} size="xl" className="profile-settings__avatar" />
     </div>
   );
 }
@@ -133,8 +124,8 @@ function EditSheet({
   async function handleSave() {
     const nextValue = value.trim();
 
-    if (activeField === "name" && !nextValue) {
-      setLocalError("Navn må fylles ut.");
+    if ((activeField === "firstName" || activeField === "lastName") && !nextValue) {
+      setLocalError("Fornavn og etternavn må fylles ut.");
       return;
     }
 
@@ -144,7 +135,7 @@ function EditSheet({
     }
 
     setLocalError("");
-    await onSave(activeField, activeField === "phone" ? value.trim() : nextValue);
+    await onSave(activeField, activeField === "phone" || activeField === "middleName" ? value.trim() : nextValue);
   }
 
   return (
@@ -353,11 +344,15 @@ function DeleteAccountSheet({
 
 export function ProfileSettingsClient() {
   const router = useRouter();
+  const avatarInputRef = useRef<HTMLInputElement>(null);
   const [profile, setProfile] = useState<Profile | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [loadError, setLoadError] = useState("");
   const [editingField, setEditingField] = useState<EditableField | null>(null);
   const [saveError, setSaveError] = useState("");
+  const [avatarError, setAvatarError] = useState("");
+  const [selectedAvatarFile, setSelectedAvatarFile] = useState<File | null>(null);
+  const [isAvatarSaving, setIsAvatarSaving] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
   const [successMessage, setSuccessMessage] = useState("");
   const [isPasswordSheetOpen, setIsPasswordSheetOpen] = useState(false);
@@ -396,7 +391,7 @@ export function ProfileSettingsClient() {
 
     try {
       const updatedProfile = await updateCurrentUserProfile({
-        [field]: field === "phone" && value.trim() === "" ? null : value
+        [field]: (field === "phone" || field === "middleName") && value.trim() === "" ? null : value
       });
 
       setProfile(updatedProfile);
@@ -406,6 +401,46 @@ export function ProfileSettingsClient() {
       setSaveError(getProfileErrorMessage(error, "Endringen ble ikke lagret. Prøv igjen."));
     } finally {
       setIsSaving(false);
+    }
+  }
+
+  function handleAvatarSelected(event: ChangeEvent<HTMLInputElement>) {
+    const file = event.target.files?.[0] ?? null;
+    event.target.value = "";
+    setAvatarError("");
+    setSelectedAvatarFile(file);
+  }
+
+  async function saveAvatar(file: File) {
+    setIsAvatarSaving(true);
+    setAvatarError("");
+    setSuccessMessage("");
+
+    try {
+      const updatedProfile = await uploadCurrentUserAvatar(file);
+      setProfile(updatedProfile);
+      setSelectedAvatarFile(null);
+      setSuccessMessage("Profilbildet er oppdatert.");
+    } catch (error) {
+      setAvatarError(getProfileErrorMessage(error, "Profilbildet ble ikke lagret. Prøv igjen."));
+    } finally {
+      setIsAvatarSaving(false);
+    }
+  }
+
+  async function removeAvatar() {
+    setIsAvatarSaving(true);
+    setAvatarError("");
+    setSuccessMessage("");
+
+    try {
+      const updatedProfile = await removeCurrentUserAvatar();
+      setProfile(updatedProfile);
+      setSuccessMessage("Profilbildet er fjernet.");
+    } catch (error) {
+      setAvatarError(getProfileErrorMessage(error, "Profilbildet ble ikke fjernet. Prøv igjen."));
+    } finally {
+      setIsAvatarSaving(false);
     }
   }
 
@@ -497,7 +532,7 @@ export function ProfileSettingsClient() {
         {!isLoading && profile ? (
           <div className="profile-settings__identity">
             <ProfileAvatar profile={profile} />
-            <p className="profile-settings__name">{profile.name}</p>
+            <p className="profile-settings__name">{profile.displayName || profile.name}</p>
             <p className="profile-settings__email">{profile.email}</p>
           </div>
         ) : null}
@@ -507,9 +542,25 @@ export function ProfileSettingsClient() {
 
       {profile ? (
         <>
+          <SettingsSection title="Profilbilde">
+            <SettingsCard>
+              <div className="profile-settings-picture">
+                <ProfileAvatar profile={profile} />
+                <div className="profile-settings-picture__actions">
+                  <button className="profile-edit-sheet__button profile-edit-sheet__button--primary" type="button" onClick={() => avatarInputRef.current?.click()} disabled={isAvatarSaving}>Endre bilde</button>
+                  {profile.avatarUrl ? <button className="profile-edit-sheet__button profile-edit-sheet__button--secondary" type="button" onClick={() => void removeAvatar()} disabled={isAvatarSaving}>Fjern bilde</button> : null}
+                </div>
+                <input ref={avatarInputRef} accept="image/*,.heic,.heif" className="sr-only" type="file" onChange={handleAvatarSelected} />
+                {avatarError ? <p className="profile-edit-sheet__error" role="alert">{avatarError}</p> : null}
+              </div>
+            </SettingsCard>
+          </SettingsSection>
+
           <SettingsSection title="Profilinformasjon">
             <SettingsCard>
-              <EditableProfileRow field="name" icon={<CircleUserRound />} label="Navn" value={profile.name} onEdit={(field) => { setSaveError(""); setEditingField(field); }} />
+              <EditableProfileRow field="firstName" icon={<CircleUserRound />} label="Fornavn" value={profile.firstName} onEdit={(field) => { setSaveError(""); setEditingField(field); }} />
+              <EditableProfileRow field="middleName" icon={<CircleUserRound />} label="Mellomnavn" value={profile.middleName ?? ""} onEdit={(field) => { setSaveError(""); setEditingField(field); }} />
+              <EditableProfileRow field="lastName" icon={<CircleUserRound />} label="Etternavn" value={profile.lastName} onEdit={(field) => { setSaveError(""); setEditingField(field); }} />
               <EditableProfileRow field="email" icon={<Mail />} label="E-post" value={profile.email} onEdit={(field) => { setSaveError(""); setEditingField(field); }} />
               <EditableProfileRow field="phone" icon={<Phone />} label="Telefon" value={profile.phone ?? ""} onEdit={(field) => { setSaveError(""); setEditingField(field); }} />
             </SettingsCard>
@@ -524,6 +575,7 @@ export function ProfileSettingsClient() {
           </SettingsSection>
 
           <EditSheet field={editingField} profile={profile} error={saveError} isSaving={isSaving} onCancel={() => setEditingField(null)} onSave={saveProfile} />
+          <ProfileImageCropper file={selectedAvatarFile} error={avatarError} isSaving={isAvatarSaving} onCancel={() => setSelectedAvatarFile(null)} onConfirm={(file) => void saveAvatar(file)} />
           {isPasswordSheetOpen ? (
             <PasswordChangeSheet error={passwordError} isSaving={isPasswordSaving} onCancel={closePasswordSheet} onSave={savePassword} />
           ) : null}

@@ -78,6 +78,11 @@ export interface PublicWishlist {
 export interface AuthUser {
   id: string;
   name: string;
+  firstName: string;
+  middleName: string | null;
+  lastName: string;
+  displayName: string;
+  avatarUrl: string | null;
   email: string;
   phone: string | null;
   createdAt: string;
@@ -85,7 +90,7 @@ export interface AuthUser {
 }
 
 export type UserProfile = AuthUser;
-export type UserProfileUpdate = Partial<Pick<UserProfile, "name" | "email" | "phone">>;
+export type UserProfileUpdate = Partial<Pick<UserProfile, "name" | "firstName" | "middleName" | "lastName" | "displayName" | "avatarUrl" | "email" | "phone">>;
 
 export interface ChangePasswordInput {
   currentPassword: string;
@@ -238,6 +243,20 @@ export async function updateCurrentUserProfile(input: UserProfileUpdate): Promis
     method: "PATCH",
     body: input
   });
+}
+
+export async function uploadCurrentUserAvatar(file: File): Promise<UserProfile> {
+  const formData = new FormData();
+  formData.set("avatar", file);
+
+  return apiRequest<UserProfile>("/me/avatar", {
+    method: "POST",
+    body: formData
+  });
+}
+
+export async function removeCurrentUserAvatar(): Promise<UserProfile> {
+  return apiRequest<UserProfile>("/me/avatar", { method: "DELETE" });
 }
 
 export async function changeCurrentUserPassword(input: ChangePasswordInput): Promise<ChangePasswordResponse> {
@@ -860,7 +879,9 @@ async function apiRequest<TData>(
   const headers = new Headers({ Accept: "application/json" });
   const includeAuth = options.includeAuth ?? true;
 
-  if (options.body !== undefined) {
+  const isFormData = typeof FormData !== "undefined" && options.body instanceof FormData;
+
+  if (options.body !== undefined && !isFormData) {
     headers.set("Content-Type", "application/json");
   }
 
@@ -879,7 +900,7 @@ async function apiRequest<TData>(
   const response = await fetch(`${API_BASE_URL}${path}`, {
     method: options.method ?? "GET",
     headers,
-    body: options.body === undefined ? undefined : JSON.stringify(options.body),
+    body: options.body === undefined ? undefined : isFormData ? options.body as BodyInit : JSON.stringify(options.body),
     credentials: "include"
   });
 

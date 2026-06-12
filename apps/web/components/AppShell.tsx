@@ -4,6 +4,8 @@ import Image from "next/image";
 import { usePathname } from "next/navigation";
 import { useEffect, useState } from "react";
 import { AppSidebar, BottomNavigation } from "./Navigation";
+import { UserAvatar } from "./avatar/UserAvatar";
+import { getCurrentUserProfile, type UserProfile } from "../lib/api";
 import { OnboardingRouteGuard } from "./OnboardingRouteGuard";
 
 const immersiveRoutes = ["/", "/login", "/register", "/forgot-password", "/invite", "/onboarding"];
@@ -51,6 +53,16 @@ export function AppShell({ children, title, titleAction }: Readonly<{ children: 
   const pathname = usePathname();
   const search = useCurrentSearch(pathname);
   const isFocus = isFocusRoute(pathname, search);
+  const [profile, setProfile] = useState<UserProfile | null>(null);
+
+  useEffect(() => {
+    if (isFocus) return;
+    let cancelled = false;
+    getCurrentUserProfile()
+      .then((userProfile) => { if (!cancelled) setProfile(userProfile); })
+      .catch(() => { if (!cancelled) setProfile(null); });
+    return () => { cancelled = true; };
+  }, [isFocus]);
 
   return (
     <div className={`app-shell${isFocus ? " app-shell--focus" : ""}`}>
@@ -63,7 +75,7 @@ export function AppShell({ children, title, titleAction }: Readonly<{ children: 
             <span className="app-shell__brand-name">FamilieAppen</span>
           </div>
           <button className="app-shell__profile" onClick={() => undefined} type="button" aria-label="Åpne profil og innstillinger">
-            <span className="app-shell__profile-initials" aria-hidden="true">EK</span>
+            {profile ? <UserAvatar identity={profile} avatarUrl={profile.avatarUrl} size="sm" decorative /> : <UserAvatar identity={{ displayName: "FamilieAppen" }} size="sm" decorative />}
           </button>
         </header>
       ) : null}
