@@ -5,7 +5,7 @@ import { usePathname, useRouter } from "next/navigation";
 import { LockedFeatureState } from "./PendingAccess";
 import { Card, EmptyState, PageContainer } from "./ui";
 import { redirectIfNeeded, resolveProtectedFamilyRoute } from "../lib/onboarding-access";
-import type { FamilyBootstrapResult } from "../lib/auth-family";
+import { getCachedFamilyBootstrapResult, type FamilyBootstrapResult } from "../lib/auth-family";
 
 type FamilyAccessState =
   | { status: "loading"; familyContext: null }
@@ -17,13 +17,13 @@ type FamilyAccessState =
 export function useFamilyAccess(): FamilyAccessState {
   const pathname = usePathname();
   const router = useRouter();
-  const [state, setState] = useState<FamilyAccessState>({ status: "loading", familyContext: null });
+  const [state, setState] = useState<FamilyAccessState>(() => getFamilyAccessStateFromCache());
 
   useEffect(() => {
     let isActive = true;
 
     async function resolveAccess() {
-      setState({ status: "loading", familyContext: null });
+      setState((currentState) => currentState.status === "approved" || currentState.status === "pending" ? currentState : getFamilyAccessStateFromCache());
 
       try {
         const decision = await resolveProtectedFamilyRoute(pathname);
@@ -64,6 +64,20 @@ export function useFamilyAccess(): FamilyAccessState {
   }, [pathname, router]);
 
   return state;
+}
+
+function getFamilyAccessStateFromCache(): FamilyAccessState {
+  const cachedFamilyContext = getCachedFamilyBootstrapResult();
+
+  if (cachedFamilyContext?.status === "ready") {
+    return { status: "approved", familyContext: cachedFamilyContext };
+  }
+
+  if (cachedFamilyContext?.status === "pending") {
+    return { status: "pending", familyContext: cachedFamilyContext };
+  }
+
+  return { status: "loading", familyContext: null };
 }
 
 export function ProtectedFamilyRoute({ children }: { children: ReactNode }) {

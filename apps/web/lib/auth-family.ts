@@ -1,5 +1,6 @@
 import type { AppRouterInstance } from "next/dist/shared/lib/app-router-context.shared-runtime";
 import { ApiError, type FamilyWithMembership, listFamilies } from "./api";
+import { registerFamilyCacheResetListener } from "./family-cache-events";
 import {
   clearActiveFamilyId,
   clearAuthSession,
@@ -20,6 +21,19 @@ export type FamilyBootstrapResult =
   | { status: "ready"; families: FamilyWithMembership[]; activeFamilyId: string };
 
 const AUTH_ERROR_CODES = new Set(["auth.requires_auth", "auth.invalid_token", "auth.expired_token"]);
+const FAMILY_CACHE_TTL_MS = 30_000;
+
+type FamilyCache = {
+  result: FamilyBootstrapResult;
+  timestamp: number;
+};
+
+let familyCache: FamilyCache | null = null;
+let familyBootstrapPromise: Promise<FamilyBootstrapResult> | null = null;
+
+registerFamilyCacheResetListener(() => {
+  resetFamilyCache();
+});
 
 export function requireAuth(router: AppRouterInstance, redirectTo = "/login"): boolean {
   if (getAccessToken()) {
@@ -37,40 +51,57 @@ export async function loadAvailableFamilies(preferredFamilyId?: string | null): 
     return { status: "unauthenticated", families: [], activeFamilyId: null, pendingRequest: null };
   }
 
-  const families = sortFamilies(await listFamilies());
-  const pendingRequest = getPendingFamilyRequest();
+  const canUseCache = preferredFamilyId === undefined || preferredFamilyId === null;
 
-  if (families.length === 0) {
-    clearActiveFamilyId();
+  if (canUseCache) {
+    const cachedResult = getFreshFamilyCache();
 
-    if (pendingRequest) {
-      return { status: "pending", families: [], activeFamilyId: null, pendingRequest };
+    if (cachedResult) {
+      return cachedResult;
     }
 
-    return { status: "no-family", families: [], activeFamilyId: null, pendingRequest: null };
+    if (familyBootstrapPromise) {
+      return familyBootstrapPromise;
+    }
   }
 
-  const requestedFamilyId = preferredFamilyId ?? getActiveFamilyId();
-  const activeFamily = families.find((family) => family.family.id === requestedFamilyId) ?? families.find((family) => getFamilyMembershipStatus(family) === "approved") ?? families[0];
-  const membershipStatus = getFamilyMembershipStatus(activeFamily);
+  const bootstrapPromise = fetchAvailableFamilies(preferredFamilyId);
 
-  setActiveFamilyId(activeFamily.family.id);
-
-  if (membershipStatus !== "approved") {
-    return {
-      status: "pending",
-      families,
-      activeFamilyId: activeFamily.family.id,
-      pendingRequest
-    };
+  if (!canUseCache) {
+    return bootstrapPromise;
   }
 
-  clearPendingFamilyRequest();
+  familyBootstrapPromise = bootstrapPromise;
 
-  return { status: "ready", families, activeFamilyId: activeFamily.family.id };
+  try {
+    const result = await bootstrapPromise;
+
+    if (familyBootstrapPromise === bootstrapPromise && getAccessToken()) {
+      familyCache = { result, timestamp: Date.now() };
+    }
+
+    return result;
+  } finally {
+    if (familyBootstrapPromise === bootstrapPromise) {
+      familyBootstrapPromise = null;
+    }
+  }
+}
+
+export function getCachedFamilyBootstrapResult(): FamilyBootstrapResult | null {
+  if (!getAccessToken()) {
+    return null;
+  }
+
+  return familyCache?.result ?? null;
+}
+
+export function clearFamilyCache(): void {
+  resetFamilyCache();
 }
 
 export function chooseActiveFamily(familyId: string): string {
+  clearFamilyCache();
   setActiveFamilyId(familyId);
   return familyId;
 }
@@ -123,6 +154,53 @@ export function getUserFacingApiMessage(error: unknown, fallbackMessage: string)
     default:
       return error.message || fallbackMessage;
   }
+}
+
+async function fetchAvailableFamilies(preferredFamilyId?: string | null): Promise<FamilyBootstrapResult> {
+  const families = sortFamilies(await listFamilies());
+  const pendingRequest = getPendingFamilyRequest();
+
+  if (families.length === 0) {
+    clearActiveFamilyId();
+
+    if (pendingRequest) {
+      return { status: "pending", families: [], activeFamilyId: null, pendingRequest };
+    }
+
+    return { status: "no-family", families: [], activeFamilyId: null, pendingRequest: null };
+  }
+
+  const requestedFamilyId = preferredFamilyId ?? getActiveFamilyId();
+  const activeFamily = families.find((family) => family.family.id === requestedFamilyId) ?? families.find((family) => getFamilyMembershipStatus(family) === "approved") ?? families[0];
+  const membershipStatus = getFamilyMembershipStatus(activeFamily);
+
+  setActiveFamilyId(activeFamily.family.id);
+
+  if (membershipStatus !== "approved") {
+    return {
+      status: "pending",
+      families,
+      activeFamilyId: activeFamily.family.id,
+      pendingRequest
+    };
+  }
+
+  clearPendingFamilyRequest();
+
+  return { status: "ready", families, activeFamilyId: activeFamily.family.id };
+}
+
+function getFreshFamilyCache(): FamilyBootstrapResult | null {
+  if (!familyCache || Date.now() - familyCache.timestamp > FAMILY_CACHE_TTL_MS) {
+    return null;
+  }
+
+  return familyCache.result;
+}
+
+function resetFamilyCache(): void {
+  familyCache = null;
+  familyBootstrapPromise = null;
 }
 
 function sortFamilies(families: FamilyWithMembership[]): FamilyWithMembership[] {

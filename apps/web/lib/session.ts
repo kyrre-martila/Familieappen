@@ -1,4 +1,5 @@
 import type { AuthResponse } from "./api";
+import { notifyFamilyCacheReset } from "./family-cache-events";
 
 const ACCESS_TOKEN_KEY = "familieappen.accessToken";
 const ACTIVE_FAMILY_ID_KEY = "familieappen.activeFamilyId";
@@ -81,4 +82,5 @@ export function clearAuthSession(): void {
   removeAccessToken();
   clearActiveFamilyId();
   clearPendingFamilyRequest();
+  notifyFamilyCacheReset();
 }
