@@ -1,6 +1,16 @@
-import { Bell, CircleUserRound, Info, UsersRound } from "lucide-react";
+import {
+  Bell,
+  CalendarDays,
+  CircleUserRound,
+  Info,
+  UsersRound,
+} from "lucide-react";
 import { ProtectedFamilyRoute } from "../../components/ProtectedFamilyRoute";
-import { SettingsCard, SettingsRow, SettingsSection } from "../../components/settings";
+import {
+  SettingsCard,
+  SettingsRow,
+  SettingsSection,
+} from "../../components/settings";
 
 const settingsItems = [
   {
@@ -22,6 +32,12 @@ const settingsItems = [
     description: "Velg hvilke varsler du vil motta",
   },
   {
+    href: "/settings/calendar",
+    icon: <CalendarDays />,
+    title: "Kalender",
+    description: "Visning, eksport og kalenderkoblinger",
+  },
+  {
     href: "/settings/about",
     icon: <Info />,
     title: "App-info",
@@ -35,7 +51,9 @@ export default function SettingsPage() {
       <main className="settings-shell" aria-labelledby="settings-title">
         <header className="settings-hero">
           <h1 id="settings-title">Innstillinger</h1>
-          <p>Administrer din profil, familie og innstillinger for FamilieAppen.</p>
+          <p>
+            Administrer din profil, familie og innstillinger for FamilieAppen.
+          </p>
         </header>
 
         <SettingsSection>

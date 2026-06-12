@@ -2334,16 +2334,10 @@ select {
   box-shadow: inset 0 1px 0 color-mix(in srgb, #ffffff 80%, transparent);
 }
 
-.onboarding-profile-form__avatar-image {
+.onboarding-profile-form__avatar-preview {
   width: 100%;
   height: 100%;
   border-radius: inherit;
-  object-fit: cover;
-}
-
-.onboarding-profile-form__avatar-placeholder {
-  width: 76%;
-  height: 76%;
 }
 
 .onboarding-profile-form__upload-button {
@@ -4325,6 +4319,16 @@ select {
   gap: var(--content-gap);
 }
 
+.app-shell__mobile-title {
+  display: none;
+  min-width: 0;
+  color: var(--color-primary-strong);
+  font-size: var(--text-body);
+  font-weight: 850;
+  letter-spacing: -0.04em;
+  line-height: 1.05;
+}
+
 .app-shell__brand {
   display: inline-flex;
   align-items: center;
@@ -4355,6 +4359,12 @@ select {
   letter-spacing: -0.04em;
 }
 
+.app-shell__profile-menu-wrap {
+  position: relative;
+  z-index: 80;
+  display: grid;
+}
+
 .app-shell__profile {
   display: grid;
   width: calc(var(--space-xl) + var(--space-s));
@@ -4371,6 +4381,74 @@ select {
   color: var(--color-primary-strong);
   cursor: pointer;
   box-shadow: var(--shadow-soft);
+}
+
+.app-shell__profile:focus-visible {
+  outline: 3px solid var(--color-primary-soft);
+  outline-offset: 3px;
+}
+
+.profile-action-menu__backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 0;
+  border: 0;
+  padding: 0;
+  background: transparent;
+}
+
+.profile-action-menu {
+  position: absolute;
+  z-index: 1;
+  top: calc(100% + var(--space-xs));
+  right: 0;
+  display: grid;
+  min-width: 11rem;
+  overflow: hidden;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-l);
+  padding: calc(var(--space-xs) * 0.65);
+  background: color-mix(in srgb, var(--color-surface) 98%, transparent);
+  box-shadow: var(--shadow-floating);
+  opacity: 0;
+  pointer-events: none;
+  transform: translateY(calc(var(--space-xs) * -0.75)) scale(0.98);
+  transform-origin: top right;
+  transition: opacity 160ms ease, transform 160ms ease;
+}
+
+.profile-action-menu--open {
+  opacity: 1;
+  pointer-events: auto;
+  transform: translateY(0) scale(1);
+}
+
+.profile-action-menu__item {
+  display: flex;
+  align-items: center;
+  min-height: var(--touch-target);
+  border: 0;
+  border-radius: var(--radius-m);
+  padding: var(--space-s) var(--space-m);
+  background: transparent;
+  color: var(--color-text);
+  cursor: pointer;
+  font: inherit;
+  font-size: var(--text-label);
+  font-weight: 850;
+  text-align: left;
+  text-decoration: none;
+}
+
+.profile-action-menu__item:hover,
+.profile-action-menu__item:focus-visible {
+  background: var(--color-primary-soft);
+  color: var(--color-primary-strong);
+  outline: none;
+}
+
+.profile-action-menu__item--danger {
+  color: color-mix(in srgb, var(--color-warning) 76%, var(--color-text));
 }
 
 .app-shell__profile-initials {
@@ -4948,8 +5026,10 @@ select {
 
 .calendar-title-actions {
   display: flex;
+  width: 100%;
   min-width: 0;
   align-items: center;
+  justify-content: space-between;
   gap: var(--space-xs);
 }
 
@@ -5348,6 +5428,21 @@ button.calendar-chip {
 .calendar-chip--school-week {
   background: var(--color-primary-soft);
   color: var(--color-primary-strong);
+}
+
+.calendar-chip__avatar-stack {
+  display: inline-flex;
+  align-items: center;
+  flex: 0 0 auto;
+}
+
+.calendar-chip__avatar {
+  border-color: color-mix(in srgb, var(--color-surface) 92%, transparent);
+  box-shadow: 0 0 0 1px color-mix(in srgb, var(--color-primary) 10%, transparent);
+}
+
+.calendar-chip__avatar + .calendar-chip__avatar {
+  margin-left: calc(var(--space-xs) * -0.65);
 }
 
 .calendar-chip--more {
@@ -12969,10 +13064,31 @@ button.family-settings-row:focus-visible:not(:disabled) {
 }
 
 @media (max-width: 34rem) {
-  .app-shell__title-row:has(.calendar-title-actions) {
-    display: grid;
-    align-items: stretch;
+  .app-shell__header {
     gap: var(--space-s);
+  }
+
+  .app-shell__brand-name {
+    display: none;
+  }
+
+  .app-shell__mobile-title {
+    display: block;
+    flex: 1 1 auto;
+    text-align: center;
+  }
+
+  .app-shell__title-row:has(.calendar-title-actions) {
+    display: block;
+  }
+
+  .app-shell__title-row:has(.calendar-title-actions) .app-shell__title {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+    clip: rect(0 0 0 0);
+    white-space: nowrap;
   }
 
   .app-shell__title-row:has(.calendar-title-actions) .app-shell__title-action {
@@ -12980,25 +13096,25 @@ button.family-settings-row:focus-visible:not(:disabled) {
   }
 
   .calendar-title-actions {
-    display: grid;
-    grid-template-columns: minmax(0, 1fr) auto auto;
-    gap: var(--space-xs);
+    display: flex;
+    width: 100%;
     align-items: center;
+    justify-content: space-between;
+    gap: var(--space-s);
   }
 
   .calendar-view-switcher {
-    grid-column: 1 / -1;
-    grid-row: 2;
-    width: 100%;
-    justify-content: stretch;
-  }
-
-  .calendar-view-switcher__option {
-    flex: 1 1 0;
+    flex: 0 1 auto;
     min-width: 0;
   }
 
+  .calendar-view-switcher__option {
+    min-width: 0;
+    padding-inline: calc(var(--space-s) * 0.82);
+  }
+
   .calendar-title-action {
+    flex: 0 0 auto;
     min-height: calc(var(--space-xl) + var(--space-xs));
   }
 }
@@ -13008,7 +13124,7 @@ button.family-settings-row:focus-visible:not(:disabled) {
   align-items: center;
   background: var(--color-surface-accent, #f6efe7);
   border: 1px solid var(--color-border-subtle, rgba(66, 47, 31, 0.12));
-  border-radius: var(--radius-full, 999px);
+  border-radius: var(--radius-full, var(--radius-pill, 999px));
   color: var(--color-text, #432f1f);
   display: inline-flex;
   flex: 0 0 auto;
@@ -13019,6 +13135,7 @@ button.family-settings-row:focus-visible:not(:disabled) {
   letter-spacing: 0.02em;
   overflow: hidden;
   width: var(--user-avatar-size);
+  box-shadow: 0 calc(var(--user-avatar-size) * 0.08) calc(var(--user-avatar-size) * 0.22) color-mix(in srgb, var(--color-text) 8%, transparent);
 }
 
 .user-avatar--xs { --user-avatar-size: 1.75rem; }

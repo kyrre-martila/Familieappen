@@ -1,3 +1,4 @@
+import { UserAvatar } from "../../../components/avatar/UserAvatar";
 import type { HuskFamilyMember, HuskReminder } from "../types";
 import { reminderIcons } from "./huskConfig";
 
@@ -8,13 +9,14 @@ function ReminderAvatars({ members }: { members: HuskFamilyMember[] }) {
       aria-label={members.map((member) => member.name).join(", ")}
     >
       {members.map((member) => (
-        <span
-          className={`husk-avatar husk-avatar--${member.tone}`}
+        <UserAvatar
+          identity={member}
+          avatarUrl={member.avatarUrl}
+          size="xs"
+          className="husk-avatar"
+          decorative
           key={member.id}
-          aria-hidden="true"
-        >
-          {member.initials}
-        </span>
+        />
       ))}
     </span>
   );

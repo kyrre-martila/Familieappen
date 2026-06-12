@@ -3,6 +3,7 @@
 import Link from "next/link";
 import type { CalendarMvpEvent } from "@familieappen/shared";
 
+import { UserAvatar } from "../../../components/avatar/UserAvatar";
 import { useCalendar } from "../hooks/useCalendar";
 import { eventIcons, eventToneByIcon } from "./calendarConfig";
 
@@ -25,12 +26,14 @@ function ParticipantStack({ participantIds }: { participantIds: string[] }) {
     <div className="calendar-participants">
       <span className="calendar-participants__avatars" aria-hidden="true">
         {members.map((member) => (
-          <span
-            className={`calendar-avatar calendar-avatar--${member.avatarColor}`}
+          <UserAvatar
+            identity={member}
+            avatarUrl={member.avatarUrl}
+            size="xs"
+            className="calendar-avatar"
+            decorative
             key={member.id}
-          >
-            {member.initials}
-          </span>
+          />
         ))}
       </span>
       <span className="calendar-participants__label">

@@ -18,6 +18,7 @@ import {
   getIconOption,
   type EventFormIconId,
 } from "../calendar/events/eventFormModel";
+import { UserAvatar } from "../../components/avatar/UserAvatar";
 import { Button, Card, EmptyState, PageContainer } from "../../components/ui";
 
 import {
@@ -124,24 +125,27 @@ function ScopePreview({
 
   if (selectedMembers.length === 1) {
     return (
-      <span
-        className={`event-form-avatar-chip__avatar event-form-avatar-chip__avatar--${selectedMembers[0].tone}`}
-        aria-hidden="true"
-      >
-        {selectedMembers[0].initials}
-      </span>
+      <UserAvatar
+        identity={selectedMembers[0]}
+        avatarUrl={selectedMembers[0].avatarUrl}
+        size="sm"
+        className="event-form-avatar-chip__avatar"
+        decorative
+      />
     );
   }
 
   return (
     <span className="event-form-scope-stack" aria-hidden="true">
       {visibleMembers.map((member) => (
-        <span
-          className={`event-form-scope-stack__avatar event-form-avatar-chip__avatar--${member.tone}`}
+        <UserAvatar
+          identity={member}
+          avatarUrl={member.avatarUrl}
+          size="xs"
+          className="event-form-scope-stack__avatar event-form-avatar-chip__avatar"
+          decorative
           key={member.id}
-        >
-          {member.initials}
-        </span>
+        />
       ))}
       {hiddenCount > 0 ? (
         <span className="event-form-scope-stack__count">+{hiddenCount}</span>
@@ -171,7 +175,9 @@ function mapReminderIcon(icon: HuskReminderIcon): EventFormIconId {
   return iconMap[icon];
 }
 
-function mapEventIconToReminderIcon(icon: EventFormIconId | ""): HuskReminderIcon {
+function mapEventIconToReminderIcon(
+  icon: EventFormIconId | "",
+): HuskReminderIcon {
   const iconMap: Partial<Record<EventFormIconId, HuskReminderIcon>> = {
     bursdag: "cake",
     gave: "gift",
@@ -221,10 +227,9 @@ function getDefaultDraft({
   kind,
   reminder,
   list,
-}: Pick<
-  HuskFocusFormClientProps,
-  "kind" | "reminder" | "list"
-> & { familyMemberCount: number }): HuskFocusDraft {
+}: Pick<HuskFocusFormClientProps, "kind" | "reminder" | "list"> & {
+  familyMemberCount: number;
+}): HuskFocusDraft {
   if (kind === "reminder") {
     return {
       title: reminder?.title ?? "",
@@ -247,13 +252,9 @@ function getDefaultDraft({
     title: list?.title ?? "",
     iconId: list ? mapListIcon(list.icon) : "generelt",
     audience:
-      list && list.memberIds.length < familyMemberCount
-        ? "people"
-        : "family",
+      list && list.memberIds.length < familyMemberCount ? "people" : "family",
     participantIds:
-      list && list.memberIds.length < familyMemberCount
-        ? list.memberIds
-        : [],
+      list && list.memberIds.length < familyMemberCount ? list.memberIds : [],
     date: "",
     reminderEnabled: false,
     description: "",
@@ -302,11 +303,37 @@ export function HuskFocusFormClient({
 }: HuskFocusFormClientProps) {
   const router = useRouter();
   const pathname = usePathname();
-  const { familyMembers, reminders, loading: remindersLoading, error: remindersError, refresh: refreshReminders, createReminder, updateReminder, deleteReminder } = useReminders();
-  const { lists, loading: listsLoading, error: listsError, refresh: refreshLists, createList, updateList, deleteList } = useLists();
-  const resolvedList = kind === "list" && list?.id ? lists.find((candidate) => candidate.id === list.id) ?? list : list;
-  const resolvedReminder = kind === "reminder" && reminderId ? reminders.find((candidate) => candidate.id === reminderId) ?? reminder : reminder;
-  const itemId = kind === "reminder" ? resolvedReminder?.id ?? reminderId : resolvedList?.id;
+  const {
+    familyMembers,
+    reminders,
+    loading: remindersLoading,
+    error: remindersError,
+    refresh: refreshReminders,
+    createReminder,
+    updateReminder,
+    deleteReminder,
+  } = useReminders();
+  const {
+    lists,
+    loading: listsLoading,
+    error: listsError,
+    refresh: refreshLists,
+    createList,
+    updateList,
+    deleteList,
+  } = useLists();
+  const resolvedList =
+    kind === "list" && list?.id
+      ? (lists.find((candidate) => candidate.id === list.id) ?? list)
+      : list;
+  const resolvedReminder =
+    kind === "reminder" && reminderId
+      ? (reminders.find((candidate) => candidate.id === reminderId) ?? reminder)
+      : reminder;
+  const itemId =
+    kind === "reminder"
+      ? (resolvedReminder?.id ?? reminderId)
+      : resolvedList?.id;
   const storageKey = useMemo(
     () => getDraftStorageKey(kind, mode, itemId),
     [itemId, kind, mode],
@@ -339,9 +366,17 @@ export function HuskFocusFormClient({
     hasAudience &&
     (!isReminder || draft.date.trim().length > 0);
   const iconPickerHref = `/calendar/events/icon-picker?returnTo=${encodeURIComponent(pathname)}&draftKey=${encodeURIComponent(storageKey)}`;
-  const scopeSummary = getScopeSummary(draft.audience, draft.participantIds, familyMembers);
-  const isLoadingExisting = mode === "edit" && (isReminder ? remindersLoading : listsLoading);
-  const missingExistingItem = mode === "edit" && !isLoadingExisting && (isReminder ? !resolvedReminder : !resolvedList?.title);
+  const scopeSummary = getScopeSummary(
+    draft.audience,
+    draft.participantIds,
+    familyMembers,
+  );
+  const isLoadingExisting =
+    mode === "edit" && (isReminder ? remindersLoading : listsLoading);
+  const missingExistingItem =
+    mode === "edit" &&
+    !isLoadingExisting &&
+    (isReminder ? !resolvedReminder : !resolvedList?.title);
   const existingItemError = isReminder ? remindersError : listsError;
 
   useEffect(() => {
@@ -349,7 +384,12 @@ export function HuskFocusFormClient({
   }, [defaultDraft, storageKey]);
 
   useEffect(() => {
-    if (kind === "list" && mode === "edit" && resolvedList?.title && !draft.title.trim()) {
+    if (
+      kind === "list" &&
+      mode === "edit" &&
+      resolvedList?.title &&
+      !draft.title.trim()
+    ) {
       setDraft(defaultDraft);
     }
   }, [defaultDraft, draft.title, kind, mode, resolvedList?.title]);
@@ -361,7 +401,10 @@ export function HuskFocusFormClient({
   useEffect(() => {
     setDraft((currentDraft) => ({
       ...currentDraft,
-      participantIds: remapLegacyMemberIds(currentDraft.participantIds, familyMembers),
+      participantIds: remapLegacyMemberIds(
+        currentDraft.participantIds,
+        familyMembers,
+      ),
     }));
   }, [familyMembers]);
 
@@ -370,7 +413,10 @@ export function HuskFocusFormClient({
       <main className="event-form-screen" aria-live="polite">
         <PageContainer>
           <Card tone="default">
-            <EmptyState title={isReminder ? "Henter husk" : "Henter liste"} description="Et lite øyeblikk." />
+            <EmptyState
+              title={isReminder ? "Henter husk" : "Henter liste"}
+              description="Et lite øyeblikk."
+            />
           </Card>
         </PageContainer>
       </main>
@@ -383,10 +429,22 @@ export function HuskFocusFormClient({
         <PageContainer>
           <Card tone="default">
             <EmptyState
-              title={existingItemError ?? (isReminder ? "Kunne ikke hente husk akkurat nå" : "Kunne ikke hente listen akkurat nå")}
+              title={
+                existingItemError ??
+                (isReminder
+                  ? "Kunne ikke hente husk akkurat nå"
+                  : "Kunne ikke hente listen akkurat nå")
+              }
               description="Prøv igjen, eller gå tilbake til Husk."
             />
-            <Button onClick={() => void (isReminder ? refreshReminders() : refreshLists())} variant="primary">Prøv igjen</Button>
+            <Button
+              onClick={() =>
+                void (isReminder ? refreshReminders() : refreshLists())
+              }
+              variant="primary"
+            >
+              Prøv igjen
+            </Button>
           </Card>
         </PageContainer>
       </main>
@@ -459,12 +517,15 @@ export function HuskFocusFormClient({
       const listPayload = {
         title: draft.title,
         icon: mapEventIconToListIcon(draft.iconId),
-        memberIds: draft.audience === "family" ? familyMembers.map((member) => member.id) : draft.participantIds,
+        memberIds:
+          draft.audience === "family"
+            ? familyMembers.map((member) => member.id)
+            : draft.participantIds,
         scopeText: draft.audience === "family" ? "Hele familien" : scopeSummary,
         completedCount: resolvedList?.completedCount ?? 0,
         totalCount: resolvedList?.totalCount ?? 0,
         archived: resolvedList?.archived ?? false,
-        tone: resolvedList?.tone ?? "blue" as const,
+        tone: resolvedList?.tone ?? ("blue" as const),
       };
 
       try {
@@ -636,32 +697,37 @@ export function HuskFocusFormClient({
               </span>
               <span>Hele familien</span>
             </button>
-            {getOrderedFamilyMembers(familyMembers).map((member: HuskFamilyMember) => {
-              const isSelected = draft.participantIds.includes(member.id);
+            {getOrderedFamilyMembers(familyMembers).map(
+              (member: HuskFamilyMember) => {
+                const isSelected = draft.participantIds.includes(member.id);
 
-              return (
-                <button
-                  className={`event-form-avatar-chip${isSelected ? " event-form-avatar-chip--selected" : ""}`}
-                  type="button"
-                  key={member.id}
-                  onClick={() => toggleParticipant(member.id)}
-                  aria-pressed={isSelected}
-                >
-                  <span
-                    className={`event-form-avatar-chip__avatar event-form-avatar-chip__avatar--${member.tone}`}
-                    aria-hidden="true"
+                return (
+                  <button
+                    className={`event-form-avatar-chip${isSelected ? " event-form-avatar-chip--selected" : ""}`}
+                    type="button"
+                    key={member.id}
+                    onClick={() => toggleParticipant(member.id)}
+                    aria-pressed={isSelected}
                   >
-                    {member.initials}
-                    {isSelected ? (
-                      <span className="event-form-avatar-chip__check">
-                        <Check size={13} strokeWidth={3.2} />
-                      </span>
-                    ) : null}
-                  </span>
-                  <span>{member.name}</span>
-                </button>
-              );
-            })}
+                    <span className="event-form-avatar-chip__avatar-wrap">
+                      <UserAvatar
+                        identity={member}
+                        avatarUrl={member.avatarUrl}
+                        size="sm"
+                        className="event-form-avatar-chip__avatar"
+                        decorative
+                      />
+                      {isSelected ? (
+                        <span className="event-form-avatar-chip__check">
+                          <Check size={13} strokeWidth={3.2} />
+                        </span>
+                      ) : null}
+                    </span>
+                    <span>{member.name}</span>
+                  </button>
+                );
+              },
+            )}
           </div>
         </section>
 

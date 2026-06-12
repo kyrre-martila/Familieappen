@@ -4,8 +4,12 @@ import { useRouter } from "next/navigation";
 import type { ChangeEvent, FormEvent } from "react";
 import { useEffect, useRef, useState } from "react";
 import { ProfileImageCropper } from "../../../components/avatar/ProfileImageCropper";
+import { UserAvatar } from "../../../components/avatar/UserAvatar";
 import { Button } from "../../../components/ui";
-import { updateCurrentUserProfile, uploadCurrentUserAvatar } from "../../../lib/api";
+import {
+  updateCurrentUserProfile,
+  uploadCurrentUserAvatar,
+} from "../../../lib/api";
 import { getUserFacingApiMessage } from "../../../lib/auth-family";
 import { getInvitationResumeRoute } from "../../../lib/invitation-context";
 import { ONBOARDING_PROFILE_STORAGE_KEY } from "../../../lib/invitation-flow";
@@ -34,19 +38,25 @@ export function ProfileOnboardingForm() {
   const [values, setValues] = useState<ProfileFormValues>(initialValues);
   const [avatarPreviewUrl, setAvatarPreviewUrl] = useState<string | null>(null);
   const [avatarFile, setAvatarFile] = useState<File | null>(null);
-  const [selectedAvatarFile, setSelectedAvatarFile] = useState<File | null>(null);
+  const [selectedAvatarFile, setSelectedAvatarFile] = useState<File | null>(
+    null,
+  );
   const [error, setError] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   useEffect(() => {
-    const savedProfile = window.localStorage.getItem(ONBOARDING_PROFILE_STORAGE_KEY);
+    const savedProfile = window.localStorage.getItem(
+      ONBOARDING_PROFILE_STORAGE_KEY,
+    );
 
     if (!savedProfile) {
       return;
     }
 
     try {
-      const parsedProfile = JSON.parse(savedProfile) as Partial<ProfileFormValues>;
+      const parsedProfile = JSON.parse(
+        savedProfile,
+      ) as Partial<ProfileFormValues>;
 
       setValues({
         birthDate: parsedProfile.birthDate ?? "",
@@ -109,12 +119,25 @@ export function ProfileOnboardingForm() {
       phoneNumber: values.phoneNumber.trim(),
     };
 
-    if (!trimmedValues.firstName || !trimmedValues.lastName || !trimmedValues.phoneNumber || !trimmedValues.birthDate) {
+    if (
+      !trimmedValues.firstName ||
+      !trimmedValues.lastName ||
+      !trimmedValues.phoneNumber ||
+      !trimmedValues.birthDate
+    ) {
       setError("Fyll ut feltene som er merket med stjerne.");
       return;
     }
 
-    const fullName = [trimmedValues.firstName, trimmedValues.middleName, trimmedValues.lastName].filter(Boolean).join(" ").replace(/\s+/g, " ").trim();
+    const fullName = [
+      trimmedValues.firstName,
+      trimmedValues.middleName,
+      trimmedValues.lastName,
+    ]
+      .filter(Boolean)
+      .join(" ")
+      .replace(/\s+/g, " ")
+      .trim();
     const phone = `${NORWAY_COUNTRY_CODE} ${trimmedValues.phoneNumber}`.trim();
 
     setIsSubmitting(true);
@@ -143,21 +166,32 @@ export function ProfileOnboardingForm() {
 
       router.push(getInvitationResumeRoute() ?? "/onboarding/family-start");
     } catch (profileError) {
-      setError(getUserFacingApiMessage(profileError, "Kunne ikke lagre profilen akkurat nå. Prøv igjen."));
+      setError(
+        getUserFacingApiMessage(
+          profileError,
+          "Kunne ikke lagre profilen akkurat nå. Prøv igjen.",
+        ),
+      );
     } finally {
       setIsSubmitting(false);
     }
   }
 
   return (
-    <form className="auth-form onboarding-profile-form" noValidate onSubmit={handleSubmit}>
+    <form
+      className="auth-form onboarding-profile-form"
+      noValidate
+      onSubmit={handleSubmit}
+    >
       <div className="onboarding-profile-form__photo-field">
         <div className="onboarding-profile-form__avatar">
-          {avatarPreviewUrl ? (
-            <img alt="" className="onboarding-profile-form__avatar-image" src={avatarPreviewUrl} />
-          ) : (
-            <DefaultAvatarIcon />
-          )}
+          <UserAvatar
+            identity={values}
+            avatarUrl={avatarPreviewUrl}
+            size="xl"
+            className="onboarding-profile-form__avatar-preview"
+            decorative
+          />
           <button
             aria-label="Last opp profilbilde"
             className="onboarding-profile-form__upload-button"
@@ -187,7 +221,9 @@ export function ProfileOnboardingForm() {
       </div>
 
       <div className="login-field">
-        <label className="login-field__label" htmlFor="profile-first-name">Fornavn *</label>
+        <label className="login-field__label" htmlFor="profile-first-name">
+          Fornavn *
+        </label>
         <div className="login-field__control">
           <UserIcon />
           <input
@@ -205,7 +241,9 @@ export function ProfileOnboardingForm() {
       </div>
 
       <div className="login-field">
-        <label className="login-field__label" htmlFor="profile-middle-name">Mellomnavn</label>
+        <label className="login-field__label" htmlFor="profile-middle-name">
+          Mellomnavn
+        </label>
         <div className="login-field__control">
           <UserIcon />
           <input
@@ -222,7 +260,9 @@ export function ProfileOnboardingForm() {
       </div>
 
       <div className="login-field">
-        <label className="login-field__label" htmlFor="profile-last-name">Etternavn *</label>
+        <label className="login-field__label" htmlFor="profile-last-name">
+          Etternavn *
+        </label>
         <div className="login-field__control">
           <UserIcon />
           <input
@@ -240,7 +280,9 @@ export function ProfileOnboardingForm() {
       </div>
 
       <div className="login-field">
-        <label className="login-field__label" htmlFor="profile-phone">Telefonnummer *</label>
+        <label className="login-field__label" htmlFor="profile-phone">
+          Telefonnummer *
+        </label>
         <div className="login-field__control onboarding-profile-form__phone-control">
           <PhoneIcon />
           <select
@@ -251,7 +293,10 @@ export function ProfileOnboardingForm() {
           >
             <option value={NORWAY_COUNTRY_CODE}>{NORWAY_COUNTRY_CODE}</option>
           </select>
-          <span className="onboarding-profile-form__divider" aria-hidden="true" />
+          <span
+            className="onboarding-profile-form__divider"
+            aria-hidden="true"
+          />
           <input
             autoComplete="tel"
             className="login-field__input"
@@ -268,7 +313,9 @@ export function ProfileOnboardingForm() {
       </div>
 
       <div className="login-field">
-        <label className="login-field__label" htmlFor="profile-birth-date">Fødselsdato *</label>
+        <label className="login-field__label" htmlFor="profile-birth-date">
+          Fødselsdato *
+        </label>
         <div className="login-field__control onboarding-profile-form__date-control">
           <CalendarIcon />
           <input
@@ -283,22 +330,41 @@ export function ProfileOnboardingForm() {
             type="date"
             value={values.birthDate}
           />
-          {values.birthDate ? null : <span className="onboarding-profile-form__date-placeholder">Velg fødselsdato</span>}
+          {values.birthDate ? null : (
+            <span className="onboarding-profile-form__date-placeholder">
+              Velg fødselsdato
+            </span>
+          )}
           <CalendarIcon variant="trailing" />
         </div>
       </div>
 
-      {error ? <p className="form-message form-message--error" role="alert">{error}</p> : null}
+      {error ? (
+        <p className="form-message form-message--error" role="alert">
+          {error}
+        </p>
+      ) : null}
 
-      <Button disabled={isSubmitting} type="submit" variant="primary">{isSubmitting ? "Lagrer…" : "Fortsett"}</Button>
-      <ProfileImageCropper file={selectedAvatarFile} onCancel={() => setSelectedAvatarFile(null)} onConfirm={handleCroppedAvatar} />
+      <Button disabled={isSubmitting} type="submit" variant="primary">
+        {isSubmitting ? "Lagrer…" : "Fortsett"}
+      </Button>
+      <ProfileImageCropper
+        file={selectedAvatarFile}
+        onCancel={() => setSelectedAvatarFile(null)}
+        onConfirm={handleCroppedAvatar}
+      />
     </form>
   );
 }
 
 function UserIcon() {
   return (
-    <svg aria-hidden="true" className="login-field__icon" fill="none" viewBox="0 0 24 24">
+    <svg
+      aria-hidden="true"
+      className="login-field__icon"
+      fill="none"
+      viewBox="0 0 24 24"
+    >
       <path d="M12 12.25a3.75 3.75 0 1 0 0-7.5 3.75 3.75 0 0 0 0 7.5Z" />
       <path d="M5.25 19.25c.75-3.15 3.25-5 6.75-5s6 1.85 6.75 5" />
     </svg>
@@ -307,17 +373,34 @@ function UserIcon() {
 
 function PhoneIcon() {
   return (
-    <svg aria-hidden="true" className="login-field__icon" fill="none" viewBox="0 0 24 24">
+    <svg
+      aria-hidden="true"
+      className="login-field__icon"
+      fill="none"
+      viewBox="0 0 24 24"
+    >
       <path d="M7.25 4.75 9.5 9l-2 1.5c.95 2.2 2.8 4.05 5 5l1.5-2 4.25 2.25-.75 3.5c-.14.63-.7 1.05-1.35.99C9.75 19.65 4.35 14.25 3.76 7.85c-.06-.65.36-1.21.99-1.35l2.5-.75Z" />
     </svg>
   );
 }
 
-function CalendarIcon({ variant = "leading" }: { variant?: "leading" | "trailing" }) {
-  const className = variant === "trailing" ? "login-field__icon onboarding-profile-form__date-icon" : "login-field__icon";
+function CalendarIcon({
+  variant = "leading",
+}: {
+  variant?: "leading" | "trailing";
+}) {
+  const className =
+    variant === "trailing"
+      ? "login-field__icon onboarding-profile-form__date-icon"
+      : "login-field__icon";
 
   return (
-    <svg aria-hidden="true" className={className} fill="none" viewBox="0 0 24 24">
+    <svg
+      aria-hidden="true"
+      className={className}
+      fill="none"
+      viewBox="0 0 24 24"
+    >
       <path d="M6.75 4.75v3" />
       <path d="M17.25 4.75v3" />
       <path d="M4.75 7.25h14.5v12H4.75z" />
@@ -331,15 +414,6 @@ function CameraIcon() {
     <svg aria-hidden="true" fill="none" viewBox="0 0 24 24">
       <path d="M8.25 7.25 9.5 5.5h5l1.25 1.75h2.5v10.5H5.75V7.25h2.5Z" />
       <path d="M12 15.25a3 3 0 1 0 0-6 3 3 0 0 0 0 6Z" />
-    </svg>
-  );
-}
-
-function DefaultAvatarIcon() {
-  return (
-    <svg aria-hidden="true" className="onboarding-profile-form__avatar-placeholder" fill="none" viewBox="0 0 160 160">
-      <circle cx="80" cy="55" r="26" fill="currentColor" opacity="0.38" />
-      <path d="M27 137c7.5-31 27.5-48 53-48s45.5 17 53 48" fill="currentColor" opacity="0.38" />
     </svg>
   );
 }
