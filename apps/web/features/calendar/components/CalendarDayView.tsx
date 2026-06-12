@@ -15,7 +15,7 @@ export function CalendarDayView({ selectedDate }: { selectedDate: string }) {
   }, [ensureSchoolWeeksForRange, selectedDate]);
 
   const eventsForDate = calendarEvents.filter(
-    (event) => event.date === selectedDate,
+    (event) => event.date === selectedDate && event.source !== "school-week",
   );
 
   return (
