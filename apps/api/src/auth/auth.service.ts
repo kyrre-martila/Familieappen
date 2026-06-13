@@ -20,6 +20,7 @@ const REFRESH_TOKEN_BYTE_LENGTH = 48;
 const PASSWORD_RESET_TOKEN_BYTE_LENGTH = 32;
 const PASSWORD_RESET_EXPIRES_IN_MINUTES = 30;
 const PASSWORD_RESET_EXPIRES_IN_MS = PASSWORD_RESET_EXPIRES_IN_MINUTES * 60 * 1000;
+const PASSWORD_RESET_RESEND_COOLDOWN_MS = 2 * 60 * 1000;
 const PASSWORD_RESET_RATE_LIMIT_WINDOW_MS = 15 * 60 * 1000;
 const PASSWORD_RESET_EMAIL_LIMIT = 3;
 const PASSWORD_RESET_IP_LIMIT = 10;
@@ -149,6 +150,16 @@ export class AuthService {
     }
 
     const emailHash = this.hashResetEmail(email);
+    const resendCooldownStart = new Date(Date.now() - PASSWORD_RESET_RESEND_COOLDOWN_MS);
+    const recentEmailCooldownRequest = await (this.prisma.client as any).passwordResetToken.findFirst({
+      where: { emailHash, createdAt: { gte: resendCooldownStart } },
+      select: { id: true }
+    });
+
+    if (recentEmailCooldownRequest) {
+      return { message: PASSWORD_RESET_SUCCESS_MESSAGE };
+    }
+
     const windowStart = new Date(Date.now() - PASSWORD_RESET_RATE_LIMIT_WINDOW_MS);
     const recentEmailRequests = await (this.prisma.client as any).passwordResetToken.count({
       where: { emailHash, createdAt: { gte: windowStart } }

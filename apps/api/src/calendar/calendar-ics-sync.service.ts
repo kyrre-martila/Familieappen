@@ -146,6 +146,10 @@ export class CalendarIcsSyncService {
       }
 
       const externalUid = externalEventKey(event);
+      if (seenExternalKeys.has(externalUid)) {
+        counts.skipped += 1;
+        continue;
+      }
       seenExternalKeys.add(externalUid);
       const existing = await (this.prisma.client as any).calendarEvent.findFirst({
         where: { icsSourceId: source.id, externalUid },
@@ -360,14 +364,23 @@ function parseIcsDateValue(value: string, params: Map<string, string>): { date: 
     const year = Number(value.slice(0, 4));
     const month = Number(value.slice(4, 6));
     const day = Number(value.slice(6, 8));
+    if (!isValidDateParts(year, month, day)) return null;
     return { date: new Date(Date.UTC(year, month - 1, day)), allDay: true };
   }
 
   const match = /^(\d{4})(\d{2})(\d{2})T(\d{2})(\d{2})(\d{2})(Z?)$/.exec(value);
   if (!match) return null;
   const [, y, mo, d, h, mi, s] = match;
+  const [year, month, day, hour, minute, second] = [y, mo, d, h, mi, s].map(Number);
+  if (!isValidDateParts(year, month, day) || hour > 23 || minute > 59 || second > 60) return null;
   const timeZone = params.get("TZID");
-  return { date: timeZone ? zonedTimeToUtc(Number(y), Number(mo), Number(d), Number(h), Number(mi), Number(s), timeZone) : new Date(Date.UTC(Number(y), Number(mo) - 1, Number(d), Number(h), Number(mi), Number(s))), allDay: false };
+  return { date: timeZone ? zonedTimeToUtc(year, month, day, hour, minute, second, timeZone) : new Date(Date.UTC(year, month - 1, day, hour, minute, second)), allDay: false };
+}
+
+function isValidDateParts(year: number, month: number, day: number): boolean {
+  if (!Number.isInteger(year) || !Number.isInteger(month) || !Number.isInteger(day) || month < 1 || month > 12 || day < 1 || day > 31) return false;
+  const date = new Date(Date.UTC(year, month - 1, day));
+  return date.getUTCFullYear() === year && date.getUTCMonth() === month - 1 && date.getUTCDate() === day;
 }
 
 function zonedTimeToUtc(year: number, month: number, day: number, hour: number, minute: number, second: number, timeZone: string): Date {

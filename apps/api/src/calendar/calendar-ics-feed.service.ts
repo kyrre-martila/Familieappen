@@ -32,7 +32,7 @@ type IcsItem = {
 };
 
 const ADMIN_ROLES: FamilyMemberRoleDto[] = ["OWNER", "PARENT"];
-const PUBLIC_API_BASE_URL = (process.env.PUBLIC_API_URL ?? process.env.API_PUBLIC_URL ?? process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:4000/api").replace(/\/$/, "");
+const PUBLIC_API_URL = (process.env.PUBLIC_API_URL ?? process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:4000/api").replace(/\/$/, "");
 
 @Injectable()
 export class CalendarIcsFeedService {
@@ -70,6 +70,10 @@ export class CalendarIcsFeedService {
 
   async renderFeed(tokenWithSuffix: string): Promise<string> {
     const token = tokenWithSuffix.replace(/\.ics$/i, "");
+    if (!/^[A-Za-z0-9_-]{32,128}$/.test(token)) {
+      throw new NotFoundException("Calendar feed was not found");
+    }
+
     const feed = await (this.prisma.client as any).calendarExportFeed.findUnique({ where: { token } }) as ExportFeedRecord | null;
 
     if (!feed || !feed.enabled) {
@@ -196,7 +200,7 @@ function toFeedDto(feed: ExportFeedRecord): CalendarExportFeedDto {
     id: feed.id,
     familyId: feed.familyId,
     enabled: feed.enabled,
-    privateUrl: `${PUBLIC_API_BASE_URL}/calendar/feed/${feed.token}.ics`,
+    privateUrl: `${PUBLIC_API_URL}/calendar/feed/${feed.token}.ics`,
     includeEvents: feed.includeEvents,
     includeMeals: feed.includeMeals,
     includeReminders: feed.includeReminders,

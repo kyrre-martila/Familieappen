@@ -6841,7 +6841,7 @@ button.calendar-chip {
   gap: var(--space-s);
   border-top: 1px solid var(--color-border);
   padding: var(--space-m) var(--space-m)
-    calc(var(--space-m) + env(safe-area-inset-bottom));
+    calc(var(--app-bottom-nav-height, 88px) + env(safe-area-inset-bottom) + var(--space-m));
   background: color-mix(
     in srgb,
     var(--color-surface) 94%,
@@ -9165,7 +9165,7 @@ button.calendar-chip {
   gap: var(--space-s);
   border-top: 1px solid var(--color-border);
   padding: var(--space-m) var(--space-m)
-    calc(var(--space-m) + env(safe-area-inset-bottom));
+    calc(var(--app-bottom-nav-height, 88px) + env(safe-area-inset-bottom) + var(--space-m));
   background: color-mix(
     in srgb,
     var(--color-surface) 94%,
@@ -9202,7 +9202,7 @@ button.calendar-chip {
 }
 
 .husk-school-sheet__panel--choice {
-  padding-bottom: calc(var(--space-m) + env(safe-area-inset-bottom));
+  padding-bottom: calc(var(--app-bottom-nav-height, 88px) + env(safe-area-inset-bottom) + var(--space-m));
 }
 
 .husk-school-choice__intro {
@@ -12140,7 +12140,8 @@ button.calendar-chip {
   margin: 0 auto;
   border: 1px solid color-mix(in srgb, var(--color-border) 76%, transparent);
   border-radius: calc(var(--radius-l) + var(--space-xs)) calc(var(--radius-l) + var(--space-xs)) 0 0;
-  padding: var(--space-s) var(--gutter) calc(var(--space-l) + env(safe-area-inset-bottom));
+  padding: var(--space-s) var(--gutter)
+    calc(var(--app-bottom-nav-height, 88px) + env(safe-area-inset-bottom) + var(--space-m));
   background: color-mix(in srgb, var(--color-surface) 98%, transparent);
   box-shadow: 0 -1.5rem 3rem color-mix(in srgb, var(--color-text) 16%, transparent);
 }
