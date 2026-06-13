@@ -504,7 +504,7 @@ export function HuskFocusFormClient({
         }
 
         window.sessionStorage.removeItem(storageKey);
-        router.push("/husk?tab=husk");
+        router.push("/husk?tab=paminnelser");
       } catch {
         // Provider keeps the optimistic state and calm error copy consistent across Husk.
         return;
@@ -536,7 +536,7 @@ export function HuskFocusFormClient({
         } else {
           await createList(listPayload);
           window.sessionStorage.removeItem(storageKey);
-          router.push("/husk?tab=lister");
+          router.push("/lister");
         }
       } catch {
         // Provider keeps the optimistic state and calm error copy consistent across Lister.
@@ -546,7 +546,7 @@ export function HuskFocusFormClient({
       return;
     }
 
-    router.push("/husk?tab=husk");
+    router.push("/husk?tab=paminnelser");
   }
 
   async function handleDelete() {
@@ -554,7 +554,7 @@ export function HuskFocusFormClient({
       try {
         await deleteReminder(itemId);
         window.sessionStorage.removeItem(storageKey);
-        router.push("/husk?tab=husk");
+        router.push("/husk?tab=paminnelser");
       } catch {
         return;
       }
@@ -566,7 +566,7 @@ export function HuskFocusFormClient({
       try {
         await deleteList(itemId);
         window.sessionStorage.removeItem(storageKey);
-        router.push("/husk?tab=lister");
+        router.push("/lister");
       } catch {
         return;
       }

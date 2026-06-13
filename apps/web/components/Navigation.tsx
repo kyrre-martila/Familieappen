@@ -9,7 +9,7 @@ import { logout } from "../lib/api";
 
 type BottomNavigationItem = (typeof bottomNavigationItems)[number];
 type MenuNavigationItem = (typeof menuNavigationItems)[number];
-type NavigationIcon = BottomNavigationItem["icon"] | MenuNavigationItem["icon"] | "logout";
+type NavigationIcon = BottomNavigationItem["icon"] | MenuNavigationItem["icon"] | "school" | "logout";
 
 
 function useCurrentSearch(dependency: string) {

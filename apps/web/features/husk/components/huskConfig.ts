@@ -26,14 +26,14 @@ import type {
 } from "../types";
 
 export const tabs = [
-  { value: "husk", label: "Husk" },
-  { value: "lister", label: "Lister" },
+  { value: "paminnelser", label: "Påminnelser" },
+  { value: "oppgaver", label: "Oppgaver" },
   { value: "skoleuka", label: "Skoleuka" },
 ] satisfies { value: HuskTab; label: string }[];
 
 export const titleByTab = {
-  husk: "Husk",
-  lister: "Lister",
+  paminnelser: "Påminnelser",
+  oppgaver: "Oppgaver",
   skoleuka: "Skoleuka",
 } satisfies Record<HuskTab, string>;
 

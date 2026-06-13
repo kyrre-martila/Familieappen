@@ -7,7 +7,7 @@ import type {
   SchoolWeekday,
 } from "../types";
 
-export type HuskTab = "husk" | "lister" | "skoleuka";
+export type HuskTab = "paminnelser" | "oppgaver" | "skoleuka";
 export type HuskPersonFilter = "all" | "family" | (string & {});
 
 export type HuskFilters = {

@@ -10,14 +10,16 @@ export function HuskToolbar({
   onQueryChange,
   query,
   selectedTab,
+  searchLabelOverride,
 }: {
   activeFilterCount: number;
   onOpenFilters: () => void;
   onQueryChange: (query: string) => void;
   query: string;
   selectedTab: HuskTab;
+  searchLabelOverride?: string;
 }) {
-  const searchLabel = selectedTab === "lister" ? "Søk i lister" : "Søk i husk";
+  const searchLabel = searchLabelOverride ?? (selectedTab === "oppgaver" ? "Søk i oppgaver" : "Søk i påminnelser");
   const filterLabel =
     activeFilterCount > 0
       ? `Åpne filtre for ${titleByTab[selectedTab]}. ${activeFilterCount} aktive filter`

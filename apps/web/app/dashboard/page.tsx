@@ -207,31 +207,31 @@ export default function DashboardPage() {
 
         <Card className="dashboard-card" tone="default">
           <SectionHeader
-            action={<Badge tone="neutral">{dashboard?.shoppingSummary.totalItems ?? 0} items</Badge>}
-            eyebrow="Shopping"
+            action={<Badge tone="neutral">{dashboard?.shoppingSummary.totalItems ?? 0} varer</Badge>}
+            eyebrow="Handleliste"
             title={formatShoppingSummary(dashboard?.shoppingSummary.uncheckedCount ?? 0)}
           />
           <EmptyState
-            title={dashboard?.shoppingSummary.totalItems ? "Shopping list in progress" : "Shopping list is empty"}
+            title={dashboard?.shoppingSummary.totalItems ? "Handleliste pågår" : "Handlelisten er tom"}
             description={
               dashboard?.shoppingSummary.totalItems
-                ? "Open shopping to add, check off, or remove shared family items."
-                : "Nothing to buy right now."
+                ? "Åpne handlelisten for å legge til, krysse av eller fjerne felles varer."
+                : "Ingenting å handle akkurat nå."
             }
           />
           <Link className="button button--secondary" href="/shopping">
-            Open shopping
+            Åpne handleliste
           </Link>
         </Card>
 
         <Card className="dashboard-card" tone="default">
           <SectionHeader
-            action={<Badge tone="neutral">{dashboard?.todayTasks.length ?? 0} tasks</Badge>}
-            eyebrow="Tasks"
-            title="What needs to be done?"
+            action={<Badge tone="neutral">{dashboard?.todayTasks.length ?? 0} oppgaver</Badge>}
+            eyebrow="Oppgaver"
+            title="Hva må gjøres?"
           />
           {dashboard?.todayTasks.length ? (
-            <ul className="task-list" aria-label="Today tasks">
+            <ul className="task-list" aria-label="Dagens oppgaver">
               {dashboard.todayTasks.map((task) => (
                 <li className={task.completed ? "task-list__item task-list__item--completed" : "task-list__item"} key={task.id}>
                   <span className="task-list__status" aria-hidden="true">
@@ -245,10 +245,10 @@ export default function DashboardPage() {
               ))}
             </ul>
           ) : (
-            <EmptyState title="No tasks today" description="Add quick family tasks when someone needs to remember something." />
+            <EmptyState title="Ingen oppgaver i dag" description="Legg til raske familieoppgaver når noe må gjøres." />
           )}
-          <Link className="button button--secondary" href="/tasks">
-            Open tasks
+          <Link className="button button--secondary" href="/husk?tab=oppgaver">
+            Åpne oppgaver
           </Link>
         </Card>
 
@@ -339,7 +339,7 @@ function formatTaskAssignee(assignedFamilyMemberId: string | null, members: Fami
     return "Anyone";
   }
 
-  return members.find((member) => member.id === assignedFamilyMemberId)?.displayName ?? "Family task";
+  return members.find((member) => member.id === assignedFamilyMemberId)?.displayName ?? "Familieoppgave";
 }
 
 function formatShoppingSummary(uncheckedCount: number): string {
