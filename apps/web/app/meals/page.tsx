@@ -128,26 +128,23 @@ function MealsPageContent() {
     restoreMeal,
     moveMeal,
     error: mealError,
+    loading: mealsLoading,
     refresh: refreshMeals,
   } = useMeals();
   const topSentinelRef = useRef<HTMLDivElement | null>(null);
   const bottomSentinelRef = useRef<HTMLDivElement | null>(null);
   const todayRef = useRef<HTMLElement | null>(null);
-  const hasInitialScrollRef = useRef(false);
+  const hasUserScrolledFromTopRef = useRef(false);
   const handledRouteActionRef = useRef<string | null>(null);
 
   useEffect(() => {
     const previousScrollRestoration = window.history.scrollRestoration;
     window.history.scrollRestoration = "manual";
 
-    if (!searchParams.get("date")) {
-      window.scrollTo({ top: 0, behavior: "auto" });
-    }
-
     return () => {
       window.history.scrollRestoration = previousScrollRestoration;
     };
-  }, [searchParams]);
+  }, []);
 
   const days = useMemo(
     () =>
@@ -232,20 +229,21 @@ function MealsPageContent() {
   }, [inputValue]);
 
   useEffect(() => {
-    if (hasInitialScrollRef.current) {
+    if (initialFocusOffset === null) {
       return;
     }
 
-    hasInitialScrollRef.current = true;
-    window.requestAnimationFrame(() => {
-      if (initialFocusOffset !== null) {
-        document
-          .querySelector(`[data-meal-day="${initialFocusOffset}"]`)
-          ?.scrollIntoView({ block: "start" });
-        return;
-      }
+    setStartOffset((currentOffset) =>
+      Math.min(currentOffset, initialFocusOffset),
+    );
+    setEndOffset((currentOffset) =>
+      Math.max(currentOffset, initialFocusOffset),
+    );
 
-      todayRef.current?.scrollIntoView({ block: "start" });
+    window.requestAnimationFrame(() => {
+      document
+        .querySelector(`[data-meal-day="${initialFocusOffset}"]`)
+        ?.scrollIntoView({ block: "start" });
     });
   }, [initialFocusOffset]);
 
@@ -276,6 +274,10 @@ function MealsPageContent() {
       return;
     }
 
+    if (createMode && mealsLoading) {
+      return;
+    }
+
     handledRouteActionRef.current = routeActionKey;
 
     if (createMode) {
@@ -291,22 +293,7 @@ function MealsPageContent() {
       return;
     }
 
-    if (dateParam) {
-      const focusOffset = getDateOffset(today, dateParam);
-
-      if (focusOffset === null) {
-        return;
-      }
-
-      setStartOffset((currentOffset) => Math.min(currentOffset, focusOffset));
-      setEndOffset((currentOffset) => Math.max(currentOffset, focusOffset));
-      window.requestAnimationFrame(() => {
-        document
-          .querySelector(`[data-meal-day="${focusOffset}"]`)
-          ?.scrollIntoView({ block: "center", behavior: "smooth" });
-      });
-    }
-  }, [mealsByOffset, searchParams, today]);
+  }, [mealsByOffset, mealsLoading, searchParams, today]);
 
   function commitOpenEditor() {
     const currentEditingOffset = editingOffsetRef.current;
@@ -518,6 +505,19 @@ function MealsPageContent() {
   }
 
   useEffect(() => {
+    function handleScroll() {
+      if (window.scrollY > 64) {
+        hasUserScrolledFromTopRef.current = true;
+      }
+    }
+
+    handleScroll();
+    window.addEventListener("scroll", handleScroll, { passive: true });
+
+    return () => window.removeEventListener("scroll", handleScroll);
+  }, []);
+
+  useEffect(() => {
     const topSentinel = topSentinelRef.current;
     const bottomSentinel = bottomSentinelRef.current;
 
@@ -533,6 +533,10 @@ function MealsPageContent() {
           }
 
           if (entry.target === topSentinel) {
+            if (startOffset === 0 && !hasUserScrolledFromTopRef.current) {
+              return;
+            }
+
             setStartOffset((current) => current - loadChunkSize);
           }
 
@@ -548,7 +552,7 @@ function MealsPageContent() {
     observer.observe(bottomSentinel);
 
     return () => observer.disconnect();
-  }, []);
+  }, [endOffset, startOffset]);
 
   return (
     <ProtectedFamilyRoute>
