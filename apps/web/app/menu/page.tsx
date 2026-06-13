@@ -1,6 +1,6 @@
 "use client";
 
-import { CalendarDays, CheckCircle2, Gift, Home, ListChecks, LogOut, School, Settings } from "lucide-react";
+import { CalendarDays, CheckCircle2, Gift, Home, ListChecks, LogOut, Settings, ShoppingCart, Utensils } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { ProtectedFamilyRoute } from "../../components/ProtectedFamilyRoute";
 import { SettingsCard, SettingsRow, SettingsSection } from "../../components/settings";
@@ -20,22 +20,28 @@ const menuItems = [
     description: "Se planer, avtaler og aktiviteter",
   },
   {
-    href: "/husk?tab=husk",
+    href: "/husk?tab=paminnelser",
     icon: <CheckCircle2 />,
     title: "Husk",
     description: "Påminnelser og ting som må gjøres",
   },
   {
-    href: "/husk?tab=lister",
-    icon: <ListChecks />,
-    title: "Lister",
-    description: "Handlelister og familiens lister",
+    href: "/shopping",
+    icon: <ShoppingCart />,
+    title: "Handleliste",
+    description: "Dagligvarer og butikkrunde",
   },
   {
-    href: "/husk?tab=skoleuka",
-    icon: <School />,
-    title: "Skoleuka",
-    description: "Planlegg og se skoleuka",
+    href: "/lister",
+    icon: <ListChecks />,
+    title: "Lister",
+    description: "Pakkelister, ferie, bursdag og sjekklister",
+  },
+  {
+    href: "/meals",
+    icon: <Utensils />,
+    title: "Middag",
+    description: "Planlegg familiens middager",
   },
   {
     href: "/wishlist",

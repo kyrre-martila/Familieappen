@@ -8,40 +8,40 @@ import { LockedFeatureState } from "../../components/PendingAccess";
 import { useFamilyAccess } from "../../components/ProtectedFamilyRoute";
 import { Card, EmptyState, PageContainer } from "../../components/ui";
 import { HuskFilterSheet } from "../../features/husk/components/HuskFilterSheet";
-import { HuskListsSection } from "../../features/husk/components/HuskListsSection";
 import { HuskRemindersSection } from "../../features/husk/components/HuskRemindersSection";
+import { OppgaverSection } from "../../features/husk/components/OppgaverSection";
 import { HuskTabs } from "../../features/husk/components/HuskTabs";
 import { HuskToolbar } from "../../features/husk/components/HuskToolbar";
 import { SchoolWeekPanel } from "../../features/husk/components/SchoolWeekPanel";
 import {
   defaultHuskFilters,
-  defaultListFilters,
   titleByTab,
 } from "../../features/husk/components/huskConfig";
 import type {
   HuskFilters,
   HuskTab,
-  ListFilters,
 } from "../../features/husk/types";
 
 const huskTabStorageKey = "familieappen:husk:selected-tab";
 const huskQueryStorageKey = "familieappen:husk:query";
-const listQueryStorageKey = "familieappen:husk:lister:query";
 const huskFiltersStorageKey = "familieappen:husk:filters";
-const listFiltersStorageKey = "familieappen:husk:list-filters";
 const huskScrollStorageKey = "familieappen:husk:scroll-y";
 
-function isHuskTab(value: string | null): value is HuskTab {
-  return value === "husk" || value === "lister" || value === "skoleuka";
+function isHuskTab(value: string | null): value is HuskTab | "husk" {
+  return value === "paminnelser" || value === "oppgaver" || value === "skoleuka" || value === "husk";
 }
 
 function readStoredHuskTab() {
   if (typeof window === "undefined") {
-    return "husk";
+    return "paminnelser";
   }
 
   const storedTab = window.sessionStorage.getItem(huskTabStorageKey);
-  return isHuskTab(storedTab) ? storedTab : "husk";
+  return isHuskTab(storedTab) ? normalizeHuskTab(storedTab) : "paminnelser";
+}
+
+function normalizeHuskTab(tab: HuskTab | "husk"): HuskTab {
+  return tab === "husk" ? "paminnelser" : tab;
 }
 
 function readStoredValue(storageKey: string, fallback = "") {
@@ -76,13 +76,6 @@ function getHuskActiveFilterCount(filters: HuskFilters) {
   );
 }
 
-function getListActiveFilterCount(filters: ListFilters) {
-  return (
-    Number(filters.person !== defaultListFilters.person) +
-    Number(filters.showArchived !== defaultListFilters.showArchived)
-  );
-}
-
 function HuskPageContent() {
   const familyAccess = useFamilyAccess();
   const searchParams = useSearchParams();
@@ -90,30 +83,21 @@ function HuskPageContent() {
   const shouldOpenSchoolPlanner =
     requestedTab === "skoleuka" && searchParams.get("edit") === "1";
   const [selectedTab, setSelectedTab] = useState<HuskTab>(() =>
-    isHuskTab(requestedTab) ? requestedTab : readStoredHuskTab(),
+    isHuskTab(requestedTab) ? normalizeHuskTab(requestedTab) : readStoredHuskTab(),
   );
   const [huskQuery, setHuskQuery] = useState(() =>
     readStoredValue(huskQueryStorageKey),
   );
-  const [listQuery, setListQuery] = useState(() =>
-    readStoredValue(listQueryStorageKey),
-  );
   const [huskFilters, setHuskFilters] = useState<HuskFilters>(() =>
     readStoredJson(huskFiltersStorageKey, defaultHuskFilters),
   );
-  const [listFilters, setListFilters] = useState<ListFilters>(() =>
-    readStoredJson(listFiltersStorageKey, defaultListFilters),
-  );
   const [isFilterSheetOpen, setIsFilterSheetOpen] = useState(false);
   const title = useMemo(() => titleByTab[selectedTab], [selectedTab]);
-  const activeFilterCount =
-    selectedTab === "lister"
-      ? getListActiveFilterCount(listFilters)
-      : getHuskActiveFilterCount(huskFilters);
+  const activeFilterCount = getHuskActiveFilterCount(huskFilters);
 
   useEffect(() => {
     if (isHuskTab(requestedTab)) {
-      setSelectedTab(requestedTab);
+      setSelectedTab(normalizeHuskTab(requestedTab));
     }
   }, [requestedTab]);
 
@@ -125,9 +109,6 @@ function HuskPageContent() {
     window.sessionStorage.setItem(huskQueryStorageKey, huskQuery);
   }, [huskQuery]);
 
-  useEffect(() => {
-    window.sessionStorage.setItem(listQueryStorageKey, listQuery);
-  }, [listQuery]);
 
   useEffect(() => {
     window.sessionStorage.setItem(
@@ -136,12 +117,6 @@ function HuskPageContent() {
     );
   }, [huskFilters]);
 
-  useEffect(() => {
-    window.sessionStorage.setItem(
-      listFiltersStorageKey,
-      JSON.stringify(listFilters),
-    );
-  }, [listFilters]);
 
   useEffect(() => {
     const storedScrollY = Number(
@@ -193,25 +168,21 @@ function HuskPageContent() {
             <HuskToolbar
               activeFilterCount={activeFilterCount}
               onOpenFilters={() => setIsFilterSheetOpen(true)}
-              query={selectedTab === "lister" ? listQuery : huskQuery}
+              query={huskQuery}
               selectedTab={selectedTab}
-              onQueryChange={
-                selectedTab === "lister" ? setListQuery : setHuskQuery
-              }
+              onQueryChange={setHuskQuery}
             />
           ) : null}
-          {selectedTab === "husk" ? (
+          {selectedTab === "paminnelser" ? (
             <HuskRemindersSection filters={huskFilters} query={huskQuery} />
           ) : null}
-          {selectedTab === "lister" ? (
-            <HuskListsSection filters={listFilters} query={listQuery} />
-          ) : null}
+          {selectedTab === "oppgaver" ? <OppgaverSection /> : null}
           {selectedTab === "skoleuka" ? (
             <SchoolWeekPanel shouldOpenPlanner={shouldOpenSchoolPlanner} />
           ) : null}
         </div>
       </PageContainer>
-      {selectedTab === "husk" ? (
+      {selectedTab === "paminnelser" ? (
         <HuskFilterSheet
           isOpen={isFilterSheetOpen}
           onClose={() => setIsFilterSheetOpen(false)}
@@ -224,27 +195,9 @@ function HuskPageContent() {
           }
           person={huskFilters.person}
           status="Velg person og om tidligere påminnelser skal vises."
-          title="Filter for Husk"
+          title="Filter for Påminnelser"
           toggleChecked={huskFilters.showPrevious}
           toggleLabel="Vis tidligere"
-        />
-      ) : null}
-      {selectedTab === "lister" ? (
-        <HuskFilterSheet
-          isOpen={isFilterSheetOpen}
-          onClose={() => setIsFilterSheetOpen(false)}
-          onPersonChange={(person) =>
-            setListFilters((current) => ({ ...current, person }))
-          }
-          onReset={() => setListFilters(defaultListFilters)}
-          onToggleChange={(showArchived) =>
-            setListFilters((current) => ({ ...current, showArchived }))
-          }
-          person={listFilters.person}
-          status="Velg person og om arkiverte lister skal vises."
-          title="Filter for Lister"
-          toggleChecked={listFilters.showArchived}
-          toggleLabel="Vis arkiverte lister"
         />
       ) : null}
     </AppShell>

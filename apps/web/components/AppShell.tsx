@@ -44,6 +44,7 @@ function isFocusRoute(pathname: string, search = "") {
     isSchoolWeekEdit ||
     pathname.startsWith("/calendar/events/") ||
     pathname.startsWith("/husk/lister/") ||
+    pathname.startsWith("/lister") ||
     pathname.startsWith("/husk/reminders/") ||
     pathname === "/wishlist/new" ||
     (pathname.startsWith("/wishlist/") && pathname.endsWith("/edit"))
