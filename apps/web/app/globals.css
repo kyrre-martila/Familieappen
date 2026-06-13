@@ -11425,8 +11425,11 @@ button.calendar-chip {
   gap: var(--space-s);
   border: 1px solid color-mix(in srgb, var(--color-border) 74%, transparent);
   border-radius: var(--radius-l) var(--radius-l) 0 0;
+  max-height: calc(100dvh - env(safe-area-inset-top) - var(--space-l));
+  overflow: auto;
   padding: var(--space-l) var(--gutter) calc(var(--space-l) + env(safe-area-inset-bottom));
   background: color-mix(in srgb, var(--color-surface) 98%, transparent);
+  overscroll-behavior: contain;
   box-shadow: var(--shadow-floating);
 }
 
@@ -11648,11 +11651,15 @@ button.calendar-chip {
 }
 
 @media (max-width: 34rem) {
-  .wishlist-share-sheet__panel,
-  .wishlist-reserve-sheet__panel {
+  .wishlist-share-sheet__panel {
     max-height: min(82dvh, 42rem);
     padding-bottom: calc(var(--space-l) + env(safe-area-inset-bottom));
     overscroll-behavior: contain;
+  }
+
+  .wishlist-reserve-sheet__panel {
+    max-height: calc(100dvh - env(safe-area-inset-top) - var(--space-l));
+    padding-bottom: calc(var(--app-bottom-nav-height, 88px) + env(safe-area-inset-bottom) + var(--space-m));
   }
 
   .wishlist-share-sheet__header,
