@@ -20,7 +20,7 @@ const menuItems = [
     description: "Se planer, avtaler og aktiviteter",
   },
   {
-    href: "/husk",
+    href: "/husk?tab=husk",
     icon: <CheckCircle2 />,
     title: "Husk",
     description: "Påminnelser og ting som må gjøres",
