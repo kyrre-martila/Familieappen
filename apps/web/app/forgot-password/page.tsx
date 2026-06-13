@@ -3,7 +3,7 @@
 import Image from "next/image";
 import Link from "next/link";
 import type { FormEvent } from "react";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { MailIcon } from "../../components/LoginFormFields";
 import { Button } from "../../components/ui";
 import { forgotPassword } from "../../lib/api";
@@ -13,9 +13,17 @@ export default function ForgotPasswordPage() {
   const [message, setMessage] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [cooldownSeconds, setCooldownSeconds] = useState(0);
+
+  useEffect(() => {
+    if (cooldownSeconds <= 0) return;
+    const timer = window.setTimeout(() => setCooldownSeconds((seconds) => Math.max(0, seconds - 1)), 1000);
+    return () => window.clearTimeout(timer);
+  }, [cooldownSeconds]);
 
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
+    if (cooldownSeconds > 0) return;
     setMessage(null);
     setError(null);
     const formData = new FormData(event.currentTarget);
@@ -25,6 +33,7 @@ export default function ForgotPasswordPage() {
     try {
       const response = await forgotPassword({ email });
       setMessage(response.message);
+      setCooldownSeconds(120);
     } catch (submitError) {
       setError(getUserFacingApiMessage(submitError, "Vi klarte ikke å sende lenken akkurat nå. Prøv igjen om litt."));
     } finally {
@@ -59,8 +68,12 @@ export default function ForgotPasswordPage() {
           {message ? <p className="form-message form-message--success" role="status">{message}</p> : null}
           {error ? <p className="form-message form-message--error" role="alert">{error}</p> : null}
 
-          <Button disabled={isSubmitting} type="submit" variant="primary">
-            {isSubmitting ? "Sender…" : "Send tilbakestillingslenke"}
+          <Button disabled={isSubmitting || cooldownSeconds > 0} type="submit" variant="primary">
+            {isSubmitting
+              ? "Sender…"
+              : cooldownSeconds > 0
+                ? `Vent ${cooldownSeconds} sekunder`
+                : "Send tilbakestillingslenke"}
           </Button>
         </form>
 
