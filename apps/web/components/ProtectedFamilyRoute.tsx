@@ -11,6 +11,7 @@ import { usePathname, useRouter } from "next/navigation";
 import { LockedFeatureState } from "./PendingAccess";
 import { Button, Card, EmptyState, PageContainer } from "./ui";
 import {
+  getLoginRoute,
   redirectIfNeeded,
   resolveProtectedFamilyRoute,
 } from "../lib/onboarding-access";
@@ -21,6 +22,7 @@ import {
   handleMissingOrInvalidAuth,
   type FamilyBootstrapResult,
 } from "../lib/auth-family";
+import { clearAuthSession, getAccessToken } from "../lib/session";
 
 const FAMILY_ACCESS_LOADING_TIMEOUT_MS = 20_000;
 const FAMILY_ACCESS_DEBUG_AUTO_SHOW_MS = 3_000;
@@ -66,6 +68,16 @@ export function useFamilyAccess(): FamilyAccessHookState {
     let isActive = true;
 
     async function resolveAccess() {
+      const loginRoute = getLoginRoute(pathname);
+
+      if (!getAccessToken()) {
+        clearAuthSession();
+        loadingStartedAtRef.current = null;
+        router.replace(loginRoute);
+        setState({ status: "redirecting", familyContext: null });
+        return;
+      }
+
       loadingStartedAtRef.current = Date.now();
       setState((currentState) =>
         currentState.status === "approved" || currentState.status === "pending"
@@ -118,7 +130,7 @@ export function useFamilyAccess(): FamilyAccessHookState {
 
         loadingStartedAtRef.current = null;
 
-        if (handleMissingOrInvalidAuth(error, router)) {
+        if (handleMissingOrInvalidAuth(error, router, getLoginRoute(pathname))) {
           setState({ status: "redirecting", familyContext: null });
           return;
         }
