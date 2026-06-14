@@ -9800,6 +9800,7 @@ button.calendar-chip {
 
 .meal-timeline__sentinel {
   min-height: 1px;
+  overflow-anchor: none;
 }
 
 .meal-day {
