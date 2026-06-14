@@ -15,15 +15,37 @@ function getStorage(): Storage | null {
     return null;
   }
 
-  return window.localStorage;
+  try {
+    return window.localStorage;
+  } catch {
+    return null;
+  }
+}
+
+function safelyUseStorage(operation: (storage: Storage) => void): void {
+  const storage = getStorage();
+
+  if (!storage) {
+    return;
+  }
+
+  try {
+    operation(storage);
+  } catch {
+    // Storage can be unavailable in constrained standalone/private browsing contexts.
+  }
 }
 
 export function getAccessToken(): string | null {
-  return getStorage()?.getItem(ACCESS_TOKEN_KEY) ?? null;
+  try {
+    return getStorage()?.getItem(ACCESS_TOKEN_KEY) ?? null;
+  } catch {
+    return null;
+  }
 }
 
 export function saveAccessToken(accessToken: string): void {
-  getStorage()?.setItem(ACCESS_TOKEN_KEY, accessToken);
+  safelyUseStorage((storage) => storage.setItem(ACCESS_TOKEN_KEY, accessToken));
 }
 
 export function saveAuthSession(auth: AuthResponse): void {
@@ -31,31 +53,41 @@ export function saveAuthSession(auth: AuthResponse): void {
 }
 
 export function removeAccessToken(): void {
-  getStorage()?.removeItem(ACCESS_TOKEN_KEY);
+  safelyUseStorage((storage) => storage.removeItem(ACCESS_TOKEN_KEY));
 }
 
 export function getActiveFamilyId(): string | null {
-  return getStorage()?.getItem(ACTIVE_FAMILY_ID_KEY) ?? null;
+  try {
+    return getStorage()?.getItem(ACTIVE_FAMILY_ID_KEY) ?? null;
+  } catch {
+    return null;
+  }
 }
 
 export function setActiveFamilyId(familyId: string): void {
-  getStorage()?.setItem(ACTIVE_FAMILY_ID_KEY, familyId);
+  safelyUseStorage((storage) => storage.setItem(ACTIVE_FAMILY_ID_KEY, familyId));
 }
 
 export function clearActiveFamilyId(): void {
-  getStorage()?.removeItem(ACTIVE_FAMILY_ID_KEY);
+  safelyUseStorage((storage) => storage.removeItem(ACTIVE_FAMILY_ID_KEY));
 }
 
 export function savePendingFamilyRequest(code: string): PendingFamilyRequest {
   const request = { code, requestedAt: new Date().toISOString() };
 
-  getStorage()?.setItem(PENDING_FAMILY_REQUEST_KEY, JSON.stringify(request));
+  safelyUseStorage((storage) => storage.setItem(PENDING_FAMILY_REQUEST_KEY, JSON.stringify(request)));
 
   return request;
 }
 
 export function getPendingFamilyRequest(): PendingFamilyRequest | null {
-  const rawRequest = getStorage()?.getItem(PENDING_FAMILY_REQUEST_KEY);
+  let rawRequest: string | null | undefined;
+
+  try {
+    rawRequest = getStorage()?.getItem(PENDING_FAMILY_REQUEST_KEY);
+  } catch {
+    rawRequest = null;
+  }
 
   if (!rawRequest) {
     return null;
@@ -75,7 +107,7 @@ export function getPendingFamilyRequest(): PendingFamilyRequest | null {
 }
 
 export function clearPendingFamilyRequest(): void {
-  getStorage()?.removeItem(PENDING_FAMILY_REQUEST_KEY);
+  safelyUseStorage((storage) => storage.removeItem(PENDING_FAMILY_REQUEST_KEY));
 }
 
 export function clearAuthSession(): void {

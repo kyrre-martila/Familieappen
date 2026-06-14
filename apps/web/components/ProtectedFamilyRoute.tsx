@@ -3,9 +3,9 @@
 import { useEffect, useState, type ReactNode } from "react";
 import { usePathname, useRouter } from "next/navigation";
 import { LockedFeatureState } from "./PendingAccess";
-import { Card, EmptyState, PageContainer } from "./ui";
+import { Button, Card, EmptyState, PageContainer } from "./ui";
 import { redirectIfNeeded, resolveProtectedFamilyRoute } from "../lib/onboarding-access";
-import { getCachedFamilyBootstrapResult, type FamilyBootstrapResult } from "../lib/auth-family";
+import { getCachedFamilyBootstrapResult, handleMissingOrInvalidAuth, type FamilyBootstrapResult } from "../lib/auth-family";
 
 type FamilyAccessState =
   | { status: "loading"; familyContext: null }
@@ -14,10 +14,13 @@ type FamilyAccessState =
   | { status: "redirecting"; familyContext: FamilyBootstrapResult | null }
   | { status: "error"; familyContext: null };
 
-export function useFamilyAccess(): FamilyAccessState {
+type FamilyAccessHookState = FamilyAccessState & { retry: () => void };
+
+export function useFamilyAccess(): FamilyAccessHookState {
   const pathname = usePathname();
   const router = useRouter();
   const [state, setState] = useState<FamilyAccessState>(() => getFamilyAccessStateFromCache());
+  const [retryKey, setRetryKey] = useState(0);
 
   useEffect(() => {
     let isActive = true;
@@ -49,10 +52,17 @@ export function useFamilyAccess(): FamilyAccessState {
         }
 
         setState({ status: "redirecting", familyContext: decision.familyContext });
-      } catch {
-        if (isActive) {
-          setState({ status: "error", familyContext: null });
+      } catch (error) {
+        if (!isActive) {
+          return;
         }
+
+        if (handleMissingOrInvalidAuth(error, router)) {
+          setState({ status: "redirecting", familyContext: null });
+          return;
+        }
+
+        setState({ status: "error", familyContext: null });
       }
     }
 
@@ -61,9 +71,9 @@ export function useFamilyAccess(): FamilyAccessState {
     return () => {
       isActive = false;
     };
-  }, [pathname, router]);
+  }, [pathname, retryKey, router]);
 
-  return state;
+  return { ...state, retry: () => setRetryKey((current) => current + 1) };
 }
 
 function getFamilyAccessStateFromCache(): FamilyAccessState {
@@ -95,7 +105,8 @@ export function ProtectedFamilyRoute({ children }: { children: ReactNode }) {
     return (
       <PageContainer>
         <Card tone="default">
-          <EmptyState title="Could not verify family access" description="Please refresh the page and try again." />
+          <EmptyState title="Kunne ikke sjekke familietilgang" description="Sjekken tok for lang tid eller feilet. Prøv igjen, eller logg inn på nytt hvis problemet fortsetter." />
+          <Button variant="primary" onClick={access.retry}>Prøv igjen</Button>
         </Card>
       </PageContainer>
     );
@@ -104,7 +115,8 @@ export function ProtectedFamilyRoute({ children }: { children: ReactNode }) {
   return (
     <PageContainer>
       <Card tone="default">
-        <EmptyState title="Checking family access" description="One moment while we verify your family membership." />
+        <EmptyState title="Sjekker familietilgang" description="Vent litt mens vi bekrefter familietilknytningen din." />
+        <Button onClick={access.retry}>Prøv igjen</Button>
       </Card>
     </PageContainer>
   );
