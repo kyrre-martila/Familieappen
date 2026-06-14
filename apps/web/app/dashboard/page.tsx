@@ -1,6 +1,5 @@
 "use client";
 
-import Image from "next/image";
 import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
 import { Bug, MessageSquare } from "lucide-react";
@@ -10,10 +9,12 @@ import { AppShell } from "../../components/AppShell";
 import { LockedFeatureState } from "../../components/PendingAccess";
 import { useFamilyAccess } from "../../components/ProtectedFamilyRoute";
 import { Badge, Card, EmptyState, PageContainer, SectionHeader } from "../../components/ui";
-import { CalendarDayChips } from "../../features/calendar/components/CalendarDayChips";
 import { CalendarDayView } from "../../features/calendar/components/CalendarDayView";
+import { CalendarMealChip } from "../../features/calendar/components/CalendarMealChip";
+import { CalendarReminderSummaryChip } from "../../features/calendar/components/CalendarReminderChip";
+import { CalendarSchoolWeekChip } from "../../features/calendar/components/CalendarSchoolWeekChip";
 import { CalendarProvider, useCalendar } from "../../features/calendar/hooks/useCalendar";
-import { getCurrentUserProfile, getShoppingList, type ShoppingList, type UserProfile } from "../../lib/api";
+import { getShoppingList, type ShoppingList } from "../../lib/api";
 import { FeedbackSheet } from "../settings/about/AppInfoSettingsClient";
 
 type FeedbackType = "feedback" | "bug";
@@ -23,27 +24,12 @@ const appVersion = typeof packageJson.version === "string" && packageJson.versio
 function HomeContent() {
   const familyAccess = useFamilyAccess();
   const { error, loading, refresh, today } = useCalendar();
-  const [profile, setProfile] = useState<UserProfile | null>(null);
   const [shoppingList, setShoppingList] = useState<ShoppingList | null>(null);
   const [shoppingLoading, setShoppingLoading] = useState(true);
   const [sheet, setSheet] = useState<FeedbackType | null>(null);
   const [feedbackMessage, setFeedbackMessage] = useState("");
 
   const activeFamilyId = familyAccess.status === "approved" ? familyAccess.familyContext.activeFamilyId : null;
-
-  useEffect(() => {
-    let cancelled = false;
-    getCurrentUserProfile()
-      .then((userProfile) => {
-        if (!cancelled) setProfile(userProfile);
-      })
-      .catch(() => {
-        if (!cancelled) setProfile(null);
-      });
-    return () => {
-      cancelled = true;
-    };
-  }, []);
 
   useEffect(() => {
     if (!activeFamilyId) {
@@ -97,45 +83,32 @@ function HomeContent() {
     <AppShell title="Hjem">
       <PageContainer>
         <section className="home-dashboard" aria-label="Familiens oversikt for i dag">
-          <header className="home-hero">
-            <span className="home-hero__logo" aria-hidden="true">
-              <Image alt="" height={44} priority src="/assets/brand/familieappen-icon.svg" width={44} />
-            </span>
-            <div className="home-hero__copy">
-              <h1>God morgen, {getFirstName(profile?.displayName)}</h1>
+          <Card className="home-card home-card--today home-card--calendar" tone="warm">
+            <header className="home-today__header">
+              <h1>I dag</h1>
               <p>{formatToday(today)}</p>
-            </div>
-          </header>
-
-          <CalendarDayChips selectedDate={today} />
-
-          <Card className="home-card home-card--calendar" tone="warm">
-            <div className="home-card__header-row">
-              <SectionHeader eyebrow="I dag" title="Dagens kalender" />
-              <Link className="button button--secondary" href="/calendar">
-                Se hele dagen
-              </Link>
-            </div>
+            </header>
+            <HomeTodayChips selectedDate={today} missingShoppingCount={uncheckedItems.length} />
             {error ? (
               <EmptyState title="Kunne ikke hente kalenderen" description="Prøv igjen for å se dagens planer." />
             ) : loading ? (
               <EmptyState title="Henter dagens planer" description="Vent litt mens vi finner kalenderen." />
             ) : (
-              <CalendarDayView selectedDate={today} showChips={false} />
+              <CalendarDayView selectedDate={today} showChips={false} emptyTitle="Rolig dag i dag" emptyDescription="Ingen hendelser foreløpig." />
             )}
             {error ? (
               <button className="button button--secondary" type="button" onClick={() => void refresh()}>
                 Prøv igjen
               </button>
             ) : null}
+            <Link className="home-card__text-link" href="/calendar">
+              Gå til kalender →
+            </Link>
           </Card>
 
           <Card className="home-card" tone="default">
             <div className="home-card__header-row">
-              <SectionHeader eyebrow="Praktisk" title="Handleliste" action={<Badge tone="neutral">{formatShoppingCount(uncheckedItems.length)}</Badge>} />
-              <Link className="button button--secondary" href="/shopping">
-                Åpne handleliste
-              </Link>
+              <SectionHeader eyebrow="Praktisk" title="Handleliste" action={uncheckedItems.length ? <Badge tone="neutral">{formatShoppingCount(uncheckedItems.length)}</Badge> : null} />
             </div>
             {shoppingLoading ? (
               <EmptyState title="Henter handlelisten" description="Ser etter varer familien mangler." />
@@ -147,11 +120,17 @@ function HomeContent() {
                     <span>{item.quantity ? `${item.label} · ${item.quantity}` : item.label}</span>
                   </li>
                 ))}
-                {remainingShoppingCount > 0 ? <li className="home-shopping-list__more">+{remainingShoppingCount} til</li> : null}
+                {remainingShoppingCount > 0 ? <li className="home-shopping-list__more">+{remainingShoppingCount} flere</li> : null}
               </ul>
             ) : (
-              <EmptyState title="Ingenting som mangler akkurat nå" description="Legg til varer når noe må handles." />
+              <div className="home-subtle-state">
+                <p className="home-subtle-state__title">Ingen varer mangler akkurat nå</p>
+                <p>Legg til varer når noe må handles.</p>
+              </div>
             )}
+            <Link className="home-card__text-link" href="/shopping">
+              Gå til handleliste →
+            </Link>
           </Card>
 
           <Card className="home-card" tone="soft">
@@ -164,7 +143,7 @@ function HomeContent() {
             </div>
           </Card>
 
-          <Card className="home-card home-card--beta" tone="accent">
+          <Card className="home-card home-card--beta" tone="soft">
             <SectionHeader eyebrow="Hjelp" title="Hjelp oss gjøre FamilieAppen bedre" action={<Badge tone="primary">BETA</Badge>} />
             <div className="home-feedback-actions">
               <button type="button" className="button button--secondary" onClick={() => { setFeedbackMessage(""); setSheet("feedback"); }}>
@@ -191,13 +170,45 @@ export default function DashboardPage() {
   );
 }
 
-function getFirstName(displayName?: string) {
-  return displayName?.trim().split(/\s+/)[0] || "familien";
+
+function HomeTodayChips({
+  missingShoppingCount,
+  selectedDate,
+}: {
+  missingShoppingCount: number;
+  selectedDate: string;
+}) {
+  const { mealSummaries, normalizedItems, reminders } = useCalendar();
+  const meal = mealSummaries.find((item) => item.date === selectedDate);
+  const visibleReminders = reminders.filter((item) => item.date === selectedDate);
+  const schoolWeekItems = normalizedItems.filter((item) => item.date === selectedDate && item.type === "school-week");
+  const hasShoppingChip = missingShoppingCount > 0;
+  const chipCount = (meal ? 1 : 0) + visibleReminders.length + schoolWeekItems.length + (hasShoppingChip ? 1 : 0);
+
+  if (chipCount === 0) return null;
+
+  return (
+    <section className={`calendar-summary-chips home-today__chips${chipCount === 1 ? " home-today__chips--single" : ""}`} aria-label="Det viktigste i dag">
+      {meal ? <CalendarMealChip date={selectedDate} meal={meal} /> : null}
+      {visibleReminders.map((reminder) => (
+        <CalendarReminderSummaryChip reminder={reminder} key={reminder.id} />
+      ))}
+      {schoolWeekItems.map((item) => (
+        <CalendarSchoolWeekChip item={item} key={item.id} />
+      ))}
+      {hasShoppingChip ? (
+        <Link className="calendar-chip home-shopping-chip" href="/shopping">
+          <span aria-hidden="true">🛒</span>
+          <span>{missingShoppingCount} {missingShoppingCount === 1 ? "vare" : "varer"} mangler</span>
+        </Link>
+      ) : null}
+    </section>
+  );
 }
 
 function formatToday(date: string) {
   const [year, month, day] = date.split("-").map(Number);
-  return new Intl.DateTimeFormat("nb-NO", { weekday: "long", day: "numeric", month: "long", year: "numeric" }).format(new Date(year, month - 1, day));
+  return new Intl.DateTimeFormat("nb-NO", { weekday: "long", day: "numeric", month: "long" }).format(new Date(year, month - 1, day));
 }
 
 function formatShoppingCount(count: number) {
