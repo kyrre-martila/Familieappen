@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 
 import { Card } from "../../../components/ui";
 import { useCalendar } from "../hooks/useCalendar";
@@ -29,6 +29,7 @@ export function CalendarListView() {
     events: calendarEvents,
     mealSummaries: mealPlannerMeals,
     reminders,
+    selectedDate,
     setSelectedDate,
     setSelectedView,
     today,
@@ -46,6 +47,29 @@ export function CalendarListView() {
       buildListDayGroups(filters, calendarEvents, reminders, mealPlannerMeals),
     [calendarEvents, filters, mealPlannerMeals, reminders],
   );
+  const initialScrollCompleteRef = useRef(false);
+
+  useEffect(() => {
+    if (initialScrollCompleteRef.current || dayGroups.length === 0) {
+      return;
+    }
+
+    const targetDate = selectedDate || today;
+    const targetGroup =
+      dayGroups.find((group) => group.date === targetDate) ??
+      dayGroups.find((group) => group.date >= targetDate) ??
+      dayGroups.at(-1);
+
+    if (!targetGroup) {
+      return;
+    }
+
+    document
+      .getElementById(`calendar-list-${targetGroup.date}`)
+      ?.closest(".calendar-list-day")
+      ?.scrollIntoView({ block: "start" });
+    initialScrollCompleteRef.current = true;
+  }, [dayGroups, selectedDate, today]);
 
   function openDayView(date: string) {
     setSelectedDate(date);

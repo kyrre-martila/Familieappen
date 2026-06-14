@@ -5741,16 +5741,14 @@ button.calendar-chip {
   letter-spacing: inherit;
   line-height: inherit;
   text-align: left;
-  text-decoration: underline;
-  text-decoration-color: color-mix(in srgb, var(--color-primary) 42%, transparent);
-  text-decoration-thickness: 0.08em;
-  text-underline-offset: 0.18em;
+  text-decoration: none;
 }
 
 .calendar-list-day__date-button:is(:hover, :focus-visible) {
   background: var(--color-primary-soft);
   color: var(--color-primary-strong);
-  text-decoration-color: currentColor;
+  outline: 2px solid var(--color-primary);
+  outline-offset: 2px;
 }
 
 .calendar-list-day__today {

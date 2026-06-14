@@ -1,6 +1,7 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { Suspense, useEffect, useState } from "react";
+import { useSearchParams } from "next/navigation";
 
 import { AppShell } from "../../components/AppShell";
 import { LockedFeatureState } from "../../components/PendingAccess";
@@ -17,8 +18,15 @@ import {
   useCalendar,
 } from "../../features/calendar/hooks/useCalendar";
 
+const validCalendarViews = new Set(["day", "month", "list"]);
+
+function isValidDateParam(value: string | null): value is string {
+  return Boolean(value?.match(/^\d{4}-\d{2}-\d{2}$/));
+}
+
 function CalendarPageContent() {
   const familyAccess = useFamilyAccess();
+  const searchParams = useSearchParams();
   const {
     error,
     loading,
@@ -32,6 +40,29 @@ function CalendarPageContent() {
   const [visibleMonth, setVisibleMonth] = useState(() =>
     parseDateString(today),
   );
+
+  useEffect(() => {
+    const dateParam = searchParams.get("date");
+    const viewParam = searchParams.get("view");
+
+    if (isValidDateParam(dateParam) && dateParam !== selectedDate) {
+      setSelectedDate(dateParam);
+    }
+
+    if (
+      viewParam &&
+      validCalendarViews.has(viewParam) &&
+      viewParam !== selectedView
+    ) {
+      setSelectedView(viewParam as typeof selectedView);
+    }
+  }, [
+    searchParams,
+    selectedDate,
+    selectedView,
+    setSelectedDate,
+    setSelectedView,
+  ]);
 
   useEffect(() => {
     if (selectedView === "month") {
@@ -131,7 +162,9 @@ function CalendarPageContent() {
 export default function CalendarPage() {
   return (
     <CalendarProvider>
-      <CalendarPageContent />
+      <Suspense fallback={null}>
+        <CalendarPageContent />
+      </Suspense>
     </CalendarProvider>
   );
 }
