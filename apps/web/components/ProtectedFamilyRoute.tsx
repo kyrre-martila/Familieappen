@@ -1,11 +1,14 @@
 "use client";
 
-import { useEffect, useState, type ReactNode } from "react";
+import { useCallback, useEffect, useRef, useState, type ReactNode } from "react";
 import { usePathname, useRouter } from "next/navigation";
 import { LockedFeatureState } from "./PendingAccess";
 import { Button, Card, EmptyState, PageContainer } from "./ui";
 import { redirectIfNeeded, resolveProtectedFamilyRoute } from "../lib/onboarding-access";
-import { getCachedFamilyBootstrapResult, handleMissingOrInvalidAuth, type FamilyBootstrapResult } from "../lib/auth-family";
+import { forceFamilyBootstrapRestart, getCachedFamilyBootstrapResult, handleMissingOrInvalidAuth, type FamilyBootstrapResult } from "../lib/auth-family";
+
+const FAMILY_ACCESS_LOADING_TIMEOUT_MS = 20_000;
+const PWA_RESUME_RETRY_THROTTLE_MS = 5_000;
 
 type FamilyAccessState =
   | { status: "loading"; familyContext: null }
@@ -21,11 +24,19 @@ export function useFamilyAccess(): FamilyAccessHookState {
   const router = useRouter();
   const [state, setState] = useState<FamilyAccessState>(() => getFamilyAccessStateFromCache());
   const [retryKey, setRetryKey] = useState(0);
+  const loadingStartedAtRef = useRef<number | null>(state.status === "loading" ? Date.now() : null);
+
+  const retry = useCallback(() => {
+    forceFamilyBootstrapRestart();
+    setState(getFamilyAccessStateFromCache());
+    setRetryKey((current) => current + 1);
+  }, []);
 
   useEffect(() => {
     let isActive = true;
 
     async function resolveAccess() {
+      loadingStartedAtRef.current = Date.now();
       setState((currentState) => currentState.status === "approved" || currentState.status === "pending" ? currentState : getFamilyAccessStateFromCache());
 
       try {
@@ -34,6 +45,8 @@ export function useFamilyAccess(): FamilyAccessHookState {
         if (!isActive) {
           return;
         }
+
+        loadingStartedAtRef.current = null;
 
         if (decision.action === "redirect") {
           redirectIfNeeded(router, decision);
@@ -57,6 +70,8 @@ export function useFamilyAccess(): FamilyAccessHookState {
           return;
         }
 
+        loadingStartedAtRef.current = null;
+
         if (handleMissingOrInvalidAuth(error, router)) {
           setState({ status: "redirecting", familyContext: null });
           return;
@@ -73,7 +88,64 @@ export function useFamilyAccess(): FamilyAccessHookState {
     };
   }, [pathname, retryKey, router]);
 
-  return { ...state, retry: () => setRetryKey((current) => current + 1) };
+  useEffect(() => {
+    if (state.status !== "loading") {
+      loadingStartedAtRef.current = null;
+      return;
+    }
+
+    if (loadingStartedAtRef.current === null) {
+      loadingStartedAtRef.current = Date.now();
+    }
+
+    const timeout = window.setTimeout(() => {
+      setState((currentState) => currentState.status === "loading" ? { status: "error", familyContext: null } : currentState);
+    }, FAMILY_ACCESS_LOADING_TIMEOUT_MS);
+
+    return () => window.clearTimeout(timeout);
+  }, [state.status, retryKey]);
+
+  useEffect(() => {
+    let lastResumeRetryAt = 0;
+
+    function recoverFromResume(event?: PageTransitionEvent | Event) {
+      const isPageShow = event?.type === "pageshow";
+      const isBfcacheRestore = isPageShow && "persisted" in event && event.persisted;
+      const isVisibleResume = event?.type === "visibilitychange" && document.visibilityState !== "visible";
+
+      if (isVisibleResume) {
+        return;
+      }
+
+      const loadingStartedAt = loadingStartedAtRef.current;
+      const hasStaleLoading = loadingStartedAt !== null && Date.now() - loadingStartedAt > PWA_RESUME_RETRY_THROTTLE_MS;
+
+      if (!isBfcacheRestore && !hasStaleLoading) {
+        return;
+      }
+
+      const now = Date.now();
+      if (now - lastResumeRetryAt < PWA_RESUME_RETRY_THROTTLE_MS) {
+        return;
+      }
+
+      lastResumeRetryAt = now;
+      retry();
+      router.refresh();
+    }
+
+    window.addEventListener("pageshow", recoverFromResume);
+    document.addEventListener("visibilitychange", recoverFromResume);
+    window.addEventListener("focus", recoverFromResume);
+
+    return () => {
+      window.removeEventListener("pageshow", recoverFromResume);
+      document.removeEventListener("visibilitychange", recoverFromResume);
+      window.removeEventListener("focus", recoverFromResume);
+    };
+  }, [retry, router]);
+
+  return { ...state, retry };
 }
 
 function getFamilyAccessStateFromCache(): FamilyAccessState {
