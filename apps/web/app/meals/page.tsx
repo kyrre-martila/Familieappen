@@ -6,6 +6,7 @@ import {
   useMemo,
   useRef,
   Suspense,
+  useLayoutEffect,
   useState,
   type DragEvent,
 } from "react";
@@ -28,6 +29,7 @@ import type { Meal } from "../../features/types";
 const initialPastDays = 0;
 const initialFutureDays = 21;
 const loadChunkSize = 14;
+const previousLoadCooldownMs = 350;
 
 const dayFormatter = new Intl.DateTimeFormat("nb-NO", {
   weekday: "long",
@@ -136,6 +138,10 @@ function MealsPageContent() {
   const todayRef = useRef<HTMLElement | null>(null);
   const hasUserScrolledFromTopRef = useRef(false);
   const handledRouteActionRef = useRef<string | null>(null);
+  const previousSentinelArmedRef = useRef(true);
+  const isLoadingPreviousRef = useRef(false);
+  const previousLoadCooldownRef = useRef<number | null>(null);
+  const previousScrollHeightRef = useRef<number | null>(null);
 
   useEffect(() => {
     const previousScrollRestoration = window.history.scrollRestoration;
@@ -504,6 +510,39 @@ function MealsPageContent() {
     setActiveDropOffset(null);
   }
 
+  useLayoutEffect(() => {
+    const previousScrollHeight = previousScrollHeightRef.current;
+
+    if (previousScrollHeight === null) {
+      return;
+    }
+
+    previousScrollHeightRef.current = null;
+    const addedHeight =
+      document.documentElement.scrollHeight - previousScrollHeight;
+
+    if (addedHeight > 0) {
+      window.scrollBy(0, addedHeight);
+    }
+
+    if (previousLoadCooldownRef.current !== null) {
+      window.clearTimeout(previousLoadCooldownRef.current);
+    }
+
+    previousLoadCooldownRef.current = window.setTimeout(() => {
+      isLoadingPreviousRef.current = false;
+      previousLoadCooldownRef.current = null;
+    }, previousLoadCooldownMs);
+  }, [startOffset]);
+
+  useEffect(() => {
+    return () => {
+      if (previousLoadCooldownRef.current !== null) {
+        window.clearTimeout(previousLoadCooldownRef.current);
+      }
+    };
+  }, []);
+
   useEffect(() => {
     function handleScroll() {
       if (window.scrollY > 64) {
@@ -528,19 +567,29 @@ function MealsPageContent() {
     const observer = new IntersectionObserver(
       (entries) => {
         entries.forEach((entry) => {
-          if (!entry.isIntersecting) {
-            return;
-          }
-
           if (entry.target === topSentinel) {
-            if (startOffset === 0 && !hasUserScrolledFromTopRef.current) {
+            if (!entry.isIntersecting) {
+              previousSentinelArmedRef.current = true;
               return;
             }
 
+            if (
+              !hasUserScrolledFromTopRef.current ||
+              isLoadingPreviousRef.current ||
+              !previousSentinelArmedRef.current
+            ) {
+              return;
+            }
+
+            previousSentinelArmedRef.current = false;
+            isLoadingPreviousRef.current = true;
+            previousScrollHeightRef.current =
+              document.documentElement.scrollHeight;
             setStartOffset((current) => current - loadChunkSize);
+            return;
           }
 
-          if (entry.target === bottomSentinel) {
+          if (entry.target === bottomSentinel && entry.isIntersecting) {
             setEndOffset((current) => current + loadChunkSize);
           }
         });
