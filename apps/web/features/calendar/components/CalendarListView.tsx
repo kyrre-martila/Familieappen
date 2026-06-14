@@ -29,6 +29,8 @@ export function CalendarListView() {
     events: calendarEvents,
     mealSummaries: mealPlannerMeals,
     reminders,
+    setSelectedDate,
+    setSelectedView,
     today,
   } = useCalendar();
   useEffect(() => {
@@ -44,6 +46,11 @@ export function CalendarListView() {
       buildListDayGroups(filters, calendarEvents, reminders, mealPlannerMeals),
     [calendarEvents, filters, mealPlannerMeals, reminders],
   );
+
+  function openDayView(date: string) {
+    setSelectedDate(date);
+    setSelectedView("day");
+  }
 
   function openFilterSheet() {
     setDraftFilters(filters);
@@ -104,6 +111,7 @@ export function CalendarListView() {
             <CalendarListDayGroup
               group={group}
               key={group.date}
+              onOpenDay={openDayView}
               today={today}
             />
           ))}

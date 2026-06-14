@@ -8,9 +8,11 @@ import type { CalendarListDayGroup as CalendarListDayGroupType } from "./calenda
 
 export function CalendarListDayGroup({
   group,
+  onOpenDay,
   today,
 }: {
   group: CalendarListDayGroupType;
+  onOpenDay: (date: string) => void;
   today: string;
 }) {
   const visibleReminders = group.reminders.slice(0, 10);
@@ -27,7 +29,14 @@ export function CalendarListDayGroup({
     >
       <div className="calendar-list-day__header">
         <h3 className="calendar-list-day__title" id={headingId}>
-          {formatListDate(group.date)}
+          <button
+            className="calendar-list-day__date-button"
+            type="button"
+            aria-label={`Åpne dagvisning for ${formatListDate(group.date)}`}
+            onClick={() => onOpenDay(group.date)}
+          >
+            {formatListDate(group.date)}
+          </button>
         </h3>
         {group.date === today ? (
           <span className="calendar-list-day__today">I dag</span>
