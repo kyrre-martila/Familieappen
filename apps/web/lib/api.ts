@@ -217,6 +217,7 @@ export interface CalendarExportFeedSettings {
 }
 
 const API_BASE_URL = (process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:4000/api").replace(/\/$/, "");
+const API_REQUEST_TIMEOUT_MS = 15_000;
 
 interface ApiEnvelope<TData> {
   data: TData;
@@ -1007,12 +1008,28 @@ async function apiRequest<TData>(
     }
   }
 
-  const response = await fetch(`${API_BASE_URL}${path}`, {
-    method: options.method ?? "GET",
-    headers,
-    body: options.body === undefined ? undefined : isFormData ? options.body as BodyInit : JSON.stringify(options.body),
-    credentials: "include"
-  });
+  const controller = new AbortController();
+  const timeoutId = globalThis.setTimeout(() => controller.abort(), API_REQUEST_TIMEOUT_MS);
+
+  let response: Response;
+
+  try {
+    response = await fetch(`${API_BASE_URL}${path}`, {
+      method: options.method ?? "GET",
+      headers,
+      body: options.body === undefined ? undefined : isFormData ? options.body as BodyInit : JSON.stringify(options.body),
+      credentials: "include",
+      signal: controller.signal
+    });
+  } catch (error) {
+    if (error instanceof DOMException && error.name === "AbortError") {
+      throw new ApiError("The request timed out. Please try again.", 408, "network.timeout");
+    }
+
+    throw new ApiError("Could not reach the server. Please check your connection and try again.", 0, "network.unavailable");
+  } finally {
+    globalThis.clearTimeout(timeoutId);
+  }
 
   if (!response.ok) {
     if (response.status === 401 && includeAuth && (options.retryOnUnauthorized ?? true)) {
