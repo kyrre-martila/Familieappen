@@ -1,385 +1,205 @@
 "use client";
 
-import { useEffect, useState, type ChangeEvent } from "react";
+import Image from "next/image";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
-import { PendingDashboard } from "../../components/PendingAccess";
-import { Badge, Button, Card, EmptyState, PageContainer, SectionHeader } from "../../components/ui";
-import { ApiError, FamilyDashboardResponse, FamilyWithMembership, getFamilyDashboard } from "../../lib/api";
-import { chooseActiveFamily, getUserFacingApiMessage, handleMissingOrInvalidAuth } from "../../lib/auth-family";
-import { redirectIfNeeded, resolveDashboardEntry } from "../../lib/onboarding-access";
-import { clearActiveFamilyId } from "../../lib/session";
+import { useEffect, useMemo, useState } from "react";
+import { Bug, MessageSquare } from "lucide-react";
 
-type DashboardStatus = "loading" | "ready" | "pending" | "unauthorized" | "no-family" | "error";
+import packageJson from "../../package.json";
+import { AppShell } from "../../components/AppShell";
+import { LockedFeatureState } from "../../components/PendingAccess";
+import { useFamilyAccess } from "../../components/ProtectedFamilyRoute";
+import { Badge, Card, EmptyState, PageContainer, SectionHeader } from "../../components/ui";
+import { CalendarDayChips } from "../../features/calendar/components/CalendarDayChips";
+import { CalendarDayView } from "../../features/calendar/components/CalendarDayView";
+import { CalendarProvider, useCalendar } from "../../features/calendar/hooks/useCalendar";
+import { getCurrentUserProfile, getShoppingList, type ShoppingList, type UserProfile } from "../../lib/api";
+import { FeedbackSheet } from "../settings/about/AppInfoSettingsClient";
 
-export default function DashboardPage() {
-  const router = useRouter();
-  const [dashboard, setDashboard] = useState<FamilyDashboardResponse | null>(null);
-  const [families, setFamilies] = useState<FamilyWithMembership[]>([]);
-  const [activeFamilyId, setActiveFamilyIdState] = useState<string | null>(null);
-  const [status, setStatus] = useState<DashboardStatus>("loading");
-  const [message, setMessage] = useState("Loading your family dashboard…");
+type FeedbackType = "feedback" | "bug";
+
+const appVersion = typeof packageJson.version === "string" && packageJson.version.trim() ? packageJson.version : "0.1.0";
+
+function HomeContent() {
+  const familyAccess = useFamilyAccess();
+  const { error, loading, refresh, today } = useCalendar();
+  const [profile, setProfile] = useState<UserProfile | null>(null);
+  const [shoppingList, setShoppingList] = useState<ShoppingList | null>(null);
+  const [shoppingLoading, setShoppingLoading] = useState(true);
+  const [sheet, setSheet] = useState<FeedbackType | null>(null);
+  const [feedbackMessage, setFeedbackMessage] = useState("");
+
+  const activeFamilyId = familyAccess.status === "approved" ? familyAccess.familyContext.activeFamilyId : null;
 
   useEffect(() => {
-    void loadDashboard();
-  }, [router]);
+    let cancelled = false;
+    getCurrentUserProfile()
+      .then((userProfile) => {
+        if (!cancelled) setProfile(userProfile);
+      })
+      .catch(() => {
+        if (!cancelled) setProfile(null);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, []);
 
-  async function loadDashboard(preferredFamilyId?: string) {
-    setStatus("loading");
-    setMessage("Loading your family dashboard…");
-
-    try {
-      const decision = await resolveDashboardEntry(undefined, preferredFamilyId);
-
-      if (decision.action === "redirect") {
-        redirectIfNeeded(router, decision);
-        return;
-      }
-
-      const familyContext = decision.familyContext;
-
-      if (familyContext.status === "pending") {
-        setFamilies(familyContext.families);
-        setDashboard(null);
-        setActiveFamilyIdState(familyContext.activeFamilyId);
-        setStatus("pending");
-        setMessage("Du venter på godkjenning for å bli med i familien.");
-        return;
-      }
-
-      if (familyContext.status !== "ready") {
-        setFamilies([]);
-        setDashboard(null);
-        setActiveFamilyIdState(null);
-        setStatus("error");
-        setMessage("Could not confirm family access. Please try again.");
-        return;
-      }
-
-      setFamilies(familyContext.families);
-      setActiveFamilyIdState(familyContext.activeFamilyId);
-      const nextFamilyId = familyContext.activeFamilyId;
-
-      const dashboardData = await getFamilyDashboard(nextFamilyId);
-      setDashboard(dashboardData);
-      setStatus("ready");
-      setMessage("Family dashboard ready.");
-    } catch (error) {
-      if (handleMissingOrInvalidAuth(error, router)) {
-        setDashboard(null);
-        setStatus("unauthorized");
-        setMessage(getUserFacingApiMessage(error, "Your session has expired. Please sign in again."));
-        return;
-      }
-
-      if (error instanceof ApiError && error.status === 404) {
-        clearActiveFamilyId();
-        setDashboard(null);
-        setActiveFamilyIdState(null);
-        setStatus("error");
-        setMessage("That family could not be loaded for your account. Please choose another family.");
-        return;
-      }
-
-      setDashboard(null);
-      setStatus("error");
-      setMessage("Could not load the dashboard right now. Please try again.");
+  useEffect(() => {
+    if (!activeFamilyId) {
+      setShoppingList(null);
+      setShoppingLoading(false);
+      return;
     }
+
+    let cancelled = false;
+    setShoppingLoading(true);
+    getShoppingList(activeFamilyId)
+      .then((list) => {
+        if (!cancelled) setShoppingList(list);
+      })
+      .catch(() => {
+        if (!cancelled) setShoppingList(null);
+      })
+      .finally(() => {
+        if (!cancelled) setShoppingLoading(false);
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [activeFamilyId]);
+
+  const uncheckedItems = useMemo(
+    () => shoppingList?.items.filter((item) => !item.checked) ?? [],
+    [shoppingList],
+  );
+  const visibleShoppingItems = uncheckedItems.slice(0, 4);
+  const remainingShoppingCount = Math.max(0, uncheckedItems.length - visibleShoppingItems.length);
+
+  if (familyAccess.status === "pending") {
+    return <LockedFeatureState />;
   }
 
-  async function handleFamilyChange(event: ChangeEvent<HTMLSelectElement>) {
-    const familyId = event.target.value;
-    chooseActiveFamily(familyId);
-    setActiveFamilyIdState(familyId);
-    await loadDashboard(familyId);
-  }
-
-  const familyName = dashboard?.family.name ?? "Your family";
-  const memberCount = dashboard?.members.length ?? 0;
-  const isLoading = status === "loading";
-  const hasMultipleFamilies = families.length > 1;
-
-  if (status === "pending") {
-    return <PendingDashboard />;
+  if (familyAccess.status !== "approved") {
+    return (
+      <AppShell title="Hjem">
+        <PageContainer>
+          <Card tone="default">
+            <EmptyState title="Sjekker familietilgang" description="Vent litt mens vi bekrefter familietilknytningen din." />
+          </Card>
+        </PageContainer>
+      </AppShell>
+    );
   }
 
   return (
-    <PageContainer tone="dashboard">
-      <section className="dashboard-hero" aria-labelledby="dashboard-title">
-        <div className="dashboard-hero__copy">
-          <Badge tone="primary">Family overview</Badge>
-          <h1 id="dashboard-title" className="dashboard-hero__title">
-            {isLoading ? "Loading dashboard…" : familyName}
-          </h1>
-          <p className="dashboard-hero__description">
-            {dashboard
-              ? `A calm overview for ${familyName}, with ${memberCount} family member${memberCount === 1 ? "" : "s"} set up.`
-              : message}
-          </p>
-        </div>
-        <div className="dashboard-hero__actions" aria-label="Dashboard actions">
-          {hasMultipleFamilies ? (
-            <label className="family-switcher">
-              <span className="family-switcher__label">Active family</span>
-              <select className="family-switcher__select" value={activeFamilyId ?? ""} onChange={handleFamilyChange}>
-                {families.map((family) => (
-                  <option key={family.family.id} value={family.family.id}>
-                    {family.family.name}
-                  </option>
-                ))}
-              </select>
-            </label>
-          ) : null}
-          <Link className="button button--secondary" href="/calendar">
-            View calendar
-          </Link>
-          <Link className="button button--primary" href="/onboarding/add-members">
-            Add member
-          </Link>
-        </div>
-      </section>
-
-      {status !== "ready" ? <DashboardStatusCard status={status} message={message} onRetry={() => loadDashboard()} /> : null}
-
-      <section className="dashboard-grid" aria-label="Family dashboard" aria-busy={isLoading}>
-        <Card className="dashboard-card" tone="warm">
-          <SectionHeader
-            action={<Badge tone="primary">{memberCount} members</Badge>}
-            eyebrow="Family"
-            title="Who is on the overview?"
-          />
-          {dashboard ? (
-            <ul className="member-list" aria-label="Dashboard family members">
-              {dashboard.members.map((member) => (
-                <li className="member-list__item" key={member.id}>
-                  <span className="member-list__name">{member.displayName}</span>
-                  <span className="member-list__role">{formatRole(member.role)}</span>
-                </li>
-              ))}
-            </ul>
-          ) : (
-            <EmptyState title="No family loaded yet" description={message} />
-          )}
-        </Card>
-
-        <Card className="dashboard-card dashboard-card--today" tone="warm">
-          <SectionHeader
-            action={<Badge tone="neutral">{dashboard?.todayEvents.length ?? 0} events</Badge>}
-            eyebrow="Today"
-            title="What happens today?"
-          />
-          {dashboard?.todayEvents.length ? (
-            <ul className="timeline" aria-label="Today events">
-              {dashboard.todayEvents.map((event) => (
-                <li className="timeline__item" key={event.id}>
-                  <span className="timeline__time">{formatEventTime(event)}</span>
-                  <div>
-                    <p className="timeline__title">{event.title}</p>
-                    <p className="timeline__detail">{formatEventParticipants(event)}</p>
-                  </div>
-                </li>
-              ))}
-            </ul>
-          ) : (
-            <EmptyState title="No events today" description="No events today. Add family plans on the calendar when something comes up." />
-          )}
-        </Card>
-
-        <Card className="dashboard-card" tone="soft">
-          <SectionHeader
-            action={<Badge tone={dashboard?.dinnerToday ? "success" : "neutral"}>{dashboard?.dinnerToday ? "Planned" : "Empty"}</Badge>}
-            eyebrow="Dinner"
-            title="What is for dinner?"
-          />
-          {dashboard?.dinnerToday ? (
-            <div className="dinner-today">
-              <p className="dinner-today__label">Dinner today:</p>
-              <p className="dinner-today__meal">{formatDinner(dashboard.dinnerToday.mealName)}</p>
-              {dashboard.dinnerToday.notes ? <p className="dinner-today__notes">{dashboard.dinnerToday.notes}</p> : null}
+    <AppShell title="Hjem">
+      <PageContainer>
+        <section className="home-dashboard" aria-label="Familiens oversikt for i dag">
+          <header className="home-hero">
+            <span className="home-hero__logo" aria-hidden="true">
+              <Image alt="" height={44} priority src="/assets/brand/familieappen-icon.svg" width={44} />
+            </span>
+            <div className="home-hero__copy">
+              <h1>God morgen, {getFirstName(profile?.displayName)}</h1>
+              <p>{formatToday(today)}</p>
             </div>
-          ) : (
-            <EmptyState title="No dinner planned today" description="Open meals to add a simple dinner plan for today." />
-          )}
-          <Link className="button button--secondary" href="/meals">
-            Open meals
-          </Link>
-        </Card>
+          </header>
 
-        <Card className="dashboard-card" tone="default">
-          <SectionHeader
-            action={<Badge tone="neutral">{dashboard?.shoppingSummary.totalItems ?? 0} varer</Badge>}
-            eyebrow="Handleliste"
-            title={formatShoppingSummary(dashboard?.shoppingSummary.uncheckedCount ?? 0)}
-          />
-          <EmptyState
-            title={dashboard?.shoppingSummary.totalItems ? "Handleliste pågår" : "Handlelisten er tom"}
-            description={
-              dashboard?.shoppingSummary.totalItems
-                ? "Åpne handlelisten for å legge til, krysse av eller fjerne felles varer."
-                : "Ingenting å handle akkurat nå."
-            }
-          />
-          <Link className="button button--secondary" href="/shopping">
-            Åpne handleliste
-          </Link>
-        </Card>
+          <CalendarDayChips selectedDate={today} />
 
-        <Card className="dashboard-card" tone="default">
-          <SectionHeader
-            action={<Badge tone="neutral">{dashboard?.todayTasks.length ?? 0} oppgaver</Badge>}
-            eyebrow="Oppgaver"
-            title="Hva må gjøres?"
-          />
-          {dashboard?.todayTasks.length ? (
-            <ul className="task-list" aria-label="Dagens oppgaver">
-              {dashboard.todayTasks.map((task) => (
-                <li className={task.completed ? "task-list__item task-list__item--completed" : "task-list__item"} key={task.id}>
-                  <span className="task-list__status" aria-hidden="true">
-                    {task.completed ? "☑" : "☐"}
-                  </span>
-                  <div className="task-list__content">
-                    <p className="task-list__title">{task.title}</p>
-                    <p className="task-list__owner">{formatTaskAssignee(task.assignedFamilyMemberId, dashboard.members)}</p>
-                  </div>
-                </li>
-              ))}
-            </ul>
-          ) : (
-            <EmptyState title="Ingen oppgaver i dag" description="Legg til raske familieoppgaver når noe må gjøres." />
-          )}
-          <Link className="button button--secondary" href="/husk?tab=oppgaver">
-            Åpne oppgaver
-          </Link>
-        </Card>
+          <Card className="home-card home-card--calendar" tone="warm">
+            <div className="home-card__header-row">
+              <SectionHeader eyebrow="I dag" title="Dagens kalender" />
+              <Link className="button button--secondary" href="/calendar">
+                Se hele dagen
+              </Link>
+            </div>
+            {error ? (
+              <EmptyState title="Kunne ikke hente kalenderen" description="Prøv igjen for å se dagens planer." />
+            ) : loading ? (
+              <EmptyState title="Henter dagens planer" description="Vent litt mens vi finner kalenderen." />
+            ) : (
+              <CalendarDayView selectedDate={today} showChips={false} />
+            )}
+            {error ? (
+              <button className="button button--secondary" type="button" onClick={() => void refresh()}>
+                Prøv igjen
+              </button>
+            ) : null}
+          </Card>
 
-        <Card className="dashboard-card dashboard-card--wishlist" tone="accent">
-          <SectionHeader
-            action={<Badge tone="neutral">{dashboard?.wishlistSummary.wishlistCount ?? 0} lists</Badge>}
-            eyebrow="Wishlists"
-            title="Gift ideas"
-          />
-          {dashboard?.wishlistSummary.recentlyUpdated.length ? (
-            <ul className="mini-list" aria-label="Recent wishlists">
-              {dashboard.wishlistSummary.recentlyUpdated.map((wishlist) => (
-                <li className="mini-list__item" key={wishlist.id}>
-                  {wishlist.title} · {wishlist.unavailableCount}/{wishlist.itemCount} unavailable
-                </li>
-              ))}
-            </ul>
-          ) : (
-            <EmptyState
-              title="No wishlists yet"
-              description="Create a wishlist to help relatives coordinate gift ideas without spoiling surprises."
-            />
-          )}
-          <Link className="button button--secondary" href="/wishlists">
-            Open wishlists
-          </Link>
-        </Card>
-      </section>
-    </PageContainer>
+          <Card className="home-card" tone="default">
+            <div className="home-card__header-row">
+              <SectionHeader eyebrow="Praktisk" title="Handleliste" action={<Badge tone="neutral">{formatShoppingCount(uncheckedItems.length)}</Badge>} />
+              <Link className="button button--secondary" href="/shopping">
+                Åpne handleliste
+              </Link>
+            </div>
+            {shoppingLoading ? (
+              <EmptyState title="Henter handlelisten" description="Ser etter varer familien mangler." />
+            ) : visibleShoppingItems.length ? (
+              <ul className="home-shopping-list" aria-label="Varer som mangler">
+                {visibleShoppingItems.map((item) => (
+                  <li key={item.id}>
+                    <span aria-hidden="true">☐</span>
+                    <span>{item.quantity ? `${item.label} · ${item.quantity}` : item.label}</span>
+                  </li>
+                ))}
+                {remainingShoppingCount > 0 ? <li className="home-shopping-list__more">+{remainingShoppingCount} til</li> : null}
+              </ul>
+            ) : (
+              <EmptyState title="Ingenting som mangler akkurat nå" description="Legg til varer når noe må handles." />
+            )}
+          </Card>
+
+          <Card className="home-card" tone="soft">
+            <SectionHeader eyebrow="Raskt videre" title="Snarveier" />
+            <div className="home-shortcuts">
+              <Link href="/calendar/events/new">Ny hendelse</Link>
+              <Link href="/husk/reminders/new">Ny husk</Link>
+              <Link href="/meals?create=1">Planlegg middag</Link>
+              <Link href="/shopping">Legg til vare</Link>
+            </div>
+          </Card>
+
+          <Card className="home-card home-card--beta" tone="accent">
+            <SectionHeader eyebrow="Hjelp" title="Hjelp oss gjøre FamilieAppen bedre" action={<Badge tone="primary">BETA</Badge>} />
+            <div className="home-feedback-actions">
+              <button type="button" className="button button--secondary" onClick={() => { setFeedbackMessage(""); setSheet("feedback"); }}>
+                <MessageSquare aria-hidden="true" size={18} /> Send tilbakemelding
+              </button>
+              <button type="button" className="button button--secondary" onClick={() => { setFeedbackMessage(""); setSheet("bug"); }}>
+                <Bug aria-hidden="true" size={18} /> Rapporter feil
+              </button>
+            </div>
+            {feedbackMessage ? <p className="home-feedback-success" role="status">{feedbackMessage}</p> : null}
+          </Card>
+        </section>
+      </PageContainer>
+      {sheet ? <FeedbackSheet type={sheet} version={appVersion} onCancel={() => setSheet(null)} onSent={(message) => { setSheet(null); setFeedbackMessage(message); }} /> : null}
+    </AppShell>
   );
 }
 
-function DashboardStatusCard({
-  status,
-  message,
-  onRetry
-}: {
-  status: DashboardStatus;
-  message: string;
-  onRetry: () => void;
-}) {
-  if (status === "loading") {
-    return (
-      <Card className="dashboard-status" tone="default">
-        <EmptyState title="Loading your dashboard" description={message} />
-      </Card>
-    );
-  }
-
-  if (status === "unauthorized") {
-    return (
-      <Card className="dashboard-status" tone="default">
-        <EmptyState title="Please sign in again" description={message} />
-        <Link className="button button--primary" href="/login">
-          Go to login
-        </Link>
-      </Card>
-    );
-  }
-
-  if (status === "no-family") {
-    return (
-      <Card className="dashboard-status" tone="default">
-        <EmptyState title="Create your first family" description={message} />
-        <Link className="button button--primary" href="/onboarding/create-family">
-          Create family
-        </Link>
-      </Card>
-    );
-  }
-
+export default function DashboardPage() {
   return (
-    <Card className="dashboard-status" tone="default">
-      <EmptyState title="Dashboard could not load" description={message} />
-      <Button variant="primary" onClick={onRetry}>
-        Try again
-      </Button>
-    </Card>
+    <CalendarProvider>
+      <HomeContent />
+    </CalendarProvider>
   );
 }
 
-function formatRole(role: string): string {
-  return role.charAt(0) + role.slice(1).toLowerCase();
+function getFirstName(displayName?: string) {
+  return displayName?.trim().split(/\s+/)[0] || "familien";
 }
 
-function formatTaskAssignee(assignedFamilyMemberId: string | null, members: FamilyDashboardResponse["members"]): string {
-  if (!assignedFamilyMemberId) {
-    return "Anyone";
-  }
-
-  return members.find((member) => member.id === assignedFamilyMemberId)?.displayName ?? "Familieoppgave";
+function formatToday(date: string) {
+  const [year, month, day] = date.split("-").map(Number);
+  return new Intl.DateTimeFormat("nb-NO", { weekday: "long", day: "numeric", month: "long", year: "numeric" }).format(new Date(year, month - 1, day));
 }
 
-function formatShoppingSummary(uncheckedCount: number): string {
-  return `${uncheckedCount} item${uncheckedCount === 1 ? "" : "s"} remaining`;
-}
-
-
-function formatDinner(mealName: string): string {
-  const lowerMealName = mealName.toLowerCase();
-
-  if (lowerMealName.includes("taco")) {
-    return `${mealName} 🌮`;
-  }
-
-  if (lowerMealName.includes("pizza")) {
-    return `${mealName} 🍕`;
-  }
-
-  if (lowerMealName.includes("pasta") || lowerMealName.includes("spaghetti")) {
-    return `${mealName} 🍝`;
-  }
-
-  return mealName;
-}
-
-
-function formatEventTime(event: FamilyDashboardResponse["todayEvents"][number]): string {
-  if (event.allDay) {
-    return "All day";
-  }
-
-  return new Intl.DateTimeFormat(undefined, { hour: "2-digit", minute: "2-digit" }).format(new Date(event.startsAt));
-}
-
-function formatEventParticipants(event: FamilyDashboardResponse["todayEvents"][number]): string {
-  if (!event.participants.length) {
-    return event.location ?? "Whole family";
-  }
-
-  const participantNames = event.participants.map((participant) => participant.familyMember.displayName).join(", ");
-
-  return event.location ? `${participantNames} · ${event.location}` : participantNames;
+function formatShoppingCount(count: number) {
+  return `${count} ${count === 1 ? "vare" : "varer"} mangler`;
 }
