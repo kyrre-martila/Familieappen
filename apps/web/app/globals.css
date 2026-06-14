@@ -5728,6 +5728,31 @@ button.calendar-chip {
   line-height: 1.15;
 }
 
+.calendar-list-day__date-button {
+  appearance: none;
+  border: 0;
+  border-radius: var(--radius-m);
+  margin: calc(var(--space-xs) * -0.75);
+  padding: calc(var(--space-xs) * 0.75);
+  background: transparent;
+  color: inherit;
+  cursor: pointer;
+  font: inherit;
+  letter-spacing: inherit;
+  line-height: inherit;
+  text-align: left;
+  text-decoration: underline;
+  text-decoration-color: color-mix(in srgb, var(--color-primary) 42%, transparent);
+  text-decoration-thickness: 0.08em;
+  text-underline-offset: 0.18em;
+}
+
+.calendar-list-day__date-button:is(:hover, :focus-visible) {
+  background: var(--color-primary-soft);
+  color: var(--color-primary-strong);
+  text-decoration-color: currentColor;
+}
+
 .calendar-list-day__today {
   flex: 0 0 auto;
   border-radius: var(--radius-pill);
