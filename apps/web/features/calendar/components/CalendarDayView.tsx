@@ -10,8 +10,12 @@ import { formatSelectedDate } from "./calendarFormatters";
 
 export function CalendarDayView({
   selectedDate,
+  emptyDescription = "Denne dagen er rolig foreløpig.",
+  emptyTitle = "Ingen hendelser",
   showChips = true,
 }: {
+  emptyDescription?: string;
+  emptyTitle?: string;
   selectedDate: string;
   showChips?: boolean;
 }) {
@@ -43,8 +47,8 @@ export function CalendarDayView({
           ))
         ) : (
           <CalendarEmptyState
-            title="Ingen hendelser"
-            description="Denne dagen er rolig foreløpig."
+            title={emptyTitle}
+            description={emptyDescription}
           />
         )}
       </div>
