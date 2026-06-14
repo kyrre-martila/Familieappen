@@ -100,6 +100,10 @@ export function clearFamilyCache(): void {
   resetFamilyCache();
 }
 
+export function forceFamilyBootstrapRestart(): void {
+  resetFamilyCache();
+}
+
 export function chooseActiveFamily(familyId: string): string {
   clearFamilyCache();
   setActiveFamilyId(familyId);
