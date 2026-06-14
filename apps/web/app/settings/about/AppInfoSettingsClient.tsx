@@ -50,7 +50,7 @@ function AppInfoRow({ description, icon, label, onClick, value }: AppInfoRowProp
   );
 }
 
-function FeedbackSheet({ type, version, onCancel, onSent }: { type: FeedbackType; version: string; onCancel: () => void; onSent: (message: string) => void }) {
+export function FeedbackSheet({ type, version, onCancel, onSent }: { type: FeedbackType; version: string; onCancel: () => void; onSent: (message: string) => void }) {
   const [message, setMessage] = useState("");
   const [status, setStatus] = useState<"idle" | "sending" | "sent" | "error">("idle");
   const [error, setError] = useState("");

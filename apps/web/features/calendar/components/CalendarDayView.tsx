@@ -8,7 +8,13 @@ import { CalendarEmptyState } from "./CalendarEmptyState";
 import { CalendarEventCard } from "./CalendarEventCard";
 import { formatSelectedDate } from "./calendarFormatters";
 
-export function CalendarDayView({ selectedDate }: { selectedDate: string }) {
+export function CalendarDayView({
+  selectedDate,
+  showChips = true,
+}: {
+  selectedDate: string;
+  showChips?: boolean;
+}) {
   const { ensureSchoolWeeksForRange, events: calendarEvents } = useCalendar();
   useEffect(() => {
     void ensureSchoolWeeksForRange(selectedDate, selectedDate);
@@ -26,7 +32,7 @@ export function CalendarDayView({ selectedDate }: { selectedDate: string }) {
       <h2 className="calendar-day-view__date" id="calendar-selected-date">
         {formatSelectedDate(selectedDate)}
       </h2>
-      <CalendarDayChips selectedDate={selectedDate} />
+      {showChips ? <CalendarDayChips selectedDate={selectedDate} /> : null}
       <div
         className="calendar-event-list"
         aria-label="Hendelser for valgt dato"
