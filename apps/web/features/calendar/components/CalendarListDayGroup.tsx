@@ -1,5 +1,7 @@
 "use client";
 
+import Link from "next/link";
+
 import { CalendarEventCard } from "./CalendarEventCard";
 import { CalendarMealChip } from "./CalendarMealChip";
 import { CalendarReminderChip } from "./CalendarReminderChip";
@@ -29,14 +31,14 @@ export function CalendarListDayGroup({
     >
       <div className="calendar-list-day__header">
         <h3 className="calendar-list-day__title" id={headingId}>
-          <button
+          <Link
             className="calendar-list-day__date-button"
-            type="button"
+            href={`/calendar?view=day&date=${group.date}`}
             aria-label={`Åpne dagvisning for ${formatListDate(group.date)}`}
             onClick={() => onOpenDay(group.date)}
           >
             {formatListDate(group.date)}
-          </button>
+          </Link>
         </h3>
         {group.date === today ? (
           <span className="calendar-list-day__today">I dag</span>
