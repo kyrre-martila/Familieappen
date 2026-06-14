@@ -23,6 +23,7 @@ import {
 } from "../lib/auth-family";
 
 const FAMILY_ACCESS_LOADING_TIMEOUT_MS = 20_000;
+const FAMILY_ACCESS_DEBUG_AUTO_SHOW_MS = 3_000;
 const PWA_RESUME_RETRY_THROTTLE_MS = 5_000;
 
 type FamilyAccessState =
@@ -231,29 +232,53 @@ function getFamilyAccessStateFromCache(): FamilyAccessState {
   return { status: "loading", familyContext: null };
 }
 
-function useShowTemporaryFamilyAccessDebugPanel(): boolean {
-  const [enabled, setEnabled] = useState(
-    () => process.env.NODE_ENV === "development",
+function hasFamilyAccessDebugQueryParam(): boolean {
+  if (typeof window === "undefined") {
+    return false;
+  }
+
+  return (
+    new URLSearchParams(window.location.search).get("debugFamilyAccess") === "1"
   );
+}
+
+function useShowTemporaryFamilyAccessDebugPanel(
+  access: FamilyAccessHookState,
+): boolean {
+  const [queryEnabled, setQueryEnabled] = useState(() =>
+    hasFamilyAccessDebugQueryParam(),
+  );
+  const [loadingTimedOut, setLoadingTimedOut] = useState(false);
 
   useEffect(() => {
-    if (process.env.NODE_ENV === "development") {
+    setQueryEnabled(hasFamilyAccessDebugQueryParam());
+  }, []);
+
+  useEffect(() => {
+    if (access.status !== "loading") {
+      setLoadingTimedOut(false);
       return;
     }
 
-    setEnabled(
-      new URLSearchParams(window.location.search).get("debugFamilyAccess") ===
-        "1",
-    );
-  }, []);
+    if (queryEnabled) {
+      return;
+    }
 
-  return enabled;
+    const timeout = window.setTimeout(
+      () => setLoadingTimedOut(true),
+      FAMILY_ACCESS_DEBUG_AUTO_SHOW_MS,
+    );
+
+    return () => window.clearTimeout(timeout);
+  }, [access.status, queryEnabled, access.retryKey]);
+
+  return access.status === "error" || queryEnabled || loadingTimedOut;
 }
 
 export function ProtectedFamilyRoute({ children }: { children: ReactNode }) {
   const access = useFamilyAccess();
   const pathname = usePathname();
-  const showDebugPanel = useShowTemporaryFamilyAccessDebugPanel();
+  const showDebugPanel = useShowTemporaryFamilyAccessDebugPanel(access);
 
   if (access.status === "approved") {
     return <>{children}</>;
@@ -351,10 +376,12 @@ function TemporaryFamilyAccessDebugPanel({
       bootstrapDebug.lastBootstrapErrorMessage ?? "none",
     ],
     ["bootstrapInFlight", String(bootstrapDebug.bootstrapInFlight)],
-    ["retryKey", String(access.retryKey)],
+    ["retryKey / attempt count", String(access.retryKey)],
     [
-      "currentLoadingMs",
-      loadingDurationMs === null ? "not loading" : String(loadingDurationMs),
+      "seconds in loading state",
+      loadingDurationMs === null
+        ? "not loading"
+        : String(Math.floor(loadingDurationMs / 1_000)),
     ],
   ];
 
@@ -373,7 +400,7 @@ function TemporaryFamilyAccessDebugPanel({
         overflowWrap: "anywhere",
       }}
     >
-      <strong>Temporary family access diagnostics</strong>
+      <strong>Midlertidig feilsøking</strong>
       <dl style={{ margin: "0.5rem 0 0", display: "grid", gap: "0.25rem" }}>
         {rows.map(([label, value]) => (
           <div key={label} style={{ display: "grid", gap: "0.125rem" }}>
