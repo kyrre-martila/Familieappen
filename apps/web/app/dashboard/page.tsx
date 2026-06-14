@@ -69,7 +69,7 @@ function HomeContent() {
 
   if (familyAccess.status !== "approved") {
     return (
-      <AppShell title="Hjem">
+      <AppShell title="Hjem" hideTitleRow>
         <PageContainer>
           <Card tone="default">
             <EmptyState title="Sjekker familietilgang" description="Vent litt mens vi bekrefter familietilknytningen din." />
@@ -80,7 +80,7 @@ function HomeContent() {
   }
 
   return (
-    <AppShell title="Hjem">
+    <AppShell title="Hjem" hideTitleRow>
       <PageContainer>
         <section className="home-dashboard" aria-label="Familiens oversikt for i dag">
           <Card className="home-card home-card--today home-card--calendar" tone="warm">

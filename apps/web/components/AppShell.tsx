@@ -177,10 +177,12 @@ export function AppShell({
   children,
   title,
   titleAction,
+  hideTitleRow = false,
 }: Readonly<{
   children: React.ReactNode;
   title: string;
   titleAction?: React.ReactNode;
+  hideTitleRow?: boolean;
 }>) {
   const pathname = usePathname();
   const search = useCurrentSearch(pathname);
@@ -224,7 +226,7 @@ export function AppShell({
           <ProfileMenu profile={profile} />
         </header>
       ) : null}
-      {!isFocus ? (
+      {!isFocus && !hideTitleRow ? (
         <div className="app-shell__title-row">
           <h1 className="app-shell__title">{title}</h1>
           {titleAction ? (
