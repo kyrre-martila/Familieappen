@@ -7,6 +7,7 @@ import {
   ChevronLeft,
   ChevronRight,
   CircleUserRound,
+  Camera,
   KeyRound,
   LogOut,
   Mail,
@@ -62,6 +63,25 @@ function ProfileAvatar({ profile }: { profile: Profile }) {
     <div className="profile-settings__avatar-wrap">
       <UserAvatar identity={profile} avatarUrl={profile.avatarUrl} size="xl" className="profile-settings__avatar" />
     </div>
+  );
+}
+
+function ProfileAvatarToggle({ expanded, profile, onClick }: { expanded: boolean; profile: Profile; onClick: () => void }) {
+  return (
+    <button
+      className="profile-settings__avatar-button"
+      type="button"
+      aria-expanded={expanded}
+      aria-controls="profile-picture-section"
+      aria-label={expanded ? "Skjul valg for profilbilde" : "Vis valg for profilbilde"}
+      onClick={onClick}
+    >
+      <ProfileAvatar profile={profile} />
+      <span className="profile-settings__avatar-edit" aria-hidden="true">
+        <Camera />
+      </span>
+      <span className="profile-settings__avatar-hint">Endre bilde</span>
+    </button>
   );
 }
 
@@ -361,6 +381,7 @@ export function ProfileSettingsClient() {
   const [isDeleteSheetOpen, setIsDeleteSheetOpen] = useState(false);
   const [deleteError, setDeleteError] = useState("");
   const [isDeletingAccount, setIsDeletingAccount] = useState(false);
+  const [isAvatarSectionOpen, setIsAvatarSectionOpen] = useState(false);
 
   const loadProfile = useCallback(async () => {
     setIsLoading(true);
@@ -531,7 +552,7 @@ export function ProfileSettingsClient() {
         ) : null}
         {!isLoading && profile ? (
           <div className="profile-settings__identity">
-            <ProfileAvatar profile={profile} />
+            <ProfileAvatarToggle expanded={isAvatarSectionOpen} profile={profile} onClick={() => setIsAvatarSectionOpen((isOpen) => !isOpen)} />
             <p className="profile-settings__name">{profile.displayName || profile.name}</p>
             <p className="profile-settings__email">{profile.email}</p>
           </div>
@@ -542,37 +563,45 @@ export function ProfileSettingsClient() {
 
       {profile ? (
         <>
-          <SettingsSection title="Profilbilde">
-            <SettingsCard>
-              <div className="profile-settings-picture">
-                <ProfileAvatar profile={profile} />
-                <div className="profile-settings-picture__actions">
-                  <button className="profile-edit-sheet__button profile-edit-sheet__button--primary" type="button" onClick={() => avatarInputRef.current?.click()} disabled={isAvatarSaving}>Endre bilde</button>
-                  {profile.avatarUrl ? <button className="profile-edit-sheet__button profile-edit-sheet__button--secondary" type="button" onClick={() => void removeAvatar()} disabled={isAvatarSaving}>Fjern bilde</button> : null}
-                </div>
-                <input ref={avatarInputRef} accept="image/*,.heic,.heif" className="sr-only" type="file" onChange={handleAvatarSelected} />
-                {avatarError ? <p className="profile-edit-sheet__error" role="alert">{avatarError}</p> : null}
+          {isAvatarSectionOpen ? (
+            <SettingsSection title="Profilbilde">
+              <div id="profile-picture-section">
+                <SettingsCard>
+                  <div className="profile-settings-picture">
+                    <ProfileAvatar profile={profile} />
+                    <div className="profile-settings-picture__actions">
+                      <button className="profile-edit-sheet__button profile-edit-sheet__button--primary" type="button" onClick={() => avatarInputRef.current?.click()} disabled={isAvatarSaving}>Endre bilde</button>
+                      {profile.avatarUrl ? <button className="profile-edit-sheet__button profile-edit-sheet__button--secondary" type="button" onClick={() => void removeAvatar()} disabled={isAvatarSaving}>Fjern bilde</button> : null}
+                    </div>
+                    <input ref={avatarInputRef} accept="image/*,.heic,.heif" className="sr-only" type="file" onChange={handleAvatarSelected} />
+                    {avatarError ? <p className="profile-edit-sheet__error" role="alert">{avatarError}</p> : null}
+                  </div>
+                </SettingsCard>
               </div>
-            </SettingsCard>
-          </SettingsSection>
+            </SettingsSection>
+          ) : null}
 
-          <SettingsSection title="Profilinformasjon">
-            <SettingsCard>
-              <EditableProfileRow field="firstName" icon={<CircleUserRound />} label="Fornavn" value={profile.firstName} onEdit={(field) => { setSaveError(""); setEditingField(field); }} />
-              <EditableProfileRow field="middleName" icon={<CircleUserRound />} label="Mellomnavn" value={profile.middleName ?? ""} onEdit={(field) => { setSaveError(""); setEditingField(field); }} />
-              <EditableProfileRow field="lastName" icon={<CircleUserRound />} label="Etternavn" value={profile.lastName} onEdit={(field) => { setSaveError(""); setEditingField(field); }} />
-              <EditableProfileRow field="email" icon={<Mail />} label="E-post" value={profile.email} onEdit={(field) => { setSaveError(""); setEditingField(field); }} />
-              <EditableProfileRow field="phone" icon={<Phone />} label="Telefon" value={profile.phone ?? ""} onEdit={(field) => { setSaveError(""); setEditingField(field); }} />
-            </SettingsCard>
-          </SettingsSection>
+          <div className="profile-settings__compact-section">
+            <SettingsSection title="Profilinformasjon">
+              <SettingsCard>
+                <EditableProfileRow field="firstName" icon={<CircleUserRound />} label="Fornavn" value={profile.firstName} onEdit={(field) => { setSaveError(""); setEditingField(field); }} />
+                <EditableProfileRow field="middleName" icon={<CircleUserRound />} label="Mellomnavn" value={profile.middleName ?? ""} onEdit={(field) => { setSaveError(""); setEditingField(field); }} />
+                <EditableProfileRow field="lastName" icon={<CircleUserRound />} label="Etternavn" value={profile.lastName} onEdit={(field) => { setSaveError(""); setEditingField(field); }} />
+                <EditableProfileRow field="email" icon={<Mail />} label="E-post" value={profile.email} onEdit={(field) => { setSaveError(""); setEditingField(field); }} />
+                <EditableProfileRow field="phone" icon={<Phone />} label="Telefon" value={profile.phone ?? ""} onEdit={(field) => { setSaveError(""); setEditingField(field); }} />
+              </SettingsCard>
+            </SettingsSection>
+          </div>
 
-          <SettingsSection title="Konto">
-            <SettingsCard>
-              <AccountRow icon={<KeyRound />} label="Endre passord" onClick={openPasswordSheet} />
-              <AccountRow icon={<Trash2 />} label="Slett konto" onClick={openDeleteSheet} destructive />
-              <AccountRow icon={<LogOut />} label="Logg ut" onClick={handleLogout} />
-            </SettingsCard>
-          </SettingsSection>
+          <div className="profile-settings__compact-section">
+            <SettingsSection title="Konto">
+              <SettingsCard>
+                <AccountRow icon={<KeyRound />} label="Endre passord" onClick={openPasswordSheet} />
+                <AccountRow icon={<Trash2 />} label="Slett konto" onClick={openDeleteSheet} destructive />
+                <AccountRow icon={<LogOut />} label="Logg ut" onClick={handleLogout} />
+              </SettingsCard>
+            </SettingsSection>
+          </div>
 
           <EditSheet field={editingField} profile={profile} error={saveError} isSaving={isSaving} onCancel={() => setEditingField(null)} onSave={saveProfile} />
           <ProfileImageCropper file={selectedAvatarFile} error={avatarError} isSaving={isAvatarSaving} onCancel={() => setSelectedAvatarFile(null)} onConfirm={(file) => void saveAvatar(file)} />
