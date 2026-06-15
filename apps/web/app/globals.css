@@ -1027,10 +1027,15 @@ select {
 }
 
 .form-message--success {
-  border: 1px solid color-mix(in srgb, var(--color-primary) 35%, var(--color-border));
+  border: 1px solid
+    color-mix(in srgb, var(--color-primary) 35%, var(--color-border));
   border-radius: var(--radius-m);
   padding: var(--space-s);
-  background: color-mix(in srgb, var(--color-primary) 10%, var(--color-surface));
+  background: color-mix(
+    in srgb,
+    var(--color-primary) 10%,
+    var(--color-surface)
+  );
   color: var(--color-text);
 }
 
@@ -4422,7 +4427,9 @@ select {
   pointer-events: none;
   transform: translateY(calc(var(--space-xs) * -0.75)) scale(0.98);
   transform-origin: top right;
-  transition: opacity 160ms ease, transform 160ms ease;
+  transition:
+    opacity 160ms ease,
+    transform 160ms ease;
 }
 
 .profile-action-menu--open {
@@ -5446,7 +5453,8 @@ button.calendar-chip {
 
 .calendar-chip__avatar {
   border-color: color-mix(in srgb, var(--color-surface) 92%, transparent);
-  box-shadow: 0 0 0 1px color-mix(in srgb, var(--color-primary) 10%, transparent);
+  box-shadow: 0 0 0 1px
+    color-mix(in srgb, var(--color-primary) 10%, transparent);
 }
 
 .calendar-chip__avatar + .calendar-chip__avatar {
@@ -6864,7 +6872,10 @@ button.calendar-chip {
   gap: var(--space-s);
   border-top: 1px solid var(--color-border);
   padding: var(--space-m) var(--space-m)
-    calc(var(--app-bottom-nav-height, 88px) + env(safe-area-inset-bottom) + var(--space-m));
+    calc(
+      var(--app-bottom-nav-height, 88px) + env(safe-area-inset-bottom) +
+        var(--space-m)
+    );
   background: color-mix(
     in srgb,
     var(--color-surface) 94%,
@@ -8161,7 +8172,11 @@ button.calendar-chip {
   border: 1px solid color-mix(in srgb, var(--color-warning) 35%, transparent);
   border-radius: var(--radius-l);
   padding: var(--space-s) var(--space-m);
-  background: color-mix(in srgb, var(--color-warning) 10%, var(--color-surface));
+  background: color-mix(
+    in srgb,
+    var(--color-warning) 10%,
+    var(--color-surface)
+  );
   color: var(--color-text);
   font-size: var(--text-small);
   font-weight: 760;
@@ -8935,7 +8950,8 @@ button.calendar-chip {
 .husk-school-item__tap-target:focus-visible,
 .husk-school-item__menu:focus-visible,
 .husk-school-item__menu-popover button:focus-visible {
-  outline: 2px solid color-mix(in srgb, var(--husk-school-item-accent) 38%, transparent);
+  outline: 2px solid
+    color-mix(in srgb, var(--husk-school-item-accent) 38%, transparent);
   outline-offset: 2px;
 }
 
@@ -9246,7 +9262,10 @@ button.calendar-chip {
   gap: var(--space-s);
   border-top: 1px solid var(--color-border);
   padding: var(--space-m) var(--space-m)
-    calc(var(--app-bottom-nav-height, 88px) + env(safe-area-inset-bottom) + var(--space-m));
+    calc(
+      var(--app-bottom-nav-height, 88px) + env(safe-area-inset-bottom) +
+        var(--space-m)
+    );
   background: color-mix(
     in srgb,
     var(--color-surface) 94%,
@@ -9283,7 +9302,10 @@ button.calendar-chip {
 }
 
 .husk-school-sheet__panel--choice {
-  padding-bottom: calc(var(--app-bottom-nav-height, 88px) + env(safe-area-inset-bottom) + var(--space-m));
+  padding-bottom: calc(
+    var(--app-bottom-nav-height, 88px) + env(safe-area-inset-bottom) +
+      var(--space-m)
+  );
 }
 
 .husk-school-choice__intro {
@@ -10542,7 +10564,8 @@ button.calendar-chip {
   align-items: center;
   justify-content: center;
   gap: var(--space-xs);
-  border: 1px solid color-mix(in srgb, var(--color-primary) 54%, var(--color-border));
+  border: 1px solid
+    color-mix(in srgb, var(--color-primary) 54%, var(--color-border));
   border-radius: var(--radius-pill);
   padding: var(--space-xs) var(--space-m);
   background: color-mix(in srgb, var(--color-surface) 94%, transparent);
@@ -10641,16 +10664,25 @@ button.calendar-chip {
   box-shadow: 0 var(--space-s) var(--space-l)
     color-mix(in srgb, var(--color-text) 6%, transparent);
   outline: none;
-  transition: border-color 160ms ease, box-shadow 160ms ease, opacity 160ms ease;
+  transition:
+    border-color 160ms ease,
+    box-shadow 160ms ease,
+    opacity 160ms ease;
 }
 
 .wishlist-card--move-mode {
-  grid-template-columns: calc(var(--space-xl) + var(--space-xs)) calc(var(--space-xl) * 2.15) minmax(0, 1fr);
+  grid-template-columns: calc(var(--space-xl) + var(--space-xs)) calc(
+      var(--space-xl) * 2.15
+    ) minmax(0, 1fr);
   padding-right: var(--space-m);
 }
 
 .wishlist-card--dragging {
-  border-color: color-mix(in srgb, var(--color-primary) 34%, var(--color-border));
+  border-color: color-mix(
+    in srgb,
+    var(--color-primary) 34%,
+    var(--color-border)
+  );
   box-shadow: 0 var(--space-s) var(--space-l)
     color-mix(in srgb, var(--color-primary) 10%, transparent);
   opacity: 0.92;
@@ -10658,7 +10690,11 @@ button.calendar-chip {
 
 .wishlist-card:focus-visible,
 .wishlist-card:focus-within {
-  border-color: color-mix(in srgb, var(--color-primary) 48%, var(--color-border));
+  border-color: color-mix(
+    in srgb,
+    var(--color-primary) 48%,
+    var(--color-border)
+  );
   box-shadow:
     0 0 0 3px var(--color-primary-soft),
     0 var(--space-s) var(--space-l)
@@ -10672,7 +10708,11 @@ button.calendar-chip {
   place-items: center;
   overflow: hidden;
   border-radius: calc(var(--radius-l) - var(--space-xs));
-  background: linear-gradient(145deg, var(--color-primary-soft), var(--color-surface));
+  background: linear-gradient(
+    145deg,
+    var(--color-primary-soft),
+    var(--color-surface)
+  );
   color: var(--color-primary);
 }
 
@@ -10683,7 +10723,11 @@ button.calendar-chip {
 }
 
 .wishlist-card__media--icon {
-  background: color-mix(in srgb, var(--color-primary-soft) 70%, var(--color-surface));
+  background: color-mix(
+    in srgb,
+    var(--color-primary-soft) 70%,
+    var(--color-surface)
+  );
 }
 
 .wishlist-card__emoji {
@@ -10770,7 +10814,11 @@ button.calendar-chip {
   place-items: center;
   border: 0;
   border-radius: var(--radius-pill);
-  background: color-mix(in srgb, var(--color-primary-soft) 38%, var(--color-surface));
+  background: color-mix(
+    in srgb,
+    var(--color-primary-soft) 38%,
+    var(--color-surface)
+  );
   color: var(--color-muted);
   cursor: grab;
   touch-action: none;
@@ -10837,7 +10885,8 @@ button.calendar-chip {
 
 .wishlist-move-note {
   width: fit-content;
-  border: 1px solid color-mix(in srgb, var(--color-primary) 18%, var(--color-border));
+  border: 1px solid
+    color-mix(in srgb, var(--color-primary) 18%, var(--color-border));
   border-radius: var(--radius-pill);
   padding: var(--space-xs) var(--space-s);
   background: color-mix(in srgb, var(--color-primary-soft) 38%, transparent);
@@ -10902,7 +10951,12 @@ button.calendar-chip {
   position: absolute;
   inset: 0;
   transform: translateX(-100%);
-  background: linear-gradient(90deg, transparent, color-mix(in srgb, white 54%, transparent), transparent);
+  background: linear-gradient(
+    90deg,
+    transparent,
+    color-mix(in srgb, white 54%, transparent),
+    transparent
+  );
   animation: wishlist-skeleton-shimmer 1.4s infinite;
 }
 
@@ -10934,7 +10988,9 @@ button.calendar-chip {
   }
 
   .wishlist-card--move-mode {
-    grid-template-columns: calc(var(--space-xl) + var(--space-xs)) calc(var(--space-xl) * 1.8) minmax(0, 1fr);
+    grid-template-columns: calc(var(--space-xl) + var(--space-xs)) calc(
+        var(--space-xl) * 1.8
+      ) minmax(0, 1fr);
   }
 
   .wishlist-card__media {
@@ -10955,7 +11011,8 @@ button.calendar-chip {
   z-index: 20;
   margin: 0;
   transform: translateY(var(--space-m));
-  border: 1px solid color-mix(in srgb, var(--color-primary) 26%, var(--color-border));
+  border: 1px solid
+    color-mix(in srgb, var(--color-primary) 26%, var(--color-border));
   border-radius: var(--radius-pill);
   padding: var(--space-s) var(--space-m);
   background: color-mix(in srgb, var(--color-surface) 96%, transparent);
@@ -10964,7 +11021,9 @@ button.calendar-chip {
   opacity: 0;
   pointer-events: none;
   box-shadow: var(--shadow-soft);
-  transition: opacity 180ms ease, transform 180ms ease;
+  transition:
+    opacity 180ms ease,
+    transform 180ms ease;
 }
 
 .wishlist-toast--visible {
@@ -11009,7 +11068,8 @@ button.calendar-chip {
   margin: 0 auto;
   grid-template-columns: 1fr auto 1fr;
   align-items: center;
-  padding: calc(var(--space-m) + env(safe-area-inset-top)) var(--gutter) var(--space-m);
+  padding: calc(var(--space-m) + env(safe-area-inset-top)) var(--gutter)
+    var(--space-m);
   background: color-mix(in srgb, #fffdf9 90%, transparent);
   backdrop-filter: blur(16px);
 }
@@ -11041,7 +11101,8 @@ button.calendar-chip {
   width: min(100%, var(--page-width));
   margin: 0 auto;
   gap: var(--space-m);
-  padding: var(--space-s) var(--gutter) calc(var(--space-xl) + env(safe-area-inset-bottom));
+  padding: var(--space-s) var(--gutter)
+    calc(var(--space-xl) + env(safe-area-inset-bottom));
 }
 
 .wishlist-form--loading {
@@ -11080,12 +11141,17 @@ button.calendar-chip {
   cursor: pointer;
   font-size: var(--text-body);
   font-weight: 850;
-  box-shadow: 0 var(--space-s) var(--space-xl) color-mix(in srgb, var(--color-text) 5%, transparent);
+  box-shadow: 0 var(--space-s) var(--space-xl)
+    color-mix(in srgb, var(--color-text) 5%, transparent);
 }
 
 .wishlist-form-media-card--image {
   border-style: dashed;
-  border-color: color-mix(in srgb, var(--color-accent) 48%, var(--color-border));
+  border-color: color-mix(
+    in srgb,
+    var(--color-accent) 48%,
+    var(--color-border)
+  );
 }
 
 .wishlist-form-media-card small {
@@ -11101,7 +11167,11 @@ button.calendar-chip {
   place-items: center;
   overflow: hidden;
   border-radius: var(--radius-pill);
-  background: color-mix(in srgb, var(--color-accent-soft) 82%, var(--color-surface));
+  background: color-mix(
+    in srgb,
+    var(--color-accent-soft) 82%,
+    var(--color-surface)
+  );
   color: color-mix(in srgb, var(--color-accent) 74%, var(--color-primary));
   font-size: clamp(2rem, 8vw, 2.8rem);
   line-height: 1;
@@ -11114,7 +11184,11 @@ button.calendar-chip {
 }
 
 .wishlist-form-media-card__preview--icon {
-  background: radial-gradient(circle, var(--color-accent-soft), color-mix(in srgb, var(--color-accent-soft) 46%, var(--color-surface)));
+  background: radial-gradient(
+    circle,
+    var(--color-accent-soft),
+    color-mix(in srgb, var(--color-accent-soft) 46%, var(--color-surface))
+  );
 }
 
 .wishlist-form-file-input {
@@ -11148,7 +11222,11 @@ button.calendar-chip {
 }
 
 .wishlist-form-icon-option[aria-pressed="true"] {
-  border-color: color-mix(in srgb, var(--color-accent) 48%, var(--color-border));
+  border-color: color-mix(
+    in srgb,
+    var(--color-accent) 48%,
+    var(--color-border)
+  );
   background: var(--color-accent-soft);
 }
 
@@ -11175,7 +11253,8 @@ button.calendar-chip {
   font: inherit;
   font-weight: 760;
   outline: none;
-  box-shadow: inset 0 1px 0 color-mix(in srgb, var(--color-surface) 80%, transparent);
+  box-shadow: inset 0 1px 0
+    color-mix(in srgb, var(--color-surface) 80%, transparent);
 }
 
 .wishlist-form-input::placeholder {
@@ -11183,7 +11262,11 @@ button.calendar-chip {
 }
 
 .wishlist-form-input:focus {
-  border-color: color-mix(in srgb, var(--color-primary) 48%, var(--color-border));
+  border-color: color-mix(
+    in srgb,
+    var(--color-primary) 48%,
+    var(--color-border)
+  );
   box-shadow: 0 0 0 3px var(--color-primary-soft);
 }
 
@@ -11258,9 +11341,14 @@ button.calendar-chip {
 
 .wishlist-form-button--primary {
   border: 1px solid var(--color-primary);
-  background: linear-gradient(135deg, var(--color-primary), var(--color-primary-strong));
+  background: linear-gradient(
+    135deg,
+    var(--color-primary),
+    var(--color-primary-strong)
+  );
   color: var(--color-surface);
-  box-shadow: 0 var(--space-s) var(--space-l) color-mix(in srgb, var(--color-primary) 18%, transparent);
+  box-shadow: 0 var(--space-s) var(--space-l)
+    color-mix(in srgb, var(--color-primary) 18%, transparent);
 }
 
 .wishlist-form-button:disabled,
@@ -11328,12 +11416,19 @@ button.calendar-chip {
   color: var(--color-text);
   box-shadow: 0 var(--space-s) var(--space-l)
     color-mix(in srgb, var(--color-text) 5%, transparent);
-  transition: border-color 160ms ease, box-shadow 160ms ease, transform 160ms ease;
+  transition:
+    border-color 160ms ease,
+    box-shadow 160ms ease,
+    transform 160ms ease;
 }
 
 .wishlist-shared-card:hover,
 .wishlist-shared-card:focus-visible {
-  border-color: color-mix(in srgb, var(--color-primary) 38%, var(--color-border));
+  border-color: color-mix(
+    in srgb,
+    var(--color-primary) 38%,
+    var(--color-border)
+  );
   box-shadow:
     0 0 0 3px var(--color-primary-soft),
     0 var(--space-s) var(--space-l)
@@ -11395,7 +11490,10 @@ button.calendar-chip {
 }
 
 .wishlist-card--readonly {
-  grid-template-columns: calc(var(--space-xl) * 2.15) minmax(0, 1fr) minmax(calc(var(--space-xl) * 1.65), auto);
+  grid-template-columns: calc(var(--space-xl) * 2.15) minmax(0, 1fr) minmax(
+      calc(var(--space-xl) * 1.65),
+      auto
+    );
 }
 
 .wishlist-card__future-action {
@@ -11439,7 +11537,8 @@ button.calendar-chip {
 
 .wishlist-reservation-button {
   min-height: calc(var(--space-xl) + var(--space-xs));
-  border: 1px solid color-mix(in srgb, var(--color-primary) 58%, var(--color-border));
+  border: 1px solid
+    color-mix(in srgb, var(--color-primary) 58%, var(--color-border));
   padding: var(--space-xs) var(--space-m);
 }
 
@@ -11462,7 +11561,11 @@ button.calendar-chip {
   gap: calc(var(--space-xs) * 0.65);
   border-radius: var(--radius-pill);
   padding: var(--space-xs) var(--space-s);
-  background: color-mix(in srgb, var(--color-primary-soft) 72%, var(--color-surface));
+  background: color-mix(
+    in srgb,
+    var(--color-primary-soft) 72%,
+    var(--color-surface)
+  );
   color: var(--color-primary-strong);
   font-size: var(--text-small);
   font-weight: 860;
@@ -11514,7 +11617,8 @@ button.calendar-chip {
   border-radius: var(--radius-l) var(--radius-l) 0 0;
   max-height: calc(100dvh - env(safe-area-inset-top) - var(--space-l));
   overflow: auto;
-  padding: var(--space-l) var(--gutter) calc(var(--space-l) + env(safe-area-inset-bottom));
+  padding: var(--space-l) var(--gutter)
+    calc(var(--space-l) + env(safe-area-inset-bottom));
   background: color-mix(in srgb, var(--color-surface) 98%, transparent);
   overscroll-behavior: contain;
   box-shadow: var(--shadow-floating);
@@ -11561,14 +11665,19 @@ button.calendar-chip {
 }
 
 .wishlist-reserve-sheet__button--ghost {
-  border: 1px solid color-mix(in srgb, var(--color-border) 88%, var(--color-muted));
+  border: 1px solid
+    color-mix(in srgb, var(--color-border) 88%, var(--color-muted));
   background: var(--color-surface);
   color: var(--color-text);
 }
 
 .wishlist-reserve-sheet__button--primary {
   border: 1px solid var(--color-primary);
-  background: linear-gradient(135deg, var(--color-primary), var(--color-primary-strong));
+  background: linear-gradient(
+    135deg,
+    var(--color-primary),
+    var(--color-primary-strong)
+  );
   color: var(--color-surface);
 }
 
@@ -11746,7 +11855,10 @@ button.calendar-chip {
 
   .wishlist-reserve-sheet__panel {
     max-height: calc(100dvh - env(safe-area-inset-top) - var(--space-l));
-    padding-bottom: calc(var(--app-bottom-nav-height, 88px) + env(safe-area-inset-bottom) + var(--space-m));
+    padding-bottom: calc(
+      var(--app-bottom-nav-height, 88px) + env(safe-area-inset-bottom) +
+        var(--space-m)
+    );
   }
 
   .wishlist-share-sheet__header,
@@ -11802,7 +11914,11 @@ button.calendar-chip {
 .settings-hero p {
   max-width: 31rem;
   margin: 0;
-  color: color-mix(in srgb, var(--color-muted) 92%, var(--color-primary-strong));
+  color: color-mix(
+    in srgb,
+    var(--color-muted) 92%,
+    var(--color-primary-strong)
+  );
   font-size: clamp(1.02rem, 0.95rem + 0.35vw, 1.28rem);
   font-weight: 560;
   line-height: 1.45;
@@ -11830,12 +11946,11 @@ button.calendar-chip {
   overflow: hidden;
   border: 1px solid color-mix(in srgb, var(--color-border) 76%, transparent);
   border-radius: calc(var(--radius-l) + var(--space-xs));
-  background:
-    linear-gradient(
-      145deg,
-      color-mix(in srgb, var(--color-surface) 98%, transparent),
-      color-mix(in srgb, var(--color-surface-warm) 78%, var(--color-surface))
-    );
+  background: linear-gradient(
+    145deg,
+    color-mix(in srgb, var(--color-surface) 98%, transparent),
+    color-mix(in srgb, var(--color-surface-warm) 78%, var(--color-surface))
+  );
   box-shadow:
     0 1rem 2.5rem color-mix(in srgb, var(--color-text) 7%, transparent),
     inset 0 1px 0 color-mix(in srgb, white 86%, transparent);
@@ -11854,7 +11969,8 @@ button.calendar-chip {
 }
 
 .settings-row:not(:last-child) {
-  border-bottom: 1px solid color-mix(in srgb, var(--color-border) 74%, transparent);
+  border-bottom: 1px solid
+    color-mix(in srgb, var(--color-border) 74%, transparent);
 }
 
 .settings-row:hover,
@@ -11901,7 +12017,11 @@ button.calendar-chip {
 }
 
 .settings-row__description {
-  color: color-mix(in srgb, var(--color-muted) 90%, var(--color-primary-strong));
+  color: color-mix(
+    in srgb,
+    var(--color-muted) 90%,
+    var(--color-primary-strong)
+  );
   font-size: clamp(0.96rem, 0.9rem + 0.35vw, 1.22rem);
   font-weight: 560;
   line-height: 1.42;
@@ -11926,7 +12046,11 @@ button.calendar-chip {
   display: flex;
   justify-content: center;
   gap: var(--space-m);
-  color: color-mix(in srgb, var(--color-primary-strong) 76%, var(--color-muted));
+  color: color-mix(
+    in srgb,
+    var(--color-primary-strong) 76%,
+    var(--color-muted)
+  );
   font-size: var(--text-small);
   font-weight: 720;
 }
@@ -12026,8 +12150,16 @@ button.calendar-chip {
   border: 1px solid color-mix(in srgb, var(--color-border) 72%, transparent);
   border-radius: var(--radius-pill);
   background:
-    radial-gradient(circle at 32% 24%, color-mix(in srgb, white 90%, transparent), transparent 34%),
-    linear-gradient(145deg, color-mix(in srgb, var(--color-success-soft) 88%, white), color-mix(in srgb, var(--color-primary-soft) 42%, white));
+    radial-gradient(
+      circle at 32% 24%,
+      color-mix(in srgb, white 90%, transparent),
+      transparent 34%
+    ),
+    linear-gradient(
+      145deg,
+      color-mix(in srgb, var(--color-success-soft) 88%, white),
+      color-mix(in srgb, var(--color-primary-soft) 42%, white)
+    );
   color: var(--color-primary-strong);
   box-shadow:
     0 1.2rem 2.4rem color-mix(in srgb, var(--color-text) 10%, transparent),
@@ -12059,7 +12191,8 @@ button.calendar-chip {
   background: color-mix(in srgb, var(--color-surface) 98%, transparent);
   color: #0b6b2f;
   cursor: pointer;
-  box-shadow: 0 0.8rem 1.8rem color-mix(in srgb, var(--color-text) 12%, transparent);
+  box-shadow: 0 0.8rem 1.8rem
+    color-mix(in srgb, var(--color-text) 12%, transparent);
 }
 
 .profile-settings__avatar-edit svg {
@@ -12079,7 +12212,11 @@ button.calendar-chip {
 
 .profile-settings__email {
   margin: 0;
-  color: color-mix(in srgb, var(--color-muted) 92%, var(--color-primary-strong));
+  color: color-mix(
+    in srgb,
+    var(--color-muted) 92%,
+    var(--color-primary-strong)
+  );
   font-size: clamp(1.05rem, 3.8vw, 1.55rem);
   font-weight: 700;
   letter-spacing: -0.035em;
@@ -12123,8 +12260,12 @@ button.calendar-chip {
 }
 
 @keyframes profile-settings-pulse {
-  0% { background-position: 140% 0; }
-  100% { background-position: -80% 0; }
+  0% {
+    background-position: 140% 0;
+  }
+  100% {
+    background-position: -80% 0;
+  }
 }
 
 .profile-settings-row {
@@ -12145,7 +12286,8 @@ button.calendar-chip {
 }
 
 .profile-settings-row:not(:last-child) {
-  border-bottom: 1px solid color-mix(in srgb, var(--color-border) 74%, transparent);
+  border-bottom: 1px solid
+    color-mix(in srgb, var(--color-border) 74%, transparent);
 }
 
 .profile-settings-row:hover,
@@ -12183,7 +12325,11 @@ button.calendar-chip {
   justify-self: end;
   overflow: hidden;
   max-width: 100%;
-  color: color-mix(in srgb, var(--color-muted) 92%, var(--color-primary-strong));
+  color: color-mix(
+    in srgb,
+    var(--color-muted) 92%,
+    var(--color-primary-strong)
+  );
   font-size: clamp(1rem, 3.2vw, 1.3rem);
   font-weight: 650;
   letter-spacing: -0.035em;
@@ -12226,11 +12372,16 @@ button.calendar-chip {
   width: min(100%, 36rem);
   margin: 0 auto;
   border: 1px solid color-mix(in srgb, var(--color-border) 76%, transparent);
-  border-radius: calc(var(--radius-l) + var(--space-xs)) calc(var(--radius-l) + var(--space-xs)) 0 0;
+  border-radius: calc(var(--radius-l) + var(--space-xs))
+    calc(var(--radius-l) + var(--space-xs)) 0 0;
   padding: var(--space-s) var(--gutter)
-    calc(var(--app-bottom-nav-height, 88px) + env(safe-area-inset-bottom) + var(--space-m));
+    calc(
+      var(--app-bottom-nav-height, 88px) + env(safe-area-inset-bottom) +
+        var(--space-m)
+    );
   background: color-mix(in srgb, var(--color-surface) 98%, transparent);
-  box-shadow: 0 -1.5rem 3rem color-mix(in srgb, var(--color-text) 16%, transparent);
+  box-shadow: 0 -1.5rem 3rem
+    color-mix(in srgb, var(--color-text) 16%, transparent);
 }
 
 .profile-edit-sheet__panel--compact {
@@ -12256,7 +12407,11 @@ button.calendar-chip {
 .profile-edit-sheet__field {
   display: grid;
   gap: var(--space-xs);
-  color: color-mix(in srgb, var(--color-muted) 88%, var(--color-primary-strong));
+  color: color-mix(
+    in srgb,
+    var(--color-muted) 88%,
+    var(--color-primary-strong)
+  );
   font-size: var(--text-small);
   font-weight: 780;
 }
@@ -12273,8 +12428,13 @@ button.calendar-chip {
 }
 
 .profile-edit-sheet__field input:focus {
-  border-color: color-mix(in srgb, var(--color-primary) 60%, var(--color-border));
-  outline: 3px solid color-mix(in srgb, var(--color-primary-soft) 72%, transparent);
+  border-color: color-mix(
+    in srgb,
+    var(--color-primary) 60%,
+    var(--color-border)
+  );
+  outline: 3px solid
+    color-mix(in srgb, var(--color-primary-soft) 72%, transparent);
 }
 
 .profile-edit-sheet__error {
@@ -12311,12 +12471,20 @@ button.calendar-chip {
 .profile-edit-sheet__button--secondary {
   border: 1px solid color-mix(in srgb, var(--color-border) 86%, transparent);
   background: var(--color-surface);
-  color: color-mix(in srgb, var(--color-primary-strong) 82%, var(--color-muted));
+  color: color-mix(
+    in srgb,
+    var(--color-primary-strong) 82%,
+    var(--color-muted)
+  );
 }
 
 .profile-edit-sheet__button--primary {
   border: 0;
-  background: linear-gradient(145deg, var(--color-primary), var(--color-primary-strong));
+  background: linear-gradient(
+    145deg,
+    var(--color-primary),
+    var(--color-primary-strong)
+  );
   color: var(--color-surface);
   box-shadow: var(--shadow-soft);
 }
@@ -12368,7 +12536,8 @@ button.family-settings-row:focus-visible:not(:disabled) {
 .family-settings-member:not(:last-child),
 .family-settings-invite:not(:last-child),
 .family-settings__section-head {
-  border-bottom: 1px solid color-mix(in srgb, var(--color-border) 74%, transparent);
+  border-bottom: 1px solid
+    color-mix(in srgb, var(--color-border) 74%, transparent);
 }
 
 .family-settings-row__label {
@@ -12381,7 +12550,11 @@ button.family-settings-row:focus-visible:not(:disabled) {
 .family-settings-row__value {
   justify-self: end;
   overflow: hidden;
-  color: color-mix(in srgb, var(--color-muted) 92%, var(--color-primary-strong));
+  color: color-mix(
+    in srgb,
+    var(--color-muted) 92%,
+    var(--color-primary-strong)
+  );
   font-size: clamp(0.98rem, 3vw, 1.22rem);
   font-weight: 690;
   text-overflow: ellipsis;
@@ -12415,7 +12588,8 @@ button.family-settings-row:focus-visible:not(:disabled) {
   align-items: center;
   justify-content: space-between;
   gap: var(--space-s);
-  padding: clamp(1rem, 0.95rem + 0.5vw, 1.35rem) clamp(1.15rem, 1rem + 0.75vw, 1.65rem);
+  padding: clamp(1rem, 0.95rem + 0.5vw, 1.35rem)
+    clamp(1.15rem, 1rem + 0.75vw, 1.65rem);
 }
 
 .family-settings__section-head h2 {
@@ -12433,7 +12607,8 @@ button.family-settings-row:focus-visible:not(:disabled) {
   grid-template-columns: auto minmax(0, 1fr) auto;
   align-items: center;
   gap: var(--space-m);
-  padding: clamp(1rem, 0.95rem + 0.5vw, 1.35rem) clamp(1.15rem, 1rem + 0.75vw, 1.65rem);
+  padding: clamp(1rem, 0.95rem + 0.5vw, 1.35rem)
+    clamp(1.15rem, 1rem + 0.75vw, 1.65rem);
 }
 
 .family-settings-member__avatar {
@@ -12442,7 +12617,11 @@ button.family-settings-row:focus-visible:not(:disabled) {
   height: 3.35rem;
   place-items: center;
   border-radius: var(--radius-pill);
-  background: linear-gradient(145deg, color-mix(in srgb, var(--color-success-soft) 92%, white), color-mix(in srgb, var(--color-primary-soft) 58%, white));
+  background: linear-gradient(
+    145deg,
+    color-mix(in srgb, var(--color-success-soft) 92%, white),
+    color-mix(in srgb, var(--color-primary-soft) 58%, white)
+  );
   color: #0b6b2f;
   font-weight: 900;
 }
@@ -12470,7 +12649,11 @@ button.family-settings-row:focus-visible:not(:disabled) {
 .family-settings__hint,
 .family-settings__empty-text {
   margin: 0;
-  color: color-mix(in srgb, var(--color-muted) 92%, var(--color-primary-strong));
+  color: color-mix(
+    in srgb,
+    var(--color-muted) 92%,
+    var(--color-primary-strong)
+  );
   font-size: var(--text-small);
   font-weight: 650;
 }
@@ -12487,7 +12670,11 @@ button.family-settings-row:focus-visible:not(:disabled) {
   border: 0;
   border-radius: var(--radius-pill);
   background: transparent;
-  color: color-mix(in srgb, var(--color-primary-strong) 78%, var(--color-muted));
+  color: color-mix(
+    in srgb,
+    var(--color-primary-strong) 78%,
+    var(--color-muted)
+  );
   cursor: pointer;
 }
 
@@ -12649,7 +12836,8 @@ button.family-settings-row:focus-visible:not(:disabled) {
 }
 
 .notification-settings-row:not(:last-child) {
-  border-bottom: 1px solid color-mix(in srgb, var(--color-border) 74%, transparent);
+  border-bottom: 1px solid
+    color-mix(in srgb, var(--color-border) 74%, transparent);
 }
 
 .notification-settings-row:hover,
@@ -12677,10 +12865,15 @@ button.family-settings-row:focus-visible:not(:disabled) {
 
 .notification-settings__error {
   margin: 0;
-  border: 1px solid color-mix(in srgb, var(--color-danger, #b42318) 24%, var(--color-border));
+  border: 1px solid
+    color-mix(in srgb, var(--color-danger, #b42318) 24%, var(--color-border));
   border-radius: var(--radius-m);
   padding: var(--space-s) var(--space-m);
-  background: color-mix(in srgb, var(--color-danger, #b42318) 8%, var(--color-surface));
+  background: color-mix(
+    in srgb,
+    var(--color-danger, #b42318) 8%,
+    var(--color-surface)
+  );
   color: color-mix(in srgb, var(--color-danger, #b42318) 82%, #111111);
   font-size: var(--text-small);
   font-weight: 760;
@@ -12716,7 +12909,11 @@ button.family-settings-row:focus-visible:not(:disabled) {
 }
 
 .app-info-row__value {
-  color: color-mix(in srgb, var(--color-muted) 92%, var(--color-primary-strong));
+  color: color-mix(
+    in srgb,
+    var(--color-muted) 92%,
+    var(--color-primary-strong)
+  );
   font-size: clamp(1rem, 0.92rem + 0.35vw, 1.18rem);
   font-weight: 700;
   line-height: 1.35;
@@ -12738,8 +12935,13 @@ button.family-settings-row:focus-visible:not(:disabled) {
 }
 
 .app-info-textarea:focus {
-  border-color: color-mix(in srgb, var(--color-primary) 60%, var(--color-border));
-  outline: 3px solid color-mix(in srgb, var(--color-primary-soft) 72%, transparent);
+  border-color: color-mix(
+    in srgb,
+    var(--color-primary) 60%,
+    var(--color-border)
+  );
+  outline: 3px solid
+    color-mix(in srgb, var(--color-primary-soft) 72%, transparent);
 }
 
 .app-info-sheet__success {
@@ -12841,8 +13043,10 @@ button.family-settings-row:focus-visible:not(:disabled) {
   max-height: calc(100svh - env(safe-area-inset-top) - var(--space-m));
   margin: 0 auto;
   border: 1px solid var(--color-border);
-  border-radius: calc(var(--radius-l) + var(--space-s)) calc(var(--radius-l) + var(--space-s)) 0 0;
-  padding: var(--space-s) var(--space-m) calc(var(--space-m) + env(safe-area-inset-bottom));
+  border-radius: calc(var(--radius-l) + var(--space-s))
+    calc(var(--radius-l) + var(--space-s)) 0 0;
+  padding: var(--space-s) var(--space-m)
+    calc(var(--space-m) + env(safe-area-inset-bottom));
   background: var(--color-surface);
   box-shadow: var(--shadow-sheet);
   transform: translateY(100%);
@@ -13008,21 +13212,25 @@ button.family-settings-row:focus-visible:not(:disabled) {
     align-items: start;
   }
 
-  .root-app-frame:not(.root-app-frame--immersive):not(.root-app-frame--focus) .root-app-frame__main {
+  .root-app-frame:not(.root-app-frame--immersive):not(.root-app-frame--focus)
+    .root-app-frame__main {
     width: min(100%, calc(var(--page-width) - var(--sidebar-width)));
     margin: 0 auto;
     padding: 0 var(--gutter) var(--section-gap);
   }
 
-  .root-app-frame:not(.root-app-frame--immersive):not(.root-app-frame--focus) .app-shell {
+  .root-app-frame:not(.root-app-frame--immersive):not(.root-app-frame--focus)
+    .app-shell {
     padding-top: var(--section-gap);
   }
 
-  .root-app-frame:not(.root-app-frame--immersive):not(.root-app-frame--focus) .app-shell__header {
+  .root-app-frame:not(.root-app-frame--immersive):not(.root-app-frame--focus)
+    .app-shell__header {
     display: none;
   }
 
-  .root-app-frame:not(.root-app-frame--immersive):not(.root-app-frame--focus) .app-shell__content {
+  .root-app-frame:not(.root-app-frame--immersive):not(.root-app-frame--focus)
+    .app-shell__content {
     padding-bottom: 0;
   }
 
@@ -13035,8 +13243,13 @@ button.family-settings-row:focus-visible:not(:disabled) {
     align-content: start;
     gap: var(--space-l);
     border-right: 1px solid var(--color-border);
-    padding: calc(var(--space-l) + env(safe-area-inset-top)) var(--space-m) var(--space-l);
-    background: color-mix(in srgb, var(--color-surface) 88%, var(--color-background));
+    padding: calc(var(--space-l) + env(safe-area-inset-top)) var(--space-m)
+      var(--space-l);
+    background: color-mix(
+      in srgb,
+      var(--color-surface) 88%,
+      var(--color-background)
+    );
   }
 
   .app-sidebar__brand {
@@ -13092,7 +13305,11 @@ button.family-settings-row:focus-visible:not(:disabled) {
     gap: var(--space-s);
     border-radius: var(--radius-pill);
     padding: var(--space-s) var(--space-m);
-    background: linear-gradient(145deg, var(--color-primary), var(--color-primary-strong));
+    background: linear-gradient(
+      145deg,
+      var(--color-primary),
+      var(--color-primary-strong)
+    );
     color: var(--color-surface);
     font-size: var(--text-label);
     font-weight: 850;
@@ -13123,7 +13340,10 @@ button.family-settings-row:focus-visible:not(:disabled) {
     font-size: var(--text-label);
     font-weight: 800;
     text-align: left;
-    transition: background 160ms ease, border-color 160ms ease, color 160ms ease;
+    transition:
+      background 160ms ease,
+      border-color 160ms ease,
+      color 160ms ease;
   }
 
   .app-sidebar__link:hover,
@@ -13238,14 +13458,26 @@ button.family-settings-row:focus-visible:not(:disabled) {
   letter-spacing: 0.02em;
   overflow: hidden;
   width: var(--user-avatar-size);
-  box-shadow: 0 calc(var(--user-avatar-size) * 0.08) calc(var(--user-avatar-size) * 0.22) color-mix(in srgb, var(--color-text) 8%, transparent);
+  box-shadow: 0 calc(var(--user-avatar-size) * 0.08)
+    calc(var(--user-avatar-size) * 0.22)
+    color-mix(in srgb, var(--color-text) 8%, transparent);
 }
 
-.user-avatar--xs { --user-avatar-size: 1.75rem; }
-.user-avatar--sm { --user-avatar-size: 2.25rem; }
-.user-avatar--md { --user-avatar-size: 2.75rem; }
-.user-avatar--lg { --user-avatar-size: 4rem; }
-.user-avatar--xl { --user-avatar-size: 6rem; }
+.user-avatar--xs {
+  --user-avatar-size: 1.75rem;
+}
+.user-avatar--sm {
+  --user-avatar-size: 2.25rem;
+}
+.user-avatar--md {
+  --user-avatar-size: 2.75rem;
+}
+.user-avatar--lg {
+  --user-avatar-size: 4rem;
+}
+.user-avatar--xl {
+  --user-avatar-size: 6rem;
+}
 
 .user-avatar__image {
   height: 100%;
@@ -13364,7 +13596,11 @@ button.family-settings-row:focus-visible:not(:disabled) {
   border-radius: var(--radius-l);
   padding: var(--panel-padding);
   background:
-    linear-gradient(135deg, color-mix(in srgb, var(--color-primary-soft) 62%, transparent), transparent 58%),
+    linear-gradient(
+      135deg,
+      color-mix(in srgb, var(--color-primary-soft) 62%, transparent),
+      transparent 58%
+    ),
     var(--color-surface);
 }
 
@@ -13534,7 +13770,11 @@ button.family-settings-row:focus-visible:not(:disabled) {
 }
 
 .home-shopping-chip {
-  background: color-mix(in srgb, var(--color-success) 14%, var(--color-surface));
+  background: color-mix(
+    in srgb,
+    var(--color-success) 14%,
+    var(--color-surface)
+  );
   color: var(--color-text);
 }
 
@@ -13587,8 +13827,16 @@ button.family-settings-row:focus-visible:not(:disabled) {
 }
 
 .home-card--beta {
-  border-color: color-mix(in srgb, var(--color-primary-soft) 72%, var(--color-border));
-  background: color-mix(in srgb, var(--color-primary-soft) 26%, var(--color-surface));
+  border-color: color-mix(
+    in srgb,
+    var(--color-primary-soft) 72%,
+    var(--color-border)
+  );
+  background: color-mix(
+    in srgb,
+    var(--color-primary-soft) 26%,
+    var(--color-surface)
+  );
 }
 
 /* Keep School Week bottom actions visible above iPhone/PWA safe areas. */
@@ -13597,7 +13845,8 @@ button.family-settings-row:focus-visible:not(:disabled) {
   bottom: 0;
   z-index: 3;
   padding-bottom: calc(env(safe-area-inset-bottom) + var(--space-m));
-  box-shadow: 0 calc(var(--space-s) * -1) var(--space-l) color-mix(in srgb, var(--color-text) 9%, transparent);
+  box-shadow: 0 calc(var(--space-s) * -1) var(--space-l)
+    color-mix(in srgb, var(--color-text) 9%, transparent);
 }
 
 .tasks-list__menu-wrap {
@@ -13674,7 +13923,8 @@ button.family-settings-row:focus-visible:not(:disabled) {
   gap: var(--space-s);
   border-radius: var(--radius-l);
   padding: var(--space-s) var(--space-m);
-  box-shadow: 0 var(--space-xs) var(--space-m) color-mix(in srgb, var(--color-text) 3%, transparent);
+  box-shadow: 0 var(--space-xs) var(--space-m)
+    color-mix(in srgb, var(--color-text) 3%, transparent);
 }
 
 .app-shell--focus .event-form-title-input {
@@ -13717,7 +13967,11 @@ button.family-settings-row:focus-visible:not(:disabled) {
 
 .profile-settings__avatar-button:hover .profile-settings__avatar,
 .profile-settings__avatar-button:focus-visible .profile-settings__avatar {
-  border-color: color-mix(in srgb, var(--color-primary-strong) 48%, var(--color-border));
+  border-color: color-mix(
+    in srgb,
+    var(--color-primary-strong) 48%,
+    var(--color-border)
+  );
   box-shadow:
     0 1.4rem 2.8rem color-mix(in srgb, var(--color-text) 14%, transparent),
     0 0 0 0.35rem color-mix(in srgb, var(--color-primary-soft) 44%, transparent),
@@ -13739,7 +13993,8 @@ button.family-settings-row:focus-visible:not(:disabled) {
 
 .profile-settings__avatar-button:hover .profile-settings__avatar-edit,
 .profile-settings__avatar-button:focus-visible .profile-settings__avatar-edit,
-.profile-settings__avatar-button[aria-expanded="true"] .profile-settings__avatar-edit {
+.profile-settings__avatar-button[aria-expanded="true"]
+  .profile-settings__avatar-edit {
   background: var(--color-primary-strong);
   color: var(--color-surface);
   transform: scale(1.04);
@@ -13748,7 +14003,11 @@ button.family-settings-row:focus-visible:not(:disabled) {
 .profile-settings__avatar-hint {
   border-radius: var(--radius-pill);
   padding: 0.35rem 0.7rem;
-  background: color-mix(in srgb, var(--color-primary-soft) 54%, var(--color-surface));
+  background: color-mix(
+    in srgb,
+    var(--color-primary-soft) 54%,
+    var(--color-surface)
+  );
   color: var(--color-primary-strong);
   font-size: clamp(0.78rem, 2.4vw, 0.92rem);
   font-weight: 780;
@@ -13765,7 +14024,8 @@ button.family-settings-row:focus-visible:not(:disabled) {
 
 .profile-settings__compact-section .profile-settings-row {
   gap: clamp(0.55rem, 2vw, 0.85rem);
-  padding: clamp(0.68rem, 0.58rem + 0.45vw, 0.95rem) clamp(0.85rem, 0.7rem + 0.6vw, 1.15rem);
+  padding: clamp(0.68rem, 0.58rem + 0.45vw, 0.95rem)
+    clamp(0.85rem, 0.7rem + 0.6vw, 1.15rem);
 }
 
 .profile-settings__compact-section .profile-settings-row__icon {
@@ -13784,4 +14044,152 @@ button.family-settings-row:focus-visible:not(:disabled) {
 
 .profile-settings__compact-section .profile-settings-row__value {
   font-size: clamp(0.84rem, 2.3vw, 1rem);
+}
+
+.husk-reminder-card {
+  position: relative;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  padding: 0;
+  cursor: default;
+}
+
+.husk-reminder-card__main {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  align-items: center;
+  gap: var(--space-m);
+  min-width: 0;
+  border: 0;
+  padding: var(--space-m);
+  background: transparent;
+  color: inherit;
+  cursor: pointer;
+  font: inherit;
+  text-align: left;
+}
+
+.husk-reminder-card__main:focus-visible,
+.husk-reminder-card__menu-button:focus-visible,
+.husk-reminder-card__menu button:focus-visible {
+  outline: 3px solid
+    color-mix(
+      in srgb,
+      var(--husk-accent, var(--color-primary)) 28%,
+      transparent
+    );
+  outline-offset: 2px;
+}
+
+.husk-reminder-card__menu-wrap {
+  position: relative;
+  display: flex;
+  align-items: center;
+  padding-right: var(--space-s);
+}
+
+.husk-reminder-card__menu-button {
+  display: grid;
+  width: calc(var(--space-xl) + var(--space-xs));
+  height: calc(var(--space-xl) + var(--space-xs));
+  place-items: center;
+  border: 1px solid
+    color-mix(
+      in srgb,
+      var(--husk-accent, var(--color-primary)) 16%,
+      var(--color-border)
+    );
+  border-radius: var(--radius-pill);
+  background: color-mix(in srgb, var(--color-surface) 84%, transparent);
+  color: var(--color-muted);
+  cursor: pointer;
+}
+
+.husk-reminder-card__menu {
+  position: absolute;
+  right: var(--space-s);
+  top: calc(100% - var(--space-xs));
+  z-index: 4;
+  display: grid;
+  min-width: 9rem;
+  overflow: hidden;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-l);
+  background: var(--color-surface);
+  box-shadow: var(--shadow-card);
+}
+
+.husk-reminder-card__menu button {
+  border: 0;
+  padding: var(--space-s) var(--space-m);
+  background: transparent;
+  color: var(--color-text);
+  cursor: pointer;
+  font: inherit;
+  font-size: var(--text-small);
+  font-weight: 820;
+  text-align: left;
+}
+
+.husk-reminder-card__menu button:hover {
+  background: var(--color-background-soft);
+}
+
+.husk-reminder-card__menu-delete {
+  color: var(--color-danger, #b42318) !important;
+}
+
+.husk-reminder-edit-sheet__panel {
+  max-height: min(88vh, 54rem);
+}
+
+.husk-reminder-edit-sheet__heading {
+  display: flex;
+  min-width: 0;
+  align-items: center;
+  gap: var(--space-s);
+}
+
+.husk-reminder-edit-sheet__icon {
+  display: grid;
+  width: calc(var(--space-xl) + var(--space-s));
+  min-width: calc(var(--space-xl) + var(--space-s));
+  height: calc(var(--space-xl) + var(--space-s));
+  place-items: center;
+  border-radius: var(--radius-l);
+  background: var(--color-primary-soft);
+  color: var(--color-primary-strong);
+}
+
+.husk-reminder-edit-sheet__content {
+  gap: var(--space-s);
+}
+
+.husk-reminder-edit-sheet__people {
+  gap: calc(var(--space-xs) * 0.75);
+}
+
+.husk-reminder-edit-sheet__rows {
+  gap: 0;
+  padding: 0;
+}
+
+.husk-reminder-edit-sheet__rows .event-form-row {
+  padding: var(--space-s) var(--space-m);
+}
+
+@media (max-width: 520px) {
+  .husk-reminder-card__main {
+    gap: var(--space-s);
+    padding: var(--space-s);
+  }
+
+  .husk-reminder-card__avatars {
+    display: none;
+  }
+
+  .husk-reminder-edit-sheet__panel {
+    width: 100%;
+    max-height: 92vh;
+  }
 }

@@ -10,14 +10,22 @@ import { SectionHeader } from "./shared/SectionHeader";
 export function HuskReminderGroups({
   familyMembers,
   groupedReminders,
+  onDeleteReminder,
+  onEditReminder,
   onOpenReminder,
+  openMenuReminderId,
   previousReminders,
+  setOpenMenuReminderId,
   showPrevious,
 }: {
   familyMembers: HuskFamilyMember[];
   groupedReminders: { group: HuskReminderGroup; reminders: HuskReminder[] }[];
+  onDeleteReminder: (reminder: HuskReminder) => void;
+  onEditReminder: (reminder: HuskReminder) => void;
   onOpenReminder: (reminder: HuskReminder) => void;
+  openMenuReminderId: string | null;
   previousReminders: HuskReminder[];
+  setOpenMenuReminderId: (reminderId: string | null) => void;
   showPrevious: boolean;
 }) {
   return (
@@ -40,7 +48,11 @@ export function HuskReminderGroups({
                 familyMembers={familyMembers}
                 key={reminder.id}
                 reminder={reminder}
+                onDelete={onDeleteReminder}
+                onEdit={onEditReminder}
                 onOpen={onOpenReminder}
+                openMenuReminderId={openMenuReminderId}
+                setOpenMenuReminderId={setOpenMenuReminderId}
               />
             ))}
           </div>
@@ -65,7 +77,11 @@ export function HuskReminderGroups({
                 familyMembers={familyMembers}
                 key={reminder.id}
                 reminder={reminder}
+                onDelete={onDeleteReminder}
+                onEdit={onEditReminder}
                 onOpen={onOpenReminder}
+                openMenuReminderId={openMenuReminderId}
+                setOpenMenuReminderId={setOpenMenuReminderId}
               />
             ))}
           </div>
