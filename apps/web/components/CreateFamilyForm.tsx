@@ -3,9 +3,10 @@
 import type { FormEvent } from "react";
 import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
-import { createFamily, getFamily } from "../lib/api";
+import { acceptWishlistInvite, createFamily, getFamily } from "../lib/api";
 import { getUserFacingApiMessage } from "../lib/auth-family";
 import { getOnboardingFamilyState, saveOnboardingFamilyState } from "../lib/onboarding-state";
+import { clearPendingWishlistInvite, getPendingWishlistInvite } from "../lib/pending-wishlist-invite";
 import { setActiveFamilyId } from "../lib/session";
 import { Button } from "./ui";
 
@@ -48,6 +49,22 @@ export function CreateFamilyForm() {
 
       setActiveFamilyId(familyDetails.family.id);
       saveOnboardingFamilyState(familyDetails.family.name, familyDetails.family.code, familyDetails.family.id);
+
+      const pendingWishlistInvite = getPendingWishlistInvite();
+
+      if (pendingWishlistInvite) {
+        try {
+          await acceptWishlistInvite(pendingWishlistInvite);
+          clearPendingWishlistInvite(pendingWishlistInvite);
+          window.sessionStorage.setItem("familieappen:wishlist:toast", "Ønskelisten er lagt til i Delt med meg.");
+          router.push("/wishlist?tab=shared");
+          return;
+        } catch (inviteError) {
+          clearPendingWishlistInvite(pendingWishlistInvite);
+          console.warn("Could not accept pending wishlist invite after family creation", inviteError);
+        }
+      }
+
       router.push("/onboarding/family-members");
     } catch (createError) {
       setError(getUserFacingApiMessage(createError, "Kunne ikke opprette familien akkurat nå. Prøv igjen."));

@@ -8,9 +8,10 @@ import { MailIcon, PasswordField } from "../../components/LoginFormFields";
 import { Button } from "../../components/ui";
 import { register } from "../../lib/api";
 import { getUserFacingApiMessage } from "../../lib/auth-family";
+import { routeAfterAuthentication } from "../../lib/onboarding-access";
 import { saveAuthSession } from "../../lib/session";
 
-export function RegisterForm() {
+export function RegisterForm({ initialEmail = "" }: { initialEmail?: string } = {}) {
   const router = useRouter();
   const [error, setError] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -55,7 +56,7 @@ export function RegisterForm() {
         password,
       });
       saveAuthSession(auth);
-      router.push("/onboarding/profile");
+      await routeAfterAuthentication(router, "/onboarding/profile");
     } catch (submitError) {
       setError(getUserFacingApiMessage(submitError, "Noe gikk galt. Prøv igjen."));
     } finally {
@@ -76,6 +77,7 @@ export function RegisterForm() {
             name="email"
             placeholder="Skriv inn e-postadressen din"
             type="email"
+            defaultValue={initialEmail}
           />
         </div>
       </div>
