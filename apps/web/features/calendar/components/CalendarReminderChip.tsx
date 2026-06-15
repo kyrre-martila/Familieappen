@@ -6,7 +6,7 @@ import type { ReminderSummary } from "@familieappen/shared";
 import { reminderIcons } from "./calendarConfig";
 
 export function CalendarReminderChip({ reminder }: { reminder: ReminderSummary }) {
-  const ReminderIcon = reminderIcons[reminder.icon];
+  const ReminderIcon = reminderIcons[reminder.icon] ?? reminderIcons.family;
 
   return (
     <button
@@ -15,7 +15,7 @@ export function CalendarReminderChip({ reminder }: { reminder: ReminderSummary }
       aria-label={`Åpne husk: ${reminder.title}`}
     >
       <ReminderIcon aria-hidden="true" size={22} strokeWidth={2.3} />
-      <span>{reminder.title}</span>
+      <span>{reminder.title || "Påminnelse"}</span>
     </button>
   );
 }
@@ -29,18 +29,18 @@ export function CalendarReminderSummaryChip({
   href?: string;
   reminder: ReminderSummary;
 }) {
-  const ReminderIcon = reminderIcons[reminder.icon];
+  const ReminderIcon = reminderIcons[reminder.icon] ?? reminderIcons.family;
   const content = (
     <>
       <ReminderIcon aria-hidden="true" size={22} strokeWidth={2.3} />
-      <span>{reminder.title}</span>
+      <span>{reminder.title || "Påminnelse"}</span>
     </>
   );
 
   if (href) {
     return (
       <Link
-        aria-label={ariaLabel ?? `Åpne husk: ${reminder.title}`}
+        aria-label={ariaLabel ?? `Åpne husk: ${reminder.title || "Påminnelse"}`}
         className="calendar-chip calendar-chip--reminder"
         href={href}
       >

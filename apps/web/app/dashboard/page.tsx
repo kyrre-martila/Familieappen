@@ -48,7 +48,7 @@ function HomeContent() {
 
     getShoppingList(activeFamilyId)
       .then((list) => {
-        if (!cancelled) setShoppingList(list);
+        if (!cancelled) setShoppingList(isShoppingList(list) ? list : null);
       })
       .catch(() => {
         if (!cancelled) setShoppingList(null);
@@ -59,7 +59,7 @@ function HomeContent() {
 
     getTasks(activeFamilyId)
       .then((familyTasks) => {
-        if (!cancelled) setTasks(familyTasks);
+        if (!cancelled) setTasks(Array.isArray(familyTasks) ? familyTasks : []);
       })
       .catch(() => {
         if (!cancelled) setTasks([]);
@@ -74,13 +74,13 @@ function HomeContent() {
   }, [activeFamilyId]);
 
   const uncheckedItems = useMemo(
-    () => shoppingList?.items.filter((item) => !item.checked) ?? [],
+    () => (Array.isArray(shoppingList?.items) ? shoppingList.items : []).filter((item) => !item.checked),
     [shoppingList],
   );
   const visibleShoppingItems = uncheckedItems.slice(0, 4);
   const remainingShoppingCount = Math.max(0, uncheckedItems.length - visibleShoppingItems.length);
   const openTasks = useMemo(
-    () => tasks.filter((task) => !task.completed).sort(sortOpenTasks),
+    () => (Array.isArray(tasks) ? tasks : []).filter((task) => !task.completed).sort(sortOpenTasks),
     [tasks],
   );
   const visibleTasks = openTasks.slice(0, 3);
@@ -231,9 +231,12 @@ function HomeTodayChips({
   selectedDate: string;
 }) {
   const { mealSummaries, normalizedItems, reminders } = useCalendar();
-  const meal = mealSummaries.find((item) => item.date === selectedDate);
-  const visibleReminders = reminders.filter((item) => item.date === selectedDate);
-  const schoolWeekItems = normalizedItems.filter((item) => item.date === selectedDate && item.type === "school-week");
+  const safeMealSummaries = Array.isArray(mealSummaries) ? mealSummaries : [];
+  const safeNormalizedItems = Array.isArray(normalizedItems) ? normalizedItems : [];
+  const safeReminders = Array.isArray(reminders) ? reminders : [];
+  const meal = safeMealSummaries.find((item) => item?.date === selectedDate);
+  const visibleReminders = safeReminders.filter((item) => item?.date === selectedDate);
+  const schoolWeekItems = safeNormalizedItems.filter((item) => item?.date === selectedDate && item.type === "school-week");
   const hasShoppingChip = missingShoppingCount > 0;
   const chipCount = (meal ? 1 : 0) + visibleReminders.length + schoolWeekItems.length + (hasShoppingChip ? 1 : 0);
 
@@ -264,8 +267,8 @@ function HomeTodayChips({
 }
 
 function formatToday(date: string) {
-  const [year, month, day] = date.split("-").map(Number);
-  return new Intl.DateTimeFormat("nb-NO", { weekday: "long", day: "numeric", month: "long" }).format(new Date(year, month - 1, day));
+  const parsedDate = parseDashboardDate(date);
+  return new Intl.DateTimeFormat("nb-NO", { weekday: "long", day: "numeric", month: "long" }).format(parsedDate ?? new Date());
 }
 
 function formatShoppingCount(count: number) {
@@ -280,16 +283,34 @@ function sortOpenTasks(first: Task, second: Task) {
   if (first.dueDate && !second.dueDate) return -1;
   if (!first.dueDate && second.dueDate) return 1;
 
-  return first.createdAt.localeCompare(second.createdAt);
+  return (first.createdAt ?? "").localeCompare(second.createdAt ?? "");
 }
 
 function formatTaskSummary(task: Task) {
-  return task.dueDate ? `${task.title} · ${formatTaskDueDate(task.dueDate)}` : task.title;
+  const title = task.title?.trim() || "Oppgave uten tittel";
+  return task.dueDate ? `${title} · ${formatTaskDueDate(task.dueDate)}` : title;
 }
 
 function formatTaskDueDate(date: string) {
-  const [year, month, day] = date.split("-").map(Number);
-  return new Intl.DateTimeFormat("nb-NO", { day: "numeric", month: "short" }).format(new Date(year, month - 1, day));
+  const parsedDate = parseDashboardDate(date);
+  if (!parsedDate) return "uten dato";
+
+  return new Intl.DateTimeFormat("nb-NO", { day: "numeric", month: "short" }).format(parsedDate);
+}
+
+function parseDashboardDate(date: string | null | undefined) {
+  if (!date) return null;
+
+  const [year, month, day] = date.slice(0, 10).split("-").map(Number);
+  if (!Number.isFinite(year) || !Number.isFinite(month) || !Number.isFinite(day)) {
+    return null;
+  }
+
+  return new Date(year, month - 1, day);
+}
+
+function isShoppingList(list: ShoppingList | null | undefined): list is ShoppingList {
+  return Boolean(list && Array.isArray(list.items));
 }
 
 function formatTaskCount(count: number) {
