@@ -394,6 +394,7 @@ model Reminder {
   note                  String?
   sourceType            String?                  @map("source_type")
   sourceId              String?                  @map("source_id")
+  isPrivate             Boolean                  @default(false)
   createdByUserId       String?
   createdAt             DateTime                 @default(now())
   updatedAt             DateTime                 @updatedAt
@@ -407,6 +408,7 @@ model Reminder {
   @@index([dueDate])
   @@index([createdByUserId])
   @@index([sourceType, sourceId])
+  @@index([familyId, isPrivate, createdByUserId])
   @@map("reminders")
 }
 

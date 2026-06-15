@@ -812,6 +812,7 @@ export async function addHuskReminder(
     memberIds?: string[];
     sourceType?: string | null;
     sourceId?: string | null;
+    isPrivate?: boolean;
   }
 ): Promise<Reminder> {
   return apiRequest<Reminder>("/husk/reminders", {
@@ -832,6 +833,7 @@ export async function updateHuskReminder(
     note?: string | null;
     scope?: "family" | "members";
     memberIds?: string[];
+    isPrivate?: boolean;
   }
 ): Promise<Reminder> {
   return apiRequest<Reminder>(`/husk/reminders/${encodeURIComponent(reminderId)}`, {

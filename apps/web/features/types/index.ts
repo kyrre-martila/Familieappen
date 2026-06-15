@@ -80,6 +80,7 @@ export type Reminder = {
   audience?: ReminderAudience;
   note?: string;
   reminderMinutesBefore?: number | null;
+  isPrivate?: boolean;
   completed?: boolean;
   recurrence?: CalendarRecurrence | null;
   createdAt?: string;
