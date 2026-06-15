@@ -2,10 +2,12 @@ import { RotateCcw } from "lucide-react";
 
 export function SchoolWeekRecurringSheet({
   itemTitle,
+  actionLabel = "endre",
   onClose,
   onChoose,
 }: {
   itemTitle: string;
+  actionLabel?: "endre" | "slette";
   onClose: () => void;
   onChoose: (scope: "occurrence" | "series") => void;
 }) {
@@ -29,7 +31,7 @@ export function SchoolWeekRecurringSheet({
             <RotateCcw size={20} strokeWidth={2.4} />
           </span>
           <p>Dette er en gjentakende husk</p>
-          <h3 id="husk-school-recurring-title">Hva vil du endre?</h3>
+          <h3 id="husk-school-recurring-title">{`Hva vil du ${actionLabel}?`}</h3>
           <span>{itemTitle}</span>
         </div>
         <div className="husk-school-choice__options">
