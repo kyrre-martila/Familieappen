@@ -13700,3 +13700,88 @@ button.family-settings-row:focus-visible:not(:disabled) {
   min-height: 6.5rem;
   padding: var(--space-s);
 }
+
+.profile-settings__avatar-button {
+  position: relative;
+  display: grid;
+  justify-items: center;
+  gap: var(--space-xs);
+  border: 0;
+  border-radius: calc(var(--radius-pill) + 0.35rem);
+  padding: 0.35rem;
+  background: transparent;
+  color: inherit;
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.profile-settings__avatar-button:hover .profile-settings__avatar,
+.profile-settings__avatar-button:focus-visible .profile-settings__avatar {
+  border-color: color-mix(in srgb, var(--color-primary-strong) 48%, var(--color-border));
+  box-shadow:
+    0 1.4rem 2.8rem color-mix(in srgb, var(--color-text) 14%, transparent),
+    0 0 0 0.35rem color-mix(in srgb, var(--color-primary-soft) 44%, transparent),
+    inset 0 1px 0 color-mix(in srgb, white 88%, transparent);
+}
+
+.profile-settings__avatar-button:focus-visible {
+  outline: 3px solid color-mix(in srgb, var(--color-primary-strong) 72%, white);
+  outline-offset: 0.35rem;
+}
+
+.profile-settings__avatar-button .profile-settings__avatar-edit {
+  pointer-events: none;
+  transition:
+    background 160ms ease,
+    color 160ms ease,
+    transform 160ms ease;
+}
+
+.profile-settings__avatar-button:hover .profile-settings__avatar-edit,
+.profile-settings__avatar-button:focus-visible .profile-settings__avatar-edit,
+.profile-settings__avatar-button[aria-expanded="true"] .profile-settings__avatar-edit {
+  background: var(--color-primary-strong);
+  color: var(--color-surface);
+  transform: scale(1.04);
+}
+
+.profile-settings__avatar-hint {
+  border-radius: var(--radius-pill);
+  padding: 0.35rem 0.7rem;
+  background: color-mix(in srgb, var(--color-primary-soft) 54%, var(--color-surface));
+  color: var(--color-primary-strong);
+  font-size: clamp(0.78rem, 2.4vw, 0.92rem);
+  font-weight: 780;
+  letter-spacing: -0.025em;
+}
+
+.profile-settings__compact-section .settings-section {
+  gap: calc(var(--space-xs) * 1.1);
+}
+
+.profile-settings__compact-section .settings-section__title {
+  font-size: clamp(0.82rem, 2.2vw, 0.98rem);
+}
+
+.profile-settings__compact-section .profile-settings-row {
+  gap: clamp(0.55rem, 2vw, 0.85rem);
+  padding: clamp(0.68rem, 0.58rem + 0.45vw, 0.95rem) clamp(0.85rem, 0.7rem + 0.6vw, 1.15rem);
+}
+
+.profile-settings__compact-section .profile-settings-row__icon {
+  width: clamp(2rem, 5vw, 2.45rem);
+  height: clamp(2rem, 5vw, 2.45rem);
+}
+
+.profile-settings__compact-section .profile-settings-row__icon svg {
+  width: clamp(1.2rem, 3.2vw, 1.55rem);
+  height: clamp(1.2rem, 3.2vw, 1.55rem);
+}
+
+.profile-settings__compact-section .profile-settings-row__label {
+  font-size: clamp(0.92rem, 2.5vw, 1.08rem);
+}
+
+.profile-settings__compact-section .profile-settings-row__value {
+  font-size: clamp(0.84rem, 2.3vw, 1rem);
+}
