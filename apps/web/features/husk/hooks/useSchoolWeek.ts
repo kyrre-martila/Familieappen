@@ -30,7 +30,7 @@ export type SchoolReminderInput = {
   note?: string | null;
 };
 
-export type SchoolReminderUpdate = Partial<Pick<HuskSchoolWeekItem, "title" | "icon" | "note" | "isRecurring" | "recurrenceEndDate">> & {
+export type SchoolReminderUpdate = Partial<Pick<HuskSchoolWeekItem, "title" | "icon" | "note" | "isRecurring" | "recurrenceEndDate" | "childFamilyMemberId">> & {
   weekday?: HuskSchoolWeekday;
   date?: string;
   occurrenceDate?: string;
@@ -221,6 +221,7 @@ function applyOptimisticUpdate(item: BackendSchoolWeekReminder, update: SchoolRe
     icon: update.icon ?? item.icon,
     category: update.icon ?? item.category,
     weekday: update.weekday ?? item.weekday,
+    childFamilyMemberId: update.childFamilyMemberId ?? item.childFamilyMemberId,
     date: update.date ?? item.date,
     occurrenceDate: update.occurrenceDate ?? item.occurrenceDate,
     isRecurring: update.isRecurring ?? item.isRecurring,

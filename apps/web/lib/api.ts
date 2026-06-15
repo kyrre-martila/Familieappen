@@ -917,7 +917,7 @@ export async function addSchoolWeekReminder(
 export async function updateSchoolWeekReminder(
   familyId: string,
   reminderId: string,
-  input: { title?: string; icon?: string; category?: string; weekday?: string; date?: string; occurrenceDate?: string; isRecurring?: boolean; recurrenceFrequency?: "weekly"; recurrenceEndDate?: string | null; note?: string | null; scope?: SchoolWeekMutationScope }
+  input: { childFamilyMemberId?: string; childId?: string; title?: string; icon?: string; category?: string; weekday?: string; date?: string; occurrenceDate?: string; isRecurring?: boolean; recurrenceFrequency?: "weekly"; recurrenceEndDate?: string | null; note?: string | null; scope?: SchoolWeekMutationScope }
 ): Promise<SchoolWeekReminder> {
   return apiRequest<SchoolWeekReminder>(`/school-week/${encodeURIComponent(reminderId)}`, { method: "PATCH", body: input, familyId });
 }
@@ -963,8 +963,20 @@ export async function addTask(
   });
 }
 
-export async function toggleTask(familyId: string, taskId: string): Promise<Task> {
+export async function updateTask(
+  familyId: string,
+  taskId: string,
+  input: { title?: string; description?: string | null; assignedFamilyMemberId?: string | null; dueDate?: string | null }
+): Promise<Task> {
   return apiRequest<Task>(`/tasks/${encodeURIComponent(taskId)}`, {
+    method: "PATCH",
+    body: input,
+    familyId
+  });
+}
+
+export async function toggleTask(familyId: string, taskId: string): Promise<Task> {
+  return apiRequest<Task>(`/tasks/${encodeURIComponent(taskId)}/toggle`, {
     method: "PATCH",
     familyId
   });

@@ -1,6 +1,7 @@
 "use client";
 
 import { FormEvent, useEffect, useMemo, useState, type ChangeEvent } from "react";
+import { MoreHorizontal } from "lucide-react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { LockedFeatureState } from "../../../components/PendingAccess";
@@ -16,7 +17,8 @@ import {
   deleteTask,
   getFamily,
   getTasks,
-  toggleTask
+  toggleTask,
+  updateTask
 } from "../../../lib/api";
 import { chooseActiveFamily, getUserFacingApiMessage, handleMissingOrInvalidAuth } from "../../../lib/auth-family";
 import { clearActiveFamilyId } from "../../../lib/session";
@@ -37,6 +39,8 @@ export function OppgaverSection() {
   const [dueDate, setDueDate] = useState("");
   const [pendingTaskId, setPendingTaskId] = useState<string | null>(null);
   const [isAdding, setIsAdding] = useState(false);
+  const [editingTaskId, setEditingTaskId] = useState<string | null>(null);
+  const [openTaskMenuId, setOpenTaskMenuId] = useState<string | null>(null);
 
   const familyAccess = useFamilyAccess();
   const approvedFamilyContext = familyAccess.status === "approved" ? familyAccess.familyContext : null;
@@ -98,16 +102,26 @@ export function OppgaverSection() {
     setMessage("");
 
     try {
-      const task = await addTask(activeFamilyId, {
-        title: nextTitle,
-        ...(nextDescription ? { description: nextDescription } : {}),
-        ...(assignedFamilyMemberId ? { assignedFamilyMemberId } : {}),
-        ...(dueDate ? { dueDate } : {})
-      });
-      setTasks((currentOppgaver) => [...currentOppgaver, task].sort(sortTasks));
-      setTitle("");
-      setDescription("");
-      setDueDate("");
+      const task = editingTaskId
+        ? await updateTask(activeFamilyId, editingTaskId, {
+            title: nextTitle,
+            description: nextDescription || null,
+            assignedFamilyMemberId: assignedFamilyMemberId || null,
+            dueDate: dueDate || null
+          })
+        : await addTask(activeFamilyId, {
+            title: nextTitle,
+            ...(nextDescription ? { description: nextDescription } : {}),
+            ...(assignedFamilyMemberId ? { assignedFamilyMemberId } : {}),
+            ...(dueDate ? { dueDate } : {})
+          });
+      if (editingTaskId) {
+        setTasks((currentOppgaver) => currentOppgaver.map((currentTask) => (currentTask.id === editingTaskId ? task : currentTask)).sort(sortTasks));
+        setEditingTaskId(null);
+      } else {
+        setTasks((currentOppgaver) => [...currentOppgaver, task].sort(sortTasks));
+      }
+      resetTaskForm();
       setStatus("ready");
     } catch (error) {
       handleActionError(error, "Could not add the task. Please try again.");
@@ -150,6 +164,24 @@ export function OppgaverSection() {
     } finally {
       setPendingTaskId(null);
     }
+  }
+
+  function startEditingOppgave(task: Task) {
+    setEditingTaskId(task.id);
+    setTitle(task.title);
+    setDescription(task.description ?? "");
+    setAssignedFamilyMemberId(task.assignedFamilyMemberId ?? "");
+    setDueDate(task.dueDate ? task.dueDate.slice(0, 10) : "");
+    setOpenTaskMenuId(null);
+    setMessage("");
+  }
+
+  function resetTaskForm() {
+    setTitle("");
+    setDescription("");
+    setAssignedFamilyMemberId("");
+    setDueDate("");
+    setEditingTaskId(null);
   }
 
   function handleLoadError(error: unknown) {
@@ -287,7 +319,7 @@ export function OppgaverSection() {
                 />
               </label>
               <Button className="tasks-form__button" disabled={isAdding || title.trim().length === 0} type="submit" variant="primary">
-                + Ny oppgave
+                {editingTaskId ? "Lagre oppgave" : "+ Ny oppgave"}
               </Button>
             </form>
           ) : null}
@@ -318,15 +350,36 @@ export function OppgaverSection() {
                     <span className="tasks-list__meta">{formatOppgaveMeta(task, members)}</span>
                     {task.description ? <span className="tasks-list__description">{task.description}</span> : null}
                   </div>
-                  <button
-                    aria-label={`Slett ${task.title}`}
-                    className="tasks-list__delete"
-                    disabled={pendingTaskId === task.id}
-                    onClick={() => handleSlettOppgave(task.id)}
-                    type="button"
+                  <span
+                    className="meal-card__menu-wrap tasks-list__menu-wrap"
+                    onBlur={(event) => {
+                      if (!(event.relatedTarget instanceof Node && event.currentTarget.contains(event.relatedTarget))) {
+                        setOpenTaskMenuId(null);
+                      }
+                    }}
                   >
-                    Slett
-                  </button>
+                    <button
+                      aria-expanded={openTaskMenuId === task.id}
+                      aria-label={`Åpne meny for ${task.title}`}
+                      className="meal-card__menu tasks-list__menu"
+                      disabled={pendingTaskId === task.id}
+                      onClick={() => setOpenTaskMenuId((currentId) => (currentId === task.id ? null : task.id))}
+                      title="Rediger / Slett"
+                      type="button"
+                    >
+                      <MoreHorizontal aria-hidden="true" size={20} />
+                    </button>
+                    {openTaskMenuId === task.id ? (
+                      <span className="meal-card__menu-popover tasks-list__menu-popover" role="menu">
+                        <button type="button" role="menuitem" onClick={() => startEditingOppgave(task)}>
+                          Rediger
+                        </button>
+                        <button type="button" role="menuitem" onClick={() => { setOpenTaskMenuId(null); void handleSlettOppgave(task.id); }}>
+                          Slett
+                        </button>
+                      </span>
+                    ) : null}
+                  </span>
                 </li>
               ))}
             </ul>

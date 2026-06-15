@@ -243,7 +243,7 @@ function getDefaultDraft({
           ? []
           : (reminder?.memberIds ?? []),
       date: reminder?.dueDate ?? getTodayDate(),
-      reminderEnabled: false,
+      reminderEnabled: Boolean(reminder?.reminderMinutesBefore),
       description: reminder?.note ?? "",
     };
   }
