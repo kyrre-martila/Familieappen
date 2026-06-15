@@ -14,7 +14,7 @@ import { CalendarMealChip } from "../../features/calendar/components/CalendarMea
 import { CalendarReminderSummaryChip } from "../../features/calendar/components/CalendarReminderChip";
 import { CalendarSchoolWeekChip } from "../../features/calendar/components/CalendarSchoolWeekChip";
 import { CalendarProvider, useCalendar } from "../../features/calendar/hooks/useCalendar";
-import { getShoppingList, type ShoppingList } from "../../lib/api";
+import { getShoppingList, getTasks, type ShoppingList, type Task } from "../../lib/api";
 import { FeedbackSheet } from "../settings/about/AppInfoSettingsClient";
 
 type FeedbackType = "feedback" | "bug";
@@ -26,6 +26,8 @@ function HomeContent() {
   const { error, loading, refresh, today } = useCalendar();
   const [shoppingList, setShoppingList] = useState<ShoppingList | null>(null);
   const [shoppingLoading, setShoppingLoading] = useState(true);
+  const [tasks, setTasks] = useState<Task[]>([]);
+  const [tasksLoading, setTasksLoading] = useState(true);
   const [sheet, setSheet] = useState<FeedbackType | null>(null);
   const [feedbackMessage, setFeedbackMessage] = useState("");
 
@@ -35,11 +37,15 @@ function HomeContent() {
     if (!activeFamilyId) {
       setShoppingList(null);
       setShoppingLoading(false);
+      setTasks([]);
+      setTasksLoading(false);
       return;
     }
 
     let cancelled = false;
     setShoppingLoading(true);
+    setTasksLoading(true);
+
     getShoppingList(activeFamilyId)
       .then((list) => {
         if (!cancelled) setShoppingList(list);
@@ -49,6 +55,17 @@ function HomeContent() {
       })
       .finally(() => {
         if (!cancelled) setShoppingLoading(false);
+      });
+
+    getTasks(activeFamilyId)
+      .then((familyTasks) => {
+        if (!cancelled) setTasks(familyTasks);
+      })
+      .catch(() => {
+        if (!cancelled) setTasks([]);
+      })
+      .finally(() => {
+        if (!cancelled) setTasksLoading(false);
       });
 
     return () => {
@@ -62,6 +79,12 @@ function HomeContent() {
   );
   const visibleShoppingItems = uncheckedItems.slice(0, 4);
   const remainingShoppingCount = Math.max(0, uncheckedItems.length - visibleShoppingItems.length);
+  const openTasks = useMemo(
+    () => tasks.filter((task) => !task.completed).sort(sortOpenTasks),
+    [tasks],
+  );
+  const visibleTasks = openTasks.slice(0, 3);
+  const remainingTaskCount = Math.max(0, openTasks.length - visibleTasks.length);
 
   if (familyAccess.status === "pending") {
     return <LockedFeatureState />;
@@ -132,6 +155,35 @@ function HomeContent() {
               Gå til handleliste →
             </Link>
           </Card>
+
+          <Link className="home-card-link" href="/husk?tab=oppgaver" aria-label="Gå til oppgaver">
+            <Card className="home-card" tone="default">
+              <div className="home-card__header-row">
+                <SectionHeader eyebrow="Praktisk" title="Oppgaver" action={openTasks.length ? <Badge tone="neutral">{formatTaskCount(openTasks.length)}</Badge> : null} />
+              </div>
+              {tasksLoading ? (
+                <EmptyState title="Henter oppgaver" description="Ser etter åpne oppgaver for familien." />
+              ) : visibleTasks.length ? (
+                <ul className="home-shopping-list" aria-label="Åpne oppgaver">
+                  {visibleTasks.map((task) => (
+                    <li key={task.id}>
+                      <span aria-hidden="true">☐</span>
+                      <span>{formatTaskSummary(task)}</span>
+                    </li>
+                  ))}
+                  {remainingTaskCount > 0 ? <li className="home-shopping-list__more">+{remainingTaskCount} flere</li> : null}
+                </ul>
+              ) : (
+                <div className="home-subtle-state">
+                  <p className="home-subtle-state__title">Ingen oppgaver akkurat nå</p>
+                  <p>Legg til oppgaver når noe må gjøres.</p>
+                </div>
+              )}
+              <span className="home-card__text-link" aria-hidden="true">
+                Gå til oppgaver →
+              </span>
+            </Card>
+          </Link>
 
           <Card className="home-card" tone="soft">
             <SectionHeader eyebrow="Raskt videre" title="Snarveier" />
@@ -218,4 +270,28 @@ function formatToday(date: string) {
 
 function formatShoppingCount(count: number) {
   return `${count} ${count === 1 ? "vare" : "varer"} mangler`;
+}
+
+function sortOpenTasks(first: Task, second: Task) {
+  if (first.dueDate && second.dueDate && first.dueDate !== second.dueDate) {
+    return first.dueDate.localeCompare(second.dueDate);
+  }
+
+  if (first.dueDate && !second.dueDate) return -1;
+  if (!first.dueDate && second.dueDate) return 1;
+
+  return first.createdAt.localeCompare(second.createdAt);
+}
+
+function formatTaskSummary(task: Task) {
+  return task.dueDate ? `${task.title} · ${formatTaskDueDate(task.dueDate)}` : task.title;
+}
+
+function formatTaskDueDate(date: string) {
+  const [year, month, day] = date.split("-").map(Number);
+  return new Intl.DateTimeFormat("nb-NO", { day: "numeric", month: "short" }).format(new Date(year, month - 1, day));
+}
+
+function formatTaskCount(count: number) {
+  return `${count} ${count === 1 ? "oppgave" : "oppgaver"}`;
 }

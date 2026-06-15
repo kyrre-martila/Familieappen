@@ -13405,6 +13405,16 @@ button.family-settings-row:focus-visible:not(:disabled) {
   align-content: start;
 }
 
+.home-card-link {
+  display: block;
+  color: inherit;
+  text-decoration: none;
+}
+
+.home-card-link:hover .home-card__text-link {
+  text-decoration: underline;
+}
+
 .home-card__header-row {
   display: grid;
   gap: var(--space-m);
