@@ -300,6 +300,9 @@ export function SchoolWeekPanel({
     await updateSchoolReminder(edit.item.id, {
       scope,
       occurrenceDate: edit.item.occurrenceDate,
+      childFamilyMemberId: edit.item.childFamilyMemberId,
+      weekday: edit.draft.weekday,
+      date: edit.item.date ?? edit.item.occurrenceDate,
       title: edit.draft.title,
       note: edit.draft.note || null,
       icon: edit.draft.icon,

@@ -1,7 +1,7 @@
 import { Body, Controller, Delete, Get, Headers, HttpStatus, Param, Patch, Post, Req, UseGuards } from "@nestjs/common";
 import { AuthGuard } from "../auth/guards/auth.guard";
 import { API_ERROR_CODES, ApiException, ApiResponse, createApiResponse } from "../common";
-import { CreateTaskRequestDto, TaskDto } from "./dto/task.dto";
+import { CreateTaskRequestDto, TaskDto, UpdateTaskRequestDto } from "./dto/task.dto";
 import { TasksService } from "./tasks.service";
 
 type AuthenticatedRequest = {
@@ -33,13 +33,23 @@ export class TasksController {
     return createApiResponse(await this.tasksService.createTask(request.user.id, requireFamilyId(familyId), body));
   }
 
-  @Patch(":taskId")
+  @Patch(":taskId/toggle")
   async toggleTask(
     @Req() request: AuthenticatedRequest,
     @Headers("x-family-id") familyId: string,
     @Param("taskId") taskId: string
   ): Promise<ApiResponse<TaskDto>> {
     return createApiResponse(await this.tasksService.toggleTask(request.user.id, requireFamilyId(familyId), taskId));
+  }
+
+  @Patch(":taskId")
+  async updateTask(
+    @Req() request: AuthenticatedRequest,
+    @Headers("x-family-id") familyId: string,
+    @Param("taskId") taskId: string,
+    @Body() body: UpdateTaskRequestDto
+  ): Promise<ApiResponse<TaskDto>> {
+    return createApiResponse(await this.tasksService.updateTask(request.user.id, requireFamilyId(familyId), taskId, body));
   }
 
   @Delete(":taskId")

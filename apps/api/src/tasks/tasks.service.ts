@@ -1,7 +1,7 @@
 import { BadRequestException, Injectable, NotFoundException } from "@nestjs/common";
 import { FamilyAuthorizationService } from "../families";
 import { PrismaService } from "../prisma";
-import { CreateTaskRequestDto, TaskDto } from "./dto/task.dto";
+import { CreateTaskRequestDto, TaskDto, UpdateTaskRequestDto } from "./dto/task.dto";
 
 type TaskRecord = {
   id: string;
@@ -68,6 +68,31 @@ export class TasksService {
         completed: nextCompleted,
         completedAt: nextCompleted ? new Date() : null,
         completedByUserId: nextCompleted ? userId : null
+      }
+    });
+
+    return this.toTaskDto(updatedTask);
+  }
+
+  async updateTask(userId: string, familyId: string, taskId: string, input: UpdateTaskRequestDto = {}): Promise<TaskDto> {
+    await this.familyAuthorization.requireFamilyMember(userId, familyId);
+    const task = await this.getFamilyTaskOrThrow(familyId, taskId);
+    const title = input.title !== undefined ? this.validateTitle(input.title) : undefined;
+    const description = input.description !== undefined ? this.validateDescription(input.description) : undefined;
+    const assignedFamilyMemberId = input.assignedFamilyMemberId !== undefined ? await this.validateAssignedFamilyMember(familyId, input.assignedFamilyMemberId) : undefined;
+    const dueDate = input.dueDate !== undefined ? this.validateDueDate(input.dueDate) : undefined;
+
+    if (title === undefined && description === undefined && assignedFamilyMemberId === undefined && dueDate === undefined) {
+      throw new BadRequestException("At least one task field is required");
+    }
+
+    const updatedTask = await this.prisma.client.task.update({
+      where: { id: task.id },
+      data: {
+        ...(title !== undefined ? { title } : {}),
+        ...(description !== undefined ? { description } : {}),
+        ...(assignedFamilyMemberId !== undefined ? { assignedFamilyMemberId } : {}),
+        ...(dueDate !== undefined ? { dueDate } : {})
       }
     });
 

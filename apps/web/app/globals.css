@@ -13590,3 +13590,20 @@ button.family-settings-row:focus-visible:not(:disabled) {
   border-color: color-mix(in srgb, var(--color-primary-soft) 72%, var(--color-border));
   background: color-mix(in srgb, var(--color-primary-soft) 26%, var(--color-surface));
 }
+
+/* Keep School Week bottom actions visible above iPhone/PWA safe areas. */
+.husk-school-sheet__actions {
+  position: sticky;
+  bottom: 0;
+  z-index: 3;
+  padding-bottom: calc(env(safe-area-inset-bottom) + var(--space-m));
+  box-shadow: 0 calc(var(--space-s) * -1) var(--space-l) color-mix(in srgb, var(--color-text) 9%, transparent);
+}
+
+.tasks-list__menu-wrap {
+  align-self: start;
+}
+
+.tasks-list__menu-popover {
+  z-index: 4;
+}

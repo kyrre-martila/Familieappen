@@ -1,9 +1,12 @@
-export interface CreateTaskRequestDto {
+export interface TaskMutationRequestDto {
   title?: unknown;
   description?: unknown;
   assignedFamilyMemberId?: unknown;
   dueDate?: unknown;
 }
+
+export type CreateTaskRequestDto = TaskMutationRequestDto;
+export type UpdateTaskRequestDto = TaskMutationRequestDto;
 
 export interface TaskDto {
   id: string;

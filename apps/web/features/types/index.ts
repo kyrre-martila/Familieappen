@@ -79,6 +79,7 @@ export type Reminder = {
   memberIds: string[];
   audience?: ReminderAudience;
   note?: string;
+  reminderMinutesBefore?: number | null;
   completed?: boolean;
   recurrence?: CalendarRecurrence | null;
   createdAt?: string;

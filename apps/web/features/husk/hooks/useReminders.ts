@@ -194,12 +194,13 @@ function toBackendInput(input: ReminderInput) {
   };
 }
 
-function toBackendUpdate(update: Partial<HuskReminder>) {
+function toBackendUpdate(update: Partial<HuskReminder> & { reminderMinutesBefore?: number | null }) {
   return {
     ...(update.title !== undefined ? { title: update.title } : {}),
     ...(update.icon !== undefined ? { icon: update.icon } : {}),
     ...(update.dueDate !== undefined ? { dueDate: update.dueDate ?? undefined } : {}),
     ...(update.note !== undefined ? { note: update.note ?? null } : {}),
+    ...(update.reminderMinutesBefore !== undefined ? { reminderMinutesBefore: update.reminderMinutesBefore } : {}),
     ...(update.scopeText !== undefined || update.memberIds !== undefined
       ? {
           scope: update.scopeText === "Hele familien" || (update.memberIds?.length ?? 0) === 0 ? "family" as const : "members" as const,
@@ -237,7 +238,7 @@ function createOptimisticBackendReminder(input: ReminderInput, familyId: string)
   };
 }
 
-function applyHuskUpdate(reminder: BackendReminder, update: Partial<HuskReminder>): BackendReminder {
+function applyHuskUpdate(reminder: BackendReminder, update: Partial<HuskReminder> & { reminderMinutesBefore?: number | null }): BackendReminder {
   const nextMemberIds = update.scopeText === "Hele familien" ? [] : (update.memberIds ?? reminder.memberIds);
   const scope = update.scopeText === "Hele familien" || nextMemberIds.length === 0 ? "family" : "members";
   const nextDate = update.dueDate ?? reminder.date;
@@ -247,6 +248,10 @@ function applyHuskUpdate(reminder: BackendReminder, update: Partial<HuskReminder
     ...(update.title !== undefined ? { title: update.title } : {}),
     ...(update.icon !== undefined ? { icon: update.icon } : {}),
     ...(update.note !== undefined ? { note: update.note ?? null } : {}),
+    ...(update.reminderMinutesBefore !== undefined ? {
+      reminderMinutesBefore: update.reminderMinutesBefore,
+      reminder: update.reminderMinutesBefore ? { minutesBefore: update.reminderMinutesBefore, label: `${update.reminderMinutesBefore} min før` } : null,
+    } : {}),
     dueDate: nextDate ? `${nextDate}T00:00:00.000Z` : null,
     date: nextDate,
     scope,
@@ -272,6 +277,7 @@ function toHuskReminder(reminder: BackendReminder, familyMembers: HuskFamilyMemb
     memberIds,
     audience: { memberIds, label: scopeText },
     note: reminder.note ?? undefined,
+    reminderMinutesBefore: reminder.reminderMinutesBefore,
     createdAt: reminder.createdAt,
     updatedAt: reminder.updatedAt,
   };
