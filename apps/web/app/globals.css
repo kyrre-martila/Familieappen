@@ -8885,15 +8885,7 @@ button.calendar-chip {
     color-mix(in srgb, var(--color-primary) 24%, transparent);
 }
 
-.husk-school--editing .husk-school-day {
-  border-color: color-mix(
-    in srgb,
-    var(--color-primary) 16%,
-    var(--color-border)
-  );
-}
-
-.husk-school--editing .husk-school-day__header {
+.husk-school .husk-school-day__header {
   display: grid;
   grid-template-columns: auto minmax(0, 1fr) auto;
 }
@@ -8911,23 +8903,38 @@ button.calendar-chip {
   cursor: pointer;
 }
 
-.husk-school--editing .husk-school-day__items {
+.husk-school .husk-school-day__items {
   display: grid;
   padding-left: 0;
 }
 
-.husk-school-item--editable,
-.husk-school-item--viewable {
+.husk-school-item {
+  position: relative;
+  grid-template-columns: minmax(0, 1fr) auto;
+  justify-items: stretch;
   width: 100%;
-  justify-content: stretch;
+}
+
+.husk-school-item__tap-target {
+  display: inline-grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  align-items: center;
+  gap: var(--space-xs);
+  min-width: 0;
+  width: 100%;
   border: 0;
+  padding: 0;
+  background: transparent;
+  color: inherit;
   cursor: pointer;
   text-align: left;
   font: inherit;
 }
 
-.husk-school-item--viewable:hover,
-.husk-school-item--viewable:focus-visible {
+.husk-school-item__tap-target:hover,
+.husk-school-item__tap-target:focus-visible,
+.husk-school-item__menu:focus-visible,
+.husk-school-item__menu-popover button:focus-visible {
   outline: 2px solid color-mix(in srgb, var(--husk-school-item-accent) 38%, transparent);
   outline-offset: 2px;
 }
@@ -8948,18 +8955,54 @@ button.calendar-chip {
   font-weight: 730;
 }
 
-.husk-school-item__edit-label {
-  margin-left: auto;
+.husk-school-item__menu {
+  display: grid;
+  width: calc(var(--space-xl) + var(--space-xs));
+  height: calc(var(--space-xl) + var(--space-xs));
+  place-items: center;
+  border: 0;
   border-radius: var(--radius-pill);
-  padding: calc(var(--space-xs) * 0.6) var(--space-s);
-  background: color-mix(
-    in srgb,
-    var(--color-primary-soft) 64%,
-    var(--color-surface)
-  );
-  color: var(--color-primary-strong);
+  padding: 0;
+  background: transparent;
+  color: var(--color-muted);
+  cursor: pointer;
+}
+
+.husk-school-item__menu-wrap {
+  position: relative;
+  display: grid;
+  place-items: center;
+}
+
+.husk-school-item__menu-popover {
+  position: absolute;
+  z-index: 3;
+  top: calc(100% + var(--space-xs));
+  right: 0;
+  display: grid;
+  min-width: 8rem;
+  overflow: hidden;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-m);
+  background: var(--color-surface);
+  box-shadow: 0 var(--space-s) var(--space-l)
+    color-mix(in srgb, var(--color-text) 12%, transparent);
+}
+
+.husk-school-item__menu-popover button {
+  border: 0;
+  padding: var(--space-s) var(--space-m);
+  background: transparent;
+  color: var(--color-text);
+  font: inherit;
   font-size: var(--text-small);
-  font-weight: 850;
+  font-weight: 800;
+  text-align: left;
+  cursor: pointer;
+}
+
+.husk-school-item__menu-popover button:hover {
+  background: var(--color-background-soft);
 }
 
 .husk-school__tip {

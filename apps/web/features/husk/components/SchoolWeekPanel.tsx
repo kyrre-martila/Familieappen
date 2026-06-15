@@ -1,11 +1,11 @@
 "use client";
 
-import { useRouter } from "next/navigation";
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import {
   CalendarDays,
   ChevronLeft,
   ChevronRight,
+  MoreHorizontal,
   Plus,
   RotateCcw,
 } from "lucide-react";
@@ -49,7 +49,7 @@ export function SchoolWeekPanel({
 }: {
   shouldOpenPlanner: boolean;
 }) {
-  const router = useRouter();
+  void shouldOpenPlanner;
   const todayWeekStart = useMemo(() => getIsoWeekStart(new Date()), []);
   const todayWeekStartTime = todayWeekStart.getTime();
   const [selectedWeekStartTime, setSelectedWeekStartTime] =
@@ -57,12 +57,14 @@ export function SchoolWeekPanel({
   const [selectedChildId, setSelectedChildId] = useState(() =>
     readStoredValue(schoolChildStorageKey),
   );
-  const [isEditing, setIsEditing] = useState(shouldOpenPlanner);
   const [createDraft, setCreateDraft] = useState<SchoolCreateDraft | null>(
     null,
   );
-  const [recurringChoiceItem, setRecurringChoiceItem] =
-    useState<HuskSchoolWeekItem | null>(null);
+  const [recurringChoice, setRecurringChoice] = useState<{
+    item: HuskSchoolWeekItem;
+    action: "edit" | "delete";
+  } | null>(null);
+  const [openItemMenuId, setOpenItemMenuId] = useState<string | null>(null);
   const [detailItem, setDetailItem] = useState<HuskSchoolWeekItem | null>(null);
   const [schoolFeedback, setSchoolFeedback] = useState<string | null>(null);
   const [showSavedBadge, setShowSavedBadge] = useState(false);
@@ -78,13 +80,9 @@ export function SchoolWeekPanel({
     refresh,
     createSchoolReminder,
     updateSchoolReminder,
+    deleteSchoolReminder,
   } = useSchoolWeek(selectedWeekStart);
-
-  useEffect(() => {
-    if (shouldOpenPlanner) {
-      setIsEditing(true);
-    }
-  }, [shouldOpenPlanner]);
+  const weekStripRef = useRef<HTMLDivElement | null>(null);
 
   useEffect(() => {
     if (selectedChildId) {
@@ -161,17 +159,13 @@ export function SchoolWeekPanel({
     }
   }
 
-  function toggleEditing() {
-    if (isEditing) {
-      if (shouldOpenPlanner) {
-        router.back();
-      } else {
-        setIsEditing(false);
-      }
-      return;
-    }
-
-    router.push("/husk?tab=skoleuka&edit=1");
+  function handleWeekSelect(weekStartTime: number, button: HTMLButtonElement) {
+    setSelectedWeekStartTime(weekStartTime);
+    button.scrollIntoView({
+      behavior: "smooth",
+      block: "nearest",
+      inline: "center",
+    });
   }
 
   function showSaved() {
@@ -226,23 +220,70 @@ export function SchoolWeekPanel({
   }
 
   async function chooseRecurringScope(scope: "occurrence" | "series") {
-    if (!recurringChoiceItem) {
+    if (!recurringChoice) {
       return;
     }
 
+    const { item, action } = recurringChoice;
+
     try {
-      await updateSchoolReminder(recurringChoiceItem.id, {
-        scope,
-        occurrenceDate: recurringChoiceItem.occurrenceDate,
-        title: recurringChoiceItem.title,
-        note: recurringChoiceItem.note ?? null,
-      });
-      setRecurringChoiceItem(null);
-      setSchoolFeedback(null);
+      if (action === "delete") {
+        await deleteSchoolReminder(item.id, {
+          scope,
+          occurrenceDate: item.occurrenceDate,
+        });
+        setSchoolFeedback(null);
+        showSaved();
+      } else {
+        await updateSchoolReminder(item.id, {
+          scope,
+          occurrenceDate: item.occurrenceDate,
+          title: item.title,
+          note: item.note ?? null,
+        });
+        setSchoolFeedback(null);
+      }
+      setRecurringChoice(null);
     } catch {
-      setSchoolFeedback("Endringen ble ikke lagret. Prøv igjen om litt.");
+      setSchoolFeedback(
+        action === "delete"
+          ? "Skolehusk ble ikke slettet. Prøv igjen om litt."
+          : "Endringen ble ikke lagret. Prøv igjen om litt.",
+      );
     }
   }
+
+  async function deleteSingleReminder(item: HuskSchoolWeekItem) {
+    try {
+      await deleteSchoolReminder(item.id, { occurrenceDate: item.occurrenceDate });
+      setOpenItemMenuId(null);
+      setSchoolFeedback(null);
+      showSaved();
+    } catch {
+      setSchoolFeedback("Skolehusk ble ikke slettet. Prøv igjen om litt.");
+    }
+  }
+
+  function openEditFlow(item: HuskSchoolWeekItem) {
+    setOpenItemMenuId(null);
+    if (item.isRecurring) {
+      setRecurringChoice({ item, action: "edit" });
+      return;
+    }
+
+    setSchoolFeedback("Enkeltstående skolehusk er lagret for denne uka.");
+  }
+
+  function openDeleteFlow(item: HuskSchoolWeekItem) {
+    setOpenItemMenuId(null);
+    if (item.isRecurring) {
+      setRecurringChoice({ item, action: "delete" });
+      return;
+    }
+
+    void deleteSingleReminder(item);
+  }
+
 
   if (loading) {
     return (
@@ -298,7 +339,7 @@ export function SchoolWeekPanel({
 
   return (
     <section
-      className={`husk-panel husk-school${isEditing ? " husk-school--editing" : ""}`}
+      className="husk-panel husk-school"
       id="husk-panel-skoleuka"
       role="tabpanel"
       aria-labelledby="husk-tab-skoleuka husk-school-title"
@@ -312,17 +353,10 @@ export function SchoolWeekPanel({
         </div>
         <div className="husk-school__actions">
           <SavedBadge isVisible={showSavedBadge} />
-          <button
-            className={`husk-school__edit-button${isEditing ? " husk-school__edit-button--done" : ""}`}
-            type="button"
-            onClick={toggleEditing}
-          >
-            {isEditing ? "Ferdig" : "Rediger"}
-          </button>
         </div>
       </div>
 
-      <div className="husk-week-strip" aria-label="Velg uke">
+      <div className="husk-week-strip" aria-label="Velg uke" ref={weekStripRef}>
         {weekOptions.map((week) => {
           const isSelected = week.startTime === selectedWeekStartTime;
           const isCurrent = week.startTime === todayWeekStart.getTime();
@@ -331,7 +365,7 @@ export function SchoolWeekPanel({
             <button
               className={`husk-week-strip__option${isSelected ? " husk-week-strip__option--selected" : ""}`}
               key={week.key}
-              onClick={() => setSelectedWeekStartTime(week.startTime)}
+              onClick={(event) => handleWeekSelect(week.startTime, event.currentTarget)}
               type="button"
               aria-current={isCurrent ? "date" : undefined}
               aria-pressed={isSelected}
@@ -383,7 +417,7 @@ export function SchoolWeekPanel({
         <SchoolWeekEmptyState
           title="Ingen skolehusk denne uka"
           description="Legg til det som må huskes til skoledagene."
-          actionHref="/husk?tab=skoleuka&edit=1"
+          actionHref="/husk?tab=skoleuka"
           actionLabel="Legg til skolehusk"
         />
       ) : null}
@@ -413,72 +447,99 @@ export function SchoolWeekPanel({
                   <h3>{weekday.label}</h3>
                   <span>{formatSchoolDate(date)}</span>
                 </div>
-                {isEditing ? (
-                  <button
-                    className="husk-school-day__add"
-                    type="button"
-                    onClick={() => openCreateSheet(weekday, date)}
-                    aria-label={`Legg til husk på ${weekday.label}`}
-                  >
-                    <Plus aria-hidden="true" size={22} strokeWidth={2.35} />
-                  </button>
-                ) : null}
+                <button
+                  className="husk-school-day__add"
+                  type="button"
+                  onClick={() => openCreateSheet(weekday, date)}
+                  aria-label={`Legg til husk på ${weekday.label}`}
+                >
+                  <Plus aria-hidden="true" size={22} strokeWidth={2.35} />
+                </button>
               </header>
               <div className="husk-school-day__items">
                 {items.length > 0 ? (
                   items.map((item) => {
                     const Icon = reminderIcons[item.icon];
-                    const content = (
-                      <>
-                        <span
-                          className="husk-school-item__icon"
-                          aria-hidden="true"
+                    const isMenuOpen = openItemMenuId === item.id;
+
+                    return (
+                      <div
+                        className={`husk-school-item husk-school-item--${item.tone}`}
+                        key={item.id}
+                      >
+                        <button
+                          className="husk-school-item__tap-target"
+                          type="button"
+                          onClick={() => setDetailItem(item)}
                         >
-                          <Icon size={20} strokeWidth={2.35} />
-                        </span>
-                        <span className="husk-school-item__copy">
-                          <span>{item.title}</span>
-                          {isEditing && item.isRecurring ? (
-                            <small>
-                              <RotateCcw size={12} strokeWidth={2.4} /> Hver uke
-                              {item.recurrenceEndDate
-                                ? ` til ${formatSchoolDate(new Date(`${item.recurrenceEndDate}T00:00:00.000Z`))}`
-                                : ""}
-                            </small>
+                          <span
+                            className="husk-school-item__icon"
+                            aria-hidden="true"
+                          >
+                            <Icon size={20} strokeWidth={2.35} />
+                          </span>
+                          <span className="husk-school-item__copy">
+                            <span>{item.title}</span>
+                            {item.isRecurring ? (
+                              <small>
+                                <RotateCcw size={12} strokeWidth={2.4} /> Hver uke
+                                {item.recurrenceEndDate
+                                  ? ` til ${formatSchoolDate(new Date(`${item.recurrenceEndDate}T00:00:00.000Z`))}`
+                                  : ""}
+                              </small>
+                            ) : null}
+                          </span>
+                        </button>
+                        <span
+                          className="husk-school-item__menu-wrap"
+                          onBlur={(event) => {
+                            if (
+                              !(
+                                event.relatedTarget instanceof Node &&
+                                event.currentTarget.contains(event.relatedTarget)
+                              )
+                            ) {
+                              setOpenItemMenuId(null);
+                            }
+                          }}
+                        >
+                          <button
+                            className="husk-school-item__menu"
+                            type="button"
+                            aria-expanded={isMenuOpen}
+                            aria-label={`Åpne meny for ${item.title}`}
+                            title="Rediger / Slett"
+                            onClick={() =>
+                              setOpenItemMenuId((currentId) =>
+                                currentId === item.id ? null : item.id,
+                              )
+                            }
+                          >
+                            <MoreHorizontal aria-hidden="true" size={20} />
+                          </button>
+                          {isMenuOpen ? (
+                            <span
+                              className="husk-school-item__menu-popover"
+                              role="menu"
+                            >
+                              <button
+                                type="button"
+                                role="menuitem"
+                                onClick={() => openEditFlow(item)}
+                              >
+                                Rediger
+                              </button>
+                              <button
+                                type="button"
+                                role="menuitem"
+                                onClick={() => openDeleteFlow(item)}
+                              >
+                                Slett
+                              </button>
+                            </span>
                           ) : null}
                         </span>
-                        {isEditing ? (
-                          <span className="husk-school-item__edit-label">
-                            Endre
-                          </span>
-                        ) : null}
-                      </>
-                    );
-
-                    return isEditing ? (
-                      <button
-                        className={`husk-school-item husk-school-item--${item.tone} husk-school-item--editable`}
-                        key={item.id}
-                        type="button"
-                        onClick={() =>
-                          item.isRecurring
-                            ? setRecurringChoiceItem(item)
-                            : setSchoolFeedback(
-                                "Enkeltstående skolehusk er lagret for denne uka.",
-                              )
-                        }
-                      >
-                        {content}
-                      </button>
-                    ) : (
-                      <button
-                        className={`husk-school-item husk-school-item--${item.tone} husk-school-item--viewable`}
-                        key={item.id}
-                        type="button"
-                        onClick={() => setDetailItem(item)}
-                      >
-                        {content}
-                      </button>
+                      </div>
                     );
                   })
                 ) : (
@@ -490,12 +551,10 @@ export function SchoolWeekPanel({
         })}
       </div>
 
-      {isEditing ? (
-        <p className="husk-school__tip">
-          Trykk + på riktig dag for å legge til. Trykk på et punkt for å endre
-          gjentakelse.
-        </p>
-      ) : null}
+      <p className="husk-school__tip">
+        Trykk + på riktig dag for å legge til. Bruk menyen på et punkt for å
+        redigere eller slette.
+      </p>
 
       {createDraft && selectedChild ? (
         <SchoolWeekCreateSheet
@@ -515,10 +574,11 @@ export function SchoolWeekPanel({
         />
       ) : null}
 
-      {recurringChoiceItem ? (
+      {recurringChoice ? (
         <SchoolWeekRecurringSheet
-          itemTitle={recurringChoiceItem.title}
-          onClose={() => setRecurringChoiceItem(null)}
+          itemTitle={recurringChoice.item.title}
+          actionLabel={recurringChoice.action === "delete" ? "slette" : "endre"}
+          onClose={() => setRecurringChoice(null)}
           onChoose={chooseRecurringScope}
         />
       ) : null}
