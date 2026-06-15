@@ -148,6 +148,7 @@ export interface Reminder {
   memberIds: string[];
   sourceType: string | null;
   sourceId: string | null;
+  isPrivate: boolean;
   createdByUserId: string | null;
   createdAt: string;
   updatedAt: string;

@@ -131,7 +131,7 @@ export class CalendarIcsFeedService {
 
     if (feed.includeReminders) {
       const reminders = await (this.prisma.client as any).reminder.findMany({
-        where: { familyId: feed.familyId, archivedAt: null, dueDate: { not: null, gte: from, lte: to } },
+        where: { familyId: feed.familyId, archivedAt: null, isPrivate: false, dueDate: { not: null, gte: from, lte: to } },
         include: { audienceMembers: { include: { familyMember: true } } }
       }) as Array<any>;
       items.push(...reminders.map((reminder) => ({

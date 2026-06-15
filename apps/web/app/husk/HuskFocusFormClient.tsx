@@ -42,6 +42,8 @@ type HuskFocusDraft = {
   participantIds: string[];
   date: string;
   reminderEnabled: boolean;
+  reminderMinutesBefore: number;
+  isPrivate: boolean;
   description: string;
 };
 
@@ -243,7 +245,9 @@ function getDefaultDraft({
           ? []
           : (reminder?.memberIds ?? []),
       date: reminder?.dueDate ?? getTodayDate(),
-      reminderEnabled: Boolean(reminder?.reminderMinutesBefore),
+      reminderEnabled: reminder?.reminderMinutesBefore !== null && reminder?.reminderMinutesBefore !== undefined,
+      reminderMinutesBefore: reminder?.reminderMinutesBefore ?? 1440,
+      isPrivate: reminder?.isPrivate ?? false,
       description: reminder?.note ?? "",
     };
   }
@@ -257,6 +261,8 @@ function getDefaultDraft({
       list && list.memberIds.length < familyMemberCount ? list.memberIds : [],
     date: "",
     reminderEnabled: false,
+    reminderMinutesBefore: 1440,
+    isPrivate: false,
     description: "",
   };
 }
@@ -349,6 +355,7 @@ export function HuskFocusFormClient({
     [familyMembers.length, kind, resolvedList, resolvedReminder],
   );
   const [draft, setDraft] = useState<HuskFocusDraft>(() => defaultDraft);
+  const [isAudienceOpen, setIsAudienceOpen] = useState(false);
   const selectedIcon = getIconOption(draft.iconId) ?? eventIconOptions[0];
   const isReminder = kind === "reminder";
   const title = isReminder
@@ -358,7 +365,7 @@ export function HuskFocusFormClient({
     : mode === "create"
       ? "Ny liste"
       : "Rediger liste";
-  const titlePlaceholder = isReminder ? "Hva må huskes?" : "Navn på listen";
+  const titlePlaceholder = isReminder ? "Hva skal huskes?" : "Navn på listen";
   const hasAudience =
     draft.audience === "family" || draft.participantIds.length > 0;
   const isValid =
@@ -493,7 +500,8 @@ export function HuskFocusFormClient({
         scopeText: draft.audience === "family" ? "Hele familien" : scopeSummary,
         dueDate: draft.date,
         note: draft.description || undefined,
-        reminderMinutesBefore: draft.reminderEnabled ? 1440 : null,
+        reminderMinutesBefore: draft.reminderEnabled ? draft.reminderMinutesBefore : null,
+        isPrivate: draft.isPrivate,
       };
 
       try {
@@ -658,26 +666,16 @@ export function HuskFocusFormClient({
           </section>
         ) : null}
 
-        <section
-          className="event-form-card"
-          aria-labelledby="husk-focus-people-title"
-        >
-          <div className="event-form-section-heading">
-            <Users aria-hidden="true" size={22} strokeWidth={2.4} />
-            <div>
-              <h2 id="husk-focus-people-title">Hvem gjelder dette for?</h2>
-              <p>Velg hele familien eller én/flere personer.</p>
-            </div>
-          </div>
-          <div className="event-form-scope-summary" aria-live="polite">
-            <ScopePreview
-              audience={draft.audience}
-              familyMembers={familyMembers}
-              participantIds={draft.participantIds}
-            />
-            <span>{scopeSummary}</span>
-          </div>
-          <div className="event-form-avatar-list" aria-label="Velg personer">
+        <section className="event-form-card event-form-card--compact" aria-labelledby="husk-focus-people-title">
+          <button className="event-form-picker-row" type="button" onClick={() => setIsAudienceOpen((open) => !open)} aria-expanded={isAudienceOpen} aria-controls="husk-focus-audience-picker">
+            <span className="event-form-picker-row__label" id="husk-focus-people-title">Gjelder</span>
+            <span className="event-form-scope-summary event-form-scope-summary--inline" aria-live="polite">
+              <ScopePreview audience={draft.audience} familyMembers={familyMembers} participantIds={draft.participantIds} />
+              <span>{scopeSummary} ▼</span>
+            </span>
+          </button>
+          {isAudienceOpen ? (
+          <div className="event-form-avatar-list" id="husk-focus-audience-picker" aria-label="Velg personer">
             <button
               className={`event-form-avatar-chip event-form-avatar-chip--family${draft.audience === "family" ? " event-form-avatar-chip--selected" : ""}`}
               type="button"
@@ -729,6 +727,7 @@ export function HuskFocusFormClient({
               },
             )}
           </div>
+          ) : null}
         </section>
 
         <section
@@ -748,17 +747,25 @@ export function HuskFocusFormClient({
                   }
                 />
               </label>
-              <label className="event-form-row event-form-row--toggle">
+              <div className="event-form-row event-form-row--toggle">
                 <Bell aria-hidden="true" size={22} strokeWidth={2.4} />
-                <span>Påminnelse</span>
-                <input
-                  className="event-form-toggle"
-                  checked={draft.reminderEnabled}
-                  onChange={(changeEvent) =>
-                    updateDraft("reminderEnabled", changeEvent.target.checked)
-                  }
-                  type="checkbox"
-                />
+                <label htmlFor="husk-reminder-enabled">Påminnelse</label>
+                <span className="event-form-reminder-control">
+                  {draft.reminderEnabled ? (
+                    <select value={draft.reminderMinutesBefore} onChange={(event) => updateDraft("reminderMinutesBefore", Number(event.target.value))} aria-label="Tidspunkt for påminnelse">
+                      <option value={0}>På dagen</option>
+                      <option value={60}>1 t før</option>
+                      <option value={1440}>Dagen før</option>
+                      <option value={10080}>Uken før</option>
+                    </select>
+                  ) : null}
+                  <input id="husk-reminder-enabled" className="event-form-toggle" checked={draft.reminderEnabled} onChange={(changeEvent) => updateDraft("reminderEnabled", changeEvent.target.checked)} type="checkbox" />
+                </span>
+              </div>
+              <label className="event-form-row event-form-row--toggle">
+                <Users aria-hidden="true" size={22} strokeWidth={2.4} />
+                <span><strong>Privat</strong><small>Bare du kan se denne påminnelsen.</small></span>
+                <input className="event-form-toggle" checked={draft.isPrivate} onChange={(changeEvent) => updateDraft("isPrivate", changeEvent.target.checked)} type="checkbox" />
               </label>
             </>
           ) : (

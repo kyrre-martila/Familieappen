@@ -33,6 +33,7 @@ type ReminderRecord = {
   sourceType: string | null;
   sourceId: string | null;
   createdByUserId: string | null;
+  isPrivate: boolean;
   createdAt: Date;
   updatedAt: Date;
   archivedAt: Date | null;
@@ -80,6 +81,7 @@ type ReminderUpdateData = {
   reminderMinutesBefore?: number | null;
   note?: string | null;
   archivedAt?: Date | null;
+  isPrivate?: boolean;
 };
 
 type ListUpdateData = {
@@ -112,7 +114,7 @@ export class HuskService {
     await this.familyAuthorization.requireFamilyMember(userId, familyId);
 
     const reminders = await this.prisma.client.reminder.findMany({
-      where: { familyId, archivedAt: null },
+      where: { familyId, archivedAt: null, OR: [{ isPrivate: false }, { createdByUserId: userId }] },
       include: this.reminderInclude,
       orderBy: [{ dueDate: "asc" }, { createdAt: "desc" }]
     });
@@ -129,6 +131,7 @@ export class HuskService {
     const note = this.validateOptionalText(input.note, "Note", 500);
     const sourceType = this.validateOptionalText(input.sourceType, "Source type", 40);
     const sourceId = this.validateOptionalText(input.sourceId, "Source id", 120);
+    const isPrivate = this.validateOptionalBoolean(input.isPrivate);
     const memberIds = await this.validateAudienceMemberIds(familyId, input.scope, input.memberIds);
 
     try {
@@ -142,6 +145,7 @@ export class HuskService {
           note,
           sourceType,
           sourceId,
+          isPrivate,
           createdByUserId: userId,
           audienceMembers: {
             create: memberIds.map((familyMemberId) => ({ familyMemberId }))
@@ -163,7 +167,7 @@ export class HuskService {
 
   async updateReminder(userId: string, familyId: string, reminderId: string, input: UpdateReminderRequestDto): Promise<ReminderDto> {
     await this.familyAuthorization.requireFamilyMember(userId, familyId);
-    const existingReminder = await this.getFamilyReminderOrThrow(familyId, reminderId);
+    const existingReminder = await this.getFamilyReminderOrThrow(familyId, reminderId, userId);
     const updateData: ReminderUpdateData = {};
 
     if (input.title !== undefined) updateData.title = this.validateRequiredText(input.title, "Title", 120);
@@ -172,6 +176,7 @@ export class HuskService {
     if (input.reminderMinutesBefore !== undefined) updateData.reminderMinutesBefore = this.validateOptionalReminderMinutes(input.reminderMinutesBefore);
     if (input.note !== undefined) updateData.note = this.validateOptionalText(input.note, "Note", 500);
     if (input.archivedAt !== undefined) updateData.archivedAt = this.validateOptionalDateTime(input.archivedAt, "Archived at");
+    if (input.isPrivate !== undefined) updateData.isPrivate = this.validateOptionalBoolean(input.isPrivate);
 
     const shouldUpdateAudience = input.scope !== undefined || input.memberIds !== undefined;
     const memberIds = shouldUpdateAudience ? await this.validateAudienceMemberIds(familyId, input.scope, input.memberIds) : [];
@@ -187,12 +192,12 @@ export class HuskService {
       await Promise.all(memberIds.map((familyMemberId) => this.prisma.client.reminderAudienceMember.create({ data: { reminderId: existingReminder.id, familyMemberId } })));
     }
 
-    return this.toReminderDto(await this.getFamilyReminderOrThrow(familyId, existingReminder.id));
+    return this.toReminderDto(await this.getFamilyReminderOrThrow(familyId, existingReminder.id, userId));
   }
 
   async deleteReminder(userId: string, familyId: string, reminderId: string): Promise<ReminderDto> {
     await this.familyAuthorization.requireFamilyMember(userId, familyId);
-    const reminder = await this.getFamilyReminderOrThrow(familyId, reminderId);
+    const reminder = await this.getFamilyReminderOrThrow(familyId, reminderId, userId);
     return this.toReminderDto(await this.prisma.client.reminder.delete({ where: { id: reminder.id }, include: this.reminderInclude }));
   }
 
@@ -328,8 +333,8 @@ export class HuskService {
     }
   };
 
-  private async getFamilyReminderOrThrow(familyId: string, reminderId: string): Promise<ReminderRecord> {
-    const reminder = await this.prisma.client.reminder.findFirst({ where: { id: reminderId, familyId }, include: this.reminderInclude });
+  private async getFamilyReminderOrThrow(familyId: string, reminderId: string, userId?: string): Promise<ReminderRecord> {
+    const reminder = await this.prisma.client.reminder.findFirst({ where: { id: reminderId, familyId, ...(userId ? { OR: [{ isPrivate: false }, { createdByUserId: userId }] } : {}) }, include: this.reminderInclude });
     if (!reminder) throw new NotFoundException("Reminder was not found");
     return reminder;
   }
@@ -427,6 +432,12 @@ export class HuskService {
     return value;
   }
 
+  private validateOptionalBoolean(value: unknown): boolean {
+    if (value === undefined || value === null) return false;
+    if (typeof value !== "boolean") throw new BadRequestException("Private setting must be a boolean");
+    return value;
+  }
+
   private isUniqueConstraintError(error: unknown): boolean {
     return typeof error === "object" && error !== null && "code" in error && (error as { code?: string }).code === "P2002";
   }
@@ -457,6 +468,7 @@ export class HuskService {
       memberIds,
       sourceType: reminder.sourceType,
       sourceId: reminder.sourceId,
+      isPrivate: reminder.isPrivate,
       createdByUserId: reminder.createdByUserId,
       createdAt: reminder.createdAt.toISOString(),
       updatedAt: reminder.updatedAt.toISOString(),

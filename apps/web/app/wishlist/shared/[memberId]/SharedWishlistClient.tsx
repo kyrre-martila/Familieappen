@@ -293,6 +293,7 @@ function SharedWishlistContent({ memberId }: { memberId: string }) {
         memberIds: [currentUserMember.id],
         sourceType: "wishlist",
         sourceId: item.id,
+        isPrivate: true,
       });
       setHuskReminderItemIds((currentIds) => new Set(currentIds).add(item.id));
       setToast("Lagt til i Husk");

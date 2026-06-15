@@ -22,6 +22,7 @@ export interface ReminderDto {
   memberIds: string[];
   sourceType: string | null;
   sourceId: string | null;
+  isPrivate: boolean;
   createdByUserId: string | null;
   createdAt: string;
   updatedAt: string;
@@ -39,6 +40,7 @@ export interface CreateReminderRequestDto {
   memberIds?: unknown;
   sourceType?: unknown;
   sourceId?: unknown;
+  isPrivate?: unknown;
 }
 
 export interface UpdateReminderRequestDto {
@@ -50,4 +52,5 @@ export interface UpdateReminderRequestDto {
   scope?: unknown;
   memberIds?: unknown;
   archivedAt?: unknown;
+  isPrivate?: unknown;
 }

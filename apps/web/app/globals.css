@@ -13607,3 +13607,96 @@ button.family-settings-row:focus-visible:not(:disabled) {
 .tasks-list__menu-popover {
   z-index: 4;
 }
+
+/* Compact Husk create/edit form */
+.event-form-card--compact {
+  gap: var(--space-xs);
+  padding-block: var(--space-s);
+}
+
+.event-form-picker-row {
+  display: flex;
+  width: 100%;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-s);
+  border: 0;
+  background: transparent;
+  color: var(--color-text);
+  cursor: pointer;
+  padding: var(--space-xs) 0;
+  text-align: left;
+}
+
+.event-form-picker-row__label {
+  font-size: var(--text-body);
+  font-weight: 840;
+}
+
+.event-form-scope-summary--inline {
+  margin: 0;
+  min-height: 2.3rem;
+  justify-content: flex-end;
+  background: color-mix(in srgb, var(--color-background-soft) 62%, transparent);
+  font-size: var(--text-small);
+}
+
+.event-form-reminder-control {
+  display: inline-flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: var(--space-xs);
+}
+
+.event-form-reminder-control select {
+  max-width: 7.5rem;
+  border: 0;
+  background: transparent;
+  color: var(--color-muted);
+  font-weight: 780;
+  text-align: right;
+}
+
+.event-form-row small {
+  display: block;
+  margin-top: 0.1rem;
+  color: var(--color-muted);
+  font-size: var(--text-small);
+  font-weight: 650;
+  line-height: 1.25;
+}
+
+.app-shell--focus .event-form {
+  gap: var(--space-s);
+}
+
+.app-shell--focus .event-form-card {
+  gap: var(--space-s);
+  border-radius: var(--radius-l);
+  padding: var(--space-s) var(--space-m);
+  box-shadow: 0 var(--space-xs) var(--space-m) color-mix(in srgb, var(--color-text) 3%, transparent);
+}
+
+.app-shell--focus .event-form-title-input {
+  padding: 0.2rem 0 var(--space-xs);
+  font-size: clamp(1.35rem, 6vw, 1.8rem);
+  letter-spacing: -0.04em;
+}
+
+.app-shell--focus .event-form-icon-link {
+  min-height: 2.75rem;
+  padding: var(--space-xs) var(--space-s);
+}
+
+.app-shell--focus .event-form-icon-link__icon {
+  width: 2rem;
+}
+
+.app-shell--focus .event-form-row {
+  padding: var(--space-s) 0;
+}
+
+.app-shell--focus .event-form-textarea {
+  min-height: 6.5rem;
+  padding: var(--space-s);
+}

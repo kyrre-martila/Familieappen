@@ -23,6 +23,7 @@ export type ReminderInput = Omit<HuskReminder, "id" | "dateLabel" | "group" | "s
   reminderMinutesBefore?: number | null;
   sourceType?: string | null;
   sourceId?: string | null;
+  isPrivate?: boolean;
 };
 
 const REMINDERS_ERROR_COPY = "Kunne ikke hente husk akkurat nå";
@@ -191,6 +192,7 @@ function toBackendInput(input: ReminderInput) {
     memberIds: input.scopeText === "Hele familien" ? [] : input.memberIds,
     sourceType: input.sourceType ?? null,
     sourceId: input.sourceId ?? null,
+    isPrivate: input.isPrivate ?? false,
   };
 }
 
@@ -201,6 +203,7 @@ function toBackendUpdate(update: Partial<HuskReminder> & { reminderMinutesBefore
     ...(update.dueDate !== undefined ? { dueDate: update.dueDate ?? undefined } : {}),
     ...(update.note !== undefined ? { note: update.note ?? null } : {}),
     ...(update.reminderMinutesBefore !== undefined ? { reminderMinutesBefore: update.reminderMinutesBefore } : {}),
+    ...(update.isPrivate !== undefined ? { isPrivate: update.isPrivate } : {}),
     ...(update.scopeText !== undefined || update.memberIds !== undefined
       ? {
           scope: update.scopeText === "Hele familien" || (update.memberIds?.length ?? 0) === 0 ? "family" as const : "members" as const,
@@ -224,7 +227,7 @@ function createOptimisticBackendReminder(input: ReminderInput, familyId: string)
     dueDate: dueDate ? `${dueDate}T00:00:00.000Z` : null,
     date: dueDate,
     reminderMinutesBefore: input.reminderMinutesBefore ?? null,
-    reminder: input.reminderMinutesBefore ? { minutesBefore: input.reminderMinutesBefore, label: `${input.reminderMinutesBefore} min før` } : null,
+    reminder: input.reminderMinutesBefore === null || input.reminderMinutesBefore === undefined ? null : { minutesBefore: input.reminderMinutesBefore, label: getReminderLabel(input.reminderMinutesBefore) },
     note: input.note ?? null,
     scope,
     memberIds,
@@ -233,6 +236,7 @@ function createOptimisticBackendReminder(input: ReminderInput, familyId: string)
     updatedAt: now,
     sourceType: input.sourceType ?? null,
     sourceId: input.sourceId ?? null,
+    isPrivate: input.isPrivate ?? false,
     archivedAt: null,
     audienceMembers: [],
   };
@@ -248,9 +252,10 @@ function applyHuskUpdate(reminder: BackendReminder, update: Partial<HuskReminder
     ...(update.title !== undefined ? { title: update.title } : {}),
     ...(update.icon !== undefined ? { icon: update.icon } : {}),
     ...(update.note !== undefined ? { note: update.note ?? null } : {}),
+    ...(update.isPrivate !== undefined ? { isPrivate: update.isPrivate } : {}),
     ...(update.reminderMinutesBefore !== undefined ? {
       reminderMinutesBefore: update.reminderMinutesBefore,
-      reminder: update.reminderMinutesBefore ? { minutesBefore: update.reminderMinutesBefore, label: `${update.reminderMinutesBefore} min før` } : null,
+      reminder: update.reminderMinutesBefore === null ? null : { minutesBefore: update.reminderMinutesBefore, label: getReminderLabel(update.reminderMinutesBefore) },
     } : {}),
     dueDate: nextDate ? `${nextDate}T00:00:00.000Z` : null,
     date: nextDate,
@@ -278,9 +283,17 @@ function toHuskReminder(reminder: BackendReminder, familyMembers: HuskFamilyMemb
     audience: { memberIds, label: scopeText },
     note: reminder.note ?? undefined,
     reminderMinutesBefore: reminder.reminderMinutesBefore,
+    isPrivate: reminder.isPrivate,
     createdAt: reminder.createdAt,
     updatedAt: reminder.updatedAt,
   };
+}
+
+function getReminderLabel(minutesBefore: number) {
+  if (minutesBefore === 0) return "På dagen";
+  if (minutesBefore === 1440) return "Dagen før";
+  if (minutesBefore === 10080) return "Uken før";
+  return `${minutesBefore} min før`;
 }
 
 function getScopeText(scope: BackendReminder["scope"], memberIds: string[], familyMembers: HuskFamilyMember[]) {
