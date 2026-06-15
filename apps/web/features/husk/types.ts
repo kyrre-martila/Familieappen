@@ -39,6 +39,7 @@ export type SchoolCreateDraft = {
   weekday: HuskSchoolWeekday;
   dateLabel: string;
   title: string;
+  note: string;
   icon: HuskReminderIcon;
   recurring: boolean;
   endDate: string;

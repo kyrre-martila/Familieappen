@@ -32,6 +32,7 @@ import { SavedBadge } from "./shared/SavedBadge";
 import { SchoolWeekEmptyState } from "./SchoolWeekEmptyState";
 import { SchoolWeekCreateSheet } from "./SchoolWeekCreateSheet";
 import { SchoolWeekRecurringSheet } from "./SchoolWeekRecurringSheet";
+import { SchoolWeekDetailSheet } from "./SchoolWeekDetailSheet";
 
 const schoolChildStorageKey = "familieappen:husk:school-child-id";
 
@@ -62,6 +63,7 @@ export function SchoolWeekPanel({
   );
   const [recurringChoiceItem, setRecurringChoiceItem] =
     useState<HuskSchoolWeekItem | null>(null);
+  const [detailItem, setDetailItem] = useState<HuskSchoolWeekItem | null>(null);
   const [schoolFeedback, setSchoolFeedback] = useState<string | null>(null);
   const [showSavedBadge, setShowSavedBadge] = useState(false);
   const selectedWeekStart = useMemo(
@@ -184,6 +186,7 @@ export function SchoolWeekPanel({
       weekday: weekday.value,
       dateLabel: `${weekday.label} ${formatSchoolDate(date)}`,
       title: "",
+      note: "",
       icon: "shirt",
       recurring: false,
       endDate: "",
@@ -207,6 +210,7 @@ export function SchoolWeekPanel({
         weekday: createDraft.weekday,
         date: date.toISOString().slice(0, 10),
         title: createDraft.title,
+        note: createDraft.note,
         icon: createDraft.icon,
         isRecurring: createDraft.recurring,
         recurrenceEndDate: createDraft.recurring
@@ -231,6 +235,7 @@ export function SchoolWeekPanel({
         scope,
         occurrenceDate: recurringChoiceItem.occurrenceDate,
         title: recurringChoiceItem.title,
+        note: recurringChoiceItem.note ?? null,
       });
       setRecurringChoiceItem(null);
       setSchoolFeedback(null);
@@ -466,12 +471,14 @@ export function SchoolWeekPanel({
                         {content}
                       </button>
                     ) : (
-                      <div
-                        className={`husk-school-item husk-school-item--${item.tone}`}
+                      <button
+                        className={`husk-school-item husk-school-item--${item.tone} husk-school-item--viewable`}
                         key={item.id}
+                        type="button"
+                        onClick={() => setDetailItem(item)}
                       >
                         {content}
-                      </div>
+                      </button>
                     );
                   })
                 ) : (
@@ -497,6 +504,14 @@ export function SchoolWeekPanel({
           onChange={setCreateDraft}
           onClose={() => setCreateDraft(null)}
           onSave={saveCreateDraft}
+        />
+      ) : null}
+
+      {detailItem ? (
+        <SchoolWeekDetailSheet
+          child={selectedChild ?? null}
+          reminder={detailItem}
+          onClose={() => setDetailItem(null)}
         />
       ) : null}
 

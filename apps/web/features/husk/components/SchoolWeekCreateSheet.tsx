@@ -67,9 +67,22 @@ export function SchoolWeekCreateSheet({
               onChange={(event) =>
                 onChange({ ...draft, title: event.target.value })
               }
-              placeholder="Hva må huskes?"
+              placeholder="Kort tittel, f.eks. Tur Karlsonvannet"
+              required
               type="text"
               value={draft.title}
+            />
+          </label>
+
+          <label className="husk-school-field">
+            <span>Notat / detaljer</span>
+            <textarea
+              onChange={(event) =>
+                onChange({ ...draft, note: event.target.value })
+              }
+              placeholder="Oppmøte, hva som skal tas med eller annen praktisk info"
+              rows={4}
+              value={draft.note}
             />
           </label>
 
