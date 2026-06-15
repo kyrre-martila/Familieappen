@@ -7,6 +7,7 @@ import { useRouter } from "next/navigation";
 import { AppShell } from "../../../../components/AppShell";
 import { PageContainer } from "../../../../components/ui";
 import { acceptWishlistInvite, declineWishlistInvite, getWishlistInvitePreview, type WishlistInvitePreview } from "../../../../lib/api";
+import { savePendingWishlistInvite } from "../../../../lib/pending-wishlist-invite";
 import { getAccessToken } from "../../../../lib/session";
 
 export function WishlistInviteClient({ token }: { token: string }) {
@@ -24,6 +25,10 @@ export function WishlistInviteClient({ token }: { token: string }) {
       .then((nextPreview) => {
         setPreview(nextPreview);
         setMessage(getUnavailableInviteMessage(nextPreview.status));
+
+        if (nextPreview.status === "pending") {
+          savePendingWishlistInvite(token);
+        }
       })
       .catch(() => setMessage("Invitasjonen er utløpt eller ikke lenger tilgjengelig."))
       .finally(() => setLoading(false));
@@ -69,8 +74,8 @@ export function WishlistInviteClient({ token }: { token: string }) {
               <h1>Du er invitert til en ønskeliste</h1>
               <p>Logg inn eller opprett konto for å legge til listen. Innholdet vises først etter innlogging.</p>
               <div className="wishlist-invite-page__actions">
-                <Link href={`/login?returnUrl=${encodeURIComponent(returnUrl)}`}>Logg inn</Link>
-                <Link href={`/register?returnUrl=${encodeURIComponent(returnUrl)}&email=${encodeURIComponent(preview.invitedEmail)}`}>Opprett konto</Link>
+                <Link href={`/login?next=${encodeURIComponent(returnUrl)}`}>Logg inn</Link>
+                <Link href={`/register?next=${encodeURIComponent(returnUrl)}&email=${encodeURIComponent(preview.invitedEmail)}`}>Opprett konto</Link>
               </div>
               <p className="wishlist-invite-page__note">Invitasjonen er sendt til {preview.invitedEmail}.</p>
             </>

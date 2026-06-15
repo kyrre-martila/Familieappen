@@ -2,7 +2,8 @@ import Image from "next/image";
 import Link from "next/link";
 import { RegisterForm } from "./RegisterForm";
 
-export default function RegisterPage() {
+export default async function RegisterPage({ searchParams }: { searchParams: Promise<{ email?: string }> }) {
+  const { email = "" } = await searchParams;
   return (
     <section className="login-screen" aria-labelledby="register-title">
       <Image
@@ -38,7 +39,7 @@ export default function RegisterPage() {
           <p className="login-screen__subtitle">Lag din konto for å komme i gang.</p>
         </div>
 
-        <RegisterForm />
+        <RegisterForm initialEmail={email} />
 
         <p className="login-screen__register">
           Har du allerede en konto? <Link href="/login">Logg inn</Link>
