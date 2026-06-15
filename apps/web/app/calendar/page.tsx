@@ -1,6 +1,6 @@
 "use client";
 
-import { Suspense, useEffect, useState } from "react";
+import { Suspense, useEffect, useRef, useState } from "react";
 import { useSearchParams } from "next/navigation";
 
 import { AppShell } from "../../components/AppShell";
@@ -40,29 +40,27 @@ function CalendarPageContent() {
   const [visibleMonth, setVisibleMonth] = useState(() =>
     parseDateString(today),
   );
+  const appliedSearchParamsRef = useRef<string | null>(null);
+  const searchParamsKey = searchParams.toString();
 
   useEffect(() => {
+    if (appliedSearchParamsRef.current === searchParamsKey) {
+      return;
+    }
+
+    appliedSearchParamsRef.current = searchParamsKey;
+
     const dateParam = searchParams.get("date");
     const viewParam = searchParams.get("view");
 
-    if (isValidDateParam(dateParam) && dateParam !== selectedDate) {
+    if (isValidDateParam(dateParam)) {
       setSelectedDate(dateParam);
     }
 
-    if (
-      viewParam &&
-      validCalendarViews.has(viewParam) &&
-      viewParam !== selectedView
-    ) {
+    if (viewParam && validCalendarViews.has(viewParam)) {
       setSelectedView(viewParam as typeof selectedView);
     }
-  }, [
-    searchParams,
-    selectedDate,
-    selectedView,
-    setSelectedDate,
-    setSelectedView,
-  ]);
+  }, [searchParams, searchParamsKey, setSelectedDate, setSelectedView]);
 
   useEffect(() => {
     if (selectedView === "month") {
