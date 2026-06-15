@@ -191,7 +191,12 @@ function HomeTodayChips({
     <section className={`calendar-summary-chips home-today__chips${chipCount === 1 ? " home-today__chips--single" : ""}`} aria-label="Det viktigste i dag">
       {meal ? <CalendarMealChip date={selectedDate} meal={meal} /> : null}
       {visibleReminders.map((reminder) => (
-        <CalendarReminderSummaryChip reminder={reminder} key={reminder.id} />
+        <CalendarReminderSummaryChip
+          ariaLabel={`Åpne påminnelser i Husk: ${reminder.title}`}
+          href="/husk?tab=paminnelser"
+          reminder={reminder}
+          key={reminder.id}
+        />
       ))}
       {schoolWeekItems.map((item) => (
         <CalendarSchoolWeekChip item={item} key={item.id} />
