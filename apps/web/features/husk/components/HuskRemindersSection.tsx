@@ -2,12 +2,17 @@
 
 import { useState } from "react";
 
-import { FamilyMembersEmptyState, FamilyMembersErrorState, FamilyMembersLoadingState } from "../../family/FamilyMembersEmptyState";
+import {
+  FamilyMembersEmptyState,
+  FamilyMembersErrorState,
+  FamilyMembersLoadingState,
+} from "../../family/FamilyMembersEmptyState";
 import { useReminders } from "../hooks/useReminders";
 import type { HuskFilters, HuskReminder } from "../types";
 import { reminderGroupOrder } from "./huskConfig";
 import { matchesPersonFilter, normalizeSearch } from "./huskUtils";
 import { HuskReminderDetailSheet } from "./HuskReminderDetailSheet";
+import { HuskReminderEditSheet } from "./HuskReminderEditSheet";
 import { HuskReminderEmptyState } from "./HuskReminderEmptyState";
 import { HuskReminderGroups } from "./HuskReminderGroups";
 
@@ -21,11 +26,30 @@ export function HuskRemindersSection({
   const [selectedReminder, setSelectedReminder] = useState<HuskReminder | null>(
     null,
   );
-  const { familyMembers, reminders, loading, error, refresh } = useReminders();
+  const [editingReminder, setEditingReminder] = useState<HuskReminder | null>(
+    null,
+  );
+  const [openMenuReminderId, setOpenMenuReminderId] = useState<string | null>(
+    null,
+  );
+  const [isSavingEdit, setIsSavingEdit] = useState(false);
+  const {
+    familyMembers,
+    reminders,
+    loading,
+    error,
+    refresh,
+    updateReminder,
+    deleteReminder,
+  } = useReminders();
   const normalizedQuery = normalizeSearch(query);
   const today = new Date().toISOString().slice(0, 10);
-  const activeReminders = reminders.filter((reminder) => !reminder.dueDate || reminder.dueDate >= today);
-  const previousReminders = reminders.filter((reminder) => reminder.dueDate && reminder.dueDate < today);
+  const activeReminders = reminders.filter(
+    (reminder) => !reminder.dueDate || reminder.dueDate >= today,
+  );
+  const previousReminders = reminders.filter(
+    (reminder) => reminder.dueDate && reminder.dueDate < today,
+  );
   const filteredReminders = activeReminders.filter((reminder) => {
     if (
       !matchesPersonFilter(
@@ -82,7 +106,12 @@ export function HuskRemindersSection({
 
   if (loading) {
     return (
-      <section className="husk-panel" id="husk-panel-husk" role="tabpanel" aria-labelledby="husk-tab-husk">
+      <section
+        className="husk-panel"
+        id="husk-panel-husk"
+        role="tabpanel"
+        aria-labelledby="husk-tab-husk"
+      >
         <FamilyMembersLoadingState />
       </section>
     );
@@ -90,7 +119,12 @@ export function HuskRemindersSection({
 
   if (error) {
     return (
-      <section className="husk-panel" id="husk-panel-husk" role="tabpanel" aria-labelledby="husk-tab-husk">
+      <section
+        className="husk-panel"
+        id="husk-panel-husk"
+        role="tabpanel"
+        aria-labelledby="husk-tab-husk"
+      >
         <FamilyMembersErrorState onRetry={() => void refresh()} />
       </section>
     );
@@ -98,7 +132,12 @@ export function HuskRemindersSection({
 
   if (familyMembers.length === 0) {
     return (
-      <section className="husk-panel" id="husk-panel-husk" role="tabpanel" aria-labelledby="husk-tab-husk">
+      <section
+        className="husk-panel"
+        id="husk-panel-husk"
+        role="tabpanel"
+        aria-labelledby="husk-tab-husk"
+      >
         <FamilyMembersEmptyState />
       </section>
     );
@@ -115,8 +154,15 @@ export function HuskRemindersSection({
         <HuskReminderGroups
           familyMembers={familyMembers}
           groupedReminders={groupedReminders}
+          onDeleteReminder={(reminder) => void deleteReminder(reminder.id)}
+          onEditReminder={(reminder) => {
+            setSelectedReminder(null);
+            setEditingReminder(reminder);
+          }}
           onOpenReminder={setSelectedReminder}
+          openMenuReminderId={openMenuReminderId}
           previousReminders={filteredPreviousReminders}
+          setOpenMenuReminderId={setOpenMenuReminderId}
           showPrevious={filters.showPrevious}
         />
       ) : (
@@ -130,6 +176,25 @@ export function HuskRemindersSection({
       <HuskReminderDetailSheet
         reminder={selectedReminder}
         onClose={() => setSelectedReminder(null)}
+        onEdit={(reminder) => {
+          setSelectedReminder(null);
+          setEditingReminder(reminder);
+        }}
+      />
+      <HuskReminderEditSheet
+        familyMembers={familyMembers}
+        isSaving={isSavingEdit}
+        reminder={editingReminder}
+        onClose={() => setEditingReminder(null)}
+        onSave={async (reminderId, input) => {
+          setIsSavingEdit(true);
+          try {
+            await updateReminder(reminderId, input);
+            setEditingReminder(null);
+          } finally {
+            setIsSavingEdit(false);
+          }
+        }}
       />
     </section>
   );

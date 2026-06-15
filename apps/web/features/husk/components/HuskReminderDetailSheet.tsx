@@ -1,4 +1,3 @@
-import Link from "next/link";
 import { CalendarDays, ClipboardList, Users, X } from "lucide-react";
 
 import type { HuskReminder } from "../types";
@@ -7,9 +6,11 @@ import { HuskMobileSheet } from "./HuskMobileSheet";
 
 export function HuskReminderDetailSheet({
   onClose,
+  onEdit,
   reminder,
 }: {
   onClose: () => void;
+  onEdit: (reminder: HuskReminder) => void;
   reminder: HuskReminder | null;
 }) {
   const Icon = reminder ? reminderIcons[reminder.icon] : ClipboardList;
@@ -65,12 +66,13 @@ export function HuskReminderDetailSheet({
             ) : null}
           </div>
           <div className="calendar-filter-sheet__actions">
-            <Link
+            <button
               className="calendar-filter-sheet__action calendar-filter-sheet__action--primary"
-              href={`/husk/reminders/${reminder.id}/edit`}
+              type="button"
+              onClick={() => onEdit(reminder)}
             >
               Endre
-            </Link>
+            </button>
           </div>
         </>
       ) : null}
