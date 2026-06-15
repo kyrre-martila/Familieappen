@@ -8916,13 +8916,20 @@ button.calendar-chip {
   padding-left: 0;
 }
 
-.husk-school-item--editable {
+.husk-school-item--editable,
+.husk-school-item--viewable {
   width: 100%;
   justify-content: stretch;
   border: 0;
   cursor: pointer;
   text-align: left;
   font: inherit;
+}
+
+.husk-school-item--viewable:hover,
+.husk-school-item--viewable:focus-visible {
+  outline: 2px solid color-mix(in srgb, var(--husk-school-item-accent) 38%, transparent);
+  outline-offset: 2px;
 }
 
 .husk-school-item__copy {
@@ -9099,7 +9106,8 @@ button.calendar-chip {
   font-weight: 870;
 }
 
-.husk-school-field input {
+.husk-school-field input,
+.husk-school-field textarea {
   min-height: calc(var(--space-2xl) + var(--space-xs));
   border: 1px solid var(--color-border);
   border-radius: var(--radius-l);
@@ -9109,6 +9117,13 @@ button.calendar-chip {
   font: inherit;
   font-size: var(--text-body);
   font-weight: 780;
+}
+
+.husk-school-field textarea {
+  min-height: 7rem;
+  resize: vertical;
+  line-height: 1.45;
+  font-weight: 650;
 }
 
 .husk-school-icon-grid,
@@ -9531,6 +9546,7 @@ button.calendar-chip {
 .event-form-title-input,
 .list-detail-editor__title,
 .husk-school-field input,
+.husk-school-field textarea,
 .event-form-textarea,
 .list-detail-field textarea {
   -webkit-tap-highlight-color: transparent;
@@ -9607,6 +9623,10 @@ button.calendar-chip {
   color: var(--color-text);
   font-size: var(--text-label);
   font-weight: 760;
+}
+
+.husk-reminder-detail__row--note {
+  align-items: start;
 }
 
 .husk-reminder-detail__row svg {
