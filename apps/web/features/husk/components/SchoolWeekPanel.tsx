@@ -60,6 +60,14 @@ export function SchoolWeekPanel({
   const [createDraft, setCreateDraft] = useState<SchoolCreateDraft | null>(
     null,
   );
+  const [editDraft, setEditDraft] = useState<{
+    item: HuskSchoolWeekItem;
+    draft: SchoolCreateDraft;
+  } | null>(null);
+  const [pendingEditDraft, setPendingEditDraft] = useState<{
+    item: HuskSchoolWeekItem;
+    draft: SchoolCreateDraft;
+  } | null>(null);
   const [recurringChoice, setRecurringChoice] = useState<{
     item: HuskSchoolWeekItem;
     action: "edit" | "delete";
@@ -234,16 +242,11 @@ export function SchoolWeekPanel({
         });
         setSchoolFeedback(null);
         showSaved();
-      } else {
-        await updateSchoolReminder(item.id, {
-          scope,
-          occurrenceDate: item.occurrenceDate,
-          title: item.title,
-          note: item.note ?? null,
-        });
-        setSchoolFeedback(null);
+      } else if (pendingEditDraft) {
+        await saveEditDraft(pendingEditDraft, scope);
       }
       setRecurringChoice(null);
+      setPendingEditDraft(null);
     } catch {
       setSchoolFeedback(
         action === "delete"
@@ -264,14 +267,76 @@ export function SchoolWeekPanel({
     }
   }
 
-  function openEditFlow(item: HuskSchoolWeekItem) {
-    setOpenItemMenuId(null);
-    if (item.isRecurring) {
-      setRecurringChoice({ item, action: "edit" });
+  function createDraftFromItem(item: HuskSchoolWeekItem): SchoolCreateDraft {
+    const itemWeekday = item.weekday ?? "monday";
+    const weekday = schoolWeekdays.find(
+      (option) => option.value === itemWeekday,
+    );
+    const itemDate =
+      item.occurrenceDate ??
+      item.date ??
+      selectedWeekStart.toISOString().slice(0, 10);
+    const date = new Date(`${itemDate}T00:00:00.000Z`);
+
+    return {
+      weekday: itemWeekday,
+      dateLabel: `${weekday?.label ?? "Skoledag"} ${formatSchoolDate(date)}`,
+      title: item.title,
+      note: item.note ?? "",
+      icon: item.icon,
+      recurring: Boolean(item.isRecurring),
+      endDate: item.recurrenceEndDate ?? "",
+    };
+  }
+
+  async function saveEditDraft(
+    edit: { item: HuskSchoolWeekItem; draft: SchoolCreateDraft },
+    scope?: "occurrence" | "series",
+  ) {
+    if (!edit.draft.title.trim()) {
       return;
     }
 
-    setSchoolFeedback("Enkeltstående skolehusk er lagret for denne uka.");
+    await updateSchoolReminder(edit.item.id, {
+      scope,
+      occurrenceDate: edit.item.occurrenceDate,
+      title: edit.draft.title,
+      note: edit.draft.note || null,
+      icon: edit.draft.icon,
+      isRecurring: edit.draft.recurring,
+      recurrenceEndDate: edit.draft.recurring
+        ? edit.draft.endDate || null
+        : null,
+    });
+    setEditDraft(null);
+    setSchoolFeedback(null);
+    showSaved();
+  }
+
+  async function handleSaveEditDraft() {
+    if (!editDraft) {
+      return;
+    }
+
+    if (editDraft.item.isRecurring) {
+      setPendingEditDraft(editDraft);
+      setRecurringChoice({ item: editDraft.item, action: "edit" });
+      setEditDraft(null);
+      return;
+    }
+
+    try {
+      await saveEditDraft(editDraft);
+    } catch {
+      setSchoolFeedback("Endringen ble ikke lagret. Prøv igjen om litt.");
+    }
+  }
+
+  function openEditFlow(item: HuskSchoolWeekItem) {
+    setOpenItemMenuId(null);
+    setDetailItem(null);
+    setSchoolFeedback(null);
+    setEditDraft({ item, draft: createDraftFromItem(item) });
   }
 
   function openDeleteFlow(item: HuskSchoolWeekItem) {
@@ -284,6 +349,13 @@ export function SchoolWeekPanel({
     void deleteSingleReminder(item);
   }
 
+  function closeRecurringChoice() {
+    if (recurringChoice?.action === "edit" && pendingEditDraft) {
+      setEditDraft(pendingEditDraft);
+      setPendingEditDraft(null);
+    }
+    setRecurringChoice(null);
+  }
 
   if (loading) {
     return (
@@ -566,6 +638,16 @@ export function SchoolWeekPanel({
         />
       ) : null}
 
+      {editDraft && selectedChild ? (
+        <SchoolWeekCreateSheet
+          childName={selectedChild.name}
+          draft={editDraft.draft}
+          onChange={(draft) => setEditDraft({ ...editDraft, draft })}
+          onClose={() => setEditDraft(null)}
+          onSave={() => void handleSaveEditDraft()}
+        />
+      ) : null}
+
       {detailItem ? (
         <SchoolWeekDetailSheet
           child={selectedChild ?? null}
@@ -578,7 +660,7 @@ export function SchoolWeekPanel({
         <SchoolWeekRecurringSheet
           itemTitle={recurringChoice.item.title}
           actionLabel={recurringChoice.action === "delete" ? "slette" : "endre"}
-          onClose={() => setRecurringChoice(null)}
+          onClose={closeRecurringChoice}
           onChoose={chooseRecurringScope}
         />
       ) : null}
