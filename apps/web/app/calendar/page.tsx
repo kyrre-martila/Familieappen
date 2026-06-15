@@ -50,8 +50,9 @@ function CalendarPageContent() {
 
     appliedSearchParamsRef.current = searchParamsKey;
 
-    const dateParam = searchParams.get("date");
-    const viewParam = searchParams.get("view");
+    const currentSearchParams = new URLSearchParams(searchParamsKey);
+    const dateParam = currentSearchParams.get("date");
+    const viewParam = currentSearchParams.get("view");
 
     if (isValidDateParam(dateParam)) {
       setSelectedDate(dateParam);
@@ -60,7 +61,7 @@ function CalendarPageContent() {
     if (viewParam && validCalendarViews.has(viewParam)) {
       setSelectedView(viewParam as typeof selectedView);
     }
-  }, [searchParams, searchParamsKey, setSelectedDate, setSelectedView]);
+  }, [searchParamsKey, setSelectedDate, setSelectedView]);
 
   useEffect(() => {
     if (selectedView === "month") {
