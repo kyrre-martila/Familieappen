@@ -489,7 +489,7 @@ export default function ShoppingPage() {
   }
 
   return (
-    <AppShell title="Handleliste">
+    <AppShell hideTitleRow title="Handleliste">
       <PageContainer>
         <section
           className="shopping-page shopping-page--mobile"
@@ -893,7 +893,7 @@ export default function ShoppingPage() {
               </label>
               <p className="shopping-create-list-sheet__notice">
                 Flere handlelister kommer senere. Du kan gjøre klar navnet nå,
-                men lagring er ikke tilgjengelig ennå.
+                men det er ikke mulig å lagre nye handlelister ennå.
               </p>
             </div>
             <div className="calendar-filter-sheet__actions">
@@ -909,7 +909,7 @@ export default function ShoppingPage() {
                 disabled
                 type="button"
               >
-                Flere handlelister kommer senere.
+                Lagring er ikke tilgjengelig ennå
               </button>
             </div>
           </form>

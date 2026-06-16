@@ -10,6 +10,7 @@
   --small: clamp(0.875rem, 0.84rem + 0.16vw, 0.95rem);
   --label: clamp(0.9375rem, 0.9rem + 0.18vw, 1rem);
   --body: clamp(0.96875rem, 0.93rem + 0.2vw, 1.0625rem);
+  --font-size-input: clamp(1rem, 0.95rem + 0.25vw, 1.125rem);
   --h2: clamp(1.5rem, 1.28rem + 1.05vw, 2rem);
   --h1: clamp(1.875rem, 1.55rem + 1.6vw, 2.375rem);
   --display: clamp(2rem, 1.5rem + 2.2vw, 3rem);

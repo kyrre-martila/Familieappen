@@ -43,6 +43,13 @@ select {
   font: inherit;
 }
 
+input,
+textarea,
+select,
+[contenteditable="true"] {
+  font-size: var(--font-size-input);
+}
+
 .app-shell {
   min-height: 100vh;
   min-height: 100svh;
@@ -2072,7 +2079,7 @@ select {
   outline: 0;
   background: transparent;
   color: #1f1f1f;
-  font-size: var(--label);
+  font-size: var(--font-size-input);
   font-weight: 500;
 }
 
@@ -7432,7 +7439,7 @@ button.calendar-chip {
   background: transparent;
   color: var(--color-text);
   font: inherit;
-  font-size: var(--text-small);
+  font-size: var(--font-size-input);
   font-weight: 760;
 }
 
@@ -14653,7 +14660,7 @@ button.family-settings-row:focus-visible:not(:disabled) {
 .shopping-edit-sheet__content .husk-school-field input,
 .shopping-edit-sheet__content .husk-school-field textarea {
   min-height: calc(var(--space-xl) + var(--space-xs));
-  font-size: var(--text-label);
+  font-size: var(--font-size-input);
 }
 
 .shopping-edit-sheet__content .husk-school-field textarea {
