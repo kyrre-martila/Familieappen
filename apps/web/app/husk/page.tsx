@@ -92,6 +92,7 @@ function HuskPageContent() {
     readStoredJson(huskFiltersStorageKey, defaultHuskFilters),
   );
   const [isFilterSheetOpen, setIsFilterSheetOpen] = useState(false);
+  const [taskCreateRequest, setTaskCreateRequest] = useState(0);
   const title = useMemo(() => titleByTab[selectedTab], [selectedTab]);
   const activeFilterCount = getHuskActiveFilterCount(huskFilters);
 
@@ -171,12 +172,13 @@ function HuskPageContent() {
               query={huskQuery}
               selectedTab={selectedTab}
               onQueryChange={setHuskQuery}
+              onNewTask={() => setTaskCreateRequest((request) => request + 1)}
             />
           ) : null}
           {selectedTab === "paminnelser" ? (
             <HuskRemindersSection filters={huskFilters} query={huskQuery} />
           ) : null}
-          {selectedTab === "oppgaver" ? <OppgaverSection /> : null}
+          {selectedTab === "oppgaver" ? <OppgaverSection query={huskQuery} createRequest={taskCreateRequest} /> : null}
           {selectedTab === "skoleuka" ? (
             <SchoolWeekPanel shouldOpenPlanner={shouldOpenSchoolPlanner} />
           ) : null}
