@@ -1,3 +1,99 @@
+export const SHOPPING_UNITS = [
+  "boks",
+  "eske",
+  "flaske",
+  "glass",
+  "kg",
+  "l",
+  "par",
+  "pk",
+  "pose",
+  "stk",
+  "tube",
+] as const;
+
+export type ShoppingUnit = (typeof SHOPPING_UNITS)[number];
+
+export interface ShoppingCategory {
+  name: string;
+  slug: string;
+  sortOrder: number;
+}
+
+export const SHOPPING_CATEGORIES = [
+  {
+    name: "Frukt og grønt",
+    slug: "frukt-og-gront",
+    sortOrder: 10,
+  },
+  {
+    name: "Brød og bakevarer",
+    slug: "brod-og-bakevarer",
+    sortOrder: 20,
+  },
+  {
+    name: "Meieriprodukter",
+    slug: "meieriprodukter",
+    sortOrder: 30,
+  },
+  {
+    name: "Kjøtt og fisk",
+    slug: "kjott-og-fisk",
+    sortOrder: 40,
+  },
+  {
+    name: "Ingredienser og krydder",
+    slug: "ingredienser-og-krydder",
+    sortOrder: 50,
+  },
+  {
+    name: "Frysevarer og ferdigmåltid",
+    slug: "frysevarer-og-ferdigmaltid",
+    sortOrder: 60,
+  },
+  {
+    name: "Kornprodukter",
+    slug: "kornprodukter",
+    sortOrder: 70,
+  },
+  {
+    name: "Snacks og godteri",
+    slug: "snacks-og-godteri",
+    sortOrder: 80,
+  },
+  {
+    name: "Drikkevarer",
+    slug: "drikkevarer",
+    sortOrder: 90,
+  },
+  {
+    name: "Husholdning",
+    slug: "husholdning",
+    sortOrder: 100,
+  },
+  {
+    name: "Omsorg & Helse",
+    slug: "omsorg-helse",
+    sortOrder: 110,
+  },
+  {
+    name: "Dyreprodukter",
+    slug: "dyreprodukter",
+    sortOrder: 120,
+  },
+] as const satisfies readonly ShoppingCategory[];
+
+export type ShoppingCategorySlug = (typeof SHOPPING_CATEGORIES)[number]["slug"];
+
+export interface ShoppingCatalogItem {
+  name: string;
+  categorySlug: ShoppingCategorySlug;
+  aliases: readonly string[];
+  defaultUnit: ShoppingUnit;
+  suggestedQuantity: number;
+}
+
+export const SHOPPING_CATALOG: ShoppingCatalogItem[] = [
 {
   name: "Açaí-bær",
   categorySlug: "frukt-og-gront",
@@ -3220,3 +3316,42 @@
   defaultUnit: "pk",
   suggestedQuantity: 1,
 },
+];
+
+export function getShoppingCategoryBySlug(slug: string): ShoppingCategory | undefined {
+  return SHOPPING_CATEGORIES.find((category) => category.slug === slug);
+}
+
+export function getShoppingCatalogItemsByCategory(categorySlug: ShoppingCategorySlug): ShoppingCatalogItem[] {
+  return SHOPPING_CATALOG.filter((item) => item.categorySlug === categorySlug);
+}
+
+export function normalizeShoppingSearchValue(value: string): string {
+  return value
+    .trim()
+    .toLocaleLowerCase("nb-NO")
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .replace(/æ/g, "ae")
+    .replace(/ø/g, "o")
+    .replace(/å/g, "a")
+    .replace(/[^a-z0-9]+/g, " ")
+    .replace(/\s+/g, " ")
+    .trim();
+}
+
+export function searchShoppingCatalog(query: string): ShoppingCatalogItem[] {
+  const normalizedQuery = normalizeShoppingSearchValue(query);
+
+  if (normalizedQuery.length < 2) {
+    return [];
+  }
+
+  return SHOPPING_CATALOG.filter((item) => {
+    const searchableValues = [item.name, ...item.aliases];
+
+    return searchableValues.some((value) =>
+      normalizeShoppingSearchValue(value).includes(normalizedQuery),
+    );
+  });
+}

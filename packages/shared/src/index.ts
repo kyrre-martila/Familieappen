@@ -416,3 +416,5 @@ export type {
   MealSummary,
   ReminderSummary
 } from "./calendar-mvp.js";
+
+export * from "./shopping/shopping-catalog.js";
