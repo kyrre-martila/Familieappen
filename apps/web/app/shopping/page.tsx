@@ -9,8 +9,9 @@ import {
   type ChangeEvent,
 } from "react";
 import Link from "next/link";
+import { AppShell } from "../../components/AppShell";
 import { useRouter } from "next/navigation";
-import { ChevronDown, MoreHorizontal, Plus, SlidersHorizontal, X } from "lucide-react";
+import { ChevronDown, MoreHorizontal, Share2, SlidersHorizontal, X } from "lucide-react";
 import { LockedFeatureState } from "../../components/PendingAccess";
 import { HuskMobileSheet } from "../../features/husk/components/HuskMobileSheet";
 import { useFamilyAccess } from "../../components/ProtectedFamilyRoute";
@@ -40,6 +41,15 @@ import {
   handleMissingOrInvalidAuth,
 } from "../../lib/auth-family";
 import { clearActiveFamilyId } from "../../lib/session";
+import {
+  SHOPPING_CATALOG,
+  SHOPPING_CATEGORIES,
+  getShoppingCatalogItemsByCategory,
+  getShoppingCategoryBySlug,
+  normalizeShoppingSearchValue,
+  searchShoppingCatalog,
+  type ShoppingCatalogItem,
+} from "@familieappen/shared";
 
 type ShoppingStatus =
   | "loading"
@@ -89,6 +99,10 @@ export default function ShoppingPage() {
     () => shoppingList?.items.filter((item) => !item.checked) ?? [],
     [shoppingList],
   );
+  const groupedRemainingItems = useMemo(
+    () => groupShoppingItemsByCategory(remainingItems),
+    [remainingItems],
+  );
   const completedItems = useMemo(
     () =>
       shoppingList?.items
@@ -102,6 +116,21 @@ export default function ShoppingPage() {
   );
   const uncheckedCount = remainingItems.length;
   const hasMultipleFamilies = families.length > 1;
+  const isDefaultShoppingList = !shoppingList || shoppingList.name === "Familiehandleliste";
+  const catalogSearchResults = useMemo(
+    () => searchShoppingCatalog(label),
+    [label],
+  );
+  const isSearchingCatalog = normalizeShoppingSearchValue(label).length >= 2;
+  const catalogItemCount = SHOPPING_CATALOG.length;
+  const visibleCatalogCategories = useMemo(
+    () =>
+      SHOPPING_CATEGORIES.map((categoryOption) => ({
+        ...categoryOption,
+        items: getShoppingCatalogItemsByCategory(categoryOption.slug).slice(0, 8),
+      })).filter((categoryOption) => categoryOption.items.length > 0),
+    [catalogItemCount],
+  );
 
   async function loadShoppingList(familyId = activeFamilyId) {
     if (!familyId) {
@@ -139,6 +168,14 @@ export default function ShoppingPage() {
     const nextCategory = category.trim();
 
     if (!activeFamilyId || nextLabel.length === 0 || isAdding) {
+      return;
+    }
+
+    if (
+      !editingItemId &&
+      isShoppingLabelInList(nextLabel, shoppingList?.items ?? [])
+    ) {
+      setMessage("Varen ligger allerede i handlelisten.");
       return;
     }
 
@@ -240,6 +277,52 @@ export default function ShoppingPage() {
     } finally {
       setPendingItemId(null);
     }
+  }
+
+  async function addItemFromCatalog(item: ShoppingCatalogItem) {
+    if (!activeFamilyId || isAdding || isCatalogItemInList(item, shoppingList?.items ?? [])) {
+      return;
+    }
+
+    setIsAdding(true);
+    setMessage("");
+
+    try {
+      const addedItem = await addShoppingItem(activeFamilyId, {
+        label: item.name,
+        quantity: String(item.suggestedQuantity),
+        unit: item.defaultUnit,
+        category: item.categorySlug,
+      });
+      setShoppingList((currentList) =>
+        currentList
+          ? {
+              ...currentList,
+              items: [...currentList.items, addedItem].sort(sortShoppingItems),
+            }
+          : currentList,
+      );
+      setLabel("");
+      setStatus("ready");
+    } catch (error) {
+      handleActionError(error, "Kunne ikke legge til varen. Prøv igjen.");
+    } finally {
+      setIsAdding(false);
+    }
+  }
+
+  function prepareCustomItem() {
+    const nextLabel = label.trim();
+    if (!nextLabel) {
+      return;
+    }
+
+    setEditingItemId(null);
+    setQuantity("");
+    setUnit("");
+    setNote("");
+    setCategory("egne-varer");
+    setIsNewSheetOpen(true);
   }
 
   function handleOpenNewSheet() {
@@ -357,54 +440,12 @@ export default function ShoppingPage() {
   }
 
   return (
-    <PageContainer>
+    <AppShell title="Handleliste">
+      <PageContainer>
       <section
         className="shopping-page shopping-page--mobile"
         aria-labelledby="shopping-title"
       >
-        <div
-          className="shopping-toolbar"
-          aria-label="Søk og handlinger for handlelisten"
-        >
-          <label
-            className="husk-search shopping-search"
-            htmlFor="shopping-search-input"
-          >
-            <span className="sr-only">Legg til eller søk etter vare</span>
-            <input
-              id="shopping-search-input"
-              className="husk-search__input"
-              maxLength={120}
-              onChange={(event) => setLabel(event.target.value)}
-              onFocus={() => setMessage("")}
-              placeholder="Jeg trenger ..."
-              value={label}
-            />
-          </label>
-          <div className="husk-toolbar__actions shopping-toolbar__actions">
-            <button
-              className="husk-filter-button"
-              type="button"
-              onClick={() => setIsFilterSheetOpen(true)}
-            >
-              <SlidersHorizontal
-                aria-hidden="true"
-                size={20}
-                strokeWidth={2.4}
-              />
-              <span>Filter</span>
-            </button>
-            <button
-              className="calendar-title-action husk-new-button"
-              type="button"
-              onClick={handleOpenNewSheet}
-            >
-              <Plus aria-hidden="true" size={18} strokeWidth={2.4} />
-              <span>Ny</span>
-            </button>
-          </div>
-        </div>
-
         {hasMultipleFamilies ? (
           <label className="family-switcher shopping-family-switcher">
             <span className="family-switcher__label">Aktiv familie</span>
@@ -422,14 +463,30 @@ export default function ShoppingPage() {
           </label>
         ) : null}
 
-        <button
-          className="shopping-list-selector"
-          type="button"
-          aria-label="Velg handleliste"
-        >
-          <span>{shoppingList?.name ?? "Familiehandleliste"}</span>
-          <span aria-hidden="true">▼</span>
-        </button>
+        <div className="shopping-list-toolbar" aria-label="Handlelistevalg">
+          <button
+            className="shopping-list-selector"
+            type="button"
+            aria-label="Velg handleliste"
+          >
+            <span>{shoppingList?.name ?? "Familiehandleliste"}</span>
+            <span aria-hidden="true">▼</span>
+          </button>
+          <button
+            className="husk-filter-button"
+            type="button"
+            onClick={() => setIsFilterSheetOpen(true)}
+          >
+            <SlidersHorizontal aria-hidden="true" size={20} strokeWidth={2.4} />
+            <span>Filter</span>
+          </button>
+          {!isDefaultShoppingList ? (
+            <button className="husk-filter-button" type="button">
+              <Share2 aria-hidden="true" size={20} strokeWidth={2.4} />
+              <span>Del</span>
+            </button>
+          ) : null}
+        </div>
 
         {status === "unauthorized" ? (
           <ShoppingStatusCard
@@ -480,23 +537,30 @@ export default function ShoppingPage() {
                   />
                 </Card>
               ) : (
-                <ul
-                  className="shopping-list shopping-list--cards"
-                  aria-label="Gjenstående varer"
-                >
-                  {remainingItems.map((item) => (
-                    <ShoppingItemCard
-                      key={item.id}
-                      item={item}
-                      isBusy={pendingItemId === item.id}
-                      isMenuOpen={openMenuItemId === item.id}
-                      onDelete={handleDeleteItem}
-                      onEdit={handleEditItem}
-                      onMenuClick={handleMenuClick}
-                      onToggle={handleToggleItem}
-                    />
+                <div className="shopping-category-groups">
+                  {groupedRemainingItems.map((group) => (
+                    <div className="shopping-category-group" key={group.slug}>
+                      <h3 className="shopping-category-group__title">{group.name}</h3>
+                      <ul
+                        className="shopping-list shopping-list--cards"
+                        aria-label={group.name}
+                      >
+                        {group.items.map((item) => (
+                          <ShoppingItemCard
+                            key={item.id}
+                            item={item}
+                            isBusy={pendingItemId === item.id}
+                            isMenuOpen={openMenuItemId === item.id}
+                            onDelete={handleDeleteItem}
+                            onEdit={handleEditItem}
+                            onMenuClick={handleMenuClick}
+                            onToggle={handleToggleItem}
+                          />
+                        ))}
+                      </ul>
+                    </div>
                   ))}
-                </ul>
+                </div>
               )}
             </section>
 
@@ -541,6 +605,61 @@ export default function ShoppingPage() {
               </section>
             ) : null}
 
+            <section
+              className="shopping-section shopping-catalog-section"
+              aria-labelledby="shopping-catalog-title"
+            >
+              <div className="shopping-catalog-section__header">
+                <h2 id="shopping-catalog-title" className="section-header__title">
+                  Legg varer i handleliste
+                </h2>
+                <label
+                  className="husk-search shopping-search"
+                  htmlFor="shopping-search-input"
+                >
+                  <span className="sr-only">Søk i varekatalog</span>
+                  <input
+                    id="shopping-search-input"
+                    className="husk-search__input"
+                    maxLength={120}
+                    onChange={(event) => setLabel(event.target.value)}
+                    onFocus={() => setMessage("")}
+                    placeholder="Jeg trenger ..."
+                    value={label}
+                  />
+                </label>
+              </div>
+              {isSearchingCatalog ? (
+                <CatalogItemGrid
+                  items={catalogSearchResults}
+                  shoppingItems={shoppingList.items}
+                  onAddItem={addItemFromCatalog}
+                />
+              ) : (
+                <div className="shopping-catalog-categories">
+                  {visibleCatalogCategories.map((categoryOption) => (
+                    <div className="shopping-catalog-category" key={categoryOption.slug}>
+                      <h3 className="shopping-category-group__title">{categoryOption.name}</h3>
+                      <CatalogItemGrid
+                        items={categoryOption.items}
+                        shoppingItems={shoppingList.items}
+                        onAddItem={addItemFromCatalog}
+                      />
+                    </div>
+                  ))}
+                </div>
+              )}
+              {isSearchingCatalog && catalogSearchResults.length === 0 ? (
+                <button
+                  className="shopping-custom-item-button"
+                  type="button"
+                  onClick={prepareCustomItem}
+                >
+                  Legg til «{label.trim()}» som egen vare
+                </button>
+              ) : null}
+            </section>
+
             {recentItems.length > 0 ? (
               <section
                 className="shopping-section"
@@ -567,23 +686,6 @@ export default function ShoppingPage() {
           </>
         ) : null}
 
-        <div
-          className="shopping-sticky-actions"
-          aria-label="Handlelistehandlinger"
-        >
-          <Button
-            disabled={
-              isAdding ||
-              label.trim().length === 0 ||
-              status === "unauthorized" ||
-              status === "no-family"
-            }
-            onClick={() => setIsNewSheetOpen(true)}
-            variant="primary"
-          >
-            Legg til vare
-          </Button>
-        </div>
       </section>
 
       <HuskMobileSheet
@@ -658,8 +760,123 @@ export default function ShoppingPage() {
           </Button>
         </div>
       </HuskMobileSheet>
-    </PageContainer>
+      </PageContainer>
+    </AppShell>
   );
+}
+
+type ShoppingItem = ShoppingList["items"][number];
+
+function CatalogItemGrid({
+  items,
+  onAddItem,
+  shoppingItems,
+}: {
+  items: ShoppingCatalogItem[];
+  onAddItem: (item: ShoppingCatalogItem) => void;
+  shoppingItems: ShoppingItem[];
+}) {
+  if (items.length === 0) {
+    return null;
+  }
+
+  return (
+    <div className="shopping-catalog-grid">
+      {items.map((item) => {
+        const alreadyAdded = isCatalogItemInList(item, shoppingItems);
+        return (
+          <button
+            className="shopping-catalog-item"
+            disabled={alreadyAdded}
+            key={`${item.categorySlug}-${item.name}`}
+            type="button"
+            onClick={() => onAddItem(item)}
+          >
+            <span className="shopping-catalog-item__name">{item.name}</span>
+            <span className="shopping-catalog-item__meta">
+              {item.suggestedQuantity} {item.defaultUnit}
+              {alreadyAdded ? " · I listen" : ""}
+            </span>
+          </button>
+        );
+      })}
+    </div>
+  );
+}
+
+function isCatalogItemInList(
+  catalogItem: ShoppingCatalogItem,
+  shoppingItems: ShoppingItem[],
+) {
+  const itemValues = [catalogItem.name, ...catalogItem.aliases].map(
+    normalizeShoppingSearchValue,
+  );
+
+  return shoppingItems.some((shoppingItem) =>
+    itemValues.includes(normalizeShoppingSearchValue(shoppingItem.label)),
+  );
+}
+
+function isShoppingLabelInList(label: string, shoppingItems: ShoppingItem[]) {
+  const normalizedLabel = normalizeShoppingSearchValue(label);
+  const catalogItem = searchShoppingCatalog(label).find((item) =>
+    [item.name, ...item.aliases]
+      .map(normalizeShoppingSearchValue)
+      .includes(normalizedLabel),
+  );
+
+  if (catalogItem) {
+    return isCatalogItemInList(catalogItem, shoppingItems);
+  }
+
+  return shoppingItems.some(
+    (shoppingItem) =>
+      normalizeShoppingSearchValue(shoppingItem.label) === normalizedLabel,
+  );
+}
+
+function getShoppingItemCategory(item: ShoppingItem) {
+  if (!item.category) {
+    return { name: "Andre varer", slug: "andre-varer", sortOrder: 999 };
+  }
+
+  if (item.category === "egne-varer") {
+    return { name: "Egne varer", slug: "egne-varer", sortOrder: 998 };
+  }
+
+  return (
+    getShoppingCategoryBySlug(item.category) ?? {
+      name: item.category,
+      slug: normalizeShoppingSearchValue(item.category).replace(/ /g, "-"),
+      sortOrder: 997,
+    }
+  );
+}
+
+function groupShoppingItemsByCategory(items: ShoppingItem[]) {
+  const groups = new Map<
+    string,
+    { items: ShoppingItem[]; name: string; slug: string; sortOrder: number }
+  >();
+
+  for (const item of items) {
+    const category = getShoppingItemCategory(item);
+    const existingGroup = groups.get(category.slug);
+
+    if (existingGroup) {
+      existingGroup.items.push(item);
+    } else {
+      groups.set(category.slug, { ...category, items: [item] });
+    }
+  }
+
+  return [...groups.values()].sort((first, second) => {
+    if (first.sortOrder !== second.sortOrder) {
+      return first.sortOrder - second.sortOrder;
+    }
+
+    return first.name.localeCompare(second.name, "nb-NO");
+  });
 }
 
 function ShoppingItemCard({
@@ -673,7 +890,7 @@ function ShoppingItemCard({
 }: {
   isBusy: boolean;
   isMenuOpen: boolean;
-  item: ShoppingList["items"][number];
+  item: ShoppingItem;
   onDelete: (itemId: string) => void;
   onEdit: (itemId: string) => void;
   onMenuClick: (event: MouseEvent<HTMLButtonElement>, itemId: string) => void;
@@ -730,7 +947,7 @@ function ShoppingItemCard({
   );
 }
 
-function formatShoppingItemMeta(item: ShoppingList["items"][number]) {
+function formatShoppingItemMeta(item: ShoppingItem) {
   return [item.quantity, item.unit, item.category, item.note].filter(Boolean).join(" · ");
 }
 
@@ -778,13 +995,9 @@ function ShoppingStatusCard({
   );
 }
 
-function formatItemCount(count: number): string {
-  return `${count} vare${count === 1 ? "" : "r"} gjenstår`;
-}
-
 function sortCompletedShoppingItems(
-  first: ShoppingList["items"][number],
-  second: ShoppingList["items"][number],
+  first: ShoppingItem,
+  second: ShoppingItem,
 ) {
   return (
     new Date(second.checkedAt ?? second.updatedAt).getTime() -
@@ -793,8 +1006,8 @@ function sortCompletedShoppingItems(
 }
 
 function sortShoppingItems(
-  first: ShoppingList["items"][number],
-  second: ShoppingList["items"][number],
+  first: ShoppingItem,
+  second: ShoppingItem,
 ) {
   if (first.checked !== second.checked) {
     return first.checked ? 1 : -1;
