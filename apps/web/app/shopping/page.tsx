@@ -144,13 +144,15 @@ export default function ShoppingPage() {
   const catalogItemCount = SHOPPING_CATALOG.length;
   const visibleCatalogCategories = useMemo(
     () =>
-      SHOPPING_CATEGORIES.map((categoryOption) => ({
-        ...categoryOption,
-        items: getShoppingCatalogItemsByCategory(categoryOption.slug).slice(
-          0,
-          8,
-        ),
-      })).filter((categoryOption) => categoryOption.items.length > 0),
+      SHOPPING_CATEGORIES.map((categoryOption) => {
+        const items = getShoppingCatalogItemsByCategory(categoryOption.slug);
+
+        return {
+          ...categoryOption,
+          items: items.slice(0, 8),
+          totalItemCount: items.length,
+        };
+      }).filter((categoryOption) => categoryOption.totalItemCount > 0),
     [catalogItemCount],
   );
 
@@ -187,7 +189,7 @@ export default function ShoppingPage() {
     const nextQuantity = quantity.trim();
     const nextUnit = unit.trim();
     const nextNote = note.trim();
-    const nextCategory = category.trim();
+    const nextCategory = getShoppingCategorySubmissionValue(category);
 
     if (!activeFamilyId || nextLabel.length === 0 || isAdding) {
       return;
@@ -396,7 +398,7 @@ export default function ShoppingPage() {
     setQuantity(item.quantity ?? "");
     setUnit(item.unit ?? "");
     setNote(item.note ?? "");
-    setCategory(item.category ?? "");
+    setCategory(formatShoppingCategoryForInput(item.category));
     setOpenMenuItemId(null);
     setIsNewSheetOpen(true);
   }
@@ -672,7 +674,7 @@ export default function ShoppingPage() {
 
                       return (
                         <CollapsibleShoppingSection
-                          badgeCount={categoryOption.items.length}
+                          badgeCount={categoryOption.totalItemCount}
                           controlsId={`shopping-catalog-category-${categoryOption.slug}`}
                           isOpen={isCategoryOpen}
                           key={categoryOption.slug}
@@ -1145,6 +1147,39 @@ function isShoppingLabelInList(label: string, shoppingItems: ShoppingItem[]) {
   return shoppingItems.some(
     (shoppingItem) =>
       normalizeShoppingSearchValue(shoppingItem.label) === normalizedLabel,
+  );
+}
+
+function formatShoppingCategoryForInput(category?: string | null) {
+  if (!category) {
+    return "";
+  }
+
+  if (category === "egne-varer") {
+    return "Egne varer";
+  }
+
+  return getShoppingCategoryBySlug(category)?.name ?? category;
+}
+
+function getShoppingCategorySubmissionValue(category: string) {
+  const trimmedCategory = category.trim();
+
+  if (!trimmedCategory) {
+    return "";
+  }
+
+  if (normalizeShoppingSearchValue(trimmedCategory) === "egne varer") {
+    return "egne-varer";
+  }
+
+  return (
+    SHOPPING_CATEGORIES.find(
+      (categoryOption) =>
+        categoryOption.slug === trimmedCategory ||
+        normalizeShoppingSearchValue(categoryOption.name) ===
+          normalizeShoppingSearchValue(trimmedCategory),
+    )?.slug ?? trimmedCategory
   );
 }
 

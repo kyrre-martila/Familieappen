@@ -14649,8 +14649,13 @@ button.family-settings-row:focus-visible:not(:disabled) {
 
 .shopping-edit-sheet__grid {
   display: grid;
-  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: var(--space-s);
+  min-width: 0;
+}
+
+.shopping-edit-sheet__grid .husk-school-field {
+  min-width: 0;
 }
 
 .shopping-edit-sheet__content .husk-school-field {
@@ -14659,7 +14664,10 @@ button.family-settings-row:focus-visible:not(:disabled) {
 
 .shopping-edit-sheet__content .husk-school-field input,
 .shopping-edit-sheet__content .husk-school-field textarea {
+  width: 100%;
+  min-width: 0;
   min-height: calc(var(--space-xl) + var(--space-xs));
+  box-sizing: border-box;
   font-size: var(--font-size-input);
 }
 
