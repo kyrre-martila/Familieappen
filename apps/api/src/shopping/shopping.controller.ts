@@ -1,7 +1,7 @@
 import { Body, Controller, Delete, Get, Headers, HttpStatus, Param, Patch, Post, Req, UseGuards } from "@nestjs/common";
 import { AuthGuard } from "../auth/guards/auth.guard";
 import { API_ERROR_CODES, ApiException, ApiResponse, createApiResponse } from "../common";
-import { AddShoppingItemRequestDto, ShoppingListDto, ShoppingListItemDto } from "./dto/shopping.dto";
+import { AddShoppingItemRequestDto, ShoppingListDto, ShoppingListItemDto, UpdateShoppingItemRequestDto } from "./dto/shopping.dto";
 import { ShoppingService } from "./shopping.service";
 
 type AuthenticatedRequest = {
@@ -34,11 +34,16 @@ export class ShoppingController {
   }
 
   @Patch("items/:itemId")
-  async toggleItem(
+  async updateOrToggleItem(
     @Req() request: AuthenticatedRequest,
     @Headers("x-family-id") familyId: string,
-    @Param("itemId") itemId: string
+    @Param("itemId") itemId: string,
+    @Body() body?: UpdateShoppingItemRequestDto
   ): Promise<ApiResponse<ShoppingListItemDto>> {
+    if (body && Object.keys(body).length > 0) {
+      return createApiResponse(await this.shoppingService.updateItem(request.user.id, requireFamilyId(familyId), itemId, body));
+    }
+
     return createApiResponse(await this.shoppingService.toggleItem(request.user.id, requireFamilyId(familyId), itemId));
   }
 

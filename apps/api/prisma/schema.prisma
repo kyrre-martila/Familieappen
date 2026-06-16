@@ -211,6 +211,9 @@ model ShoppingListItem {
   shoppingListId   String
   label            String
   quantity         String?
+  unit             String?
+  note             String?
+  category         String?
   checked          Boolean      @default(false)
   createdByUserId  String?
   checkedByUserId  String?

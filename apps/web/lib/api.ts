@@ -626,10 +626,22 @@ export async function getShoppingList(familyId: string): Promise<ShoppingList> {
 
 export async function addShoppingItem(
   familyId: string,
-  input: { label: string; quantity?: string }
+  input: { label: string; quantity?: string; unit?: string; note?: string; category?: string }
 ): Promise<ShoppingListItem> {
   return apiRequest<ShoppingListItem>("/shopping/items", {
     method: "POST",
+    body: input,
+    familyId
+  });
+}
+
+export async function updateShoppingItem(
+  familyId: string,
+  itemId: string,
+  input: { label: string; quantity?: string; unit?: string; note?: string; category?: string }
+): Promise<ShoppingListItem> {
+  return apiRequest<ShoppingListItem>(`/shopping/items/${encodeURIComponent(itemId)}`, {
+    method: "PATCH",
     body: input,
     familyId
   });
