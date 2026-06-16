@@ -85,12 +85,14 @@ export default function ShoppingPage() {
   const [openMenuItemId, setOpenMenuItemId] = useState<string | null>(null);
   const [isNewSheetOpen, setIsNewSheetOpen] = useState(false);
   const [isListSheetOpen, setIsListSheetOpen] = useState(false);
-  const [isRecentItemsOpen, setIsRecentItemsOpen] = useState(true);
+  const [isCreateListSheetOpen, setIsCreateListSheetOpen] = useState(false);
+  const [newListName, setNewListName] = useState("");
+  const [isRecentItemsOpen, setIsRecentItemsOpen] = useState(false);
   const [openCatalogCategories, setOpenCatalogCategories] = useState<
     Record<string, boolean>
   >(() =>
     Object.fromEntries(
-      SHOPPING_CATEGORIES.map((categoryOption) => [categoryOption.slug, true]),
+      SHOPPING_CATEGORIES.map((categoryOption) => [categoryOption.slug, false]),
     ),
   );
   const [pendingItemId, setPendingItemId] = useState<string | null>(null);
@@ -125,7 +127,10 @@ export default function ShoppingPage() {
         .sort(sortCompletedShoppingItems) ?? [],
     [shoppingList],
   );
-  const recentItems = completedItems;
+  const recentItems = useMemo(
+    () => getRecentShoppingCatalogItems(completedItems),
+    [completedItems],
+  );
   const uncheckedCount = remainingItems.length;
   const hasMultipleFamilies = families.length > 1;
   const selectedShoppingListName = formatShoppingListName(shoppingList?.name);
@@ -302,11 +307,22 @@ export default function ShoppingPage() {
   }
 
   async function addItemFromCatalog(item: ShoppingCatalogItem) {
-    if (
-      !activeFamilyId ||
-      isAdding ||
-      isCatalogItemInList(item, shoppingList?.items ?? [])
-    ) {
+    if (!activeFamilyId || isAdding) {
+      return;
+    }
+
+    const matchingCompletedItem = findMatchingShoppingItem(
+      item,
+      shoppingList?.items ?? [],
+      true,
+    );
+
+    if (matchingCompletedItem) {
+      await handleToggleItem(matchingCompletedItem.id);
+      return;
+    }
+
+    if (isCatalogItemInList(item, shoppingList?.items ?? [])) {
       return;
     }
 
@@ -354,7 +370,7 @@ export default function ShoppingPage() {
   function toggleCatalogCategory(categorySlug: string) {
     setOpenCatalogCategories((currentCategories) => ({
       ...currentCategories,
-      [categorySlug]: !(currentCategories[categorySlug] ?? true),
+      [categorySlug]: !(currentCategories[categorySlug] ?? false),
     }));
   }
 
@@ -555,7 +571,7 @@ export default function ShoppingPage() {
               >
                 <SectionHeader
                   action={<Badge tone="neutral">{uncheckedCount}</Badge>}
-                  title="Handleliste"
+                  title="Aktive varer"
                 />
                 {remainingItems.length === 0 ? (
                   <Card className="shopping-empty-card" tone="default">
@@ -621,7 +637,8 @@ export default function ShoppingPage() {
                     />
                   </label>
                 </div>
-                {recentItems.length > 0 ? (
+                {recentItems.length > 0 &&
+                !(isSearchingCatalog && catalogSearchResults.length > 0) ? (
                   <CollapsibleShoppingSection
                     badgeCount={recentItems.length}
                     controlsId="recent-shopping-list"
@@ -630,24 +647,15 @@ export default function ShoppingPage() {
                     tone="success"
                     onToggle={() => setIsRecentItemsOpen((isOpen) => !isOpen)}
                   >
-                    <ul
-                      id="recent-shopping-list"
-                      className="shopping-list shopping-list--cards"
-                      aria-label="Nylige varer"
-                    >
-                      {recentItems.map((item) => (
-                        <ShoppingItemCard
-                          key={item.id}
-                          item={item}
-                          isBusy={pendingItemId === item.id}
-                          isMenuOpen={openMenuItemId === item.id}
-                          onDelete={handleDeleteItem}
-                          onEdit={handleEditItem}
-                          onMenuClick={handleMenuClick}
-                          onToggle={handleToggleItem}
-                        />
-                      ))}
-                    </ul>
+                    <div id="recent-shopping-list">
+                      <RecentItemGrid
+                        items={recentItems}
+                        pendingItemId={pendingItemId}
+                        shoppingItems={shoppingList.items}
+                        onAddCatalogItem={addItemFromCatalog}
+                        onRestoreItem={handleToggleItem}
+                      />
+                    </div>
                   </CollapsibleShoppingSection>
                 ) : null}
                 {isSearchingCatalog ? (
@@ -660,7 +668,7 @@ export default function ShoppingPage() {
                   <div className="shopping-catalog-categories">
                     {visibleCatalogCategories.map((categoryOption) => {
                       const isCategoryOpen =
-                        openCatalogCategories[categoryOption.slug] ?? true;
+                        openCatalogCategories[categoryOption.slug] ?? false;
 
                       return (
                         <CollapsibleShoppingSection
@@ -836,12 +844,75 @@ export default function ShoppingPage() {
               <button
                 className="calendar-filter-sheet__action calendar-filter-sheet__action--primary shopping-list-sheet__add"
                 type="button"
+                onClick={() => {
+                  setIsListSheetOpen(false);
+                  setIsCreateListSheetOpen(true);
+                }}
               >
                 <Plus aria-hidden="true" size={18} strokeWidth={2.5} />
                 Legg til ny handleliste
               </button>
             </div>
           </div>
+        </HuskMobileSheet>
+
+        <HuskMobileSheet
+          isOpen={isCreateListSheetOpen}
+          labelledBy="shopping-create-list-sheet-title"
+          onClose={() => setIsCreateListSheetOpen(false)}
+        >
+          <form className="shopping-sheet shopping-create-list-sheet">
+            <div className="calendar-filter-sheet__header">
+              <div>
+                <p className="husk-school-sheet__eyebrow">Handleliste</p>
+                <h2
+                  id="shopping-create-list-sheet-title"
+                  className="calendar-filter-sheet__title"
+                >
+                  Ny handleliste
+                </h2>
+              </div>
+              <button
+                className="calendar-filter-sheet__close"
+                type="button"
+                aria-label="Lukk"
+                onClick={() => setIsCreateListSheetOpen(false)}
+              >
+                <X aria-hidden="true" size={18} strokeWidth={2.5} />
+              </button>
+            </div>
+            <div className="calendar-filter-sheet__content shopping-create-list-sheet__content">
+              <label className="husk-school-field">
+                <span>Navn på handleliste</span>
+                <input
+                  maxLength={80}
+                  onChange={(event) => setNewListName(event.target.value)}
+                  placeholder="F.eks. Helgehandel"
+                  value={newListName}
+                />
+              </label>
+              <p className="shopping-create-list-sheet__notice">
+                Flere handlelister kommer senere. Du kan gjøre klar navnet nå,
+                men lagring er ikke tilgjengelig ennå.
+              </p>
+            </div>
+            <div className="calendar-filter-sheet__actions">
+              <button
+                className="calendar-filter-sheet__action calendar-filter-sheet__action--secondary"
+                type="button"
+                onClick={() => setIsCreateListSheetOpen(false)}
+              >
+                Avbryt
+              </button>
+              <button
+                className="calendar-filter-sheet__action calendar-filter-sheet__action--primary"
+                disabled
+                type="button"
+              >
+                Flere handlelister kommer senere.
+              </button>
+            </div>
+          </form>
         </HuskMobileSheet>
       </PageContainer>
     </AppShell>
@@ -906,6 +977,65 @@ function CollapsibleShoppingSection({
   );
 }
 
+function RecentItemGrid({
+  items,
+  onAddCatalogItem,
+  onRestoreItem,
+  pendingItemId,
+  shoppingItems,
+}: {
+  items: ShoppingCatalogItem[];
+  onAddCatalogItem: (item: ShoppingCatalogItem) => void;
+  onRestoreItem: (itemId: string) => void;
+  pendingItemId: string | null;
+  shoppingItems: ShoppingItem[];
+}) {
+  if (items.length === 0) {
+    return null;
+  }
+
+  return (
+    <div className="shopping-catalog-grid">
+      {items.map((item) => {
+        const activeItem = findMatchingShoppingItem(item, shoppingItems, false);
+        const completedItem = findMatchingShoppingItem(
+          item,
+          shoppingItems,
+          true,
+        );
+        const isBusy = completedItem
+          ? pendingItemId === completedItem.id
+          : false;
+
+        return (
+          <button
+            className="shopping-catalog-item"
+            disabled={Boolean(activeItem) || isBusy}
+            key={`recent-${item.categorySlug}-${item.name}`}
+            type="button"
+            onClick={() => {
+              if (completedItem) {
+                onRestoreItem(completedItem.id);
+                return;
+              }
+
+              onAddCatalogItem(item);
+            }}
+          >
+            <span className="shopping-catalog-item__name">{item.name}</span>
+            <span className="shopping-catalog-item__meta">
+              {item.suggestedQuantity} {item.defaultUnit} ·{" "}
+              {getShoppingCategoryBySlug(item.categorySlug)?.name ??
+                item.categorySlug}
+              {activeItem ? " · I listen" : ""}
+            </span>
+          </button>
+        );
+      })}
+    </div>
+  );
+}
+
 function CatalogItemGrid({
   items,
   onAddItem,
@@ -947,13 +1077,57 @@ function isCatalogItemInList(
   catalogItem: ShoppingCatalogItem,
   shoppingItems: ShoppingItem[],
 ) {
+  return Boolean(findMatchingShoppingItem(catalogItem, shoppingItems, false));
+}
+
+function findMatchingShoppingItem(
+  catalogItem: ShoppingCatalogItem,
+  shoppingItems: ShoppingItem[],
+  checked: boolean,
+) {
   const itemValues = [catalogItem.name, ...catalogItem.aliases].map(
     normalizeShoppingSearchValue,
   );
 
-  return shoppingItems.some((shoppingItem) =>
-    itemValues.includes(normalizeShoppingSearchValue(shoppingItem.label)),
+  return shoppingItems.find(
+    (shoppingItem) =>
+      shoppingItem.checked === checked &&
+      itemValues.includes(normalizeShoppingSearchValue(shoppingItem.label)),
   );
+}
+
+function getCatalogItemForShoppingItem(shoppingItem: ShoppingItem) {
+  const normalizedLabel = normalizeShoppingSearchValue(shoppingItem.label);
+
+  return SHOPPING_CATALOG.find((catalogItem) =>
+    [catalogItem.name, ...catalogItem.aliases]
+      .map(normalizeShoppingSearchValue)
+      .includes(normalizedLabel),
+  );
+}
+
+function getRecentShoppingCatalogItems(shoppingItems: ShoppingItem[]) {
+  const recentItems = new Map<string, ShoppingCatalogItem>();
+
+  for (const shoppingItem of shoppingItems) {
+    const catalogItem = getCatalogItemForShoppingItem(shoppingItem);
+
+    if (!catalogItem) {
+      continue;
+    }
+
+    const itemKey = normalizeShoppingSearchValue(catalogItem.name);
+
+    if (!recentItems.has(itemKey)) {
+      recentItems.set(itemKey, catalogItem);
+    }
+
+    if (recentItems.size === 20) {
+      break;
+    }
+  }
+
+  return [...recentItems.values()];
 }
 
 function isShoppingLabelInList(label: string, shoppingItems: ShoppingItem[]) {
