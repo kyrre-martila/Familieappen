@@ -1,7 +1,8 @@
 "use client";
 
 import { FormEvent, useEffect, useMemo, useState, type ChangeEvent } from "react";
-import { MoreHorizontal } from "lucide-react";
+import { createPortal } from "react-dom";
+import { ListTodo, MoreHorizontal, X } from "lucide-react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { LockedFeatureState } from "../../../components/PendingAccess";
@@ -25,7 +26,7 @@ import { clearActiveFamilyId } from "../../../lib/session";
 
 type OppgaverStatus = "loading" | "ready" | "pending" | "unauthorized" | "no-family" | "error";
 
-export function OppgaverSection() {
+export function OppgaverSection({ query, createRequest = 0 }: { query: string; createRequest?: number }) {
   const router = useRouter();
   const [tasks, setTasks] = useState<Task[]>([]);
   const [familyDetails, setFamilyDetails] = useState<FamilyDetails | null>(null);
@@ -41,9 +42,29 @@ export function OppgaverSection() {
   const [isAdding, setIsAdding] = useState(false);
   const [editingTaskId, setEditingTaskId] = useState<string | null>(null);
   const [openTaskMenuId, setOpenTaskMenuId] = useState<string | null>(null);
+  const [isTaskSheetOpen, setIsTaskSheetOpen] = useState(false);
+  const [isMounted, setIsMounted] = useState(false);
 
   const familyAccess = useFamilyAccess();
   const approvedFamilyContext = familyAccess.status === "approved" ? familyAccess.familyContext : null;
+
+  useEffect(() => {
+    setIsMounted(true);
+  }, []);
+
+  useEffect(() => {
+    if (createRequest > 0) {
+      resetTaskForm();
+      setIsTaskSheetOpen(true);
+    }
+  }, [createRequest]);
+
+  useEffect(() => {
+    if (!isTaskSheetOpen) return;
+    const previousOverflow = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+    return () => { document.body.style.overflow = previousOverflow; };
+  }, [isTaskSheetOpen]);
 
   useEffect(() => {
     if (!approvedFamilyContext) {
@@ -55,6 +76,13 @@ export function OppgaverSection() {
     void loadOppgaver(approvedFamilyContext.activeFamilyId);
   }, [approvedFamilyContext?.activeFamilyId, approvedFamilyContext]);
 
+  const normalizedQuery = query.trim().toLocaleLowerCase("nb-NO");
+  const filteredTasks = useMemo(() => {
+    if (!normalizedQuery) return tasks;
+    return tasks.filter((task) => [task.title, task.description ?? "", formatOppgaveMeta(task, familyDetails?.members ?? [])].some((value) => value.toLocaleLowerCase("nb-NO").includes(normalizedQuery)));
+  }, [familyDetails?.members, normalizedQuery, tasks]);
+  const incompleteTasks = useMemo(() => filteredTasks.filter((task) => !task.completed), [filteredTasks]);
+  const completedTasks = useMemo(() => filteredTasks.filter((task) => task.completed), [filteredTasks]);
   const incompleteCount = useMemo(() => tasks.filter((task) => !task.completed).length, [tasks]);
   const hasMultipleFamilies = families.length > 1;
   const members = familyDetails?.members ?? [];
@@ -122,6 +150,7 @@ export function OppgaverSection() {
         setTasks((currentOppgaver) => [...currentOppgaver, task].sort(sortTasks));
       }
       resetTaskForm();
+      setIsTaskSheetOpen(false);
       setStatus("ready");
     } catch (error) {
       handleActionError(error, "Could not add the task. Please try again.");
@@ -173,6 +202,7 @@ export function OppgaverSection() {
     setAssignedFamilyMemberId(task.assignedFamilyMemberId ?? "");
     setDueDate(task.dueDate ? task.dueDate.slice(0, 10) : "");
     setOpenTaskMenuId(null);
+    setIsTaskSheetOpen(true);
     setMessage("");
   }
 
@@ -278,50 +308,24 @@ export function OppgaverSection() {
           {status === "error" ? <OppgaverStatusCard message={message} status={status} onRetry={() => loadOppgaver()} /> : null}
 
           {status !== "unauthorized" && status !== "no-family" ? (
-            <form className="tasks-form" onSubmit={handleAddOppgave}>
-              <label className="tasks-form__field tasks-form__field--title">
-                <span className="tasks-form__label">Oppgave</span>
-                <input
-                  className="tasks-form__input"
-                  maxLength={120}
-                  onChange={(event) => setTitle(event.target.value)}
-                  placeholder="Kjøp melk"
-                  value={title}
-                />
-              </label>
-              <label className="tasks-form__field">
-                <span className="tasks-form__label">Tildel</span>
-                <select
-                  className="tasks-form__input"
-                  onChange={(event) => setAssignedFamilyMemberId(event.target.value)}
-                  value={assignedFamilyMemberId}
-                >
-                  <option value="">Alle</option>
-                  {members.map((member) => (
-                    <option key={member.id} value={member.id}>
-                      {member.displayName}
-                    </option>
-                  ))}
-                </select>
-              </label>
-              <label className="tasks-form__field">
-                <span className="tasks-form__label">Frist</span>
-                <input className="tasks-form__input" onChange={(event) => setDueDate(event.target.value)} type="date" value={dueDate} />
-              </label>
-              <label className="tasks-form__field tasks-form__field--description">
-                <span className="tasks-form__label">Notat</span>
-                <input
-                  className="tasks-form__input"
-                  maxLength={500}
-                  onChange={(event) => setDescription(event.target.value)}
-                  placeholder="Valgfri detalj"
-                  value={description}
-                />
-              </label>
-              <Button className="tasks-form__button" disabled={isAdding || title.trim().length === 0} type="submit" variant="primary">
-                {editingTaskId ? "Lagre oppgave" : "+ Ny oppgave"}
-              </Button>
-            </form>
+            <TaskFormSheet
+              activeFamilyId={activeFamilyId}
+              assignedFamilyMemberId={assignedFamilyMemberId}
+              description={description}
+              dueDate={dueDate}
+              editingTaskId={editingTaskId}
+              isAdding={isAdding}
+              isMounted={isMounted}
+              isOpen={isTaskSheetOpen}
+              members={members}
+              onClose={() => { setIsTaskSheetOpen(false); resetTaskForm(); }}
+              onSubmit={handleAddOppgave}
+              setAssignedFamilyMemberId={setAssignedFamilyMemberId}
+              setDescription={setDescription}
+              setDueDate={setDueDate}
+              setTitle={setTitle}
+              title={title}
+            />
           ) : null}
 
           {message && status === "ready" ? <p className="tasks-card__message">{message}</p> : null}
@@ -332,60 +336,163 @@ export function OppgaverSection() {
             <EmptyState title="Ingen oppgaver i dag" description="Legg til en oppgave når noe må gjøres." />
           ) : null}
 
-          {status === "ready" && tasks.length > 0 ? (
-            <ul className="tasks-list" aria-label="Familieoppgaver">
-              {tasks.map((task) => (
-                <li className={task.completed ? "tasks-list__item tasks-list__item--completed" : "tasks-list__item"} key={task.id}>
-                  <button
-                    aria-label={`${task.completed ? "Marker som ikke ferdig" : "Fullfør"} ${task.title}`}
-                    className="tasks-list__toggle"
-                    disabled={pendingTaskId === task.id}
-                    onClick={() => handleToggleOppgave(task.id)}
-                    type="button"
-                  >
-                    {task.completed ? "☑" : "☐"}
-                  </button>
-                  <div className="tasks-list__content">
-                    <span className="tasks-list__title">{task.title}</span>
-                    <span className="tasks-list__meta">{formatOppgaveMeta(task, members)}</span>
-                    {task.description ? <span className="tasks-list__description">{task.description}</span> : null}
-                  </div>
-                  <span
-                    className="meal-card__menu-wrap tasks-list__menu-wrap"
-                    onBlur={(event) => {
-                      if (!(event.relatedTarget instanceof Node && event.currentTarget.contains(event.relatedTarget))) {
-                        setOpenTaskMenuId(null);
-                      }
-                    }}
-                  >
-                    <button
-                      aria-expanded={openTaskMenuId === task.id}
-                      aria-label={`Åpne meny for ${task.title}`}
-                      className="meal-card__menu tasks-list__menu"
-                      disabled={pendingTaskId === task.id}
-                      onClick={() => setOpenTaskMenuId((currentId) => (currentId === task.id ? null : task.id))}
-                      title="Rediger / Slett"
-                      type="button"
-                    >
-                      <MoreHorizontal aria-hidden="true" size={20} />
-                    </button>
-                    {openTaskMenuId === task.id ? (
-                      <span className="meal-card__menu-popover tasks-list__menu-popover" role="menu">
-                        <button type="button" role="menuitem" onClick={() => startEditingOppgave(task)}>
-                          Rediger
-                        </button>
-                        <button type="button" role="menuitem" onClick={() => { setOpenTaskMenuId(null); void handleSlettOppgave(task.id); }}>
-                          Slett
-                        </button>
-                      </span>
-                    ) : null}
-                  </span>
-                </li>
-              ))}
-            </ul>
+          {status === "ready" && filteredTasks.length > 0 ? (
+            <div className="tasks-sections">
+              <TaskGroup title="Gjenstående oppgaver" tasks={incompleteTasks} members={members} pendingTaskId={pendingTaskId} openTaskMenuId={openTaskMenuId} onToggle={handleToggleOppgave} onMenuToggle={setOpenTaskMenuId} onEdit={startEditingOppgave} onDelete={handleSlettOppgave} />
+              <TaskGroup title="Fullførte oppgaver" tasks={completedTasks} members={members} pendingTaskId={pendingTaskId} openTaskMenuId={openTaskMenuId} onToggle={handleToggleOppgave} onMenuToggle={setOpenTaskMenuId} onEdit={startEditingOppgave} onDelete={handleSlettOppgave} />
+            </div>
           ) : null}
         </Card>
       </section>
+  );
+}
+
+function TaskFormSheet({
+  assignedFamilyMemberId,
+  description,
+  dueDate,
+  editingTaskId,
+  isAdding,
+  isMounted,
+  isOpen,
+  members,
+  onClose,
+  onSubmit,
+  setAssignedFamilyMemberId,
+  setDescription,
+  setDueDate,
+  setTitle,
+  title
+}: {
+  activeFamilyId: string | null;
+  assignedFamilyMemberId: string;
+  description: string;
+  dueDate: string;
+  editingTaskId: string | null;
+  isAdding: boolean;
+  isMounted: boolean;
+  isOpen: boolean;
+  members: FamilyMember[];
+  onClose: () => void;
+  onSubmit: (event: FormEvent<HTMLFormElement>) => void;
+  setAssignedFamilyMemberId: (value: string) => void;
+  setDescription: (value: string) => void;
+  setDueDate: (value: string) => void;
+  setTitle: (value: string) => void;
+  title: string;
+}) {
+  const sheet = (
+    <div aria-hidden={!isOpen} className={`husk-school-sheet${isOpen ? " husk-school-sheet--open" : ""}`}>
+      <button className="husk-school-sheet__backdrop" type="button" aria-label="Lukk oppgave" onClick={onClose} />
+      <form className="husk-school-sheet__panel task-edit-sheet__panel" role="dialog" aria-modal="true" aria-labelledby="task-edit-title" onSubmit={onSubmit}>
+        <div className="husk-school-sheet__handle" aria-hidden="true" />
+        <div className="husk-school-sheet__header">
+          <div className="husk-reminder-edit-sheet__heading">
+            <span className="husk-reminder-edit-sheet__icon" aria-hidden="true">
+              <ListTodo size={22} strokeWidth={2.35} />
+            </span>
+            <div>
+              <p className="husk-school-sheet__eyebrow">Oppgaver</p>
+              <h3 className="husk-school-sheet__title" id="task-edit-title">{editingTaskId ? "Rediger oppgave" : "Ny oppgave"}</h3>
+            </div>
+          </div>
+          <button className="husk-school-sheet__close" type="button" aria-label="Lukk" onClick={onClose}>
+            <X aria-hidden="true" size={18} strokeWidth={2.5} />
+          </button>
+        </div>
+        <div className="husk-school-sheet__content husk-reminder-edit-sheet__content">
+          <label className="husk-school-field">
+            <span>Oppgave</span>
+            <input maxLength={120} onChange={(event) => setTitle(event.target.value)} placeholder="Kjøp melk" required value={title} />
+          </label>
+          <label className="husk-school-field">
+            <span>Notat</span>
+            <textarea maxLength={500} onChange={(event) => setDescription(event.target.value)} placeholder="Valgfri detalj …" rows={3} value={description} />
+          </label>
+          <div className="event-form-card event-form-card--rows husk-reminder-edit-sheet__rows" aria-label="Oppgavedetaljer">
+            <label className="event-form-row">
+              <span>Tildel</span>
+              <select onChange={(event) => setAssignedFamilyMemberId(event.target.value)} value={assignedFamilyMemberId}>
+                <option value="">Alle</option>
+                {members.map((member) => (
+                  <option key={member.id} value={member.id}>{member.displayName}</option>
+                ))}
+              </select>
+            </label>
+            <label className="event-form-row">
+              <span>Frist</span>
+              <input onChange={(event) => setDueDate(event.target.value)} type="date" value={dueDate} />
+            </label>
+          </div>
+        </div>
+        <div className="husk-school-sheet__actions">
+          <button className="husk-school-sheet__action husk-school-sheet__action--secondary" type="button" onClick={onClose}>Avbryt</button>
+          <button className="husk-school-sheet__action husk-school-sheet__action--primary" disabled={isAdding || title.trim().length === 0} type="submit">{isAdding ? "Lagrer …" : "Lagre"}</button>
+        </div>
+      </form>
+    </div>
+  );
+
+  return isMounted ? createPortal(sheet, document.body) : sheet;
+}
+
+function TaskGroup({
+  members,
+  onDelete,
+  onEdit,
+  onMenuToggle,
+  onToggle,
+  openTaskMenuId,
+  pendingTaskId,
+  tasks,
+  title
+}: {
+  members: FamilyMember[];
+  onDelete: (taskId: string) => void;
+  onEdit: (task: Task) => void;
+  onMenuToggle: (taskId: string | null | ((currentId: string | null) => string | null)) => void;
+  onToggle: (taskId: string) => void;
+  openTaskMenuId: string | null;
+  pendingTaskId: string | null;
+  tasks: Task[];
+  title: string;
+}) {
+  return (
+    <section className="tasks-section" aria-labelledby={`${title.replaceAll(" ", "-").toLowerCase()}-heading`}>
+      <div className="husk-reminder-group__heading">
+        <h2 className="husk-reminder-group__title" id={`${title.replaceAll(" ", "-").toLowerCase()}-heading`}>{title}</h2>
+        <span className="husk-reminder-group__count">{tasks.length}</span>
+      </div>
+      {tasks.length > 0 ? (
+        <ul className="tasks-list" aria-label={title}>
+          {tasks.map((task) => (
+            <li className={task.completed ? "tasks-list__item tasks-list__item--completed" : "tasks-list__item"} key={task.id}>
+              <button aria-label={`${task.completed ? "Marker som ikke ferdig" : "Fullfør"} ${task.title}`} className="tasks-list__toggle" disabled={pendingTaskId === task.id} onClick={() => onToggle(task.id)} type="button">
+                {task.completed ? "☑" : "☐"}
+              </button>
+              <div className="tasks-list__content">
+                <span className="tasks-list__title">{task.title}</span>
+                <span className="tasks-list__meta">{formatOppgaveMeta(task, members)}</span>
+                {task.description ? <span className="tasks-list__description">{task.description}</span> : null}
+              </div>
+              <span className="husk-reminder-card__menu-wrap tasks-list__menu-wrap" onBlur={(event) => {
+                if (!(event.relatedTarget instanceof Node && event.currentTarget.contains(event.relatedTarget))) onMenuToggle(null);
+              }}>
+                <button aria-expanded={openTaskMenuId === task.id} aria-label={`Åpne meny for ${task.title}`} className="husk-reminder-card__menu-button" disabled={pendingTaskId === task.id} onClick={() => onMenuToggle((currentId) => (currentId === task.id ? null : task.id))} type="button">
+                  <MoreHorizontal aria-hidden="true" size={20} />
+                </button>
+                {openTaskMenuId === task.id ? (
+                  <span className="husk-reminder-card__menu tasks-list__menu-popover" role="menu">
+                    <button type="button" role="menuitem" onClick={() => onEdit(task)}>Rediger</button>
+                    <button className="husk-reminder-card__menu-delete" type="button" role="menuitem" onClick={() => { onMenuToggle(null); onDelete(task.id); }}>Slett</button>
+                  </span>
+                ) : null}
+              </span>
+            </li>
+          ))}
+        </ul>
+      ) : null}
+    </section>
   );
 }
 
