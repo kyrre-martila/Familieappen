@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
+import { createPortal } from "react-dom";
 import { Bell, CalendarDays, Check, FileText, Users, X } from "lucide-react";
 
 import { UserAvatar } from "../../../components/avatar/UserAvatar";
@@ -97,6 +98,7 @@ export function HuskReminderEditSheet({
   const [draft, setDraft] = useState<ReminderEditDraft>(() =>
     toDraft(reminder),
   );
+  const [isMounted, setIsMounted] = useState(false);
   const isOpen = Boolean(reminder);
   const Icon = reminderIcons[draft.icon];
   const scopeSummary = useMemo(
@@ -109,8 +111,23 @@ export function HuskReminderEditSheet({
     (draft.audience === "family" || draft.memberIds.length > 0);
 
   useEffect(() => {
+    setIsMounted(true);
+  }, []);
+
+  useEffect(() => {
     setDraft(toDraft(reminder));
   }, [reminder]);
+
+  useEffect(() => {
+    if (!isOpen) return;
+
+    const previousOverflow = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+
+    return () => {
+      document.body.style.overflow = previousOverflow;
+    };
+  }, [isOpen]);
 
   function toggleMember(memberId: string) {
     setDraft((current) => ({
@@ -139,7 +156,7 @@ export function HuskReminderEditSheet({
     });
   }
 
-  return (
+  const sheet = (
     <div
       aria-hidden={!isOpen}
       className={`husk-school-sheet${isOpen ? " husk-school-sheet--open" : ""}`}
@@ -383,4 +400,6 @@ export function HuskReminderEditSheet({
       </section>
     </div>
   );
+
+  return isMounted ? createPortal(sheet, document.body) : sheet;
 }
