@@ -7,11 +7,19 @@ import {
   useMemo,
   useState,
   type ChangeEvent,
+  type ReactNode,
 } from "react";
 import Link from "next/link";
 import { AppShell } from "../../components/AppShell";
 import { useRouter } from "next/navigation";
-import { ChevronDown, MoreHorizontal, Share2, SlidersHorizontal, X } from "lucide-react";
+import {
+  Check,
+  ChevronDown,
+  MoreHorizontal,
+  Plus,
+  Share2,
+  X,
+} from "lucide-react";
 import { LockedFeatureState } from "../../components/PendingAccess";
 import { HuskMobileSheet } from "../../features/husk/components/HuskMobileSheet";
 import { useFamilyAccess } from "../../components/ProtectedFamilyRoute";
@@ -73,11 +81,18 @@ export default function ShoppingPage() {
   const [unit, setUnit] = useState("");
   const [note, setNote] = useState("");
   const [category, setCategory] = useState("");
-  const [showCompletedItems, setShowCompletedItems] = useState(false);
   const [editingItemId, setEditingItemId] = useState<string | null>(null);
   const [openMenuItemId, setOpenMenuItemId] = useState<string | null>(null);
   const [isNewSheetOpen, setIsNewSheetOpen] = useState(false);
-  const [isFilterSheetOpen, setIsFilterSheetOpen] = useState(false);
+  const [isListSheetOpen, setIsListSheetOpen] = useState(false);
+  const [isRecentItemsOpen, setIsRecentItemsOpen] = useState(true);
+  const [openCatalogCategories, setOpenCatalogCategories] = useState<
+    Record<string, boolean>
+  >(() =>
+    Object.fromEntries(
+      SHOPPING_CATEGORIES.map((categoryOption) => [categoryOption.slug, true]),
+    ),
+  );
   const [pendingItemId, setPendingItemId] = useState<string | null>(null);
   const [isAdding, setIsAdding] = useState(false);
 
@@ -110,13 +125,12 @@ export default function ShoppingPage() {
         .sort(sortCompletedShoppingItems) ?? [],
     [shoppingList],
   );
-  const recentItems = useMemo(
-    () => completedItems.slice(0, 3),
-    [completedItems],
-  );
+  const recentItems = completedItems;
   const uncheckedCount = remainingItems.length;
   const hasMultipleFamilies = families.length > 1;
-  const isDefaultShoppingList = !shoppingList || shoppingList.name === "Familiehandleliste";
+  const selectedShoppingListName = formatShoppingListName(shoppingList?.name);
+  const isDefaultShoppingList =
+    selectedShoppingListName === "Familiehandleliste";
   const catalogSearchResults = useMemo(
     () => searchShoppingCatalog(label),
     [label],
@@ -127,7 +141,10 @@ export default function ShoppingPage() {
     () =>
       SHOPPING_CATEGORIES.map((categoryOption) => ({
         ...categoryOption,
-        items: getShoppingCatalogItemsByCategory(categoryOption.slug).slice(0, 8),
+        items: getShoppingCatalogItemsByCategory(categoryOption.slug).slice(
+          0,
+          8,
+        ),
       })).filter((categoryOption) => categoryOption.items.length > 0),
     [catalogItemCount],
   );
@@ -215,7 +232,12 @@ export default function ShoppingPage() {
       setEditingItemId(null);
       setStatus("ready");
     } catch (error) {
-      handleActionError(error, editingItemId ? "Kunne ikke lagre varen. Prøv igjen." : "Kunne ikke legge til varen. Prøv igjen.");
+      handleActionError(
+        error,
+        editingItemId
+          ? "Kunne ikke lagre varen. Prøv igjen."
+          : "Kunne ikke legge til varen. Prøv igjen.",
+      );
     } finally {
       setIsAdding(false);
     }
@@ -280,7 +302,11 @@ export default function ShoppingPage() {
   }
 
   async function addItemFromCatalog(item: ShoppingCatalogItem) {
-    if (!activeFamilyId || isAdding || isCatalogItemInList(item, shoppingList?.items ?? [])) {
+    if (
+      !activeFamilyId ||
+      isAdding ||
+      isCatalogItemInList(item, shoppingList?.items ?? [])
+    ) {
       return;
     }
 
@@ -323,6 +349,13 @@ export default function ShoppingPage() {
     setNote("");
     setCategory("egne-varer");
     setIsNewSheetOpen(true);
+  }
+
+  function toggleCatalogCategory(categorySlug: string) {
+    setOpenCatalogCategories((currentCategories) => ({
+      ...currentCategories,
+      [categorySlug]: !(currentCategories[categorySlug] ?? true),
+    }));
   }
 
   function handleOpenNewSheet() {
@@ -442,330 +475,436 @@ export default function ShoppingPage() {
   return (
     <AppShell title="Handleliste">
       <PageContainer>
-      <section
-        className="shopping-page shopping-page--mobile"
-        aria-labelledby="shopping-title"
-      >
-        {hasMultipleFamilies ? (
-          <label className="family-switcher shopping-family-switcher">
-            <span className="family-switcher__label">Aktiv familie</span>
-            <select
-              className="family-switcher__select"
-              value={activeFamilyId ?? ""}
-              onChange={handleFamilyChange}
-            >
-              {families.map((family) => (
-                <option key={family.family.id} value={family.family.id}>
-                  {family.family.name}
-                </option>
-              ))}
-            </select>
-          </label>
-        ) : null}
-
-        <div className="shopping-list-toolbar" aria-label="Handlelistevalg">
-          <button
-            className="shopping-list-selector"
-            type="button"
-            aria-label="Velg handleliste"
-          >
-            <span>{shoppingList?.name ?? "Familiehandleliste"}</span>
-            <span aria-hidden="true">▼</span>
-          </button>
-          <button
-            className="husk-filter-button"
-            type="button"
-            onClick={() => setIsFilterSheetOpen(true)}
-          >
-            <SlidersHorizontal aria-hidden="true" size={20} strokeWidth={2.4} />
-            <span>Filter</span>
-          </button>
-          {!isDefaultShoppingList ? (
-            <button className="husk-filter-button" type="button">
-              <Share2 aria-hidden="true" size={20} strokeWidth={2.4} />
-              <span>Del</span>
-            </button>
+        <section
+          className="shopping-page shopping-page--mobile"
+          aria-label="Handleliste"
+        >
+          {hasMultipleFamilies ? (
+            <label className="family-switcher shopping-family-switcher">
+              <span className="family-switcher__label">Aktiv familie</span>
+              <select
+                className="family-switcher__select"
+                value={activeFamilyId ?? ""}
+                onChange={handleFamilyChange}
+              >
+                {families.map((family) => (
+                  <option key={family.family.id} value={family.family.id}>
+                    {family.family.name}
+                  </option>
+                ))}
+              </select>
+            </label>
           ) : null}
-        </div>
 
-        {status === "unauthorized" ? (
-          <ShoppingStatusCard
-            message={message}
-            status={status}
-            onRetry={() => loadShoppingList()}
-          />
-        ) : null}
-        {status === "no-family" ? (
-          <ShoppingStatusCard
-            message={message}
-            status={status}
-            onRetry={() => loadShoppingList()}
-          />
-        ) : null}
-        {status === "error" ? (
-          <ShoppingStatusCard
-            message={message}
-            status={status}
-            onRetry={() => loadShoppingList()}
-          />
-        ) : null}
-        {message && status === "ready" ? (
-          <p className="shopping-card__message">{message}</p>
-        ) : null}
-        {status === "loading" ? (
-          <LoadingState
-            title="Laster handleliste"
-            description="Henter familiens varer."
-          />
-        ) : null}
-
-        {status === "ready" && shoppingList ? (
-          <>
-            <section
-              className="shopping-section"
-              aria-labelledby="remaining-shopping-title"
+          <div className="shopping-list-toolbar" aria-label="Handlelistevalg">
+            <button
+              className="shopping-list-selector"
+              type="button"
+              aria-expanded={isListSheetOpen}
+              aria-haspopup="dialog"
+              aria-label="Velg handleliste"
+              onClick={() => setIsListSheetOpen(true)}
             >
-              <SectionHeader
-                action={<Badge tone="neutral">{uncheckedCount}</Badge>}
-                title="Gjenstående varer"
-              />
-              {remainingItems.length === 0 ? (
-                <Card className="shopping-empty-card" tone="default">
-                  <EmptyState
-                    title="Ingenting å handle akkurat nå"
-                    description="Skriv i søkefeltet eller trykk Ny når familien trenger noe."
-                  />
-                </Card>
-              ) : (
-                <div className="shopping-category-groups">
-                  {groupedRemainingItems.map((group) => (
-                    <div className="shopping-category-group" key={group.slug}>
-                      <h3 className="shopping-category-group__title">{group.name}</h3>
-                      <ul
-                        className="shopping-list shopping-list--cards"
-                        aria-label={group.name}
-                      >
-                        {group.items.map((item) => (
-                          <ShoppingItemCard
-                            key={item.id}
-                            item={item}
-                            isBusy={pendingItemId === item.id}
-                            isMenuOpen={openMenuItemId === item.id}
-                            onDelete={handleDeleteItem}
-                            onEdit={handleEditItem}
-                            onMenuClick={handleMenuClick}
-                            onToggle={handleToggleItem}
-                          />
-                        ))}
-                      </ul>
-                    </div>
-                  ))}
-                </div>
-              )}
-            </section>
+              <span>{selectedShoppingListName}</span>
+              <ChevronDown aria-hidden="true" size={18} strokeWidth={2.5} />
+            </button>
+            {!isDefaultShoppingList ? (
+              <button className="husk-filter-button" type="button">
+                <Share2 aria-hidden="true" size={20} strokeWidth={2.4} />
+                <span>Del</span>
+              </button>
+            ) : null}
+          </div>
 
-            {completedItems.length > 0 ? (
+          {status === "unauthorized" ? (
+            <ShoppingStatusCard
+              message={message}
+              status={status}
+              onRetry={() => loadShoppingList()}
+            />
+          ) : null}
+          {status === "no-family" ? (
+            <ShoppingStatusCard
+              message={message}
+              status={status}
+              onRetry={() => loadShoppingList()}
+            />
+          ) : null}
+          {status === "error" ? (
+            <ShoppingStatusCard
+              message={message}
+              status={status}
+              onRetry={() => loadShoppingList()}
+            />
+          ) : null}
+          {message && status === "ready" ? (
+            <p className="shopping-card__message">{message}</p>
+          ) : null}
+          {status === "loading" ? (
+            <LoadingState
+              title="Laster handleliste"
+              description="Henter familiens varer."
+            />
+          ) : null}
+
+          {status === "ready" && shoppingList ? (
+            <>
               <section
                 className="shopping-section"
-                aria-labelledby="completed-shopping-title"
+                aria-labelledby="remaining-shopping-title"
               >
-                <button
-                  className="shopping-completed-toggle"
-                  type="button"
-                  aria-expanded={showCompletedItems}
-                  aria-controls="completed-shopping-list"
-                  onClick={() => setShowCompletedItems((isOpen) => !isOpen)}
-                >
-                  <span id="completed-shopping-title">Fullførte varer</span>
-                  <span className="shopping-completed-toggle__meta">
-                    <Badge tone="success">{completedItems.length}</Badge>
-                    <ChevronDown aria-hidden="true" className={showCompletedItems ? "shopping-completed-toggle__icon shopping-completed-toggle__icon--open" : "shopping-completed-toggle__icon"} size={18} strokeWidth={2.5} />
-                  </span>
-                </button>
-                {showCompletedItems ? (
-                <ul
-                  id="completed-shopping-list"
-                  className="shopping-list shopping-list--cards"
-                  aria-label="Fullførte varer"
-                >
-                  {completedItems.map((item) => (
-                    <ShoppingItemCard
-                      key={item.id}
-                      item={item}
-                      isBusy={pendingItemId === item.id}
-                      isMenuOpen={openMenuItemId === item.id}
-                      onDelete={handleDeleteItem}
-                      onEdit={handleEditItem}
-                      onMenuClick={handleMenuClick}
-                      onToggle={handleToggleItem}
+                <SectionHeader
+                  action={<Badge tone="neutral">{uncheckedCount}</Badge>}
+                  title="Handleliste"
+                />
+                {remainingItems.length === 0 ? (
+                  <Card className="shopping-empty-card" tone="default">
+                    <EmptyState
+                      title="Ingenting å handle akkurat nå"
+                      description="Skriv i søkefeltet eller trykk Ny når familien trenger noe."
                     />
-                  ))}
-                </ul>
+                  </Card>
+                ) : (
+                  <div className="shopping-category-groups">
+                    {groupedRemainingItems.map((group) => (
+                      <div className="shopping-category-group" key={group.slug}>
+                        <h3 className="shopping-category-group__title">
+                          {group.name}
+                        </h3>
+                        <ul
+                          className="shopping-list shopping-list--cards"
+                          aria-label={group.name}
+                        >
+                          {group.items.map((item) => (
+                            <ShoppingItemCard
+                              key={item.id}
+                              item={item}
+                              isBusy={pendingItemId === item.id}
+                              isMenuOpen={openMenuItemId === item.id}
+                              onDelete={handleDeleteItem}
+                              onEdit={handleEditItem}
+                              onMenuClick={handleMenuClick}
+                              onToggle={handleToggleItem}
+                            />
+                          ))}
+                        </ul>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </section>
+
+              <section
+                className="shopping-section shopping-catalog-section"
+                aria-labelledby="shopping-catalog-title"
+              >
+                <div className="shopping-catalog-section__header">
+                  <h2
+                    id="shopping-catalog-title"
+                    className="section-header__title"
+                  >
+                    Legg varer i handleliste
+                  </h2>
+                  <label
+                    className="husk-search shopping-search"
+                    htmlFor="shopping-search-input"
+                  >
+                    <span className="sr-only">Søk i varekatalog</span>
+                    <input
+                      id="shopping-search-input"
+                      className="husk-search__input"
+                      maxLength={120}
+                      onChange={(event) => setLabel(event.target.value)}
+                      onFocus={() => setMessage("")}
+                      placeholder="Jeg trenger ..."
+                      value={label}
+                    />
+                  </label>
+                </div>
+                {recentItems.length > 0 ? (
+                  <CollapsibleShoppingSection
+                    badgeCount={recentItems.length}
+                    controlsId="recent-shopping-list"
+                    isOpen={isRecentItemsOpen}
+                    title="Nylige varer"
+                    tone="success"
+                    onToggle={() => setIsRecentItemsOpen((isOpen) => !isOpen)}
+                  >
+                    <ul
+                      id="recent-shopping-list"
+                      className="shopping-list shopping-list--cards"
+                      aria-label="Nylige varer"
+                    >
+                      {recentItems.map((item) => (
+                        <ShoppingItemCard
+                          key={item.id}
+                          item={item}
+                          isBusy={pendingItemId === item.id}
+                          isMenuOpen={openMenuItemId === item.id}
+                          onDelete={handleDeleteItem}
+                          onEdit={handleEditItem}
+                          onMenuClick={handleMenuClick}
+                          onToggle={handleToggleItem}
+                        />
+                      ))}
+                    </ul>
+                  </CollapsibleShoppingSection>
+                ) : null}
+                {isSearchingCatalog ? (
+                  <CatalogItemGrid
+                    items={catalogSearchResults}
+                    shoppingItems={shoppingList.items}
+                    onAddItem={addItemFromCatalog}
+                  />
+                ) : (
+                  <div className="shopping-catalog-categories">
+                    {visibleCatalogCategories.map((categoryOption) => {
+                      const isCategoryOpen =
+                        openCatalogCategories[categoryOption.slug] ?? true;
+
+                      return (
+                        <CollapsibleShoppingSection
+                          badgeCount={categoryOption.items.length}
+                          controlsId={`shopping-catalog-category-${categoryOption.slug}`}
+                          isOpen={isCategoryOpen}
+                          key={categoryOption.slug}
+                          title={categoryOption.name}
+                          onToggle={() =>
+                            toggleCatalogCategory(categoryOption.slug)
+                          }
+                        >
+                          <div
+                            id={`shopping-catalog-category-${categoryOption.slug}`}
+                          >
+                            <CatalogItemGrid
+                              items={categoryOption.items}
+                              shoppingItems={shoppingList.items}
+                              onAddItem={addItemFromCatalog}
+                            />
+                          </div>
+                        </CollapsibleShoppingSection>
+                      );
+                    })}
+                  </div>
+                )}
+                {isSearchingCatalog && catalogSearchResults.length === 0 ? (
+                  <button
+                    className="shopping-custom-item-button"
+                    type="button"
+                    onClick={prepareCustomItem}
+                  >
+                    Legg til «{label.trim()}» som egen vare
+                  </button>
                 ) : null}
               </section>
-            ) : null}
+            </>
+          ) : null}
+        </section>
 
-            <section
-              className="shopping-section shopping-catalog-section"
-              aria-labelledby="shopping-catalog-title"
-            >
-              <div className="shopping-catalog-section__header">
-                <h2 id="shopping-catalog-title" className="section-header__title">
-                  Legg varer i handleliste
-                </h2>
-                <label
-                  className="husk-search shopping-search"
-                  htmlFor="shopping-search-input"
+        <HuskMobileSheet
+          isOpen={isNewSheetOpen}
+          labelledBy="shopping-item-sheet-title"
+          onClose={handleCloseItemSheet}
+        >
+          <form className="shopping-edit-sheet" onSubmit={handleAddItem}>
+            <div className="calendar-filter-sheet__header">
+              <div>
+                <p className="husk-school-sheet__eyebrow">Handleliste</p>
+                <h2
+                  id="shopping-item-sheet-title"
+                  className="calendar-filter-sheet__title"
                 >
-                  <span className="sr-only">Søk i varekatalog</span>
+                  {editingItemId ? "Rediger vare" : "Ny vare"}
+                </h2>
+              </div>
+              <button
+                className="calendar-filter-sheet__close"
+                type="button"
+                aria-label="Lukk"
+                onClick={handleCloseItemSheet}
+              >
+                <X aria-hidden="true" size={18} strokeWidth={2.5} />
+              </button>
+            </div>
+            <div className="calendar-filter-sheet__content shopping-edit-sheet__content">
+              <label className="husk-school-field">
+                <span>Navn</span>
+                <input
+                  maxLength={120}
+                  onChange={(event) => setLabel(event.target.value)}
+                  placeholder="Jeg trenger ..."
+                  value={label}
+                />
+              </label>
+              <div className="shopping-edit-sheet__grid">
+                <label className="husk-school-field">
+                  <span>Antall</span>
                   <input
-                    id="shopping-search-input"
-                    className="husk-search__input"
-                    maxLength={120}
-                    onChange={(event) => setLabel(event.target.value)}
-                    onFocus={() => setMessage("")}
-                    placeholder="Jeg trenger ..."
-                    value={label}
+                    maxLength={60}
+                    onChange={(event) => setQuantity(event.target.value)}
+                    placeholder="2"
+                    value={quantity}
+                  />
+                </label>
+                <label className="husk-school-field">
+                  <span>Enhet</span>
+                  <input
+                    maxLength={40}
+                    onChange={(event) => setUnit(event.target.value)}
+                    placeholder="liter"
+                    value={unit}
                   />
                 </label>
               </div>
-              {isSearchingCatalog ? (
-                <CatalogItemGrid
-                  items={catalogSearchResults}
-                  shoppingItems={shoppingList.items}
-                  onAddItem={addItemFromCatalog}
+              <label className="husk-school-field">
+                <span>Notat</span>
+                <textarea
+                  maxLength={240}
+                  onChange={(event) => setNote(event.target.value)}
+                  placeholder="F.eks. merke eller tilbud"
+                  value={note}
                 />
-              ) : (
-                <div className="shopping-catalog-categories">
-                  {visibleCatalogCategories.map((categoryOption) => (
-                    <div className="shopping-catalog-category" key={categoryOption.slug}>
-                      <h3 className="shopping-category-group__title">{categoryOption.name}</h3>
-                      <CatalogItemGrid
-                        items={categoryOption.items}
-                        shoppingItems={shoppingList.items}
-                        onAddItem={addItemFromCatalog}
-                      />
-                    </div>
-                  ))}
-                </div>
-              )}
-              {isSearchingCatalog && catalogSearchResults.length === 0 ? (
-                <button
-                  className="shopping-custom-item-button"
-                  type="button"
-                  onClick={prepareCustomItem}
-                >
-                  Legg til «{label.trim()}» som egen vare
-                </button>
-              ) : null}
-            </section>
-
-            {recentItems.length > 0 ? (
-              <section
-                className="shopping-section"
-                aria-labelledby="recent-shopping-title"
+              </label>
+              <label className="husk-school-field">
+                <span>Kategori</span>
+                <input
+                  maxLength={60}
+                  onChange={(event) => setCategory(event.target.value)}
+                  placeholder="Frukt og grønt"
+                  value={category}
+                />
+              </label>
+            </div>
+            <div className="calendar-filter-sheet__actions">
+              <button
+                className="calendar-filter-sheet__action calendar-filter-sheet__action--secondary"
+                type="button"
+                onClick={handleCloseItemSheet}
               >
-                <SectionHeader title="Nylig brukt" />
-                <div
-                  className="shopping-recent-pills"
-                  aria-label="Nylig brukte varer"
+                Avbryt
+              </button>
+              <button
+                className="calendar-filter-sheet__action calendar-filter-sheet__action--primary"
+                disabled={isAdding || label.trim().length === 0}
+                type="submit"
+              >
+                {isAdding ? "Lagrer …" : "Lagre"}
+              </button>
+            </div>
+          </form>
+        </HuskMobileSheet>
+
+        <HuskMobileSheet
+          isOpen={isListSheetOpen}
+          labelledBy="shopping-list-sheet-title"
+          onClose={() => setIsListSheetOpen(false)}
+        >
+          <div className="shopping-sheet shopping-list-sheet">
+            <div className="calendar-filter-sheet__header">
+              <div>
+                <p className="husk-school-sheet__eyebrow">Handleliste</p>
+                <h2
+                  id="shopping-list-sheet-title"
+                  className="calendar-filter-sheet__title"
                 >
-                  {recentItems.map((item) => (
-                    <button
-                      className="husk-filter-button shopping-recent-pill"
-                      key={item.id}
-                      type="button"
-                      onClick={() => setLabel(item.label)}
-                    >
-                      {item.label}
-                    </button>
-                  ))}
-                </div>
-              </section>
-            ) : null}
-          </>
-        ) : null}
-
-      </section>
-
-      <HuskMobileSheet
-        isOpen={isNewSheetOpen}
-        labelledBy="shopping-item-sheet-title"
-        onClose={handleCloseItemSheet}
-      >
-        <form className="shopping-edit-sheet" onSubmit={handleAddItem}>
-          <div className="calendar-filter-sheet__header">
-            <div>
-              <p className="husk-school-sheet__eyebrow">Handleliste</p>
-              <h2 id="shopping-item-sheet-title" className="calendar-filter-sheet__title">
-                {editingItemId ? "Rediger vare" : "Ny vare"}
-              </h2>
+                  Velg handleliste
+                </h2>
+              </div>
+              <button
+                className="calendar-filter-sheet__close"
+                type="button"
+                aria-label="Lukk"
+                onClick={() => setIsListSheetOpen(false)}
+              >
+                <X aria-hidden="true" size={18} strokeWidth={2.5} />
+              </button>
             </div>
-            <button className="calendar-filter-sheet__close" type="button" aria-label="Lukk" onClick={handleCloseItemSheet}>
-              <X aria-hidden="true" size={18} strokeWidth={2.5} />
-            </button>
-          </div>
-          <div className="calendar-filter-sheet__content shopping-edit-sheet__content">
-            <label className="husk-school-field">
-              <span>Navn</span>
-              <input maxLength={120} onChange={(event) => setLabel(event.target.value)} placeholder="Jeg trenger ..." value={label} />
-            </label>
-            <div className="shopping-edit-sheet__grid">
-              <label className="husk-school-field">
-                <span>Antall</span>
-                <input maxLength={60} onChange={(event) => setQuantity(event.target.value)} placeholder="2" value={quantity} />
-              </label>
-              <label className="husk-school-field">
-                <span>Enhet</span>
-                <input maxLength={40} onChange={(event) => setUnit(event.target.value)} placeholder="liter" value={unit} />
-              </label>
+            <div className="calendar-filter-sheet__content shopping-list-sheet__content">
+              <button
+                className="shopping-list-sheet__option shopping-list-sheet__option--selected"
+                type="button"
+                onClick={() => setIsListSheetOpen(false)}
+              >
+                <span>
+                  <strong>Familiehandleliste</strong>
+                  <small>Standardlisten for familien</small>
+                </span>
+                <Check aria-hidden="true" size={20} strokeWidth={2.6} />
+              </button>
             </div>
-            <label className="husk-school-field">
-              <span>Notat</span>
-              <textarea maxLength={240} onChange={(event) => setNote(event.target.value)} placeholder="F.eks. merke eller tilbud" value={note} />
-            </label>
-            <label className="husk-school-field">
-              <span>Kategori</span>
-              <input maxLength={60} onChange={(event) => setCategory(event.target.value)} placeholder="Frukt og grønt" value={category} />
-            </label>
+            <div className="calendar-filter-sheet__actions">
+              <button
+                className="calendar-filter-sheet__action calendar-filter-sheet__action--primary shopping-list-sheet__add"
+                type="button"
+              >
+                <Plus aria-hidden="true" size={18} strokeWidth={2.5} />
+                Legg til ny handleliste
+              </button>
+            </div>
           </div>
-          <div className="calendar-filter-sheet__actions">
-            <button className="calendar-filter-sheet__action calendar-filter-sheet__action--secondary" type="button" onClick={handleCloseItemSheet}>Avbryt</button>
-            <button className="calendar-filter-sheet__action calendar-filter-sheet__action--primary" disabled={isAdding || label.trim().length === 0} type="submit">{isAdding ? "Lagrer …" : "Lagre"}</button>
-          </div>
-        </form>
-      </HuskMobileSheet>
-
-      <HuskMobileSheet
-        isOpen={isFilterSheetOpen}
-        labelledBy="shopping-filter-sheet-title"
-        onClose={() => setIsFilterSheetOpen(false)}
-      >
-        <div className="shopping-sheet">
-          <div className="shopping-sheet__header">
-            <p className="section-header__eyebrow">Handleliste</p>
-            <h2
-              id="shopping-filter-sheet-title"
-              className="section-header__title"
-            >
-              Filter
-            </h2>
-          </div>
-          <p className="shopping-card__message">
-            Flere handlelister og filtre kommer senere. Foreløpig viser vi
-            familiehandlelisten.
-          </p>
-          <Button variant="primary" onClick={() => setIsFilterSheetOpen(false)}>
-            Ferdig
-          </Button>
-        </div>
-      </HuskMobileSheet>
+        </HuskMobileSheet>
       </PageContainer>
     </AppShell>
   );
 }
 
 type ShoppingItem = ShoppingList["items"][number];
+
+function formatShoppingListName(name?: string | null) {
+  if (!name || name === "Family Shopping") {
+    return "Familiehandleliste";
+  }
+
+  return name;
+}
+
+function CollapsibleShoppingSection({
+  badgeCount,
+  children,
+  controlsId,
+  isOpen,
+  onToggle,
+  title,
+  tone = "neutral",
+}: {
+  badgeCount?: number;
+  children: ReactNode;
+  controlsId: string;
+  isOpen: boolean;
+  onToggle: () => void;
+  title: string;
+  tone?: "neutral" | "success";
+}) {
+  return (
+    <section className="shopping-collapsible-section">
+      <button
+        className={`shopping-collapsible-toggle shopping-collapsible-toggle--${tone}`}
+        type="button"
+        aria-expanded={isOpen}
+        aria-controls={controlsId}
+        onClick={onToggle}
+      >
+        <span>{title}</span>
+        <span className="shopping-collapsible-toggle__meta">
+          {typeof badgeCount === "number" ? (
+            <Badge tone={tone}>{badgeCount}</Badge>
+          ) : null}
+          <ChevronDown
+            aria-hidden="true"
+            className={
+              isOpen
+                ? "shopping-collapsible-toggle__icon shopping-collapsible-toggle__icon--open"
+                : "shopping-collapsible-toggle__icon"
+            }
+            size={18}
+            strokeWidth={2.5}
+          />
+        </span>
+      </button>
+      {isOpen ? children : null}
+    </section>
+  );
+}
 
 function CatalogItemGrid({
   items,
@@ -910,7 +1049,9 @@ function ShoppingItemCard({
         <span className="shopping-list__content">
           <span className="shopping-list__label">{item.label}</span>
           {formatShoppingItemMeta(item) ? (
-            <span className="shopping-list__quantity">{formatShoppingItemMeta(item)}</span>
+            <span className="shopping-list__quantity">
+              {formatShoppingItemMeta(item)}
+            </span>
           ) : null}
         </span>
       </button>
@@ -948,7 +1089,14 @@ function ShoppingItemCard({
 }
 
 function formatShoppingItemMeta(item: ShoppingItem) {
-  return [item.quantity, item.unit, item.category, item.note].filter(Boolean).join(" · ");
+  return [
+    item.quantity,
+    item.unit,
+    item.category ? getShoppingItemCategory(item).name : null,
+    item.note,
+  ]
+    .filter(Boolean)
+    .join(" · ");
 }
 
 function ShoppingStatusCard({
@@ -995,20 +1143,14 @@ function ShoppingStatusCard({
   );
 }
 
-function sortCompletedShoppingItems(
-  first: ShoppingItem,
-  second: ShoppingItem,
-) {
+function sortCompletedShoppingItems(first: ShoppingItem, second: ShoppingItem) {
   return (
     new Date(second.checkedAt ?? second.updatedAt).getTime() -
     new Date(first.checkedAt ?? first.updatedAt).getTime()
   );
 }
 
-function sortShoppingItems(
-  first: ShoppingItem,
-  second: ShoppingItem,
-) {
+function sortShoppingItems(first: ShoppingItem, second: ShoppingItem) {
   if (first.checked !== second.checked) {
     return first.checked ? 1 : -1;
   }

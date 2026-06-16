@@ -14595,7 +14595,11 @@ button.family-settings-row:focus-visible:not(:disabled) {
   border: 0;
   border-radius: var(--radius-l);
   padding: var(--space-s) var(--space-m);
-  background: color-mix(in srgb, var(--color-success-soft) 34%, var(--color-surface));
+  background: color-mix(
+    in srgb,
+    var(--color-success-soft) 34%,
+    var(--color-surface)
+  );
   color: var(--color-text);
   cursor: pointer;
   font: inherit;
@@ -14703,7 +14707,11 @@ button.family-settings-row:focus-visible:not(:disabled) {
   border: 1px solid var(--color-border);
   border-radius: var(--radius-l);
   padding: var(--space-s);
-  background: color-mix(in srgb, var(--color-surface) 86%, var(--color-accent-soft));
+  background: color-mix(
+    in srgb,
+    var(--color-surface) 86%,
+    var(--color-accent-soft)
+  );
   color: var(--color-text);
   cursor: pointer;
   text-align: left;
@@ -14731,4 +14739,126 @@ button.family-settings-row:focus-visible:not(:disabled) {
 .shopping-custom-item-button {
   width: 100%;
   font-weight: 850;
+}
+
+/* Handleliste polish: collapsible sections and list picker sheet */
+.shopping-collapsible-section {
+  display: grid;
+  gap: var(--space-s);
+}
+
+.shopping-collapsible-toggle {
+  display: flex;
+  width: 100%;
+  min-height: calc(var(--space-xl) + var(--space-xs));
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-s);
+  border: 0;
+  border-radius: var(--radius-l);
+  padding: var(--space-s) var(--space-m);
+  background: color-mix(
+    in srgb,
+    var(--color-primary-soft) 34%,
+    var(--color-surface)
+  );
+  color: var(--color-text);
+  cursor: pointer;
+  font: inherit;
+  font-size: var(--text-body);
+  font-weight: 880;
+  text-align: left;
+  box-shadow: 0 var(--space-xs) var(--space-m)
+    color-mix(in srgb, var(--color-text) 5%, transparent);
+}
+
+.shopping-collapsible-toggle--success {
+  background: color-mix(
+    in srgb,
+    var(--color-success-soft) 42%,
+    var(--color-surface)
+  );
+}
+
+.shopping-collapsible-toggle__meta {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-xs);
+}
+
+.shopping-collapsible-toggle__icon {
+  color: var(--color-muted);
+  transition: transform 160ms ease;
+}
+
+.shopping-collapsible-toggle__icon--open {
+  transform: rotate(180deg);
+}
+
+.shopping-list-sheet {
+  display: contents;
+}
+
+.calendar-filter-sheet__panel:has(.shopping-list-sheet) {
+  grid-template-rows: auto auto minmax(0, 1fr) auto;
+  max-height: min(78vh, 42rem);
+}
+
+.shopping-list-sheet__content {
+  gap: var(--space-s);
+}
+
+.shopping-list-sheet__option {
+  display: flex;
+  width: 100%;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-m);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-l);
+  padding: var(--space-m);
+  background: var(--color-surface);
+  color: var(--color-text);
+  cursor: pointer;
+  font: inherit;
+  text-align: left;
+  box-shadow: 0 var(--space-xs) var(--space-m)
+    color-mix(in srgb, var(--color-text) 4%, transparent);
+}
+
+.shopping-list-sheet__option--selected {
+  border-color: color-mix(
+    in srgb,
+    var(--color-primary) 32%,
+    var(--color-border)
+  );
+  background: color-mix(
+    in srgb,
+    var(--color-primary-soft) 42%,
+    var(--color-surface)
+  );
+  color: var(--color-primary-strong);
+}
+
+.shopping-list-sheet__option span {
+  display: grid;
+  gap: calc(var(--space-xs) * 0.5);
+}
+
+.shopping-list-sheet__option strong {
+  font-weight: 880;
+}
+
+.shopping-list-sheet__option small {
+  color: var(--color-muted);
+  font-size: var(--text-small);
+  font-weight: 720;
+}
+
+.shopping-list-sheet__add {
+  grid-column: 1 / -1;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-xs);
 }
