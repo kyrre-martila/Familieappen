@@ -1,4 +1,5 @@
-import type { ReactNode } from "react";
+import { useEffect, useState, type ReactNode } from "react";
+import { createPortal } from "react-dom";
 
 export function HuskMobileSheet({
   children,
@@ -11,7 +12,24 @@ export function HuskMobileSheet({
   labelledBy: string;
   onClose: () => void;
 }) {
-  return (
+  const [isMounted, setIsMounted] = useState(false);
+
+  useEffect(() => {
+    setIsMounted(true);
+  }, []);
+
+  useEffect(() => {
+    if (!isOpen) return;
+
+    const previousOverflow = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+
+    return () => {
+      document.body.style.overflow = previousOverflow;
+    };
+  }, [isOpen]);
+
+  const sheet = (
     <div
       aria-hidden={!isOpen}
       className={`calendar-filter-sheet${isOpen ? " calendar-filter-sheet--open" : ""}`}
@@ -33,4 +51,6 @@ export function HuskMobileSheet({
       </section>
     </div>
   );
+
+  return isMounted ? createPortal(sheet, document.body) : sheet;
 }

@@ -14284,3 +14284,85 @@ button.family-settings-row:focus-visible:not(:disabled) {
   font: inherit;
   font-weight: 780;
 }
+
+.calendar-event-sheet-host {
+  min-height: 100dvh;
+  background: transparent;
+}
+
+.calendar-event-sheet__header-actions {
+  display: inline-flex;
+  gap: calc(var(--space-xs) * 0.75);
+}
+
+.calendar-event-sheet__content {
+  min-height: 0;
+  max-height: 62vh;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  padding-bottom: var(--space-m);
+}
+
+.calendar-event-sheet__rows {
+  gap: 0;
+  padding: 0;
+}
+
+.calendar-event-sheet__row {
+  grid-template-columns: auto minmax(5.5rem, 0.45fr) minmax(0, 1fr);
+  align-items: center;
+  padding: var(--space-s) var(--space-m);
+}
+
+.calendar-event-sheet__row strong {
+  color: var(--color-text);
+  font-size: var(--text-small);
+  font-weight: 820;
+  line-height: 1.35;
+  text-align: right;
+  white-space: normal;
+}
+
+.calendar-event-sheet__people {
+  gap: calc(var(--space-xs) * 0.75);
+}
+
+.calendar-event-sheet__note {
+  margin: 0;
+  border: 1px solid color-mix(in srgb, var(--color-primary) 25%, var(--color-border));
+  border-radius: var(--radius-l);
+  padding: var(--space-s) var(--space-m);
+  background: var(--color-primary-soft);
+  color: var(--color-primary-strong);
+  font-size: var(--text-small);
+  font-weight: 760;
+}
+
+.calendar-event-sheet__delete {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: calc(var(--space-xs) * 0.75);
+  min-height: calc(var(--space-xl) + var(--space-xs));
+  border: 1px solid color-mix(in srgb, var(--color-danger, #b42318) 40%, var(--color-border));
+  border-radius: var(--radius-pill);
+  background: color-mix(in srgb, var(--color-danger, #b42318) 8%, var(--color-surface));
+  color: var(--color-danger, #b42318);
+  cursor: pointer;
+  font-size: var(--text-label);
+  font-weight: 860;
+}
+
+.calendar-event-edit-sheet__panel {
+  z-index: 1;
+}
+
+@media (max-width: 520px) {
+  .calendar-event-sheet__content {
+    max-height: 68vh;
+  }
+
+  .calendar-event-sheet__row {
+    grid-template-columns: auto minmax(4.75rem, 0.42fr) minmax(0, 1fr);
+  }
+}
