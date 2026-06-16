@@ -9039,7 +9039,7 @@ button.calendar-chip {
 .husk-school-sheet {
   position: fixed;
   inset: 0;
-  z-index: 75;
+  z-index: 1200;
   display: grid;
   align-items: end;
   pointer-events: none;
@@ -9057,6 +9057,7 @@ button.calendar-chip {
 .husk-school-sheet__panel {
   position: relative;
   display: grid;
+  grid-template-rows: auto auto minmax(0, 1fr) auto;
   width: min(100%, calc(var(--page-width) * 0.5));
   max-height: min(86vh, 50rem);
   margin: 0 auto;
@@ -9129,7 +9130,10 @@ button.calendar-chip {
 .husk-school-sheet__content {
   display: grid;
   gap: var(--space-m);
+  min-height: 0;
+  overscroll-behavior: contain;
   overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
   padding: 0 var(--space-m) var(--space-m);
 }
 
@@ -14106,10 +14110,8 @@ button.family-settings-row:focus-visible:not(:disabled) {
 }
 
 .husk-reminder-card__menu {
-  position: absolute;
-  right: var(--space-s);
-  top: calc(100% - var(--space-xs));
-  z-index: 4;
+  position: fixed;
+  z-index: 1210;
   display: grid;
   min-width: 9rem;
   overflow: hidden;

@@ -71,7 +71,7 @@ export function HuskReminderDetailSheet({
               type="button"
               onClick={() => onEdit(reminder)}
             >
-              Endre
+              Rediger
             </button>
           </div>
         </>

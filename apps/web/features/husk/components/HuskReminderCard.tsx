@@ -1,3 +1,7 @@
+"use client";
+
+import { useEffect, useRef, useState } from "react";
+import { createPortal } from "react-dom";
 import { MoreHorizontal } from "lucide-react";
 
 import { UserAvatar } from "../../../components/avatar/UserAvatar";
@@ -47,6 +51,76 @@ export function HuskReminderCard({
     .filter((member): member is HuskFamilyMember => Boolean(member));
 
   const isMenuOpen = openMenuReminderId === reminder.id;
+  const menuButtonRef = useRef<HTMLButtonElement>(null);
+  const [isMounted, setIsMounted] = useState(false);
+  const [menuPosition, setMenuPosition] = useState<{
+    top: number;
+    right: number;
+  } | null>(null);
+
+  useEffect(() => {
+    setIsMounted(true);
+  }, []);
+
+  useEffect(() => {
+    if (!isMenuOpen) {
+      setMenuPosition(null);
+      return;
+    }
+
+    function updateMenuPosition() {
+      const rect = menuButtonRef.current?.getBoundingClientRect();
+      if (!rect) return;
+
+      setMenuPosition({
+        top: rect.bottom + 6,
+        right: Math.max(12, window.innerWidth - rect.right),
+      });
+    }
+
+    updateMenuPosition();
+    window.addEventListener("resize", updateMenuPosition);
+    window.addEventListener("scroll", updateMenuPosition, true);
+
+    return () => {
+      window.removeEventListener("resize", updateMenuPosition);
+      window.removeEventListener("scroll", updateMenuPosition, true);
+    };
+  }, [isMenuOpen]);
+
+  const menu =
+    isMounted && isMenuOpen && menuPosition
+      ? createPortal(
+          <div
+            className="husk-reminder-card__menu"
+            role="menu"
+            style={{ top: menuPosition.top, right: menuPosition.right }}
+          >
+            <button
+              type="button"
+              role="menuitem"
+              onClick={() => {
+                setOpenMenuReminderId(null);
+                onEdit(reminder);
+              }}
+            >
+              Rediger
+            </button>
+            <button
+              type="button"
+              role="menuitem"
+              className="husk-reminder-card__menu-delete"
+              onClick={() => {
+                setOpenMenuReminderId(null);
+                onDelete(reminder);
+              }}
+            >
+              Slett
+            </button>
+          </div>,
+          document.body,
+        )
+      : null;
 
   return (
     <article
@@ -73,6 +147,7 @@ export function HuskReminderCard({
       <div className="husk-reminder-card__menu-wrap">
         <button
           className="husk-reminder-card__menu-button"
+          ref={menuButtonRef}
           type="button"
           aria-label={`Åpne valg for ${reminder.title}`}
           aria-expanded={isMenuOpen}
@@ -80,31 +155,7 @@ export function HuskReminderCard({
         >
           <MoreHorizontal aria-hidden="true" size={20} strokeWidth={2.5} />
         </button>
-        {isMenuOpen ? (
-          <div className="husk-reminder-card__menu" role="menu">
-            <button
-              type="button"
-              role="menuitem"
-              onClick={() => {
-                setOpenMenuReminderId(null);
-                onEdit(reminder);
-              }}
-            >
-              Rediger
-            </button>
-            <button
-              type="button"
-              role="menuitem"
-              className="husk-reminder-card__menu-delete"
-              onClick={() => {
-                setOpenMenuReminderId(null);
-                onDelete(reminder);
-              }}
-            >
-              Slett
-            </button>
-          </div>
-        ) : null}
+        {menu}
       </div>
     </article>
   );
