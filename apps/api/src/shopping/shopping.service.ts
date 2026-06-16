@@ -1,7 +1,7 @@
 import { BadRequestException, Injectable, NotFoundException } from "@nestjs/common";
 import { FamilyAuthorizationService } from "../families";
 import { PrismaService } from "../prisma";
-import { AddShoppingItemRequestDto, ShoppingListDto, ShoppingListItemDto } from "./dto/shopping.dto";
+import { AddShoppingItemRequestDto, ShoppingListDto, ShoppingListItemDto, UpdateShoppingItemRequestDto } from "./dto/shopping.dto";
 
 const DEFAULT_SHOPPING_LIST_NAME = "Family Shopping";
 
@@ -18,6 +18,9 @@ type ShoppingListItemRecord = {
   shoppingListId: string;
   label: string;
   quantity: string | null;
+  unit: string | null;
+  note: string | null;
+  category: string | null;
   checked: boolean;
   createdByUserId: string | null;
   checkedByUserId: string | null;
@@ -44,18 +47,47 @@ export class ShoppingService {
     await this.familyAuthorization.requireFamilyMember(userId, familyId);
     const shoppingList = await this.getOrCreateFamilyShoppingList(familyId);
     const label = this.validateLabel(input.label);
-    const quantity = this.validateQuantity(input.quantity);
+    const quantity = this.validateOptionalText(input.quantity, "Shopping item quantity", 60);
+    const unit = this.validateOptionalText(input.unit, "Shopping item unit", 40);
+    const note = this.validateOptionalText(input.note, "Shopping item note", 240);
+    const category = this.validateOptionalText(input.category, "Shopping item category", 60);
 
     const item = await this.prisma.client.shoppingListItem.create({
       data: {
         shoppingListId: shoppingList.id,
         label,
         quantity,
+        unit,
+        note,
+        category,
         createdByUserId: userId
       }
     });
 
     return this.toShoppingListItemDto(item);
+  }
+
+  async updateItem(userId: string, familyId: string, itemId: string, input: UpdateShoppingItemRequestDto = {}): Promise<ShoppingListItemDto> {
+    await this.familyAuthorization.requireFamilyMember(userId, familyId);
+    const item = await this.getFamilyShoppingItemOrThrow(familyId, itemId);
+    const label = this.validateLabel(input.label);
+    const quantity = this.validateOptionalText(input.quantity, "Shopping item quantity", 60);
+    const unit = this.validateOptionalText(input.unit, "Shopping item unit", 40);
+    const note = this.validateOptionalText(input.note, "Shopping item note", 240);
+    const category = this.validateOptionalText(input.category, "Shopping item category", 60);
+
+    const updatedItem = await this.prisma.client.shoppingListItem.update({
+      where: { id: item.id },
+      data: {
+        label,
+        quantity,
+        unit,
+        note,
+        category
+      }
+    });
+
+    return this.toShoppingListItemDto(updatedItem);
   }
 
   async toggleItem(userId: string, familyId: string, itemId: string): Promise<ShoppingListItemDto> {
@@ -163,22 +195,22 @@ export class ShoppingService {
     return label;
   }
 
-  private validateQuantity(value: unknown): string | null {
+  private validateOptionalText(value: unknown, fieldName: string, maxLength: number): string | null {
     if (value === undefined || value === null) {
       return null;
     }
 
     if (typeof value !== "string") {
-      throw new BadRequestException("Shopping item quantity must be text");
+      throw new BadRequestException(`${fieldName} must be text`);
     }
 
-    const quantity = value.trim();
+    const text = value.trim();
 
-    if (quantity.length > 60) {
-      throw new BadRequestException("Shopping item quantity must be 60 characters or fewer");
+    if (text.length > maxLength) {
+      throw new BadRequestException(`${fieldName} must be ${maxLength} characters or fewer`);
     }
 
-    return quantity.length === 0 ? null : quantity;
+    return text.length === 0 ? null : text;
   }
 
   private toShoppingListDto(shoppingList: ShoppingListRecord & { items: ShoppingListItemRecord[] }): ShoppingListDto {
@@ -198,6 +230,9 @@ export class ShoppingService {
       shoppingListId: item.shoppingListId,
       label: item.label,
       quantity: item.quantity,
+      unit: item.unit,
+      note: item.note,
+      category: item.category,
       checked: item.checked,
       createdByUserId: item.createdByUserId,
       checkedByUserId: item.checkedByUserId,

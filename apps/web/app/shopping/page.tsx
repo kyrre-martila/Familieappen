@@ -10,7 +10,7 @@ import {
 } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { MoreHorizontal, Plus, SlidersHorizontal } from "lucide-react";
+import { ChevronDown, MoreHorizontal, Plus, SlidersHorizontal, X } from "lucide-react";
 import { LockedFeatureState } from "../../components/PendingAccess";
 import { HuskMobileSheet } from "../../features/husk/components/HuskMobileSheet";
 import { useFamilyAccess } from "../../components/ProtectedFamilyRoute";
@@ -32,6 +32,7 @@ import {
   deleteShoppingItem,
   getShoppingList,
   toggleShoppingItem,
+  updateShoppingItem,
 } from "../../lib/api";
 import {
   chooseActiveFamily,
@@ -59,6 +60,10 @@ export default function ShoppingPage() {
   const [message, setMessage] = useState("Laster handleliste …");
   const [label, setLabel] = useState("");
   const [quantity, setQuantity] = useState("");
+  const [unit, setUnit] = useState("");
+  const [note, setNote] = useState("");
+  const [category, setCategory] = useState("");
+  const [showCompletedItems, setShowCompletedItems] = useState(false);
   const [editingItemId, setEditingItemId] = useState<string | null>(null);
   const [openMenuItemId, setOpenMenuItemId] = useState<string | null>(null);
   const [isNewSheetOpen, setIsNewSheetOpen] = useState(false);
@@ -129,6 +134,9 @@ export default function ShoppingPage() {
 
     const nextLabel = label.trim();
     const nextQuantity = quantity.trim();
+    const nextUnit = unit.trim();
+    const nextNote = note.trim();
+    const nextCategory = category.trim();
 
     if (!activeFamilyId || nextLabel.length === 0 || isAdding) {
       return;
@@ -138,34 +146,39 @@ export default function ShoppingPage() {
     setMessage("");
 
     try {
-      if (editingItemId) {
-        await deleteShoppingItem(activeFamilyId, editingItemId);
-      }
-
-      const item = await addShoppingItem(activeFamilyId, {
+      const input = {
         label: nextLabel,
         ...(nextQuantity ? { quantity: nextQuantity } : {}),
-      });
+        ...(nextUnit ? { unit: nextUnit } : {}),
+        ...(nextNote ? { note: nextNote } : {}),
+        ...(nextCategory ? { category: nextCategory } : {}),
+      };
+      const item = editingItemId
+        ? await updateShoppingItem(activeFamilyId, editingItemId, input)
+        : await addShoppingItem(activeFamilyId, input);
       setShoppingList((currentList) =>
         currentList
           ? {
               ...currentList,
-              items: [
-                ...currentList.items.filter(
-                  (currentItem) => currentItem.id !== editingItemId,
-                ),
-                item,
-              ].sort(sortShoppingItems),
+              items: (editingItemId
+                ? currentList.items.map((currentItem) =>
+                    currentItem.id === item.id ? item : currentItem,
+                  )
+                : [...currentList.items, item]
+              ).sort(sortShoppingItems),
             }
           : currentList,
       );
       setLabel("");
       setQuantity("");
+      setUnit("");
+      setNote("");
+      setCategory("");
       setIsNewSheetOpen(false);
       setEditingItemId(null);
       setStatus("ready");
     } catch (error) {
-      handleActionError(error, "Kunne ikke legge til varen. Prøv igjen.");
+      handleActionError(error, editingItemId ? "Kunne ikke lagre varen. Prøv igjen." : "Kunne ikke legge til varen. Prøv igjen.");
     } finally {
       setIsAdding(false);
     }
@@ -232,6 +245,9 @@ export default function ShoppingPage() {
   function handleOpenNewSheet() {
     setEditingItemId(null);
     setQuantity("");
+    setUnit("");
+    setNote("");
+    setCategory("");
     setIsNewSheetOpen(true);
   }
 
@@ -246,6 +262,9 @@ export default function ShoppingPage() {
     setEditingItemId(itemId);
     setLabel(item.label);
     setQuantity(item.quantity ?? "");
+    setUnit(item.unit ?? "");
+    setNote(item.note ?? "");
+    setCategory(item.category ?? "");
     setOpenMenuItemId(null);
     setIsNewSheetOpen(true);
   }
@@ -254,6 +273,9 @@ export default function ShoppingPage() {
     setIsNewSheetOpen(false);
     setEditingItemId(null);
     setQuantity("");
+    setUnit("");
+    setNote("");
+    setCategory("");
   }
 
   function handleMenuClick(
@@ -483,11 +505,22 @@ export default function ShoppingPage() {
                 className="shopping-section"
                 aria-labelledby="completed-shopping-title"
               >
-                <SectionHeader
-                  action={<Badge tone="success">{completedItems.length}</Badge>}
-                  title="Fullførte varer"
-                />
+                <button
+                  className="shopping-completed-toggle"
+                  type="button"
+                  aria-expanded={showCompletedItems}
+                  aria-controls="completed-shopping-list"
+                  onClick={() => setShowCompletedItems((isOpen) => !isOpen)}
+                >
+                  <span id="completed-shopping-title">Fullførte varer</span>
+                  <span className="shopping-completed-toggle__meta">
+                    <Badge tone="success">{completedItems.length}</Badge>
+                    <ChevronDown aria-hidden="true" className={showCompletedItems ? "shopping-completed-toggle__icon shopping-completed-toggle__icon--open" : "shopping-completed-toggle__icon"} size={18} strokeWidth={2.5} />
+                  </span>
+                </button>
+                {showCompletedItems ? (
                 <ul
+                  id="completed-shopping-list"
                   className="shopping-list shopping-list--cards"
                   aria-label="Fullførte varer"
                 >
@@ -504,6 +537,7 @@ export default function ShoppingPage() {
                     />
                   ))}
                 </ul>
+                ) : null}
               </section>
             ) : null}
 
@@ -557,51 +591,45 @@ export default function ShoppingPage() {
         labelledBy="shopping-item-sheet-title"
         onClose={handleCloseItemSheet}
       >
-        <form className="shopping-sheet" onSubmit={handleAddItem}>
-          <div className="shopping-sheet__header">
-            <p className="section-header__eyebrow">Handleliste</p>
-            <h2
-              id="shopping-item-sheet-title"
-              className="section-header__title"
-            >
-              {editingItemId ? "Rediger vare" : "Ny vare"}
-            </h2>
+        <form className="shopping-edit-sheet" onSubmit={handleAddItem}>
+          <div className="calendar-filter-sheet__header">
+            <div>
+              <p className="husk-school-sheet__eyebrow">Handleliste</p>
+              <h2 id="shopping-item-sheet-title" className="calendar-filter-sheet__title">
+                {editingItemId ? "Rediger vare" : "Ny vare"}
+              </h2>
+            </div>
+            <button className="calendar-filter-sheet__close" type="button" aria-label="Lukk" onClick={handleCloseItemSheet}>
+              <X aria-hidden="true" size={18} strokeWidth={2.5} />
+            </button>
           </div>
-          <label className="shopping-form__field">
-            <span className="shopping-form__label">Vare</span>
-            <input
-              className="shopping-form__input"
-              maxLength={120}
-              onChange={(event) => setLabel(event.target.value)}
-              placeholder="Jeg trenger ..."
-              value={label}
-            />
-          </label>
-          <label className="shopping-form__field">
-            <span className="shopping-form__label">Mengde / notat</span>
-            <input
-              className="shopping-form__input"
-              maxLength={60}
-              onChange={(event) => setQuantity(event.target.value)}
-              placeholder="2 liter"
-              value={quantity}
-            />
-          </label>
-          <div className="shopping-sheet__actions">
-            <Button
-              type="button"
-              variant="ghost"
-              onClick={handleCloseItemSheet}
-            >
-              Avbryt
-            </Button>
-            <Button
-              disabled={isAdding || label.trim().length === 0}
-              type="submit"
-              variant="primary"
-            >
-              Lagre
-            </Button>
+          <div className="calendar-filter-sheet__content shopping-edit-sheet__content">
+            <label className="husk-school-field">
+              <span>Navn</span>
+              <input maxLength={120} onChange={(event) => setLabel(event.target.value)} placeholder="Jeg trenger ..." value={label} />
+            </label>
+            <div className="shopping-edit-sheet__grid">
+              <label className="husk-school-field">
+                <span>Antall</span>
+                <input maxLength={60} onChange={(event) => setQuantity(event.target.value)} placeholder="2" value={quantity} />
+              </label>
+              <label className="husk-school-field">
+                <span>Enhet</span>
+                <input maxLength={40} onChange={(event) => setUnit(event.target.value)} placeholder="liter" value={unit} />
+              </label>
+            </div>
+            <label className="husk-school-field">
+              <span>Notat</span>
+              <textarea maxLength={240} onChange={(event) => setNote(event.target.value)} placeholder="F.eks. merke eller tilbud" value={note} />
+            </label>
+            <label className="husk-school-field">
+              <span>Kategori</span>
+              <input maxLength={60} onChange={(event) => setCategory(event.target.value)} placeholder="Frukt og grønt" value={category} />
+            </label>
+          </div>
+          <div className="calendar-filter-sheet__actions">
+            <button className="calendar-filter-sheet__action calendar-filter-sheet__action--secondary" type="button" onClick={handleCloseItemSheet}>Avbryt</button>
+            <button className="calendar-filter-sheet__action calendar-filter-sheet__action--primary" disabled={isAdding || label.trim().length === 0} type="submit">{isAdding ? "Lagrer …" : "Lagre"}</button>
           </div>
         </form>
       </HuskMobileSheet>
@@ -664,8 +692,8 @@ function ShoppingItemCard({
       >
         <span className="shopping-list__content">
           <span className="shopping-list__label">{item.label}</span>
-          {item.quantity ? (
-            <span className="shopping-list__quantity">{item.quantity}</span>
+          {formatShoppingItemMeta(item) ? (
+            <span className="shopping-list__quantity">{formatShoppingItemMeta(item)}</span>
           ) : null}
         </span>
       </button>
@@ -700,6 +728,10 @@ function ShoppingItemCard({
       </div>
     </li>
   );
+}
+
+function formatShoppingItemMeta(item: ShoppingList["items"][number]) {
+  return [item.quantity, item.unit, item.category, item.note].filter(Boolean).join(" · ");
 }
 
 function ShoppingStatusCard({

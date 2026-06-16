@@ -344,6 +344,9 @@ export interface ShoppingListItem {
   shoppingListId: string;
   label: string;
   quantity: string | null;
+  unit: string | null;
+  note: string | null;
+  category: string | null;
   checked: boolean;
   createdByUserId: string | null;
   checkedByUserId: string | null;

@@ -14584,3 +14584,74 @@ button.family-settings-row:focus-visible:not(:disabled) {
     margin-inline: 0;
   }
 }
+
+.shopping-completed-toggle {
+  display: flex;
+  width: 100%;
+  min-height: calc(var(--space-xl) + var(--space-xs));
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-s);
+  border: 0;
+  border-radius: var(--radius-l);
+  padding: var(--space-s) var(--space-m);
+  background: color-mix(in srgb, var(--color-success-soft) 34%, var(--color-surface));
+  color: var(--color-text);
+  cursor: pointer;
+  font: inherit;
+  font-size: var(--text-body);
+  font-weight: 880;
+  text-align: left;
+  box-shadow: 0 var(--space-xs) var(--space-m)
+    color-mix(in srgb, var(--color-text) 5%, transparent);
+}
+
+.shopping-completed-toggle__meta {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-xs);
+}
+
+.shopping-completed-toggle__icon {
+  color: var(--color-muted);
+  transition: transform 160ms ease;
+}
+
+.shopping-completed-toggle__icon--open {
+  transform: rotate(180deg);
+}
+
+.shopping-edit-sheet {
+  display: contents;
+}
+
+.calendar-filter-sheet__panel:has(.shopping-edit-sheet) {
+  grid-template-rows: auto auto minmax(0, 1fr) auto;
+  max-height: min(86vh, 50rem);
+}
+
+.shopping-edit-sheet__content {
+  gap: var(--space-s);
+  overscroll-behavior: contain;
+  -webkit-overflow-scrolling: touch;
+}
+
+.shopping-edit-sheet__grid {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  gap: var(--space-s);
+}
+
+.shopping-edit-sheet__content .husk-school-field {
+  gap: calc(var(--space-xs) * 0.5);
+}
+
+.shopping-edit-sheet__content .husk-school-field input,
+.shopping-edit-sheet__content .husk-school-field textarea {
+  min-height: calc(var(--space-xl) + var(--space-xs));
+  font-size: var(--text-label);
+}
+
+.shopping-edit-sheet__content .husk-school-field textarea {
+  min-height: 5.75rem;
+}
