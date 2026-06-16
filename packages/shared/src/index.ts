@@ -417,4 +417,4 @@ export type {
   ReminderSummary
 } from "./calendar-mvp.js";
 
-export * from "./shopping/shopping-catalog.js";
+export * from "./shopping/shopping-catalog";
