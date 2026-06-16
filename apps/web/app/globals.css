@@ -14862,3 +14862,32 @@ button.family-settings-row:focus-visible:not(:disabled) {
   justify-content: center;
   gap: var(--space-xs);
 }
+
+.shopping-create-list-sheet {
+  display: contents;
+}
+
+.calendar-filter-sheet__panel:has(.shopping-create-list-sheet) {
+  grid-template-rows: auto auto minmax(0, 1fr) auto;
+  max-height: min(78vh, 42rem);
+}
+
+.shopping-create-list-sheet__content {
+  gap: var(--space-m);
+}
+
+.shopping-create-list-sheet__notice {
+  margin: 0;
+  border: 1px solid
+    color-mix(in srgb, var(--color-primary) 20%, var(--color-border));
+  border-radius: var(--radius-l);
+  padding: var(--space-m);
+  background: color-mix(
+    in srgb,
+    var(--color-primary-soft) 34%,
+    var(--color-surface)
+  );
+  color: var(--color-muted);
+  font-size: var(--text-small);
+  font-weight: 720;
+}
