@@ -40,6 +40,127 @@ import {
 } from "../../lib/auth-family";
 import { clearActiveFamilyId } from "../../lib/session";
 
+type ShoppingCatalogItem = { label: string };
+type ShoppingCategory = { name: string; items: ShoppingCatalogItem[] };
+
+const CUSTOM_CATEGORY_NAME = "Egne varer";
+
+const SHOPPING_CATEGORIES: ShoppingCategory[] = [
+  {
+    name: "Frukt og grønt",
+    items: [
+      { label: "Banan" },
+      { label: "Eple" },
+      { label: "Tomat" },
+      { label: "Agurk" },
+      { label: "Gulrot" },
+      { label: "Potet" },
+    ],
+  },
+  {
+    name: "Brød og bakevarer",
+    items: [
+      { label: "Brød" },
+      { label: "Rundstykker" },
+      { label: "Tortilla" },
+      { label: "Knekkebrød" },
+    ],
+  },
+  {
+    name: "Meieri",
+    items: [
+      { label: "Melk" },
+      { label: "Yoghurt" },
+      { label: "Ost" },
+      { label: "Smør" },
+      { label: "Rømme" },
+    ],
+  },
+  {
+    name: "Kjøtt og fisk",
+    items: [
+      { label: "Kylling" },
+      { label: "Kjøttdeig" },
+      { label: "Laks" },
+      { label: "Fiskekaker" },
+      { label: "Skinke" },
+    ],
+  },
+  {
+    name: "Ingredienser og krydder",
+    items: [
+      { label: "Egg" },
+      { label: "Olivenolje" },
+      { label: "Salt" },
+      { label: "Pepper" },
+      { label: "Tacokrydder" },
+    ],
+  },
+  {
+    name: "Frysevarer",
+    items: [
+      { label: "Frosne bær" },
+      { label: "Pizza" },
+      { label: "Grønnsaksblanding" },
+      { label: "Is" },
+    ],
+  },
+  {
+    name: "Kornprodukter",
+    items: [
+      { label: "Pasta" },
+      { label: "Ris" },
+      { label: "Havregryn" },
+      { label: "Frokostblanding" },
+    ],
+  },
+  {
+    name: "Snacks og godteri",
+    items: [
+      { label: "Potetgull" },
+      { label: "Sjokolade" },
+      { label: "Kjeks" },
+      { label: "Nøtter" },
+    ],
+  },
+  {
+    name: "Drikke",
+    items: [
+      { label: "Kaffe" },
+      { label: "Te" },
+      { label: "Juice" },
+      { label: "Brus" },
+    ],
+  },
+  {
+    name: "Husholdning",
+    items: [
+      { label: "Dopapir" },
+      { label: "Tørkepapir" },
+      { label: "Vaskemiddel" },
+      { label: "Oppvasktabletter" },
+    ],
+  },
+  {
+    name: "Omsorg og helse",
+    items: [
+      { label: "Bleier" },
+      { label: "Våtservietter" },
+      { label: "Tannkrem" },
+      { label: "Sjampo" },
+    ],
+  },
+  {
+    name: "Dyreprodukter",
+    items: [
+      { label: "Hundemat" },
+      { label: "Kattemat" },
+      { label: "Kattesand" },
+      { label: "Dyregodteri" },
+    ],
+  },
+];
+
 type ShoppingStatus =
   | "loading"
   | "ready"
@@ -63,6 +184,8 @@ export default function ShoppingPage() {
   const [openMenuItemId, setOpenMenuItemId] = useState<string | null>(null);
   const [isNewSheetOpen, setIsNewSheetOpen] = useState(false);
   const [isFilterSheetOpen, setIsFilterSheetOpen] = useState(false);
+  const [openCategoryName, setOpenCategoryName] = useState<string | null>(null);
+  const [toastMessage, setToastMessage] = useState<string | null>(null);
   const [pendingItemId, setPendingItemId] = useState<string | null>(null);
   const [isAdding, setIsAdding] = useState(false);
 
@@ -92,9 +215,53 @@ export default function ShoppingPage() {
     [shoppingList],
   );
   const recentItems = useMemo(
-    () => completedItems.slice(0, 3),
+    () => completedItems.slice(0, 8),
     [completedItems],
   );
+  const searchResults = useMemo(() => {
+    const query = normalizeShoppingLabel(label);
+
+    if (query.length < 2) {
+      return [];
+    }
+
+    return SHOPPING_CATEGORIES.flatMap((category) =>
+      category.items.map((item) => ({ ...item, category: category.name })),
+    )
+      .filter((item) => normalizeShoppingLabel(item.label).includes(query))
+      .slice(0, 8);
+  }, [label]);
+  const customCategoryItems = useMemo(() => {
+    const catalogLabels = new Set(
+      SHOPPING_CATEGORIES.flatMap((category) => category.items).map((item) =>
+        normalizeShoppingLabel(item.label),
+      ),
+    );
+
+    return Array.from(
+      new Map(
+        (shoppingList?.items ?? [])
+          .filter(
+            (item) => !catalogLabels.has(normalizeShoppingLabel(item.label)),
+          )
+          .map((item) => [
+            normalizeShoppingLabel(item.label),
+            { label: item.label },
+          ]),
+      ).values(),
+    );
+  }, [shoppingList?.items]);
+  const activeCategory = useMemo(() => {
+    if (openCategoryName === CUSTOM_CATEGORY_NAME) {
+      return { name: CUSTOM_CATEGORY_NAME, items: customCategoryItems };
+    }
+
+    return (
+      SHOPPING_CATEGORIES.find(
+        (category) => category.name === openCategoryName,
+      ) ?? null
+    );
+  }, [customCategoryItems, openCategoryName]);
   const uncheckedCount = remainingItems.length;
   const hasMultipleFamilies = families.length > 1;
 
@@ -124,6 +291,15 @@ export default function ShoppingPage() {
     await loadShoppingList(familyId);
   }
 
+  useEffect(() => {
+    if (!toastMessage) {
+      return;
+    }
+
+    const timeout = window.setTimeout(() => setToastMessage(null), 2200);
+    return () => window.clearTimeout(timeout);
+  }, [toastMessage]);
+
   async function handleAddItem(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
 
@@ -134,12 +310,39 @@ export default function ShoppingPage() {
       return;
     }
 
+    await addItemDirectly(nextLabel, nextQuantity, editingItemId);
+  }
+
+  async function addItemDirectly(
+    itemLabel: string,
+    itemQuantity = "",
+    replaceItemId: string | null = null,
+  ) {
+    const nextLabel = itemLabel.trim();
+    const nextQuantity = itemQuantity.trim();
+
+    if (!activeFamilyId || nextLabel.length === 0 || isAdding) {
+      return;
+    }
+
+    const alreadyInList = remainingItems.some(
+      (item) =>
+        item.id !== replaceItemId &&
+        normalizeShoppingLabel(item.label) ===
+          normalizeShoppingLabel(nextLabel),
+    );
+
+    if (alreadyInList) {
+      setToastMessage("Denne varen finnes allerede i listen");
+      return;
+    }
+
     setIsAdding(true);
     setMessage("");
 
     try {
-      if (editingItemId) {
-        await deleteShoppingItem(activeFamilyId, editingItemId);
+      if (replaceItemId) {
+        await deleteShoppingItem(activeFamilyId, replaceItemId);
       }
 
       const item = await addShoppingItem(activeFamilyId, {
@@ -152,7 +355,7 @@ export default function ShoppingPage() {
               ...currentList,
               items: [
                 ...currentList.items.filter(
-                  (currentItem) => currentItem.id !== editingItemId,
+                  (currentItem) => currentItem.id !== replaceItemId,
                 ),
                 item,
               ].sort(sortShoppingItems),
@@ -162,7 +365,9 @@ export default function ShoppingPage() {
       setLabel("");
       setQuantity("");
       setIsNewSheetOpen(false);
+      setOpenCategoryName(null);
       setEditingItemId(null);
+      setToastMessage("Vare lagt til");
       setStatus("ready");
     } catch (error) {
       handleActionError(error, "Kunne ikke legge til varen. Prøv igjen.");
@@ -409,6 +614,87 @@ export default function ShoppingPage() {
           <span aria-hidden="true">▼</span>
         </button>
 
+        {status === "ready" && shoppingList && label.trim().length >= 2 ? (
+          <section className="shopping-section" aria-label="Søkeresultater">
+            <SectionHeader title="Forslag" />
+            {searchResults.length > 0 ? (
+              <div className="shopping-suggestion-grid">
+                {searchResults.map((item) => (
+                  <button
+                    className="shopping-suggestion-card"
+                    disabled={isAdding}
+                    key={`${item.category}-${item.label}`}
+                    type="button"
+                    onClick={() => void addItemDirectly(item.label)}
+                  >
+                    <span>{item.label}</span>
+                    <small>{item.category}</small>
+                  </button>
+                ))}
+              </div>
+            ) : (
+              <button
+                className="shopping-suggestion-card shopping-suggestion-card--custom"
+                disabled={isAdding}
+                type="button"
+                onClick={() => void addItemDirectly(label)}
+              >
+                <span>Legg til «{label.trim()}»</span>
+                <small>{CUSTOM_CATEGORY_NAME}</small>
+              </button>
+            )}
+          </section>
+        ) : null}
+
+        {status === "ready" && shoppingList && recentItems.length > 0 ? (
+          <section
+            className="shopping-section"
+            aria-labelledby="recent-shopping-title"
+          >
+            <SectionHeader title="Nylig brukt" />
+            <div
+              className="shopping-recent-pills"
+              aria-label="Nylig brukte varer"
+            >
+              {recentItems.map((item) => (
+                <button
+                  className="husk-filter-button shopping-recent-pill"
+                  disabled={isAdding}
+                  key={item.id}
+                  type="button"
+                  onClick={() =>
+                    void addItemDirectly(item.label, item.quantity ?? "")
+                  }
+                >
+                  {item.label}
+                </button>
+              ))}
+            </div>
+          </section>
+        ) : null}
+
+        {status === "ready" && shoppingList ? (
+          <section className="shopping-section" aria-label="Varekategorier">
+            <SectionHeader title="Kategorier" />
+            <div className="shopping-category-grid">
+              {[
+                ...SHOPPING_CATEGORIES,
+                { name: CUSTOM_CATEGORY_NAME, items: customCategoryItems },
+              ].map((category) => (
+                <button
+                  className="shopping-category-card"
+                  key={category.name}
+                  type="button"
+                  onClick={() => setOpenCategoryName(category.name)}
+                >
+                  <span>{category.name}</span>
+                  <small>{category.items.length} varer</small>
+                </button>
+              ))}
+            </div>
+          </section>
+        ) : null}
+
         {status === "unauthorized" ? (
           <ShoppingStatusCard
             message={message}
@@ -506,30 +792,6 @@ export default function ShoppingPage() {
                 </ul>
               </section>
             ) : null}
-
-            {recentItems.length > 0 ? (
-              <section
-                className="shopping-section"
-                aria-labelledby="recent-shopping-title"
-              >
-                <SectionHeader title="Nylig brukt" />
-                <div
-                  className="shopping-recent-pills"
-                  aria-label="Nylig brukte varer"
-                >
-                  {recentItems.map((item) => (
-                    <button
-                      className="husk-filter-button shopping-recent-pill"
-                      key={item.id}
-                      type="button"
-                      onClick={() => setLabel(item.label)}
-                    >
-                      {item.label}
-                    </button>
-                  ))}
-                </div>
-              </section>
-            ) : null}
           </>
         ) : null}
 
@@ -605,6 +867,52 @@ export default function ShoppingPage() {
           </div>
         </form>
       </HuskMobileSheet>
+
+      <HuskMobileSheet
+        isOpen={Boolean(activeCategory)}
+        labelledBy="shopping-category-sheet-title"
+        onClose={() => setOpenCategoryName(null)}
+      >
+        <div className="shopping-sheet">
+          <div className="shopping-sheet__header">
+            <p className="section-header__eyebrow">Kategori</p>
+            <h2
+              id="shopping-category-sheet-title"
+              className="section-header__title"
+            >
+              {activeCategory?.name}
+            </h2>
+          </div>
+          {activeCategory && activeCategory.items.length > 0 ? (
+            <div className="shopping-category-items">
+              {activeCategory.items.map((item) => (
+                <button
+                  className="shopping-suggestion-card"
+                  disabled={isAdding}
+                  key={`${activeCategory.name}-${item.label}`}
+                  type="button"
+                  onClick={() => void addItemDirectly(item.label)}
+                >
+                  <span>{item.label}</span>
+                  <small>Legg rett i handlelisten</small>
+                </button>
+              ))}
+            </div>
+          ) : (
+            <p className="shopping-card__message">
+              Egne varer vises her etter at du har lagt dem til første gang.
+            </p>
+          )}
+        </div>
+      </HuskMobileSheet>
+
+      <p
+        className={`shopping-toast${toastMessage ? " shopping-toast--visible" : ""}`}
+        role="status"
+        aria-live="polite"
+      >
+        {toastMessage}
+      </p>
 
       <HuskMobileSheet
         isOpen={isFilterSheetOpen}
@@ -746,8 +1054,8 @@ function ShoppingStatusCard({
   );
 }
 
-function formatItemCount(count: number): string {
-  return `${count} vare${count === 1 ? "" : "r"} gjenstår`;
+function normalizeShoppingLabel(label: string): string {
+  return label.trim().toLocaleLowerCase("nb-NO");
 }
 
 function sortCompletedShoppingItems(
