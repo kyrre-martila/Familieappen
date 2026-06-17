@@ -60,6 +60,7 @@ export interface ShoppingCatalogItem {
   aliases: string[];
   defaultUnit: string;
   suggestedQuantity: number;
+  isCustom?: boolean;
 }
 
 export interface Wishlist {
@@ -640,17 +641,25 @@ export async function markPublicWishlistItemPurchased(token: string, itemId: str
 }
 
 
-export async function getShoppingCatalogCategories(): Promise<ShoppingCatalogCategory[]> {
-  return apiRequest<ShoppingCatalogCategory[]>("/shopping/catalog/categories");
+export async function getShoppingCatalogCategories(familyId?: string): Promise<ShoppingCatalogCategory[]> {
+  return apiRequest<ShoppingCatalogCategory[]>("/shopping/catalog/categories", { familyId });
 }
 
-export async function getShoppingCatalogItems(): Promise<ShoppingCatalogItem[]> {
-  return apiRequest<ShoppingCatalogItem[]>("/shopping/catalog/items");
+export async function getShoppingCatalogItems(familyId?: string): Promise<ShoppingCatalogItem[]> {
+  return apiRequest<ShoppingCatalogItem[]>("/shopping/catalog/items", { familyId });
 }
 
-export async function searchShoppingCatalogItems(query: string): Promise<ShoppingCatalogItem[]> {
+export async function searchShoppingCatalogItems(query: string, familyId?: string): Promise<ShoppingCatalogItem[]> {
   const params = new URLSearchParams({ q: query });
-  return apiRequest<ShoppingCatalogItem[]>(`/shopping/catalog/search?${params.toString()}`);
+  return apiRequest<ShoppingCatalogItem[]>(`/shopping/catalog/search?${params.toString()}`, { familyId });
+}
+
+export async function updateFamilyCustomShoppingItem(familyId: string, itemId: string, input: { name?: string; defaultUnit?: string; suggestedQuantity?: number | string; categorySlug?: string; iconKey?: string | null }): Promise<ShoppingCatalogItem> {
+  return apiRequest<ShoppingCatalogItem>(`/shopping/custom-items/${encodeURIComponent(itemId)}`, { method: "PATCH", body: input, familyId });
+}
+
+export async function deleteFamilyCustomShoppingItem(familyId: string, itemId: string): Promise<{ ok: true }> {
+  return apiRequest<{ ok: true }>(`/shopping/custom-items/${encodeURIComponent(itemId)}`, { method: "DELETE", familyId });
 }
 
 export async function getShoppingLists(familyId: string): Promise<ShoppingList[]> {
