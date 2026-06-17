@@ -60,7 +60,7 @@ model User {
   updatedAt    DateTime       @updatedAt
   memberships  FamilyMember[]
   createdShoppingItems ShoppingListItem[] @relation("ShoppingItemCreatedBy")
-  createdCustomShoppingItems FamilyCustomShoppingItem[] @relation("FamilyCustomShoppingItemCreatedBy")
+  customShoppingItems FamilyCustomShoppingItem[] @relation("FamilyCustomShoppingItemCreatedBy")
   checkedShoppingItems ShoppingListItem[] @relation("ShoppingItemCheckedBy")
   ownedShoppingLists ShoppingList[] @relation("ShoppingListOwnerUser")
   shoppingListAccesses ShoppingListAccess[]
@@ -79,7 +79,6 @@ model User {
   receivedFamilyInvitations FamilyInvitation[] @relation("FamilyInvitationInvitedUser")
   notificationPreferences NotificationPreference?
   feedbackSubmissions FeedbackSubmission[]
-  customShoppingItems FamilyCustomShoppingItem[]
   sessions UserSession[]
   passwordResetTokens PasswordResetToken[]
 
