@@ -14,6 +14,7 @@ import type {
   MealPlanDay,
   MoveMealResult,
   ShoppingList,
+  ShoppingListInvitation,
   ShoppingListItem,
   SharedWishlistItem,
   SharedWishlistItemsResponse,
@@ -33,7 +34,7 @@ import type {
   SchoolWeekReminder
 } from "@familieappen/shared";
 
-export type { CalendarEvent, Family, FamilyDashboardResponse, FamilyInvitation, FamilyInviteResponse, FamilyMember, FamilyMemberRole, ManualFamilyMemberRole, MealPlan, MealPlanDay, MoveMealResult, ShoppingList, ShoppingListItem, SharedWishlistItem, SharedWishlistItemsResponse, SharedWishlistSummary, Task, WishlistItem, WishlistItemCreateInput, WishlistItemListResponse, WishlistItemUpdateInput, WishlistSummary, WishlistInvitePreview, WishlistShareInvitation, WishlistShareInviteResponse, Reminder, HuskList, HuskListItem, SchoolWeekReminder };
+export type { CalendarEvent, Family, FamilyDashboardResponse, FamilyInvitation, FamilyInviteResponse, FamilyMember, FamilyMemberRole, ManualFamilyMemberRole, MealPlan, MealPlanDay, MoveMealResult, ShoppingList, ShoppingListInvitation, ShoppingListItem, SharedWishlistItem, SharedWishlistItemsResponse, SharedWishlistSummary, Task, WishlistItem, WishlistItemCreateInput, WishlistItemListResponse, WishlistItemUpdateInput, WishlistSummary, WishlistInvitePreview, WishlistShareInvitation, WishlistShareInviteResponse, Reminder, HuskList, HuskListItem, SchoolWeekReminder };
 
 type LegacyWishlistItem = WishlistItem & {
   productUrl?: string | null;
@@ -652,15 +653,30 @@ export async function searchShoppingCatalogItems(query: string): Promise<Shoppin
   return apiRequest<ShoppingCatalogItem[]>(`/shopping/catalog/search?${params.toString()}`);
 }
 
-export async function getShoppingList(familyId: string): Promise<ShoppingList> {
-  return apiRequest<ShoppingList>("/shopping", { familyId });
+export async function getShoppingLists(familyId: string): Promise<ShoppingList[]> {
+  return apiRequest<ShoppingList[]>("/shopping/lists", { familyId });
+}
+
+export async function createShoppingList(familyId: string, name: string): Promise<ShoppingList> {
+  return apiRequest<ShoppingList>("/shopping/lists", { method: "POST", body: { name }, familyId });
+}
+
+export async function getShoppingList(familyId: string, listId?: string): Promise<ShoppingList> {
+  const suffix = listId ? `?${new URLSearchParams({ listId }).toString()}` : "";
+  return apiRequest<ShoppingList>(`/shopping${suffix}`, { familyId });
+}
+
+export async function inviteToShoppingList(familyId: string, listId: string, email: string): Promise<{ invitation: ShoppingListInvitation; email: { ok: boolean; mode: "provider" | "dev-log" } }> {
+  return apiRequest(`/shopping/lists/${encodeURIComponent(listId)}/invite`, { method: "POST", body: { email }, familyId });
 }
 
 export async function addShoppingItem(
   familyId: string,
-  input: { label: string; quantity?: string; unit?: string; note?: string; category?: string }
+  input: { label: string; quantity?: string; unit?: string; note?: string; category?: string },
+  listId?: string
 ): Promise<ShoppingListItem> {
-  return apiRequest<ShoppingListItem>("/shopping/items", {
+  const suffix = listId ? `?${new URLSearchParams({ listId }).toString()}` : "";
+  return apiRequest<ShoppingListItem>(`/shopping/items${suffix}`, {
     method: "POST",
     body: input,
     familyId
@@ -670,27 +686,50 @@ export async function addShoppingItem(
 export async function updateShoppingItem(
   familyId: string,
   itemId: string,
-  input: { label: string; quantity?: string; unit?: string; note?: string; category?: string }
+  input: { label: string; quantity?: string; unit?: string; note?: string; category?: string },
+  listId?: string
 ): Promise<ShoppingListItem> {
-  return apiRequest<ShoppingListItem>(`/shopping/items/${encodeURIComponent(itemId)}`, {
+  const suffix = listId ? `?${new URLSearchParams({ listId }).toString()}` : "";
+  return apiRequest<ShoppingListItem>(`/shopping/items/${encodeURIComponent(itemId)}${suffix}`, {
     method: "PATCH",
     body: input,
     familyId
   });
 }
 
-export async function toggleShoppingItem(familyId: string, itemId: string): Promise<ShoppingListItem> {
-  return apiRequest<ShoppingListItem>(`/shopping/items/${encodeURIComponent(itemId)}`, {
+export async function toggleShoppingItem(familyId: string, itemId: string, listId?: string): Promise<ShoppingListItem> {
+  const suffix = listId ? `?${new URLSearchParams({ listId }).toString()}` : "";
+  return apiRequest<ShoppingListItem>(`/shopping/items/${encodeURIComponent(itemId)}${suffix}`, {
     method: "PATCH",
     familyId
   });
 }
 
-export async function deleteShoppingItem(familyId: string, itemId: string): Promise<ShoppingListItem> {
-  return apiRequest<ShoppingListItem>(`/shopping/items/${encodeURIComponent(itemId)}`, {
+export async function deleteShoppingItem(familyId: string, itemId: string, listId?: string): Promise<ShoppingListItem> {
+  const suffix = listId ? `?${new URLSearchParams({ listId }).toString()}` : "";
+  return apiRequest<ShoppingListItem>(`/shopping/items/${encodeURIComponent(itemId)}${suffix}`, {
     method: "DELETE",
     familyId
   });
+}
+
+
+export interface ShoppingListInvitePreview {
+  id: string;
+  shoppingListId: string;
+  listName: string;
+  invitedEmail: string;
+  inviterName: string;
+  status: "pending" | "accepted" | "declined" | "revoked";
+  requiresAuth: true;
+}
+
+export async function getShoppingListInvitePreview(token: string): Promise<ShoppingListInvitePreview> {
+  return apiRequest<ShoppingListInvitePreview>(`/shopping/invites/${encodeURIComponent(token)}`, { includeAuth: false });
+}
+
+export async function acceptShoppingListInvite(token: string): Promise<ShoppingListInvitation> {
+  return apiRequest<ShoppingListInvitation>(`/shopping/invites/${encodeURIComponent(token)}/accept`, { method: "POST" });
 }
 
 export async function getMealPlan(familyId: string): Promise<MealPlan> {

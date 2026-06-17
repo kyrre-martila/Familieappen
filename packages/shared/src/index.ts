@@ -355,10 +355,24 @@ export interface ShoppingListItem {
   updatedAt: string;
 }
 
+export interface ShoppingListInvitation {
+  id: string;
+  shoppingListId: string;
+  invitedEmail: string;
+  invitedUserId: string | null;
+  status: "pending" | "accepted" | "declined" | "revoked";
+  acceptedAt: string | null;
+  createdAt: string;
+  updatedAt: string;
+}
+
 export interface ShoppingList {
   id: string;
   familyId: string;
   name: string;
+  isDefault: boolean;
+  ownerUserId: string | null;
+  invitations?: ShoppingListInvitation[];
   createdAt: string;
   updatedAt: string;
   items: ShoppingListItem[];
