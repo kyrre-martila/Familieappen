@@ -666,6 +666,18 @@ export async function getShoppingList(familyId: string, listId?: string): Promis
   return apiRequest<ShoppingList>(`/shopping${suffix}`, { familyId });
 }
 
+export async function revokeShoppingListInvitation(familyId: string, listId: string, invitationId: string): Promise<ShoppingListInvitation> {
+  return apiRequest<ShoppingListInvitation>(`/shopping/lists/${encodeURIComponent(listId)}/invitations/${encodeURIComponent(invitationId)}/revoke`, { method: "POST", familyId });
+}
+
+export async function leaveShoppingList(familyId: string, listId: string): Promise<{ ok: true }> {
+  return apiRequest<{ ok: true }>(`/shopping/lists/${encodeURIComponent(listId)}/collaborators/me`, { method: "DELETE", familyId });
+}
+
+export async function removeShoppingListCollaborator(familyId: string, listId: string, userId: string): Promise<{ ok: true }> {
+  return apiRequest<{ ok: true }>(`/shopping/lists/${encodeURIComponent(listId)}/collaborators/${encodeURIComponent(userId)}`, { method: "DELETE", familyId });
+}
+
 export async function inviteToShoppingList(familyId: string, listId: string, email: string): Promise<{ invitation: ShoppingListInvitation; email: { ok: boolean; mode: "provider" | "dev-log" } }> {
   return apiRequest(`/shopping/lists/${encodeURIComponent(listId)}/invite`, { method: "POST", body: { email }, familyId });
 }

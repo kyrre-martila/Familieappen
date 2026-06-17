@@ -366,6 +366,14 @@ export interface ShoppingListInvitation {
   updatedAt: string;
 }
 
+export interface ShoppingListCollaborator {
+  id: string;
+  userId: string;
+  name: string | null;
+  email: string;
+  createdAt: string;
+}
+
 export interface ShoppingList {
   id: string;
   familyId: string;
@@ -373,6 +381,7 @@ export interface ShoppingList {
   isDefault: boolean;
   ownerUserId: string | null;
   invitations?: ShoppingListInvitation[];
+  collaborators?: ShoppingListCollaborator[];
   createdAt: string;
   updatedAt: string;
   items: ShoppingListItem[];
