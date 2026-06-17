@@ -1,6 +1,6 @@
 import { BadRequestException, ConflictException, ForbiddenException, Injectable, NotFoundException } from "@nestjs/common";
 import { createHash, randomBytes } from "node:crypto";
-import { EmailService } from "../email";
+import { EmailService, getAppBaseUrl } from "../email";
 import { FamilyAuthorizationService } from "../families";
 import { PrismaService } from "../prisma";
 import { SharedWishlistItemDto, SharedWishlistItemsResponseDto, SharedWishlistSummaryDto, WishlistInvitePreviewDto, WishlistItemCreateInput, WishlistItemDto, WishlistItemListResponseDto, WishlistItemUpdateInput, WishlistReorderInput, WishlistShareInvitationDto, WishlistShareInviteInput, WishlistShareInviteResponseDto } from "./dto/wishlist.dto";
@@ -724,8 +724,7 @@ export class WishlistsService {
   }
 
   private async sendWishlistInviteEmail(invitedEmail: string, token: string, inviterName: string, ownerName: string) {
-    const appBaseUrl = process.env.APP_BASE_URL?.trim() || "http://localhost:3000";
-    const inviteUrl = `${appBaseUrl.replace(/\/$/, "")}/wishlist/invite/${encodeURIComponent(token)}`;
+    const inviteUrl = `${getAppBaseUrl()}/wishlist/invite/${encodeURIComponent(token)}`;
 
     return this.emailService.sendEmail({
       to: invitedEmail,
