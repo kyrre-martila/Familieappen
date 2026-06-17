@@ -5,6 +5,7 @@ import {
   MouseEvent,
   useEffect,
   useMemo,
+  useRef,
   useState,
   type ChangeEvent,
   type ReactNode,
@@ -125,6 +126,7 @@ export default function ShoppingPage() {
   const [pendingItemId, setPendingItemId] = useState<string | null>(null);
   const [isAdding, setIsAdding] = useState(false);
   const [itemSheetError, setItemSheetError] = useState("");
+  const currentSaveAttemptRef = useRef(0);
 
   const familyAccess = useFamilyAccess();
   const approvedFamilyContext =
@@ -251,6 +253,8 @@ export default function ShoppingPage() {
     const nextUnit = unit.trim() || DEFAULT_SHOPPING_UNIT;
     const nextNote = note.trim();
     const nextCategory = getShoppingCategorySubmissionValue(category, catalogCategories);
+    const saveAttempt = currentSaveAttemptRef.current + 1;
+    currentSaveAttemptRef.current = saveAttempt;
     setItemSheetError("");
 
     if (!activeFamilyId || nextLabel.length === 0 || isAdding) {
@@ -310,12 +314,14 @@ export default function ShoppingPage() {
       setEditingItemId(null);
       setStatus("ready");
     } catch (error) {
-      handleActionError(
-        error,
-        editingItemId
-          ? "Kunne ikke lagre varen. Prøv igjen."
-          : "Kunne ikke legge til varen. Prøv igjen.",
-      );
+      if (currentSaveAttemptRef.current === saveAttempt) {
+        handleActionError(
+          error,
+          editingItemId
+            ? "Kunne ikke lagre varen. Prøv igjen."
+            : "Kunne ikke legge til varen. Prøv igjen.",
+        );
+      }
     } finally {
       setIsAdding(false);
     }
@@ -427,6 +433,7 @@ export default function ShoppingPage() {
   }
 
   function prepareCustomItem() {
+    currentSaveAttemptRef.current += 1;
     const nextLabel = label.trim();
     if (!nextLabel) {
       return;
@@ -449,6 +456,7 @@ export default function ShoppingPage() {
   }
 
   function handleOpenNewSheet() {
+    currentSaveAttemptRef.current += 1;
     setEditingItemId(null);
     setQuantity("");
     setUnit(DEFAULT_SHOPPING_UNIT);
@@ -459,6 +467,7 @@ export default function ShoppingPage() {
   }
 
   function handleEditItem(itemId: string) {
+    currentSaveAttemptRef.current += 1;
     const item = shoppingList?.items.find(
       (currentItem) => currentItem.id === itemId,
     );
@@ -473,16 +482,19 @@ export default function ShoppingPage() {
     setNote(item.note ?? "");
     setCategory(getShoppingCategorySubmissionValue(item.category ?? DEFAULT_CUSTOM_CATEGORY_SLUG, catalogCategories));
     setOpenMenuItemId(null);
+    setItemSheetError("");
     setIsNewSheetOpen(true);
   }
 
   function handleCloseItemSheet() {
+    currentSaveAttemptRef.current += 1;
     setIsNewSheetOpen(false);
     setEditingItemId(null);
     setQuantity("");
     setUnit(DEFAULT_SHOPPING_UNIT);
     setNote("");
     setCategory(DEFAULT_CUSTOM_CATEGORY_SLUG);
+    setItemSheetError("");
   }
 
   function handleMenuClick(
@@ -497,6 +509,7 @@ export default function ShoppingPage() {
 
 
   async function handleEditCustomCatalogItem(item: ShoppingCatalogItem) {
+    currentSaveAttemptRef.current += 1;
     setEditingItemId(`custom:${item.id}`);
     setLabel(item.name);
     setQuantity(String(item.suggestedQuantity));
@@ -836,7 +849,7 @@ export default function ShoppingPage() {
                       id="shopping-search-input"
                       className="husk-search__input"
                       maxLength={120}
-                      onChange={(event) => setLabel(event.target.value)}
+                      onChange={(event) => { setLabel(event.target.value); setItemSheetError(""); currentSaveAttemptRef.current += 1; }}
                       onFocus={() => setMessage("")}
                       placeholder="Jeg trenger ..."
                       value={label}
@@ -955,7 +968,7 @@ export default function ShoppingPage() {
                 <span>Navn</span>
                 <input
                   maxLength={120}
-                  onChange={(event) => setLabel(event.target.value)}
+                  onChange={(event) => { setLabel(event.target.value); setItemSheetError(""); currentSaveAttemptRef.current += 1; }}
                   placeholder="Jeg trenger ..."
                   value={label}
                 />
@@ -965,14 +978,14 @@ export default function ShoppingPage() {
                   <span>Antall</span>
                   <input
                     maxLength={60}
-                    onChange={(event) => setQuantity(event.target.value)}
+                    onChange={(event) => { setQuantity(event.target.value); setItemSheetError(""); currentSaveAttemptRef.current += 1; }}
                     placeholder="2"
                     value={quantity}
                   />
                 </label>
                 <label className="husk-school-field">
                   <span>Enhet</span>
-                  <select onChange={(event) => setUnit(event.target.value)} value={unit}>
+                  <select onChange={(event) => { setUnit(event.target.value); setItemSheetError(""); currentSaveAttemptRef.current += 1; }} value={unit}>
                     {SHOPPING_UNIT_OPTIONS.map((unitOption) => <option key={unitOption} value={unitOption}>{unitOption}</option>)}
                   </select>
                 </label>
@@ -981,14 +994,14 @@ export default function ShoppingPage() {
                 <span>Notat</span>
                 <textarea
                   maxLength={240}
-                  onChange={(event) => setNote(event.target.value)}
+                  onChange={(event) => { setNote(event.target.value); setItemSheetError(""); currentSaveAttemptRef.current += 1; }}
                   placeholder="F.eks. merke eller tilbud"
                   value={note}
                 />
               </label>
               <label className="husk-school-field">
                 <span>Kategori</span>
-                <select onChange={(event) => setCategory(event.target.value)} value={category}>
+                <select onChange={(event) => { setCategory(event.target.value); setItemSheetError(""); currentSaveAttemptRef.current += 1; }} value={category}>
                   {getCategoryOptions(catalogCategories).map((categoryOption) => <option key={categoryOption.slug} value={categoryOption.slug}>{categoryOption.name}</option>)}
                 </select>
               </label>
