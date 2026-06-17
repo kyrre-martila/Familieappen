@@ -141,7 +141,8 @@ export default function ShoppingPage() {
     [label],
   );
   const isSearchingCatalog = normalizeShoppingSearchValue(label).length >= 2;
-  const catalogItemCount = SHOPPING_CATALOG.length;
+  // TODO(shopping-catalog): Replace this seed-data read with a DB-backed API
+  // response once catalog categories/items are persisted on the backend.
   const visibleCatalogCategories = useMemo(
     () =>
       SHOPPING_CATEGORIES.map((categoryOption) => {
@@ -149,11 +150,11 @@ export default function ShoppingPage() {
 
         return {
           ...categoryOption,
-          items: items.slice(0, 8),
+          items,
           totalItemCount: items.length,
         };
       }).filter((categoryOption) => categoryOption.totalItemCount > 0),
-    [catalogItemCount],
+    [],
   );
 
   async function loadShoppingList(familyId = activeFamilyId) {
