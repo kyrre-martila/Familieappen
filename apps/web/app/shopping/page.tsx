@@ -36,11 +36,16 @@ import {
 import {
   ApiError,
   FamilyWithMembership,
+  ShoppingCatalogCategory,
+  ShoppingCatalogItem,
   ShoppingList,
   addShoppingItem,
   deleteShoppingItem,
+  getShoppingCatalogCategories,
+  getShoppingCatalogItems,
   getShoppingList,
   toggleShoppingItem,
+  searchShoppingCatalogItems,
   updateShoppingItem,
 } from "../../lib/api";
 import {
@@ -49,15 +54,7 @@ import {
   handleMissingOrInvalidAuth,
 } from "../../lib/auth-family";
 import { clearActiveFamilyId } from "../../lib/session";
-import {
-  SHOPPING_CATALOG,
-  SHOPPING_CATEGORIES,
-  getShoppingCatalogItemsByCategory,
-  getShoppingCategoryBySlug,
-  normalizeShoppingSearchValue,
-  searchShoppingCatalog,
-  type ShoppingCatalogItem,
-} from "@familieappen/shared";
+import { normalizeShoppingSearchValue } from "@familieappen/shared";
 
 type ShoppingStatus =
   | "loading"
@@ -88,13 +85,10 @@ export default function ShoppingPage() {
   const [isCreateListSheetOpen, setIsCreateListSheetOpen] = useState(false);
   const [newListName, setNewListName] = useState("");
   const [isRecentItemsOpen, setIsRecentItemsOpen] = useState(false);
-  const [openCatalogCategories, setOpenCatalogCategories] = useState<
-    Record<string, boolean>
-  >(() =>
-    Object.fromEntries(
-      SHOPPING_CATEGORIES.map((categoryOption) => [categoryOption.slug, false]),
-    ),
-  );
+  const [catalogCategories, setCatalogCategories] = useState<ShoppingCatalogCategory[]>([]);
+  const [catalogItems, setCatalogItems] = useState<ShoppingCatalogItem[]>([]);
+  const [catalogSearchResults, setCatalogSearchResults] = useState<ShoppingCatalogItem[]>([]);
+  const [openCatalogCategories, setOpenCatalogCategories] = useState<Record<string, boolean>>({});
   const [pendingItemId, setPendingItemId] = useState<string | null>(null);
   const [isAdding, setIsAdding] = useState(false);
 
@@ -117,8 +111,8 @@ export default function ShoppingPage() {
     [shoppingList],
   );
   const groupedRemainingItems = useMemo(
-    () => groupShoppingItemsByCategory(remainingItems),
-    [remainingItems],
+    () => groupShoppingItemsByCategory(remainingItems, catalogCategories),
+    [catalogCategories, remainingItems],
   );
   const completedItems = useMemo(
     () =>
@@ -128,34 +122,53 @@ export default function ShoppingPage() {
     [shoppingList],
   );
   const recentItems = useMemo(
-    () => getRecentShoppingCatalogItems(completedItems),
-    [completedItems],
+    () => getRecentShoppingCatalogItems(completedItems, catalogItems),
+    [catalogItems, completedItems],
   );
   const uncheckedCount = remainingItems.length;
   const hasMultipleFamilies = families.length > 1;
   const selectedShoppingListName = formatShoppingListName(shoppingList?.name);
   const isDefaultShoppingList =
     selectedShoppingListName === "Familiehandleliste";
-  const catalogSearchResults = useMemo(
-    () => searchShoppingCatalog(label),
-    [label],
-  );
   const isSearchingCatalog = normalizeShoppingSearchValue(label).length >= 2;
-  // TODO(shopping-catalog): Replace this seed-data read with a DB-backed API
-  // response once catalog categories/items are persisted on the backend.
   const visibleCatalogCategories = useMemo(
     () =>
-      SHOPPING_CATEGORIES.map((categoryOption) => {
-        const items = getShoppingCatalogItemsByCategory(categoryOption.slug);
-
-        return {
+      catalogCategories
+        .map((categoryOption) => ({
           ...categoryOption,
-          items,
-          totalItemCount: items.length,
-        };
-      }).filter((categoryOption) => categoryOption.totalItemCount > 0),
-    [],
+          items: openCatalogCategories[categoryOption.slug]
+            ? catalogItems.filter((item) => item.categorySlug === categoryOption.slug)
+            : [],
+        }))
+        .filter((categoryOption) => categoryOption.totalItemCount > 0),
+    [catalogCategories, catalogItems, openCatalogCategories],
   );
+
+  useEffect(() => {
+    let isCancelled = false;
+
+    if (!isSearchingCatalog) {
+      setCatalogSearchResults([]);
+      return;
+    }
+
+    const timeout = window.setTimeout(() => {
+      void searchShoppingCatalogItems(label).then((items) => {
+        if (!isCancelled) {
+          setCatalogSearchResults(items);
+        }
+      }).catch(() => {
+        if (!isCancelled) {
+          setCatalogSearchResults([]);
+        }
+      });
+    }, 150);
+
+    return () => {
+      isCancelled = true;
+      window.clearTimeout(timeout);
+    };
+  }, [isSearchingCatalog, label]);
 
   async function loadShoppingList(familyId = activeFamilyId) {
     if (!familyId) {
@@ -168,7 +181,18 @@ export default function ShoppingPage() {
     setMessage("Laster handleliste …");
 
     try {
-      setShoppingList(await getShoppingList(familyId));
+      const [nextShoppingList, nextCatalogCategories, nextCatalogItems] = await Promise.all([
+        getShoppingList(familyId),
+        getShoppingCatalogCategories(),
+        getShoppingCatalogItems(),
+      ]);
+      setShoppingList(nextShoppingList);
+      setCatalogCategories(nextCatalogCategories);
+      setCatalogItems(nextCatalogItems);
+      setOpenCatalogCategories((currentCategories) => ({
+        ...Object.fromEntries(nextCatalogCategories.map((categoryOption) => [categoryOption.slug, false])),
+        ...currentCategories,
+      }));
       setStatus("ready");
       setMessage("");
     } catch (error) {
@@ -190,7 +214,7 @@ export default function ShoppingPage() {
     const nextQuantity = quantity.trim();
     const nextUnit = unit.trim();
     const nextNote = note.trim();
-    const nextCategory = getShoppingCategorySubmissionValue(category);
+    const nextCategory = getShoppingCategorySubmissionValue(category, catalogCategories);
 
     if (!activeFamilyId || nextLabel.length === 0 || isAdding) {
       return;
@@ -198,7 +222,7 @@ export default function ShoppingPage() {
 
     if (
       !editingItemId &&
-      isShoppingLabelInList(nextLabel, shoppingList?.items ?? [])
+      isShoppingLabelInList(nextLabel, shoppingList?.items ?? [], catalogItems)
     ) {
       setMessage("Varen ligger allerede i handlelisten.");
       return;
@@ -399,7 +423,7 @@ export default function ShoppingPage() {
     setQuantity(item.quantity ?? "");
     setUnit(item.unit ?? "");
     setNote(item.note ?? "");
-    setCategory(formatShoppingCategoryForInput(item.category));
+    setCategory(formatShoppingCategoryForInput(item.category, catalogCategories));
     setOpenMenuItemId(null);
     setIsNewSheetOpen(true);
   }
@@ -597,6 +621,7 @@ export default function ShoppingPage() {
                           {group.items.map((item) => (
                             <ShoppingItemCard
                               key={item.id}
+                              catalogCategories={catalogCategories}
                               item={item}
                               isBusy={pendingItemId === item.id}
                               isMenuOpen={openMenuItemId === item.id}
@@ -652,6 +677,7 @@ export default function ShoppingPage() {
                   >
                     <div id="recent-shopping-list">
                       <RecentItemGrid
+                        catalogCategories={catalogCategories}
                         items={recentItems}
                         pendingItemId={pendingItemId}
                         shoppingItems={shoppingList.items}
@@ -675,7 +701,7 @@ export default function ShoppingPage() {
 
                       return (
                         <CollapsibleShoppingSection
-                          badgeCount={categoryOption.totalItemCount}
+                          badgeCount={isCategoryOpen ? categoryOption.totalItemCount : 0}
                           controlsId={`shopping-catalog-category-${categoryOption.slug}`}
                           isOpen={isCategoryOpen}
                           key={categoryOption.slug}
@@ -981,12 +1007,14 @@ function CollapsibleShoppingSection({
 }
 
 function RecentItemGrid({
+  catalogCategories,
   items,
   onAddCatalogItem,
   onRestoreItem,
   pendingItemId,
   shoppingItems,
 }: {
+  catalogCategories: ShoppingCatalogCategory[];
   items: ShoppingCatalogItem[];
   onAddCatalogItem: (item: ShoppingCatalogItem) => void;
   onRestoreItem: (itemId: string) => void;
@@ -1028,8 +1056,7 @@ function RecentItemGrid({
             <span className="shopping-catalog-item__name">{item.name}</span>
             <span className="shopping-catalog-item__meta">
               {item.suggestedQuantity} {item.defaultUnit} ·{" "}
-              {getShoppingCategoryBySlug(item.categorySlug)?.name ??
-                item.categorySlug}
+              {getShoppingCategoryName(item.categorySlug, catalogCategories)}
               {activeItem ? " · I listen" : ""}
             </span>
           </button>
@@ -1099,21 +1126,27 @@ function findMatchingShoppingItem(
   );
 }
 
-function getCatalogItemForShoppingItem(shoppingItem: ShoppingItem) {
+function getCatalogItemForShoppingItem(
+  shoppingItem: ShoppingItem,
+  catalogItems: ShoppingCatalogItem[],
+) {
   const normalizedLabel = normalizeShoppingSearchValue(shoppingItem.label);
 
-  return SHOPPING_CATALOG.find((catalogItem) =>
+  return catalogItems.find((catalogItem) =>
     [catalogItem.name, ...catalogItem.aliases]
       .map(normalizeShoppingSearchValue)
       .includes(normalizedLabel),
   );
 }
 
-function getRecentShoppingCatalogItems(shoppingItems: ShoppingItem[]) {
+function getRecentShoppingCatalogItems(
+  shoppingItems: ShoppingItem[],
+  catalogItems: ShoppingCatalogItem[],
+) {
   const recentItems = new Map<string, ShoppingCatalogItem>();
 
   for (const shoppingItem of shoppingItems) {
-    const catalogItem = getCatalogItemForShoppingItem(shoppingItem);
+    const catalogItem = getCatalogItemForShoppingItem(shoppingItem, catalogItems);
 
     if (!catalogItem) {
       continue;
@@ -1133,9 +1166,13 @@ function getRecentShoppingCatalogItems(shoppingItems: ShoppingItem[]) {
   return [...recentItems.values()];
 }
 
-function isShoppingLabelInList(label: string, shoppingItems: ShoppingItem[]) {
+function isShoppingLabelInList(
+  label: string,
+  shoppingItems: ShoppingItem[],
+  catalogItems: ShoppingCatalogItem[],
+) {
   const normalizedLabel = normalizeShoppingSearchValue(label);
-  const catalogItem = searchShoppingCatalog(label).find((item) =>
+  const catalogItem = catalogItems.find((item) =>
     [item.name, ...item.aliases]
       .map(normalizeShoppingSearchValue)
       .includes(normalizedLabel),
@@ -1151,7 +1188,14 @@ function isShoppingLabelInList(label: string, shoppingItems: ShoppingItem[]) {
   );
 }
 
-function formatShoppingCategoryForInput(category?: string | null) {
+function getShoppingCategoryName(
+  categorySlug: string,
+  catalogCategories: ShoppingCatalogCategory[],
+) {
+  return catalogCategories.find((category) => category.slug === categorySlug)?.name ?? categorySlug;
+}
+
+function formatShoppingCategoryForInput(category: string | null | undefined, catalogCategories: ShoppingCatalogCategory[]) {
   if (!category) {
     return "";
   }
@@ -1160,10 +1204,10 @@ function formatShoppingCategoryForInput(category?: string | null) {
     return "Egne varer";
   }
 
-  return getShoppingCategoryBySlug(category)?.name ?? category;
+  return getShoppingCategoryName(category, catalogCategories);
 }
 
-function getShoppingCategorySubmissionValue(category: string) {
+function getShoppingCategorySubmissionValue(category: string, catalogCategories: ShoppingCatalogCategory[]) {
   const trimmedCategory = category.trim();
 
   if (!trimmedCategory) {
@@ -1175,7 +1219,7 @@ function getShoppingCategorySubmissionValue(category: string) {
   }
 
   return (
-    SHOPPING_CATEGORIES.find(
+    catalogCategories.find(
       (categoryOption) =>
         categoryOption.slug === trimmedCategory ||
         normalizeShoppingSearchValue(categoryOption.name) ===
@@ -1184,7 +1228,7 @@ function getShoppingCategorySubmissionValue(category: string) {
   );
 }
 
-function getShoppingItemCategory(item: ShoppingItem) {
+function getShoppingItemCategory(item: ShoppingItem, catalogCategories: ShoppingCatalogCategory[]) {
   if (!item.category) {
     return { name: "Andre varer", slug: "andre-varer", sortOrder: 999 };
   }
@@ -1194,7 +1238,7 @@ function getShoppingItemCategory(item: ShoppingItem) {
   }
 
   return (
-    getShoppingCategoryBySlug(item.category) ?? {
+    catalogCategories.find((categoryOption) => categoryOption.slug === item.category) ?? {
       name: item.category,
       slug: normalizeShoppingSearchValue(item.category).replace(/ /g, "-"),
       sortOrder: 997,
@@ -1202,14 +1246,14 @@ function getShoppingItemCategory(item: ShoppingItem) {
   );
 }
 
-function groupShoppingItemsByCategory(items: ShoppingItem[]) {
+function groupShoppingItemsByCategory(items: ShoppingItem[], catalogCategories: ShoppingCatalogCategory[]) {
   const groups = new Map<
     string,
     { items: ShoppingItem[]; name: string; slug: string; sortOrder: number }
   >();
 
   for (const item of items) {
-    const category = getShoppingItemCategory(item);
+    const category = getShoppingItemCategory(item, catalogCategories);
     const existingGroup = groups.get(category.slug);
 
     if (existingGroup) {
@@ -1229,6 +1273,7 @@ function groupShoppingItemsByCategory(items: ShoppingItem[]) {
 }
 
 function ShoppingItemCard({
+  catalogCategories,
   isBusy,
   isMenuOpen,
   item,
@@ -1237,6 +1282,7 @@ function ShoppingItemCard({
   onMenuClick,
   onToggle,
 }: {
+  catalogCategories: ShoppingCatalogCategory[];
   isBusy: boolean;
   isMenuOpen: boolean;
   item: ShoppingItem;
@@ -1258,9 +1304,9 @@ function ShoppingItemCard({
       >
         <span className="shopping-list__content">
           <span className="shopping-list__label">{item.label}</span>
-          {formatShoppingItemMeta(item) ? (
+          {formatShoppingItemMeta(item, catalogCategories) ? (
             <span className="shopping-list__quantity">
-              {formatShoppingItemMeta(item)}
+              {formatShoppingItemMeta(item, catalogCategories)}
             </span>
           ) : null}
         </span>
@@ -1298,11 +1344,11 @@ function ShoppingItemCard({
   );
 }
 
-function formatShoppingItemMeta(item: ShoppingItem) {
+function formatShoppingItemMeta(item: ShoppingItem, catalogCategories: ShoppingCatalogCategory[]) {
   return [
     item.quantity,
     item.unit,
-    item.category ? getShoppingItemCategory(item).name : null,
+    item.category ? getShoppingItemCategory(item, catalogCategories).name : null,
     item.note,
   ]
     .filter(Boolean)

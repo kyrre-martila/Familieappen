@@ -230,6 +230,39 @@ model ShoppingListItem {
   @@map("shopping_list_items")
 }
 
+
+model ShoppingCatalogCategory {
+  id        String                @id @default(cuid())
+  name      String
+  slug      String                @unique
+  sortOrder Int
+  createdAt DateTime              @default(now())
+  updatedAt DateTime              @updatedAt
+  items     ShoppingCatalogItem[]
+
+  @@index([sortOrder])
+  @@map("shopping_catalog_categories")
+}
+
+model ShoppingCatalogItem {
+  id             String                  @id @default(cuid())
+  categoryId     String
+  name           String
+  normalizedName String                  @unique
+  aliases        String[]                @default([])
+  searchValues   String[]                @default([])
+  defaultUnit    String
+  suggestedQuantity Int
+  sortOrder      Int
+  createdAt      DateTime                @default(now())
+  updatedAt      DateTime                @updatedAt
+  category       ShoppingCatalogCategory @relation(fields: [categoryId], references: [id], onDelete: Cascade)
+
+  @@index([categoryId, sortOrder])
+  @@index([normalizedName])
+  @@map("shopping_catalog_items")
+}
+
 model MealPlan {
   id        String        @id @default(cuid())
   familyId  String        @unique

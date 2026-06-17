@@ -43,6 +43,24 @@ type LegacyWishlistItem = WishlistItem & {
   reserved?: boolean;
 };
 
+
+export interface ShoppingCatalogCategory {
+  id: string;
+  name: string;
+  slug: string;
+  sortOrder: number;
+  totalItemCount: number;
+}
+
+export interface ShoppingCatalogItem {
+  id: string;
+  name: string;
+  categorySlug: string;
+  aliases: string[];
+  defaultUnit: string;
+  suggestedQuantity: number;
+}
+
 export interface Wishlist {
   id: string;
   familyId: string;
@@ -618,6 +636,20 @@ export async function markPublicWishlistItemPurchased(token: string, itemId: str
     body: { reservedByName },
     includeAuth: false
   });
+}
+
+
+export async function getShoppingCatalogCategories(): Promise<ShoppingCatalogCategory[]> {
+  return apiRequest<ShoppingCatalogCategory[]>("/shopping/catalog/categories");
+}
+
+export async function getShoppingCatalogItems(): Promise<ShoppingCatalogItem[]> {
+  return apiRequest<ShoppingCatalogItem[]>("/shopping/catalog/items");
+}
+
+export async function searchShoppingCatalogItems(query: string): Promise<ShoppingCatalogItem[]> {
+  const params = new URLSearchParams({ q: query });
+  return apiRequest<ShoppingCatalogItem[]>(`/shopping/catalog/search?${params.toString()}`);
 }
 
 export async function getShoppingList(familyId: string): Promise<ShoppingList> {

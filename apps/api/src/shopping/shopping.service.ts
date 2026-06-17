@@ -1,9 +1,43 @@
 import { BadRequestException, Injectable, NotFoundException } from "@nestjs/common";
 import { FamilyAuthorizationService } from "../families";
 import { PrismaService } from "../prisma";
-import { AddShoppingItemRequestDto, ShoppingListDto, ShoppingListItemDto, UpdateShoppingItemRequestDto } from "./dto/shopping.dto";
+import { AddShoppingItemRequestDto, ShoppingCatalogCategoryDto, ShoppingCatalogItemDto, ShoppingListDto, ShoppingListItemDto, UpdateShoppingItemRequestDto } from "./dto/shopping.dto";
 
 const DEFAULT_SHOPPING_LIST_NAME = "Family Shopping";
+
+function normalizeShoppingSearchValue(value: string): string {
+  return value
+    .trim()
+    .toLocaleLowerCase("nb-NO")
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .replace(/æ/g, "ae")
+    .replace(/ø/g, "o")
+    .replace(/å/g, "a")
+    .replace(/[^a-z0-9]+/g, " ")
+    .replace(/\s+/g, " ")
+    .trim();
+}
+
+
+
+type ShoppingCatalogCategoryRecord = {
+  id: string;
+  name: string;
+  slug: string;
+  sortOrder: number;
+  _count?: { items: number };
+};
+
+type ShoppingCatalogItemRecord = {
+  id: string;
+  name: string;
+  aliases: string[];
+  defaultUnit: string;
+  suggestedQuantity: number;
+  category: { slug: string };
+  searchValues?: string[];
+};
 
 type ShoppingListRecord = {
   id: string;
@@ -35,6 +69,48 @@ export class ShoppingService {
     private readonly prisma: PrismaService,
     private readonly familyAuthorization: FamilyAuthorizationService
   ) {}
+
+
+  async getCatalogCategories(): Promise<ShoppingCatalogCategoryDto[]> {
+    const categories = await this.prisma.client.shoppingCatalogCategory.findMany({
+      orderBy: [{ sortOrder: "asc" }, { name: "asc" }],
+      include: { _count: { select: { items: true } } }
+    });
+
+    return (categories as ShoppingCatalogCategoryRecord[]).map((category) => ({
+      id: category.id,
+      name: category.name,
+      slug: category.slug,
+      sortOrder: category.sortOrder,
+      totalItemCount: category._count?.items ?? 0
+    }));
+  }
+
+  async getCatalogItems(): Promise<ShoppingCatalogItemDto[]> {
+    const items = await this.prisma.client.shoppingCatalogItem.findMany({
+      orderBy: [{ category: { sortOrder: "asc" } }, { sortOrder: "asc" }, { name: "asc" }],
+      include: { category: { select: { slug: true } } }
+    });
+
+    return (items as ShoppingCatalogItemRecord[]).map((item) => this.toShoppingCatalogItemDto(item));
+  }
+
+  async searchCatalog(query: string): Promise<ShoppingCatalogItemDto[]> {
+    const normalizedQuery = normalizeShoppingSearchValue(query);
+
+    if (normalizedQuery.length < 2) {
+      return [];
+    }
+
+    const items = await this.prisma.client.shoppingCatalogItem.findMany({
+      orderBy: [{ category: { sortOrder: "asc" } }, { sortOrder: "asc" }, { name: "asc" }],
+      include: { category: { select: { slug: true } } }
+    });
+
+    return (items as ShoppingCatalogItemRecord[])
+      .filter((item) => (item.searchValues ?? [item.name, ...item.aliases].map(normalizeShoppingSearchValue)).some((value) => value.includes(normalizedQuery)))
+      .map((item) => this.toShoppingCatalogItemDto(item));
+  }
 
   async getShoppingList(userId: string, familyId: string): Promise<ShoppingListDto> {
     await this.familyAuthorization.requireFamilyMember(userId, familyId);
@@ -211,6 +287,17 @@ export class ShoppingService {
     }
 
     return text.length === 0 ? null : text;
+  }
+
+  private toShoppingCatalogItemDto(item: ShoppingCatalogItemRecord): ShoppingCatalogItemDto {
+    return {
+      id: item.id,
+      name: item.name,
+      categorySlug: item.category.slug,
+      aliases: item.aliases,
+      defaultUnit: item.defaultUnit,
+      suggestedQuantity: item.suggestedQuantity
+    };
   }
 
   private toShoppingListDto(shoppingList: ShoppingListRecord & { items: ShoppingListItemRecord[] }): ShoppingListDto {

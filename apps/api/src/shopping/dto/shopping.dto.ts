@@ -32,3 +32,20 @@ export interface ShoppingListDto {
   updatedAt: string;
   items: ShoppingListItemDto[];
 }
+
+export interface ShoppingCatalogCategoryDto {
+  id: string;
+  name: string;
+  slug: string;
+  sortOrder: number;
+  totalItemCount: number;
+}
+
+export interface ShoppingCatalogItemDto {
+  id: string;
+  name: string;
+  categorySlug: string;
+  aliases: string[];
+  defaultUnit: string;
+  suggestedQuantity: number;
+}
