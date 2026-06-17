@@ -724,8 +724,8 @@ export class FamiliesService {
   }
 
   private async getOrCreateShoppingSummary(familyId: string): Promise<{ uncheckedCount: number; totalItems: number }> {
-    let shoppingList = await this.prisma.client.shoppingList.findUnique({
-      where: { familyId },
+    let shoppingList = await this.prisma.client.shoppingList.findFirst({
+      where: { familyId, isDefault: true },
       select: { id: true }
     });
 
@@ -733,7 +733,8 @@ export class FamiliesService {
       shoppingList = await this.prisma.client.shoppingList.create({
         data: {
           familyId,
-          name: "Family Shopping"
+          name: "Family Shopping",
+          isDefault: true
         },
         select: { id: true }
       });
