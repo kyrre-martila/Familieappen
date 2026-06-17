@@ -701,7 +701,7 @@ export default function ShoppingPage() {
 
                       return (
                         <CollapsibleShoppingSection
-                          badgeCount={isCategoryOpen ? categoryOption.totalItemCount : 0}
+                          badgeCount={categoryOption.totalItemCount}
                           controlsId={`shopping-catalog-category-${categoryOption.slug}`}
                           isOpen={isCategoryOpen}
                           key={categoryOption.slug}
