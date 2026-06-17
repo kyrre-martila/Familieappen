@@ -892,8 +892,8 @@ export default function ShoppingPage() {
                 />
               </label>
               <p className="shopping-create-list-sheet__notice">
-                Flere handlelister kommer senere. Du kan gjøre klar navnet nå,
-                men lagring er ikke tilgjengelig ennå.
+                Du kan skrive inn et navn som kladd, men lagring av nye
+                handlelister er ikke tilgjengelig ennå.
               </p>
             </div>
             <div className="calendar-filter-sheet__actions">
@@ -909,7 +909,7 @@ export default function ShoppingPage() {
                 disabled
                 type="button"
               >
-                Flere handlelister kommer senere.
+                Lagring er ikke tilgjengelig ennå.
               </button>
             </div>
           </form>

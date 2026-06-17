@@ -43,6 +43,13 @@ select {
   font: inherit;
 }
 
+input,
+textarea,
+select,
+[contenteditable="true"] {
+  font-size: var(--font-size-input);
+}
+
 .app-shell {
   min-height: 100vh;
   min-height: 100svh;
@@ -1101,13 +1108,6 @@ select {
   gap: var(--space-s);
 }
 
-.shopping-page__title {
-  margin: 0;
-  color: var(--color-text);
-  font-size: var(--text-title);
-  line-height: 1.05;
-  letter-spacing: -0.055em;
-}
 
 .shopping-page__description,
 .shopping-card__message,
@@ -2072,7 +2072,7 @@ select {
   outline: 0;
   background: transparent;
   color: #1f1f1f;
-  font-size: var(--label);
+  font-size: var(--font-size-input);
   font-weight: 500;
 }
 
@@ -2408,7 +2408,7 @@ select {
   background: transparent;
   color: #1f1f1f;
   cursor: pointer;
-  font-size: var(--label);
+  font-size: var(--font-size-input);
   font-weight: 700;
 }
 
@@ -7432,7 +7432,7 @@ button.calendar-chip {
   background: transparent;
   color: var(--color-text);
   font: inherit;
-  font-size: var(--text-small);
+  font-size: var(--font-size-input);
   font-weight: 760;
 }
 
@@ -8459,7 +8459,7 @@ button.calendar-chip {
   min-height: calc(var(--space-xl) * 1.35);
   resize: none;
   padding: var(--space-s);
-  font-size: var(--text-body);
+  font-size: var(--font-size-input);
   font-weight: 680;
   line-height: 1.4;
 }
@@ -9178,7 +9178,7 @@ button.calendar-chip {
   background: var(--color-background-soft);
   color: var(--color-text);
   font: inherit;
-  font-size: var(--text-body);
+  font-size: var(--font-size-input);
   font-weight: 780;
 }
 
@@ -10378,7 +10378,7 @@ button.calendar-chip {
   background: transparent;
   color: var(--color-text);
   font: inherit;
-  font-size: var(--text-body);
+  font-size: var(--font-size-input);
   outline: none;
 }
 
@@ -12427,7 +12427,7 @@ button.calendar-chip {
   padding: 0.95rem 1rem;
   background: var(--color-surface-warm);
   color: var(--color-text);
-  font-size: var(--text-body);
+  font-size: var(--font-size-input);
   font-weight: 650;
 }
 
@@ -12782,7 +12782,7 @@ button.family-settings-row:focus-visible:not(:disabled) {
   padding: 0.95rem 1rem;
   background: var(--color-surface-warm);
   color: var(--color-text);
-  font-size: var(--text-body);
+  font-size: var(--font-size-input);
   font-weight: 650;
 }
 
@@ -12933,7 +12933,7 @@ button.family-settings-row:focus-visible:not(:disabled) {
   background: var(--color-surface-warm);
   color: var(--color-text);
   font: inherit;
-  font-size: var(--text-body);
+  font-size: var(--font-size-input);
   font-weight: 650;
   line-height: 1.45;
 }
@@ -14653,7 +14653,7 @@ button.family-settings-row:focus-visible:not(:disabled) {
 .shopping-edit-sheet__content .husk-school-field input,
 .shopping-edit-sheet__content .husk-school-field textarea {
   min-height: calc(var(--space-xl) + var(--space-xs));
-  font-size: var(--text-label);
+  font-size: var(--font-size-input);
 }
 
 .shopping-edit-sheet__content .husk-school-field textarea {
