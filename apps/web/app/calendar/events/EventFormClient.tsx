@@ -333,7 +333,7 @@ export function CalendarEventFormClient({
                     className="event-form-icon-link__icon"
                     aria-hidden="true"
                   >
-                    <selectedIcon.Icon size={24} strokeWidth={2.5} />
+                    <selectedIcon.Icon size={20} strokeWidth={2.5} />
                   </span>
                   <span>{selectedIcon.label}</span>
                 </>
@@ -348,7 +348,7 @@ export function CalendarEventFormClient({
             aria-labelledby="event-participants-title"
           >
             <div className="event-form-section-heading">
-              <Users aria-hidden="true" size={24} />
+              <Users aria-hidden="true" size={20} />
               <div>
                 <h2 id="event-participants-title">Gjelder</h2>
                 <p>{participantSummary}</p>
@@ -376,7 +376,7 @@ export function CalendarEventFormClient({
                   aria-label={`Hele familien. ${draft.participantIds.length === 0 ? "Valgt" : "Ikke valgt"}`}
                 >
                   <span className="event-form-avatar-chip__avatar event-form-avatar-chip__avatar--family event-form-avatar-chip__avatar-wrap">
-                    <Users aria-hidden="true" size={22} />
+                    <Users aria-hidden="true" size={18} />
                     {draft.participantIds.length === 0 ? (
                       <span className="event-form-avatar-chip__check">
                         <Check size={14} strokeWidth={3.2} />
@@ -425,11 +425,11 @@ export function CalendarEventFormClient({
             aria-labelledby="event-date-title"
           >
             <div className="event-form-section-heading event-form-section-heading--compact calendar-event-form-sheet__section-heading">
-              <CalendarCheck aria-hidden="true" size={24} />
+              <CalendarCheck aria-hidden="true" size={20} />
               <h2 id="event-date-title">Dato og tid</h2>
             </div>
             <label className="event-form-row" htmlFor="event-date">
-              <CalendarCheck aria-hidden="true" size={24} />
+              <CalendarCheck aria-hidden="true" size={20} />
               <span>Dato</span>
               <input
                 id="event-date"
@@ -444,7 +444,7 @@ export function CalendarEventFormClient({
             {!draft.allDay ? (
               <div className="event-form-time-grid">
                 <label className="event-form-row" htmlFor="event-start-time">
-                  <Clock aria-hidden="true" size={24} />
+                  <Clock aria-hidden="true" size={20} />
                   <span>Starttid</span>
                   <input
                     id="event-start-time"
@@ -456,7 +456,7 @@ export function CalendarEventFormClient({
                   />
                 </label>
                 <label className="event-form-row" htmlFor="event-end-time">
-                  <Clock aria-hidden="true" size={24} />
+                  <Clock aria-hidden="true" size={20} />
                   <span>Sluttid</span>
                   <input
                     id="event-end-time"
@@ -473,7 +473,7 @@ export function CalendarEventFormClient({
               className="event-form-row event-form-row--toggle"
               htmlFor="event-all-day"
             >
-              <Clock aria-hidden="true" size={24} />
+              <Clock aria-hidden="true" size={20} />
               <span>Heldag</span>
               <input
                 id="event-all-day"
@@ -492,7 +492,7 @@ export function CalendarEventFormClient({
             aria-labelledby="event-repeat-title"
           >
             <div className="event-form-section-heading event-form-section-heading--compact">
-              <Repeat aria-hidden="true" size={24} />
+              <Repeat aria-hidden="true" size={20} />
               <h2 id="event-repeat-title">Gjentakelse</h2>
             </div>
             <div
@@ -522,7 +522,7 @@ export function CalendarEventFormClient({
             aria-labelledby="event-reminder-title"
           >
             <div className="event-form-section-heading event-form-section-heading--compact">
-              <Clock aria-hidden="true" size={24} />
+              <Clock aria-hidden="true" size={20} />
               <h2 id="event-reminder-title">Påminnelse</h2>
             </div>
             <div
@@ -552,7 +552,7 @@ export function CalendarEventFormClient({
             aria-labelledby="event-location-title"
           >
             <div className="event-form-section-heading event-form-section-heading--compact">
-              <MapPin aria-hidden="true" size={24} />
+              <MapPin aria-hidden="true" size={20} />
               <h2 id="event-location-title">Sted</h2>
             </div>
             <label className="sr-only" htmlFor="event-location">
@@ -574,7 +574,7 @@ export function CalendarEventFormClient({
             aria-labelledby="event-description-title"
           >
             <div className="event-form-section-heading event-form-section-heading--compact">
-              <FileText aria-hidden="true" size={24} />
+              <FileText aria-hidden="true" size={20} />
               <h2 id="event-description-title">Beskrivelse</h2>
             </div>
             <label className="sr-only" htmlFor="event-description">
@@ -588,7 +588,7 @@ export function CalendarEventFormClient({
                 updateDraft("description", changeEvent.target.value)
               }
               placeholder="Legg til beskrivelse, noter eller annen informasjon..."
-              rows={7}
+              rows={4}
             />
           </section>
           {mode === "edit" ? (

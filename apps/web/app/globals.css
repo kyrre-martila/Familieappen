@@ -14916,19 +14916,41 @@ button.family-settings-row:focus-visible:not(:disabled) {
 
 /* Calendar create/edit now reuses the Husk bottom-sheet and form primitives. */
 .calendar-event-form-sheet__panel {
-  max-height: min(92svh, 56rem);
+  max-height: min(90svh, 54rem);
 }
 
 .calendar-event-form-sheet__content {
-  padding-bottom: var(--space-l);
+  gap: var(--space-s);
+  padding-bottom: var(--space-m);
 }
 
 .calendar-event-form-sheet .event-form-card {
+  gap: var(--space-s);
+  padding: var(--space-s);
   box-shadow: none;
 }
 
+.calendar-event-form-sheet .event-form-card--rows {
+  gap: 0;
+  padding: 0;
+}
+
+.calendar-event-form-sheet .event-form-card--title {
+  align-items: center;
+}
+
+.calendar-event-form-sheet .event-form-label {
+  font-size: calc(var(--text-small) * 0.92);
+  font-weight: 780;
+  letter-spacing: 0.095em;
+}
+
 .calendar-event-form-sheet .event-form-title-input {
-  font-size: clamp(1.65rem, 7vw, 2.35rem);
+  margin-top: calc(var(--space-xs) * 0.6);
+  padding: calc(var(--space-xs) * 0.6) 0 var(--space-xs);
+  font-size: clamp(1.28rem, 5.5vw, 1.78rem);
+  font-weight: 780;
+  letter-spacing: -0.045em;
 }
 
 .calendar-event-form-sheet .event-form-icon-link,
@@ -14937,8 +14959,101 @@ button.family-settings-row:focus-visible:not(:disabled) {
   background: var(--color-background-soft);
 }
 
+.calendar-event-form-sheet .event-form-icon-link {
+  min-height: 2.45rem;
+  gap: calc(var(--space-xs) * 0.75);
+  padding: calc(var(--space-xs) * 0.8) var(--space-s);
+  font-size: var(--text-small);
+  font-weight: 780;
+}
+
+.calendar-event-form-sheet .event-form-icon-link__icon {
+  width: 1.85rem;
+}
+
+.calendar-event-form-sheet .event-form-section-heading {
+  gap: calc(var(--space-xs) * 0.9);
+}
+
+.calendar-event-form-sheet .event-form-section-heading h2 {
+  font-size: var(--text-body);
+  font-weight: 780;
+  letter-spacing: -0.025em;
+}
+
+.calendar-event-form-sheet .event-form-section-heading p {
+  font-size: var(--text-small);
+  font-weight: 650;
+  line-height: 1.25;
+}
+
 .calendar-event-form-sheet__section-heading {
-  padding: var(--space-m) 0 var(--space-xs);
+  padding: var(--space-s) var(--space-s) calc(var(--space-xs) * 0.75);
+}
+
+.calendar-event-form-sheet .event-form-avatar-list {
+  gap: calc(var(--space-xs) * 0.75);
+}
+
+.calendar-event-form-sheet .event-form-avatar-chip {
+  min-width: 0;
+  gap: calc(var(--space-xs) * 0.55);
+  border-radius: calc(var(--radius-m) - 0.2rem);
+  padding: calc(var(--space-xs) * 0.75);
+  font-size: calc(var(--text-small) * 0.92);
+  font-weight: 700;
+  line-height: 1.15;
+}
+
+.calendar-event-form-sheet .event-form-avatar-chip__avatar {
+  width: clamp(2.35rem, 10vw, 2.9rem);
+}
+
+.calendar-event-form-sheet .event-form-avatar-chip__check {
+  right: -0.1rem;
+  bottom: -0.1rem;
+  width: 1.05rem;
+  border-width: 1.5px;
+}
+
+.calendar-event-form-sheet .event-form-row {
+  min-height: 2.95rem;
+  gap: calc(var(--space-xs) * 0.9);
+  padding: var(--space-xs) var(--space-s);
+}
+
+.calendar-event-form-sheet .event-form-row span {
+  font-size: var(--text-small);
+  font-weight: 740;
+}
+
+.calendar-event-form-sheet .event-form-row input:not(.event-form-toggle),
+.calendar-event-form-sheet .event-form-row select,
+.calendar-event-form-sheet .event-form-option {
+  font-size: var(--text-small);
+  font-weight: 690;
+}
+
+.calendar-event-form-sheet .event-form-options {
+  gap: calc(var(--space-xs) * 0.35);
+  padding: calc(var(--space-xs) * 0.75) var(--space-s) var(--space-xs);
+}
+
+.calendar-event-form-sheet .event-form-option {
+  min-height: 2.15rem;
+  gap: calc(var(--space-xs) * 0.9);
+}
+
+.calendar-event-form-sheet .event-form-text-input,
+.calendar-event-form-sheet .event-form-textarea {
+  padding: var(--space-s);
+  font-size: var(--text-small);
+  font-weight: 650;
+}
+
+.calendar-event-form-sheet .event-form-textarea {
+  min-height: 7.5rem;
+  line-height: 1.45;
 }
 
 .event-form-avatar-chip__avatar-wrap {
