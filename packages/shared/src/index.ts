@@ -342,6 +342,7 @@ export interface WishlistSummary {
 export interface ShoppingListItem {
   id: string;
   shoppingListId: string;
+  familyCustomShoppingItemId: string | null;
   label: string;
   quantity: string | null;
   unit: string | null;

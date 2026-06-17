@@ -61,6 +61,12 @@ export interface ShoppingCatalogItem {
   defaultUnit: string;
   suggestedQuantity: number;
   isCustom?: boolean;
+  categoryLabel?: string;
+}
+
+export interface AddShoppingItemResponse {
+  item: ShoppingListItem;
+  catalogItem: ShoppingCatalogItem | null;
 }
 
 export interface Wishlist {
@@ -693,11 +699,11 @@ export async function inviteToShoppingList(familyId: string, listId: string, ema
 
 export async function addShoppingItem(
   familyId: string,
-  input: { label: string; quantity?: string; unit?: string; note?: string; category?: string },
+  input: { label: string; quantity?: string; unit?: string; note?: string; category?: string; createCustom?: boolean; customItemId?: string },
   listId?: string
-): Promise<ShoppingListItem> {
+): Promise<AddShoppingItemResponse> {
   const suffix = listId ? `?${new URLSearchParams({ listId }).toString()}` : "";
-  return apiRequest<ShoppingListItem>(`/shopping/items${suffix}`, {
+  return apiRequest<AddShoppingItemResponse>(`/shopping/items${suffix}`, {
     method: "POST",
     body: input,
     familyId

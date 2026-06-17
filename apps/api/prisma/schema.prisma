@@ -275,16 +275,19 @@ model ShoppingListItem {
   checked          Boolean      @default(false)
   createdByUserId  String?
   checkedByUserId  String?
+  familyCustomShoppingItemId String? @map("family_custom_shopping_item_id")
   checkedAt        DateTime?
   createdAt        DateTime     @default(now())
   updatedAt        DateTime     @updatedAt
   shoppingList     ShoppingList @relation(fields: [shoppingListId], references: [id], onDelete: Cascade)
   createdByUser    User?        @relation("ShoppingItemCreatedBy", fields: [createdByUserId], references: [id], onDelete: SetNull)
   checkedByUser    User?        @relation("ShoppingItemCheckedBy", fields: [checkedByUserId], references: [id], onDelete: SetNull)
+  familyCustomShoppingItem FamilyCustomShoppingItem? @relation(fields: [familyCustomShoppingItemId], references: [id], onDelete: SetNull)
 
   @@index([shoppingListId])
   @@index([createdByUserId])
   @@index([checkedByUserId])
+  @@index([familyCustomShoppingItemId])
   @@map("shopping_list_items")
 }
 
@@ -305,6 +308,7 @@ model FamilyCustomShoppingItem {
   updatedAt         DateTime  @updatedAt @map("updated_at")
   family            Family    @relation(fields: [familyId], references: [id], onDelete: Cascade)
   createdByUser     User?     @relation("FamilyCustomShoppingItemCreatedBy", fields: [createdByUserId], references: [id], onDelete: SetNull)
+  shoppingListItems ShoppingListItem[]
 
   @@unique([familyId, normalizedName])
   @@index([familyId, categorySlug, deletedAt])
