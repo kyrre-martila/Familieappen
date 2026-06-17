@@ -265,7 +265,9 @@ export default function ShoppingPage() {
       !editingItemId &&
       isShoppingLabelInList(nextLabel, shoppingList?.items ?? [], catalogItems)
     ) {
-      setMessage("Varen ligger allerede i handlelisten.");
+      const duplicateListMessage = "Varen ligger allerede i handlelisten.";
+      setMessage(duplicateListMessage);
+      setItemSheetError(duplicateListMessage);
       return;
     }
 
@@ -310,17 +312,17 @@ export default function ShoppingPage() {
       setNote("");
       setCategory(DEFAULT_CUSTOM_CATEGORY_SLUG);
       setIsNewSheetOpen(false);
-    setItemSheetError("");
+      setItemSheetError("");
       setEditingItemId(null);
       setStatus("ready");
     } catch (error) {
       if (currentSaveAttemptRef.current === saveAttempt) {
-        handleActionError(
-          error,
-          editingItemId
-            ? "Kunne ikke lagre varen. Prøv igjen."
-            : "Kunne ikke legge til varen. Prøv igjen.",
-        );
+        const fallbackMessage = editingItemId
+          ? "Kunne ikke lagre varen. Prøv igjen."
+          : "Kunne ikke legge til varen. Prøv igjen.";
+        const userMessage = getUserFacingApiMessage(error, fallbackMessage);
+        handleActionError(error, fallbackMessage);
+        setItemSheetError(userMessage);
       }
     } finally {
       setIsAdding(false);
@@ -1315,7 +1317,7 @@ function CatalogItemGrid({
       {items.map((item) => {
         const alreadyAdded = isCatalogItemInList(item, shoppingItems);
         return (
-          <div className="shopping-catalog-item-shell" key={`${item.categorySlug}-${item.name}`}>
+          <div className={item.isCustom ? "shopping-catalog-item-shell shopping-catalog-item-shell--custom" : "shopping-catalog-item-shell"} key={`${item.categorySlug}-${item.name}`}>
             <button
               className="shopping-catalog-item"
               disabled={alreadyAdded}
@@ -1329,7 +1331,7 @@ function CatalogItemGrid({
               </span>
             </button>
             {item.isCustom ? (
-              <div className="shopping-item-card__menu">
+              <div className="shopping-catalog-item__menu-wrap">
                 <button className="shopping-item-card__menu-button" type="button" aria-label={`Meny for ${item.name}`} onClick={(event) => onMenuClick(event, item.id)}>
                   <MoreHorizontal aria-hidden="true" size={18} strokeWidth={2.5} />
                 </button>
