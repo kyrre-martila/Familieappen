@@ -93,6 +93,9 @@ export interface ShoppingCatalogItem {
   suggestedQuantity: number;
 }
 
+// TODO(shopping-catalog): Treat this catalog as database seed/source data only.
+// Frontend runtime catalog reads should move to DB-backed API endpoints when the
+// backend catalog model is introduced.
 export const SHOPPING_CATALOG: ShoppingCatalogItem[] = [
 {
   name: "Açaí-bær",
