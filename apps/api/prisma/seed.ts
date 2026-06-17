@@ -5,7 +5,7 @@ import {
   SHOPPING_CATALOG,
   SHOPPING_CATEGORIES,
   normalizeShoppingSearchValue,
-} from "@familieappen/shared";
+} from "@familieappen/shared/shopping-catalog";
 
 config();
 
