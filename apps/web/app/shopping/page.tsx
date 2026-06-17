@@ -41,6 +41,7 @@ import {
   ShoppingList,
   addShoppingItem,
   createShoppingList,
+  deleteFamilyCustomShoppingItem,
   deleteShoppingItem,
   getShoppingCatalogCategories,
   getShoppingCatalogItems,
@@ -52,6 +53,7 @@ import {
   revokeShoppingListInvitation,
   toggleShoppingItem,
   searchShoppingCatalogItems,
+  updateFamilyCustomShoppingItem,
   updateShoppingItem,
 } from "../../lib/api";
 import {
@@ -122,6 +124,7 @@ export default function ShoppingPage() {
   const [openCatalogCategories, setOpenCatalogCategories] = useState<Record<string, boolean>>({});
   const [pendingItemId, setPendingItemId] = useState<string | null>(null);
   const [isAdding, setIsAdding] = useState(false);
+  const [itemSheetError, setItemSheetError] = useState("");
 
   const familyAccess = useFamilyAccess();
   const approvedFamilyContext =
@@ -170,7 +173,7 @@ export default function ShoppingPage() {
             ? catalogItems.filter((item) => item.categorySlug === categoryOption.slug)
             : [],
         }))
-        .filter((categoryOption) => categoryOption.totalItemCount > 0),
+        .filter((categoryOption) => categoryOption.slug === DEFAULT_CUSTOM_CATEGORY_SLUG || categoryOption.totalItemCount > 0),
     [catalogCategories, catalogItems, openCatalogCategories],
   );
 
@@ -183,7 +186,7 @@ export default function ShoppingPage() {
     }
 
     const timeout = window.setTimeout(() => {
-      void searchShoppingCatalogItems(label).then((items) => {
+      void searchShoppingCatalogItems(label, activeFamilyId ?? undefined).then((items) => {
         if (!isCancelled) {
           setCatalogSearchResults(items);
         }
@@ -198,7 +201,7 @@ export default function ShoppingPage() {
       isCancelled = true;
       window.clearTimeout(timeout);
     };
-  }, [isSearchingCatalog, label]);
+  }, [activeFamilyId, isSearchingCatalog, label]);
 
   async function loadShoppingList(familyId = activeFamilyId, listId = activeShoppingListId ?? undefined) {
     if (!familyId) {
@@ -214,13 +217,13 @@ export default function ShoppingPage() {
       const [nextShoppingLists, nextShoppingList, nextCatalogCategories, nextCatalogItems] = await Promise.all([
         getShoppingLists(familyId),
         getShoppingList(familyId, listId),
-        getShoppingCatalogCategories(),
-        getShoppingCatalogItems(),
+        getShoppingCatalogCategories(familyId),
+        getShoppingCatalogItems(familyId),
       ]);
       setShoppingLists(nextShoppingLists);
       setShoppingList(nextShoppingList);
       setActiveShoppingListId(nextShoppingList.id);
-      setCatalogCategories(nextCatalogCategories.length > 0 ? nextCatalogCategories : FALLBACK_SHOPPING_CATEGORIES);
+      setCatalogCategories(getCategoryOptions(nextCatalogCategories.length > 0 ? nextCatalogCategories : FALLBACK_SHOPPING_CATEGORIES));
       setCatalogItems(nextCatalogItems);
       setOpenCatalogCategories((currentCategories) => ({
         ...Object.fromEntries((nextCatalogCategories.length > 0 ? nextCatalogCategories : FALLBACK_SHOPPING_CATEGORIES).map((categoryOption) => [categoryOption.slug, false])),
@@ -248,6 +251,7 @@ export default function ShoppingPage() {
     const nextUnit = unit.trim() || DEFAULT_SHOPPING_UNIT;
     const nextNote = note.trim();
     const nextCategory = getShoppingCategorySubmissionValue(category, catalogCategories);
+    setItemSheetError("");
 
     if (!activeFamilyId || nextLabel.length === 0 || isAdding) {
       return;
@@ -272,19 +276,27 @@ export default function ShoppingPage() {
         ...(nextNote ? { note: nextNote } : {}),
         ...(nextCategory ? { category: nextCategory } : {}),
       };
-      const item = editingItemId
-        ? await updateShoppingItem(activeFamilyId, editingItemId, input, shoppingList?.id)
-        : await addShoppingItem(activeFamilyId, input, shoppingList?.id);
+      const customEditId = editingItemId?.startsWith("custom:") ? editingItemId.slice("custom:".length) : null;
+      const item = customEditId
+        ? null
+        : editingItemId
+          ? await updateShoppingItem(activeFamilyId, editingItemId, input, shoppingList?.id)
+          : await addShoppingItem(activeFamilyId, input, shoppingList?.id);
+      if (customEditId) {
+        const updatedCustomItem = await updateFamilyCustomShoppingItem(activeFamilyId, customEditId, { name: nextLabel, defaultUnit: nextUnit, suggestedQuantity: nextQuantity || 1, categorySlug: nextCategory });
+        setCatalogItems((items) => items.map((catalogItem) => catalogItem.id === updatedCustomItem.id ? updatedCustomItem : catalogItem));
+        await loadShoppingList(activeFamilyId, shoppingList?.id);
+      }
       setShoppingList((currentList) =>
         currentList
           ? {
               ...currentList,
-              items: (editingItemId
+              items: item ? (editingItemId
                 ? currentList.items.map((currentItem) =>
                     currentItem.id === item.id ? item : currentItem,
                   )
                 : [...currentList.items, item]
-              ).sort(sortShoppingItems),
+              ).sort(sortShoppingItems) : currentList.items,
             }
           : currentList,
       );
@@ -294,6 +306,7 @@ export default function ShoppingPage() {
       setNote("");
       setCategory(DEFAULT_CUSTOM_CATEGORY_SLUG);
       setIsNewSheetOpen(false);
+    setItemSheetError("");
       setEditingItemId(null);
       setStatus("ready");
     } catch (error) {
@@ -424,6 +437,7 @@ export default function ShoppingPage() {
     setUnit(DEFAULT_SHOPPING_UNIT);
     setNote("");
     setCategory(DEFAULT_CUSTOM_CATEGORY_SLUG);
+    setItemSheetError("");
     setIsNewSheetOpen(true);
   }
 
@@ -440,6 +454,7 @@ export default function ShoppingPage() {
     setUnit(DEFAULT_SHOPPING_UNIT);
     setNote("");
     setCategory(DEFAULT_CUSTOM_CATEGORY_SLUG);
+    setItemSheetError("");
     setIsNewSheetOpen(true);
   }
 
@@ -480,6 +495,34 @@ export default function ShoppingPage() {
     );
   }
 
+
+  async function handleEditCustomCatalogItem(item: ShoppingCatalogItem) {
+    setEditingItemId(`custom:${item.id}`);
+    setLabel(item.name);
+    setQuantity(String(item.suggestedQuantity));
+    setUnit(item.defaultUnit && SHOPPING_UNIT_OPTIONS.includes(item.defaultUnit) ? item.defaultUnit : DEFAULT_SHOPPING_UNIT);
+    setNote("");
+    setCategory(getShoppingCategorySubmissionValue(item.categorySlug, catalogCategories));
+    setOpenMenuItemId(null);
+    setItemSheetError("");
+    setIsNewSheetOpen(true);
+  }
+
+  async function handleDeleteCustomCatalogItem(itemId: string) {
+    if (!activeFamilyId || pendingItemId) return;
+    setPendingItemId(itemId);
+    setMessage("");
+    try {
+      await deleteFamilyCustomShoppingItem(activeFamilyId, itemId);
+      setCatalogItems((items) => items.filter((item) => item.id !== itemId));
+      setCatalogCategories((categories) => categories.map((cat) => cat.slug === DEFAULT_CUSTOM_CATEGORY_SLUG ? { ...cat, totalItemCount: Math.max(0, cat.totalItemCount - 1) } : cat));
+      setOpenMenuItemId(null);
+    } catch (error) {
+      handleActionError(error, "Kunne ikke slette egen vare. Prøv igjen.");
+    } finally {
+      setPendingItemId(null);
+    }
+  }
 
   async function handleSelectShoppingList(listId: string) {
     if (!activeFamilyId || listId === shoppingList?.id) {
@@ -627,7 +670,9 @@ export default function ShoppingPage() {
       return;
     }
 
-    setMessage(getUserFacingApiMessage(error, fallbackMessage));
+    const userMessage = getUserFacingApiMessage(error, fallbackMessage);
+    setMessage(userMessage);
+    if (isNewSheetOpen) setItemSheetError(userMessage);
   }
 
   if (familyAccess.status === "pending") {
@@ -825,6 +870,10 @@ export default function ShoppingPage() {
                     items={catalogSearchResults}
                     shoppingItems={shoppingList.items}
                     onAddItem={addItemFromCatalog}
+                    openMenuItemId={openMenuItemId}
+                    onMenuClick={handleMenuClick}
+                    onEditCustomItem={handleEditCustomCatalogItem}
+                    onDeleteCustomItem={handleDeleteCustomCatalogItem}
                   />
                 ) : (
                   <div className="shopping-catalog-categories">
@@ -850,6 +899,10 @@ export default function ShoppingPage() {
                               items={categoryOption.items}
                               shoppingItems={shoppingList.items}
                               onAddItem={addItemFromCatalog}
+                              openMenuItemId={openMenuItemId}
+                              onMenuClick={handleMenuClick}
+                              onEditCustomItem={handleEditCustomCatalogItem}
+                              onDeleteCustomItem={handleDeleteCustomCatalogItem}
                             />
                           </div>
                         </CollapsibleShoppingSection>
@@ -897,6 +950,7 @@ export default function ShoppingPage() {
               </button>
             </div>
             <div className="calendar-filter-sheet__content shopping-edit-sheet__content">
+              {itemSheetError ? <p className="shopping-create-list-sheet__error" role="alert">{itemSheetError}</p> : null}
               <label className="husk-school-field">
                 <span>Navn</span>
                 <input
@@ -1198,42 +1252,24 @@ function RecentItemGrid({
   pendingItemId: string | null;
   shoppingItems: ShoppingItem[];
 }) {
-  if (items.length === 0) {
-    return null;
-  }
-
+  if (items.length === 0) return null;
   return (
     <div className="shopping-catalog-grid">
       {items.map((item) => {
         const activeItem = findMatchingShoppingItem(item, shoppingItems, false);
-        const completedItem = findMatchingShoppingItem(
-          item,
-          shoppingItems,
-          true,
-        );
-        const isBusy = completedItem
-          ? pendingItemId === completedItem.id
-          : false;
-
+        const completedItem = findMatchingShoppingItem(item, shoppingItems, true);
+        const isBusy = completedItem ? pendingItemId === completedItem.id : false;
         return (
           <button
             className="shopping-catalog-item"
             disabled={Boolean(activeItem) || isBusy}
             key={`recent-${item.categorySlug}-${item.name}`}
             type="button"
-            onClick={() => {
-              if (completedItem) {
-                onRestoreItem(completedItem.id);
-                return;
-              }
-
-              onAddCatalogItem(item);
-            }}
+            onClick={() => completedItem ? onRestoreItem(completedItem.id) : onAddCatalogItem(item)}
           >
             <span className="shopping-catalog-item__name">{item.name}</span>
             <span className="shopping-catalog-item__meta">
-              {item.suggestedQuantity} {item.defaultUnit} ·{" "}
-              {getShoppingCategoryName(item.categorySlug, catalogCategories)}
+              {item.suggestedQuantity} {item.defaultUnit} · {getShoppingCategoryName(item.categorySlug, catalogCategories)}
               {activeItem ? " · I listen" : ""}
             </span>
           </button>
@@ -1246,34 +1282,53 @@ function RecentItemGrid({
 function CatalogItemGrid({
   items,
   onAddItem,
+  onDeleteCustomItem,
+  onEditCustomItem,
+  onMenuClick,
+  openMenuItemId,
   shoppingItems,
 }: {
   items: ShoppingCatalogItem[];
   onAddItem: (item: ShoppingCatalogItem) => void;
+  onDeleteCustomItem: (itemId: string) => void;
+  onEditCustomItem: (item: ShoppingCatalogItem) => void;
+  onMenuClick: (event: MouseEvent<HTMLButtonElement>, itemId: string) => void;
+  openMenuItemId: string | null;
   shoppingItems: ShoppingItem[];
 }) {
-  if (items.length === 0) {
-    return null;
-  }
-
+  if (items.length === 0) return null;
   return (
     <div className="shopping-catalog-grid">
       {items.map((item) => {
         const alreadyAdded = isCatalogItemInList(item, shoppingItems);
         return (
-          <button
-            className="shopping-catalog-item"
-            disabled={alreadyAdded}
-            key={`${item.categorySlug}-${item.name}`}
-            type="button"
-            onClick={() => onAddItem(item)}
-          >
-            <span className="shopping-catalog-item__name">{item.name}</span>
-            <span className="shopping-catalog-item__meta">
-              {item.suggestedQuantity} {item.defaultUnit}
-              {alreadyAdded ? " · I listen" : ""}
-            </span>
-          </button>
+          <div className="shopping-catalog-item-shell" key={`${item.categorySlug}-${item.name}`}>
+            <button
+              className="shopping-catalog-item"
+              disabled={alreadyAdded}
+              type="button"
+              onClick={() => onAddItem(item)}
+            >
+              <span className="shopping-catalog-item__name">{item.name}</span>
+              <span className="shopping-catalog-item__meta">
+                {item.suggestedQuantity} {item.defaultUnit}
+                {alreadyAdded ? " · I listen" : ""}
+              </span>
+            </button>
+            {item.isCustom ? (
+              <div className="shopping-item-card__menu">
+                <button className="shopping-item-card__menu-button" type="button" aria-label={`Meny for ${item.name}`} onClick={(event) => onMenuClick(event, item.id)}>
+                  <MoreHorizontal aria-hidden="true" size={18} strokeWidth={2.5} />
+                </button>
+                {openMenuItemId === item.id ? (
+                  <div className="shopping-item-card__menu-popover">
+                    <button type="button" onClick={() => onEditCustomItem(item)}>Rediger</button>
+                    <button type="button" onClick={() => onDeleteCustomItem(item.id)}>Slett</button>
+                  </div>
+                ) : null}
+              </div>
+            ) : null}
+          </div>
         );
       })}
     </div>

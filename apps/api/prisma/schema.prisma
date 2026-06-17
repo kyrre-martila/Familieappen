@@ -60,6 +60,7 @@ model User {
   updatedAt    DateTime       @updatedAt
   memberships  FamilyMember[]
   createdShoppingItems ShoppingListItem[] @relation("ShoppingItemCreatedBy")
+  createdCustomShoppingItems FamilyCustomShoppingItem[] @relation("FamilyCustomShoppingItemCreatedBy")
   checkedShoppingItems ShoppingListItem[] @relation("ShoppingItemCheckedBy")
   ownedShoppingLists ShoppingList[] @relation("ShoppingListOwnerUser")
   shoppingListAccesses ShoppingListAccess[]
@@ -78,6 +79,7 @@ model User {
   receivedFamilyInvitations FamilyInvitation[] @relation("FamilyInvitationInvitedUser")
   notificationPreferences NotificationPreference?
   feedbackSubmissions FeedbackSubmission[]
+  customShoppingItems FamilyCustomShoppingItem[]
   sessions UserSession[]
   passwordResetTokens PasswordResetToken[]
 
@@ -175,6 +177,7 @@ model Family {
   familyInvitations FamilyInvitation[]
   schoolWeekReminders SchoolWeekReminder[]
   feedbackSubmissions FeedbackSubmission[]
+  customShoppingItems FamilyCustomShoppingItem[]
 
   @@map("families")
 }
@@ -286,6 +289,29 @@ model ShoppingListItem {
   @@map("shopping_list_items")
 }
 
+
+
+model FamilyCustomShoppingItem {
+  id                String    @id @default(cuid())
+  familyId          String    @map("family_id")
+  name              String
+  normalizedName    String    @map("normalized_name")
+  defaultUnit       String    @default("stk") @map("default_unit")
+  suggestedQuantity Int       @default(1) @map("suggested_quantity")
+  categorySlug      String    @default("egne-varer") @map("category_slug")
+  iconKey           String?   @map("icon_key")
+  createdByUserId   String?   @map("created_by_user_id")
+  deletedAt         DateTime? @map("deleted_at")
+  createdAt         DateTime  @default(now()) @map("created_at")
+  updatedAt         DateTime  @updatedAt @map("updated_at")
+  family            Family    @relation(fields: [familyId], references: [id], onDelete: Cascade)
+  createdByUser     User?     @relation("FamilyCustomShoppingItemCreatedBy", fields: [createdByUserId], references: [id], onDelete: SetNull)
+
+  @@unique([familyId, normalizedName])
+  @@index([familyId, categorySlug, deletedAt])
+  @@index([createdByUserId])
+  @@map("family_custom_shopping_items")
+}
 
 model ShoppingCatalogCategory {
   id        String                @id @default(cuid())

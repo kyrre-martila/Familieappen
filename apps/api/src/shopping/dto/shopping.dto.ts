@@ -11,4 +11,5 @@ export interface ShoppingListSummaryDto { id: string; familyId: string; name: st
 export interface ShoppingListItemDto { id: string; shoppingListId: string; label: string; quantity: string | null; unit: string | null; note: string | null; category: string | null; checked: boolean; createdByUserId: string | null; checkedByUserId: string | null; checkedAt: string | null; createdAt: string; updatedAt: string; }
 export interface ShoppingListDto extends ShoppingListSummaryDto { items: ShoppingListItemDto[]; }
 export interface ShoppingCatalogCategoryDto { id: string; name: string; slug: string; sortOrder: number; totalItemCount: number; }
-export interface ShoppingCatalogItemDto { id: string; name: string; categorySlug: string; aliases: string[]; defaultUnit: string; suggestedQuantity: number; }
+export interface ShoppingCatalogItemDto { id: string; name: string; categorySlug: string; aliases: string[]; defaultUnit: string; suggestedQuantity: number; isCustom?: boolean; }
+export interface UpdateFamilyCustomShoppingItemRequestDto { name?: unknown; defaultUnit?: unknown; suggestedQuantity?: unknown; categorySlug?: unknown; iconKey?: unknown; }
