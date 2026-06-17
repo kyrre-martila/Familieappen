@@ -16,7 +16,7 @@
     "test:config": "ts-node --project tsconfig.json test/app-config.test.ts",
     "test:security": "ts-node --project tsconfig.test.json test/security-harness.test.ts",
     "test:contracts": "ts-node --project tsconfig.test.json test/api-contracts.test.ts",
-    "prisma:seed": "prisma db seed"
+    "prisma:seed": "pnpm --filter @familieappen/shared build && prisma db seed"
   },
   "dependencies": {
     "@nestjs/common": "^11.1.6",

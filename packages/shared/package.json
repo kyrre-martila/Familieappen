@@ -9,10 +9,15 @@
     ".": {
       "types": "./src/index.ts",
       "import": "./src/index.ts"
+    },
+    "./shopping-catalog": {
+      "types": "./src/shopping/shopping-catalog.ts",
+      "import": "./src/shopping/shopping-catalog.ts",
+      "require": "./dist-cjs/shopping/shopping-catalog.js"
     }
   },
   "scripts": {
-    "build": "tsc -p tsconfig.json",
+    "build": "tsc -p tsconfig.json && tsc -p tsconfig.cjs.json && node scripts/write-cjs-package.cjs",
     "typecheck": "tsc -p tsconfig.json --noEmit"
   },
   "devDependencies": {

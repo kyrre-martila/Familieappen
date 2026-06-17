@@ -12,8 +12,15 @@
     "ignoreDeprecations": "5.0",
     "baseUrl": ".",
     "paths": {
-      "@familieappen/shared": ["packages/shared/src/index.ts"],
-      "@familieappen/ui": ["packages/ui/src/index.ts"]
+      "@familieappen/shared": [
+        "packages/shared/src/index.ts"
+      ],
+      "@familieappen/ui": [
+        "packages/ui/src/index.ts"
+      ],
+      "@familieappen/shared/shopping-catalog": [
+        "packages/shared/src/shopping/shopping-catalog.ts"
+      ]
     }
   }
 }
