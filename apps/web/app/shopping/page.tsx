@@ -47,6 +47,9 @@ import {
   getShoppingList,
   getShoppingLists,
   inviteToShoppingList,
+  leaveShoppingList,
+  removeShoppingListCollaborator,
+  revokeShoppingListInvitation,
   toggleShoppingItem,
   searchShoppingCatalogItems,
   updateShoppingItem,
@@ -67,6 +70,23 @@ type ShoppingStatus =
   | "no-family"
   | "error";
 
+const DEFAULT_SHOPPING_UNIT = "stk";
+const DEFAULT_CUSTOM_CATEGORY_SLUG = "egne-varer";
+const SHOPPING_UNIT_OPTIONS = ["stk", "pk", "kg", "g", "l", "dl", "cl", "ml", "boks", "pose", "flaske", "beger", "glass", "tube"];
+const FALLBACK_SHOPPING_CATEGORIES: ShoppingCatalogCategory[] = [
+  { id: "fallback-frukt-og-gront", name: "Frukt og grønt", slug: "frukt-og-gront", sortOrder: 10, totalItemCount: 0 },
+  { id: "fallback-brod-og-bakevarer", name: "Brød og bakevarer", slug: "brod-og-bakevarer", sortOrder: 20, totalItemCount: 0 },
+  { id: "fallback-kjott-og-fisk", name: "Kjøtt og fisk", slug: "kjott-og-fisk", sortOrder: 30, totalItemCount: 0 },
+  { id: "fallback-meieri", name: "Meieri", slug: "meieri", sortOrder: 40, totalItemCount: 0 },
+  { id: "fallback-drikke", name: "Drikke", slug: "drikke", sortOrder: 50, totalItemCount: 0 },
+  { id: "fallback-frysevarer", name: "Frysevarer", slug: "frysevarer", sortOrder: 60, totalItemCount: 0 },
+  { id: "fallback-snacks", name: "Snacks", slug: "snacks", sortOrder: 70, totalItemCount: 0 },
+  { id: "fallback-hygiene", name: "Hygiene", slug: "hygiene", sortOrder: 80, totalItemCount: 0 },
+  { id: "fallback-vask-og-rengjoring", name: "Vask og rengjøring", slug: "vask-og-rengjoring", sortOrder: 90, totalItemCount: 0 },
+  { id: "fallback-dyremat", name: "Dyremat", slug: "dyremat", sortOrder: 100, totalItemCount: 0 },
+  { id: "fallback-egne-varer", name: "Egne varer", slug: DEFAULT_CUSTOM_CATEGORY_SLUG, sortOrder: 999, totalItemCount: 0 },
+];
+
 export default function ShoppingPage() {
   const router = useRouter();
   const [shoppingList, setShoppingList] = useState<ShoppingList | null>(null);
@@ -79,9 +99,9 @@ export default function ShoppingPage() {
   const [message, setMessage] = useState("Laster handleliste …");
   const [label, setLabel] = useState("");
   const [quantity, setQuantity] = useState("");
-  const [unit, setUnit] = useState("");
+  const [unit, setUnit] = useState("stk");
   const [note, setNote] = useState("");
-  const [category, setCategory] = useState("");
+  const [category, setCategory] = useState("egne-varer");
   const [editingItemId, setEditingItemId] = useState<string | null>(null);
   const [openMenuItemId, setOpenMenuItemId] = useState<string | null>(null);
   const [isNewSheetOpen, setIsNewSheetOpen] = useState(false);
@@ -93,6 +113,8 @@ export default function ShoppingPage() {
   const [isShareSheetOpen, setIsShareSheetOpen] = useState(false);
   const [inviteEmail, setInviteEmail] = useState("");
   const [isSharing, setIsSharing] = useState(false);
+  const [shareError, setShareError] = useState("");
+  const [sharePendingId, setSharePendingId] = useState<string | null>(null);
   const [isRecentItemsOpen, setIsRecentItemsOpen] = useState(false);
   const [catalogCategories, setCatalogCategories] = useState<ShoppingCatalogCategory[]>([]);
   const [catalogItems, setCatalogItems] = useState<ShoppingCatalogItem[]>([]);
@@ -198,10 +220,10 @@ export default function ShoppingPage() {
       setShoppingLists(nextShoppingLists);
       setShoppingList(nextShoppingList);
       setActiveShoppingListId(nextShoppingList.id);
-      setCatalogCategories(nextCatalogCategories);
+      setCatalogCategories(nextCatalogCategories.length > 0 ? nextCatalogCategories : FALLBACK_SHOPPING_CATEGORIES);
       setCatalogItems(nextCatalogItems);
       setOpenCatalogCategories((currentCategories) => ({
-        ...Object.fromEntries(nextCatalogCategories.map((categoryOption) => [categoryOption.slug, false])),
+        ...Object.fromEntries((nextCatalogCategories.length > 0 ? nextCatalogCategories : FALLBACK_SHOPPING_CATEGORIES).map((categoryOption) => [categoryOption.slug, false])),
         ...currentCategories,
       }));
       setStatus("ready");
@@ -223,7 +245,7 @@ export default function ShoppingPage() {
 
     const nextLabel = label.trim();
     const nextQuantity = quantity.trim();
-    const nextUnit = unit.trim();
+    const nextUnit = unit.trim() || DEFAULT_SHOPPING_UNIT;
     const nextNote = note.trim();
     const nextCategory = getShoppingCategorySubmissionValue(category, catalogCategories);
 
@@ -268,9 +290,9 @@ export default function ShoppingPage() {
       );
       setLabel("");
       setQuantity("");
-      setUnit("");
+      setUnit(DEFAULT_SHOPPING_UNIT);
       setNote("");
-      setCategory("");
+      setCategory(DEFAULT_CUSTOM_CATEGORY_SLUG);
       setIsNewSheetOpen(false);
       setEditingItemId(null);
       setStatus("ready");
@@ -399,9 +421,9 @@ export default function ShoppingPage() {
 
     setEditingItemId(null);
     setQuantity("");
-    setUnit("");
+    setUnit(DEFAULT_SHOPPING_UNIT);
     setNote("");
-    setCategory("egne-varer");
+    setCategory(DEFAULT_CUSTOM_CATEGORY_SLUG);
     setIsNewSheetOpen(true);
   }
 
@@ -415,9 +437,9 @@ export default function ShoppingPage() {
   function handleOpenNewSheet() {
     setEditingItemId(null);
     setQuantity("");
-    setUnit("");
+    setUnit(DEFAULT_SHOPPING_UNIT);
     setNote("");
-    setCategory("");
+    setCategory(DEFAULT_CUSTOM_CATEGORY_SLUG);
     setIsNewSheetOpen(true);
   }
 
@@ -432,9 +454,9 @@ export default function ShoppingPage() {
     setEditingItemId(itemId);
     setLabel(item.label);
     setQuantity(item.quantity ?? "");
-    setUnit(item.unit ?? "");
+    setUnit(item.unit && SHOPPING_UNIT_OPTIONS.includes(item.unit) ? item.unit : DEFAULT_SHOPPING_UNIT);
     setNote(item.note ?? "");
-    setCategory(formatShoppingCategoryForInput(item.category, catalogCategories));
+    setCategory(getShoppingCategorySubmissionValue(item.category ?? DEFAULT_CUSTOM_CATEGORY_SLUG, catalogCategories));
     setOpenMenuItemId(null);
     setIsNewSheetOpen(true);
   }
@@ -443,9 +465,9 @@ export default function ShoppingPage() {
     setIsNewSheetOpen(false);
     setEditingItemId(null);
     setQuantity("");
-    setUnit("");
+    setUnit(DEFAULT_SHOPPING_UNIT);
     setNote("");
-    setCategory("");
+    setCategory(DEFAULT_CUSTOM_CATEGORY_SLUG);
   }
 
   function handleMenuClick(
@@ -495,6 +517,7 @@ export default function ShoppingPage() {
     event.preventDefault();
     if (!activeFamilyId || !shoppingList || shoppingList.isDefault || inviteEmail.trim().length === 0 || isSharing) return;
     setIsSharing(true);
+    setShareError("");
     try {
       const response = await inviteToShoppingList(activeFamilyId, shoppingList.id, inviteEmail.trim());
       setShoppingList((current) => current ? { ...current, invitations: [response.invitation, ...(current.invitations ?? []).filter((invite) => invite.id !== response.invitation.id)] } : current);
@@ -502,9 +525,57 @@ export default function ShoppingPage() {
       setInviteEmail("");
       setMessage("Invitasjonen er sendt.");
     } catch (error) {
-      handleActionError(error, "Kunne ikke sende invitasjonen. Prøv igjen.");
+      const errorMessage = getUserFacingApiMessage(error, "Kunne ikke sende invitasjonen. Prøv igjen.");
+      setShareError(errorMessage);
     } finally {
       setIsSharing(false);
+    }
+  }
+
+  async function handleRevokeInvitation(invitationId: string) {
+    if (!activeFamilyId || !shoppingList || sharePendingId) return;
+    setSharePendingId(invitationId);
+    setShareError("");
+    try {
+      const updated = await revokeShoppingListInvitation(activeFamilyId, shoppingList.id, invitationId);
+      setShoppingList((current) => current ? { ...current, invitations: (current.invitations ?? []).map((invite) => invite.id === updated.id ? updated : invite) } : current);
+      setShoppingLists((lists) => lists.map((list) => list.id === shoppingList.id ? { ...list, invitations: (list.invitations ?? []).map((invite) => invite.id === updated.id ? updated : invite) } : list));
+    } catch (error) {
+      setShareError(getUserFacingApiMessage(error, "Kunne ikke trekke tilbake invitasjonen."));
+    } finally {
+      setSharePendingId(null);
+    }
+  }
+
+  async function handleRemoveCollaborator(userId: string) {
+    if (!activeFamilyId || !shoppingList || sharePendingId) return;
+    setSharePendingId(userId);
+    setShareError("");
+    try {
+      await removeShoppingListCollaborator(activeFamilyId, shoppingList.id, userId);
+      setShoppingList((current) => current ? { ...current, collaborators: (current.collaborators ?? []).filter((collaborator) => collaborator.userId !== userId) } : current);
+    } catch (error) {
+      setShareError(getUserFacingApiMessage(error, "Kunne ikke fjerne tilgang."));
+    } finally {
+      setSharePendingId(null);
+    }
+  }
+
+  async function handleLeaveShoppingList() {
+    if (!activeFamilyId || !shoppingList || sharePendingId || shoppingList.ownerUserId === null) return;
+    setSharePendingId("me");
+    setShareError("");
+    try {
+      await leaveShoppingList(activeFamilyId, shoppingList.id);
+      const lists = await getShoppingLists(activeFamilyId);
+      setShoppingLists(lists);
+      const nextList = lists[0];
+      if (nextList) await loadShoppingList(activeFamilyId, nextList.id);
+      setIsShareSheetOpen(false);
+    } catch (error) {
+      setShareError(getUserFacingApiMessage(error, "Kunne ikke forlate handlelisten."));
+    } finally {
+      setSharePendingId(null);
     }
   }
 
@@ -786,13 +857,13 @@ export default function ShoppingPage() {
                     })}
                   </div>
                 )}
-                {isSearchingCatalog && catalogSearchResults.length === 0 ? (
+                {isSearchingCatalog ? (
                   <button
                     className="shopping-custom-item-button"
                     type="button"
                     onClick={prepareCustomItem}
                   >
-                    Legg til «{label.trim()}» som egen vare
+                    Opprett «{label.trim()}» som egen vare
                   </button>
                 ) : null}
               </section>
@@ -847,12 +918,9 @@ export default function ShoppingPage() {
                 </label>
                 <label className="husk-school-field">
                   <span>Enhet</span>
-                  <input
-                    maxLength={40}
-                    onChange={(event) => setUnit(event.target.value)}
-                    placeholder="liter"
-                    value={unit}
-                  />
+                  <select onChange={(event) => setUnit(event.target.value)} value={unit}>
+                    {SHOPPING_UNIT_OPTIONS.map((unitOption) => <option key={unitOption} value={unitOption}>{unitOption}</option>)}
+                  </select>
                 </label>
               </div>
               <label className="husk-school-field">
@@ -866,12 +934,9 @@ export default function ShoppingPage() {
               </label>
               <label className="husk-school-field">
                 <span>Kategori</span>
-                <input
-                  maxLength={60}
-                  onChange={(event) => setCategory(event.target.value)}
-                  placeholder="Frukt og grønt"
-                  value={category}
-                />
+                <select onChange={(event) => setCategory(event.target.value)} value={category}>
+                  {getCategoryOptions(catalogCategories).map((categoryOption) => <option key={categoryOption.slug} value={categoryOption.slug}>{categoryOption.name}</option>)}
+                </select>
               </label>
             </div>
             <div className="calendar-filter-sheet__actions">
@@ -1036,15 +1101,18 @@ export default function ShoppingPage() {
             <div className="calendar-filter-sheet__content shopping-create-list-sheet__content">
               <label className="husk-school-field">
                 <span>E-postadresse</span>
-                <input maxLength={160} onChange={(event) => setInviteEmail(event.target.value)} placeholder="navn@eksempel.no" type="email" value={inviteEmail} />
+                <input maxLength={160} onChange={(event) => { setInviteEmail(event.target.value); setShareError(""); }} placeholder="navn@eksempel.no" type="email" value={inviteEmail} />
               </label>
+              {shareError ? <p className="shopping-create-list-sheet__error" role="alert">{shareError}</p> : null}
               {(shoppingList?.invitations ?? []).length > 0 ? (
                 <div className="shopping-create-list-sheet__notice">
                   {(shoppingList?.invitations ?? []).map((invite) => (
-                    <p key={invite.id}>{invite.invitedEmail}: {invite.status === "accepted" ? "Akseptert" : invite.status === "pending" ? "Venter" : invite.status}</p>
+                    <p key={invite.id}>{invite.invitedEmail}: {invite.status === "accepted" ? "Akseptert" : invite.status === "pending" ? "Venter" : invite.status} {invite.status === "pending" ? <button type="button" onClick={() => handleRevokeInvitation(invite.id)} disabled={sharePendingId === invite.id}>Trekk tilbake</button> : null}</p>
                   ))}
                 </div>
               ) : null}
+              {(shoppingList?.collaborators ?? []).length > 0 ? <div className="shopping-create-list-sheet__notice">{(shoppingList?.collaborators ?? []).map((collaborator) => <p key={collaborator.id}>{collaborator.name ?? collaborator.email}: <button type="button" onClick={() => handleRemoveCollaborator(collaborator.userId)} disabled={sharePendingId === collaborator.userId}>Fjern tilgang</button></p>)}</div> : null}
+              {shoppingList && !shoppingList.isDefault && shoppingList.ownerUserId ? <button className="calendar-filter-sheet__action calendar-filter-sheet__action--secondary" type="button" onClick={handleLeaveShoppingList} disabled={sharePendingId === "me"}>Forlat delt liste</button> : null}
             </div>
             <div className="calendar-filter-sheet__actions">
               <button className="calendar-filter-sheet__action calendar-filter-sheet__action--secondary" type="button" onClick={() => setIsShareSheetOpen(false)}>Lukk</button>
@@ -1304,23 +1372,18 @@ function getShoppingCategoryName(
   return catalogCategories.find((category) => category.slug === categorySlug)?.name ?? categorySlug;
 }
 
-function formatShoppingCategoryForInput(category: string | null | undefined, catalogCategories: ShoppingCatalogCategory[]) {
-  if (!category) {
-    return "";
-  }
-
-  if (category === "egne-varer") {
-    return "Egne varer";
-  }
-
-  return getShoppingCategoryName(category, catalogCategories);
+function getCategoryOptions(catalogCategories: ShoppingCatalogCategory[]) {
+  const options = catalogCategories.length > 0 ? catalogCategories : FALLBACK_SHOPPING_CATEGORIES;
+  return options.some((categoryOption) => categoryOption.slug === DEFAULT_CUSTOM_CATEGORY_SLUG)
+    ? options
+    : [...options, FALLBACK_SHOPPING_CATEGORIES[FALLBACK_SHOPPING_CATEGORIES.length - 1]];
 }
 
 function getShoppingCategorySubmissionValue(category: string, catalogCategories: ShoppingCatalogCategory[]) {
   const trimmedCategory = category.trim();
 
   if (!trimmedCategory) {
-    return "";
+    return DEFAULT_CUSTOM_CATEGORY_SLUG;
   }
 
   if (normalizeShoppingSearchValue(trimmedCategory) === "egne varer") {
