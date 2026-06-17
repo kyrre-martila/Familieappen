@@ -14914,3 +14914,66 @@ button.family-settings-row:focus-visible:not(:disabled) {
   font-weight: 700;
 }
 
+/* Calendar create/edit now reuses the Husk bottom-sheet and form primitives. */
+.calendar-event-form-sheet__panel {
+  max-height: min(92svh, 56rem);
+}
+
+.calendar-event-form-sheet__content {
+  padding-bottom: var(--space-l);
+}
+
+.calendar-event-form-sheet .event-form-card {
+  box-shadow: none;
+}
+
+.calendar-event-form-sheet .event-form-title-input {
+  font-size: clamp(1.65rem, 7vw, 2.35rem);
+}
+
+.calendar-event-form-sheet .event-form-icon-link,
+.calendar-event-form-sheet .event-form-text-input,
+.calendar-event-form-sheet .event-form-textarea {
+  background: var(--color-background-soft);
+}
+
+.calendar-event-form-sheet__section-heading {
+  padding: var(--space-m) 0 var(--space-xs);
+}
+
+.event-form-avatar-chip__avatar-wrap {
+  position: relative;
+  display: grid;
+  place-items: center;
+}
+
+.event-form-error {
+  margin: 0;
+  border: 1px solid color-mix(in srgb, #c92838 28%, var(--color-border));
+  border-radius: var(--radius-l);
+  padding: var(--space-s) var(--space-m);
+  background: color-mix(in srgb, #c92838 8%, var(--color-surface));
+  color: #9f1f2c;
+  font-size: var(--text-small);
+  font-weight: 780;
+}
+
+.calendar-event-form-sheet .event-form-delete:disabled {
+  cursor: not-allowed;
+  opacity: 0.42;
+}
+
+@media (max-width: 42rem) {
+  .calendar-event-form-sheet__panel {
+    width: 100%;
+    max-height: calc(100svh - env(safe-area-inset-top));
+  }
+
+  .calendar-event-form-sheet .event-form-avatar-list {
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+  }
+
+  .calendar-event-form-sheet .event-form-row {
+    grid-template-columns: auto minmax(4.7rem, 1fr) minmax(0, 1fr);
+  }
+}
