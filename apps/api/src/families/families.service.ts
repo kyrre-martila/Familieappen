@@ -1,6 +1,6 @@
 import { BadRequestException, ConflictException, Injectable, NotFoundException } from "@nestjs/common";
 import { createHash, randomBytes } from "crypto";
-import { EmailService } from "../email";
+import { EmailService, getAppBaseUrl } from "../email";
 import { PrismaService } from "../prisma";
 import { FamilyDashboardDto } from "./dto/dashboard.dto";
 import {
@@ -922,7 +922,7 @@ export class FamiliesService {
   }
 
   private async sendFamilyInviteEmail(invitedEmail: string, token: string, inviterName: string, familyName: string) {
-    const appUrl = (process.env.APP_BASE_URL || process.env.APP_PUBLIC_URL || "http://localhost:3000").replace(/\/$/, "");
+    const appUrl = getAppBaseUrl();
 
     return this.emailService.sendEmail({
       to: invitedEmail,

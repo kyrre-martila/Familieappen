@@ -71,6 +71,16 @@ export function getEmailConfig(): EmailConfig {
   };
 }
 
-export function getAppBaseUrl(): string {
-  return (readOptional("APP_BASE_URL") || readOptional("APP_PUBLIC_URL") || "http://localhost:3000").replace(/\/$/, "");
+export function getAppBaseUrl(env: NodeJS.ProcessEnv = process.env): string {
+  const appBaseUrl = (env.APP_BASE_URL?.trim() || env.APP_PUBLIC_URL?.trim())?.replace(/\/$/, "");
+
+  if (appBaseUrl) {
+    return appBaseUrl;
+  }
+
+  if ((env.NODE_ENV || "development") === "production") {
+    throw new Error("APP_BASE_URL or APP_PUBLIC_URL is required in production for public app links.");
+  }
+
+  return "http://localhost:3000";
 }
