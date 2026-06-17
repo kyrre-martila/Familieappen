@@ -1,4 +1,4 @@
-import { Body, Controller, Delete, Get, Headers, HttpStatus, Param, Patch, Post, Query, Req, UseGuards } from "@nestjs/common";
+import { Body, Controller, Delete, Get, Headers, HttpStatus, Logger, Param, Patch, Post, Query, Req, UseGuards } from "@nestjs/common";
 import { AuthGuard } from "../auth/guards/auth.guard";
 import { API_ERROR_CODES, ApiException, ApiResponse, createApiResponse } from "../common";
 import { AddShoppingItemRequestDto, CreateShoppingListRequestDto, ShoppingCatalogCategoryDto, ShoppingCatalogItemDto, ShoppingListDto, ShoppingListInvitationDto, ShoppingListInvitePreviewDto, ShoppingListInviteRequestDto, ShoppingListInviteResponseDto, ShoppingListItemDto, ShoppingListSummaryDto, UpdateShoppingItemRequestDto } from "./dto/shopping.dto";
@@ -8,12 +8,24 @@ type AuthenticatedRequest = { user: { id: string; email: string } };
 
 @Controller("shopping")
 export class ShoppingController {
+  private readonly logger = new Logger(ShoppingController.name);
+
   constructor(private readonly shoppingService: ShoppingService) {}
   @Get("catalog/categories") @UseGuards(AuthGuard) async getCatalogCategories(): Promise<ApiResponse<ShoppingCatalogCategoryDto[]>> { return createApiResponse(await this.shoppingService.getCatalogCategories()); }
   @Get("catalog/items") @UseGuards(AuthGuard) async getCatalogItems(): Promise<ApiResponse<ShoppingCatalogItemDto[]>> { return createApiResponse(await this.shoppingService.getCatalogItems()); }
   @Get("catalog/search") @UseGuards(AuthGuard) async searchCatalog(@Query("q") query = ""): Promise<ApiResponse<ShoppingCatalogItemDto[]>> { return createApiResponse(await this.shoppingService.searchCatalog(query)); }
   @Get("lists") @UseGuards(AuthGuard) async listShoppingLists(@Req() request: AuthenticatedRequest, @Headers("x-family-id") familyId: string): Promise<ApiResponse<ShoppingListSummaryDto[]>> { return createApiResponse(await this.shoppingService.listShoppingLists(request.user.id, requireFamilyId(familyId))); }
-  @Post("lists") @UseGuards(AuthGuard) async createShoppingList(@Req() request: AuthenticatedRequest, @Headers("x-family-id") familyId: string, @Body() body: CreateShoppingListRequestDto): Promise<ApiResponse<ShoppingListDto>> { return createApiResponse(await this.shoppingService.createShoppingList(request.user.id, requireFamilyId(familyId), body)); }
+  @Post("lists") @UseGuards(AuthGuard) async createShoppingList(@Req() request: AuthenticatedRequest, @Headers("x-family-id") familyId: string, @Body() body: CreateShoppingListRequestDto): Promise<ApiResponse<ShoppingListDto>> {
+    try {
+      return createApiResponse(await this.shoppingService.createShoppingList(request.user.id, requireFamilyId(familyId), body));
+    } catch (error) {
+      this.logger.error(
+        `Failed to create shopping list for user ${request.user.id} in family ${familyId ?? "<missing>"}`,
+        error instanceof Error ? error.stack : String(error)
+      );
+      throw error;
+    }
+  }
   @Get() @UseGuards(AuthGuard) async getShoppingList(@Req() request: AuthenticatedRequest, @Headers("x-family-id") familyId: string, @Query("listId") listId?: string): Promise<ApiResponse<ShoppingListDto>> { return createApiResponse(await this.shoppingService.getShoppingList(request.user.id, requireFamilyId(familyId), listId)); }
   @Post("lists/:listId/invite") @UseGuards(AuthGuard) async inviteByEmail(@Req() request: AuthenticatedRequest, @Headers("x-family-id") familyId: string, @Param("listId") listId: string, @Body() body: ShoppingListInviteRequestDto): Promise<ApiResponse<ShoppingListInviteResponseDto>> { return createApiResponse(await this.shoppingService.inviteByEmail(request.user.id, requireFamilyId(familyId), listId, body)); }
   @Get("invites/:token") async getInvitePreview(@Param("token") token: string): Promise<ApiResponse<ShoppingListInvitePreviewDto>> { return createApiResponse(await this.shoppingService.getInvitePreview(token)); }

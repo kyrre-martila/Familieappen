@@ -88,6 +88,7 @@ export default function ShoppingPage() {
   const [isListSheetOpen, setIsListSheetOpen] = useState(false);
   const [isCreateListSheetOpen, setIsCreateListSheetOpen] = useState(false);
   const [newListName, setNewListName] = useState("");
+  const [createListError, setCreateListError] = useState("");
   const [activeShoppingListId, setActiveShoppingListId] = useState<string | null>(null);
   const [isShareSheetOpen, setIsShareSheetOpen] = useState(false);
   const [inviteEmail, setInviteEmail] = useState("");
@@ -471,15 +472,21 @@ export default function ShoppingPage() {
   async function handleCreateShoppingList(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     if (!activeFamilyId || newListName.trim().length === 0) return;
+    setCreateListError("");
     try {
       const created = await createShoppingList(activeFamilyId, newListName.trim());
-      setShoppingLists((lists) => [...lists, created]);
+      const nextShoppingLists = await getShoppingLists(activeFamilyId);
+      setShoppingLists(nextShoppingLists.some((list) => list.id === created.id) ? nextShoppingLists : [...nextShoppingLists, created]);
       setShoppingList(created);
       setActiveShoppingListId(created.id);
       setNewListName("");
       setIsCreateListSheetOpen(false);
       setStatus("ready");
+      setMessage("");
     } catch (error) {
+      const errorMessage = getUserFacingApiMessage(error, "Kunne ikke opprette handlelisten. Prøv igjen.");
+      setCreateListError(errorMessage);
+      setMessage(errorMessage);
       handleActionError(error, "Kunne ikke opprette handlelisten. Prøv igjen.");
     }
   }
@@ -946,7 +953,10 @@ export default function ShoppingPage() {
         <HuskMobileSheet
           isOpen={isCreateListSheetOpen}
           labelledBy="shopping-create-list-sheet-title"
-          onClose={() => setIsCreateListSheetOpen(false)}
+          onClose={() => {
+            setIsCreateListSheetOpen(false);
+            setCreateListError("");
+          }}
         >
           <form className="shopping-sheet shopping-create-list-sheet" onSubmit={handleCreateShoppingList}>
             <div className="calendar-filter-sheet__header">
@@ -963,7 +973,10 @@ export default function ShoppingPage() {
                 className="calendar-filter-sheet__close"
                 type="button"
                 aria-label="Lukk"
-                onClick={() => setIsCreateListSheetOpen(false)}
+                onClick={() => {
+                  setIsCreateListSheetOpen(false);
+                  setCreateListError("");
+                }}
               >
                 <X aria-hidden="true" size={18} strokeWidth={2.5} />
               </button>
@@ -973,12 +986,20 @@ export default function ShoppingPage() {
                 <span>Navn på handleliste</span>
                 <input
                   maxLength={80}
-                  onChange={(event) => setNewListName(event.target.value)}
+                  onChange={(event) => {
+                    setNewListName(event.target.value);
+                    setCreateListError("");
+                  }}
                   placeholder="F.eks. Helgehandel"
                   value={newListName}
                 />
               </label>
               <p className="shopping-create-list-sheet__notice">Listen opprettes som en egen handleliste du kan dele.</p>
+              {createListError ? (
+                <p className="shopping-create-list-sheet__error" role="alert">
+                  {createListError}
+                </p>
+              ) : null}
             </div>
             <div className="calendar-filter-sheet__actions">
               <button
