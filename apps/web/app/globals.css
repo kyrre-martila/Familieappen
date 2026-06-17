@@ -14906,3 +14906,11 @@ button.family-settings-row:focus-visible:not(:disabled) {
   font-size: var(--text-small);
   font-weight: 720;
 }
+
+.shopping-create-list-sheet__error {
+  margin: 0;
+  color: var(--danger-700, #b42318);
+  font-size: 0.9rem;
+  font-weight: 700;
+}
+

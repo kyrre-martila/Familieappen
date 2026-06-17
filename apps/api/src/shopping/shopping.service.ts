@@ -22,7 +22,21 @@ export class ShoppingService {
   async searchCatalog(query: string): Promise<ShoppingCatalogItemDto[]> { const q = normalizeShoppingSearchValue(query); if (q.length < 2) return []; const items = await this.prisma.client.shoppingCatalogItem.findMany({ orderBy: [{ category: { sortOrder: "asc" } }, { sortOrder: "asc" }, { name: "asc" }], include: { category: { select: { slug: true } } } }); return (items as Rec[]).filter((item) => (item.searchValues ?? [item.name, ...item.aliases].map(normalizeShoppingSearchValue)).some((v: string) => v.includes(q))).map((item) => this.toShoppingCatalogItemDto(item)); }
 
   async listShoppingLists(userId: string, familyId: string): Promise<ShoppingListSummaryDto[]> { await this.familyAuthorization.requireFamilyMember(userId, familyId); await this.getOrCreateFamilyShoppingList(familyId); const lists = await this.db.shoppingList.findMany({ where: { OR: [{ familyId, isDefault: true }, { ownerUserId: userId }, { accesses: { some: { userId } } }] }, include: { invitations: { orderBy: { createdAt: "desc" } } }, orderBy: [{ isDefault: "desc" }, { createdAt: "asc" }] }); return lists.map((l: Rec) => this.toShoppingListSummaryDto(l)); }
-  async createShoppingList(userId: string, familyId: string, input: CreateShoppingListRequestDto = {}): Promise<ShoppingListDto> { await this.familyAuthorization.requireFamilyMember(userId, familyId); const name = this.validateName(input.name); const list = await this.db.shoppingList.create({ data: { familyId, name, isDefault: false, ownerUserId: userId, accesses: { create: { userId } } }, include: { items: true, invitations: true } }); return this.toShoppingListDto(list); }
+  async createShoppingList(userId: string, familyId: string, input: CreateShoppingListRequestDto = {}): Promise<ShoppingListDto> {
+    await this.familyAuthorization.requireFamilyMember(userId, familyId);
+    const name = this.validateName(input.name);
+    const list = await this.db.shoppingList.create({
+      data: {
+        name,
+        isDefault: false,
+        family: { connect: { id: familyId } },
+        ownerUser: { connect: { id: userId } },
+        accesses: { create: { user: { connect: { id: userId } } } }
+      },
+      include: this.listInclude()
+    });
+    return this.toShoppingListDto(list);
+  }
   async getShoppingList(userId: string, familyId: string, listId?: string): Promise<ShoppingListDto> { await this.familyAuthorization.requireFamilyMember(userId, familyId); const list = listId ? await this.getAccessibleListOrThrow(userId, familyId, listId) : await this.getOrCreateFamilyShoppingList(familyId); return this.toShoppingListDto(list); }
 
   async addItem(userId: string, familyId: string, input: AddShoppingItemRequestDto = {}, listId?: string): Promise<ShoppingListItemDto> { const list = await this.getAccessibleListOrThrow(userId, familyId, listId ?? (await this.getOrCreateFamilyShoppingList(familyId)).id); const item = await this.prisma.client.shoppingListItem.create({ data: { shoppingListId: list.id, label: this.validateLabel(input.label), quantity: this.validateOptionalText(input.quantity, "Shopping item quantity", 60), unit: this.validateOptionalText(input.unit, "Shopping item unit", 40), note: this.validateOptionalText(input.note, "Shopping item note", 240), category: this.validateOptionalText(input.category, "Shopping item category", 60), createdByUserId: userId } }); return this.toShoppingListItemDto(item); }

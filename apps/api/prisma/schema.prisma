@@ -207,7 +207,7 @@ model FamilyMember {
 
 model ShoppingList {
   id            String             @id @default(cuid())
-  familyId      String
+  familyId      String             @map("family_id")
   name          String
   isDefault     Boolean            @default(false) @map("is_default")
   ownerUserId   String?            @map("owner_user_id")
