@@ -1,7 +1,7 @@
-import { Body, Controller, Delete, Get, Headers, HttpStatus, Param, Patch, Post, Req, UseGuards } from "@nestjs/common";
+import { Body, Controller, Delete, Get, Headers, HttpStatus, Param, Patch, Post, Query, Req, UseGuards } from "@nestjs/common";
 import { AuthGuard } from "../auth/guards/auth.guard";
 import { API_ERROR_CODES, ApiException, ApiResponse, createApiResponse } from "../common";
-import { AddShoppingItemRequestDto, ShoppingListDto, ShoppingListItemDto, UpdateShoppingItemRequestDto } from "./dto/shopping.dto";
+import { AddShoppingItemRequestDto, ShoppingCatalogCategoryDto, ShoppingCatalogItemDto, ShoppingListDto, ShoppingListItemDto, UpdateShoppingItemRequestDto } from "./dto/shopping.dto";
 import { ShoppingService } from "./shopping.service";
 
 type AuthenticatedRequest = {
@@ -15,6 +15,22 @@ type AuthenticatedRequest = {
 @UseGuards(AuthGuard)
 export class ShoppingController {
   constructor(private readonly shoppingService: ShoppingService) {}
+
+
+  @Get("catalog/categories")
+  async getCatalogCategories(): Promise<ApiResponse<ShoppingCatalogCategoryDto[]>> {
+    return createApiResponse(await this.shoppingService.getCatalogCategories());
+  }
+
+  @Get("catalog/items")
+  async getCatalogItems(): Promise<ApiResponse<ShoppingCatalogItemDto[]>> {
+    return createApiResponse(await this.shoppingService.getCatalogItems());
+  }
+
+  @Get("catalog/search")
+  async searchCatalog(@Query("q") query = ""): Promise<ApiResponse<ShoppingCatalogItemDto[]>> {
+    return createApiResponse(await this.shoppingService.searchCatalog(query));
+  }
 
   @Get()
   async getShoppingList(

@@ -34,6 +34,8 @@ interface PrismaClientConnection {
   familyMember: PrismaDelegate;
   shoppingList: PrismaDelegate;
   shoppingListItem: PrismaDelegate;
+  shoppingCatalogCategory: PrismaDelegate & { upsert(args: Record<string, unknown>): Promise<any>; };
+  shoppingCatalogItem: PrismaDelegate & { upsert(args: Record<string, unknown>): Promise<any>; };
   mealPlan: PrismaDelegate;
   mealPlanDay: PrismaDelegate & {
     upsert(args: Record<string, unknown>): Promise<any>;
