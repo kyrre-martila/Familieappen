@@ -245,6 +245,23 @@ export default function ShoppingPage() {
     await loadShoppingList(familyId);
   }
 
+  async function refreshShoppingData(familyId = activeFamilyId, listId = activeShoppingListId ?? undefined) {
+    if (!familyId) return;
+    const [nextShoppingList, nextCatalogCategories, nextCatalogItems] = await Promise.all([
+      getShoppingList(familyId, listId),
+      getShoppingCatalogCategories(familyId),
+      getShoppingCatalogItems(familyId),
+    ]);
+    const categories = getCategoryOptions(nextCatalogCategories.length > 0 ? nextCatalogCategories : FALLBACK_SHOPPING_CATEGORIES);
+    setShoppingList(nextShoppingList);
+    setActiveShoppingListId(nextShoppingList.id);
+    setCatalogCategories(categories);
+    setCatalogItems(nextCatalogItems);
+    if (normalizeShoppingSearchValue(label).length >= 2) {
+      setCatalogSearchResults(await searchShoppingCatalogItems(label, familyId));
+    }
+  }
+
   async function handleAddItem(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
 
@@ -261,16 +278,6 @@ export default function ShoppingPage() {
       return;
     }
 
-    if (
-      !editingItemId &&
-      isShoppingLabelInList(nextLabel, shoppingList?.items ?? [], catalogItems)
-    ) {
-      const duplicateListMessage = "Varen ligger allerede i handlelisten.";
-      setMessage(duplicateListMessage);
-      setItemSheetError(duplicateListMessage);
-      return;
-    }
-
     setIsAdding(true);
     setMessage("");
 
@@ -281,17 +288,18 @@ export default function ShoppingPage() {
         ...(nextUnit ? { unit: nextUnit } : {}),
         ...(nextNote ? { note: nextNote } : {}),
         ...(nextCategory ? { category: nextCategory } : {}),
+        ...(!editingItemId ? { createCustom: true } : {}),
       };
       const customEditId = editingItemId?.startsWith("custom:") ? editingItemId.slice("custom:".length) : null;
       const item = customEditId
         ? null
         : editingItemId
           ? await updateShoppingItem(activeFamilyId, editingItemId, input, shoppingList?.id)
-          : await addShoppingItem(activeFamilyId, input, shoppingList?.id);
+          : (await addShoppingItem(activeFamilyId, input, shoppingList?.id)).item;
       if (customEditId) {
         const updatedCustomItem = await updateFamilyCustomShoppingItem(activeFamilyId, customEditId, { name: nextLabel, defaultUnit: nextUnit, suggestedQuantity: nextQuantity || 1, categorySlug: nextCategory });
         setCatalogItems((items) => items.map((catalogItem) => catalogItem.id === updatedCustomItem.id ? updatedCustomItem : catalogItem));
-        await loadShoppingList(activeFamilyId, shoppingList?.id);
+        await refreshShoppingData(activeFamilyId, shoppingList?.id);
       }
       setShoppingList((currentList) =>
         currentList
@@ -311,6 +319,7 @@ export default function ShoppingPage() {
       setUnit(DEFAULT_SHOPPING_UNIT);
       setNote("");
       setCategory(DEFAULT_CUSTOM_CATEGORY_SLUG);
+      await refreshShoppingData(activeFamilyId, shoppingList?.id);
       setIsNewSheetOpen(false);
       setItemSheetError("");
       setEditingItemId(null);
@@ -411,11 +420,12 @@ export default function ShoppingPage() {
     setMessage("");
 
     try {
-      const addedItem = await addShoppingItem(activeFamilyId, {
+      const { item: addedItem } = await addShoppingItem(activeFamilyId, {
         label: item.name,
         quantity: String(item.suggestedQuantity),
         unit: item.defaultUnit,
         category: item.categorySlug,
+        ...(item.isCustom ? { customItemId: item.id } : {}),
       }, shoppingList?.id);
       setShoppingList((currentList) =>
         currentList
@@ -529,8 +539,7 @@ export default function ShoppingPage() {
     setMessage("");
     try {
       await deleteFamilyCustomShoppingItem(activeFamilyId, itemId);
-      setCatalogItems((items) => items.filter((item) => item.id !== itemId));
-      setCatalogCategories((categories) => categories.map((cat) => cat.slug === DEFAULT_CUSTOM_CATEGORY_SLUG ? { ...cat, totalItemCount: Math.max(0, cat.totalItemCount - 1) } : cat));
+      await refreshShoppingData(activeFamilyId, shoppingList?.id);
       setOpenMenuItemId(null);
     } catch (error) {
       handleActionError(error, "Kunne ikke slette egen vare. Prøv igjen.");
