@@ -40,10 +40,13 @@ import {
   ShoppingCatalogItem,
   ShoppingList,
   addShoppingItem,
+  createShoppingList,
   deleteShoppingItem,
   getShoppingCatalogCategories,
   getShoppingCatalogItems,
   getShoppingList,
+  getShoppingLists,
+  inviteToShoppingList,
   toggleShoppingItem,
   searchShoppingCatalogItems,
   updateShoppingItem,
@@ -67,6 +70,7 @@ type ShoppingStatus =
 export default function ShoppingPage() {
   const router = useRouter();
   const [shoppingList, setShoppingList] = useState<ShoppingList | null>(null);
+  const [shoppingLists, setShoppingLists] = useState<ShoppingList[]>([]);
   const [families, setFamilies] = useState<FamilyWithMembership[]>([]);
   const [activeFamilyId, setActiveFamilyIdState] = useState<string | null>(
     null,
@@ -84,6 +88,10 @@ export default function ShoppingPage() {
   const [isListSheetOpen, setIsListSheetOpen] = useState(false);
   const [isCreateListSheetOpen, setIsCreateListSheetOpen] = useState(false);
   const [newListName, setNewListName] = useState("");
+  const [activeShoppingListId, setActiveShoppingListId] = useState<string | null>(null);
+  const [isShareSheetOpen, setIsShareSheetOpen] = useState(false);
+  const [inviteEmail, setInviteEmail] = useState("");
+  const [isSharing, setIsSharing] = useState(false);
   const [isRecentItemsOpen, setIsRecentItemsOpen] = useState(false);
   const [catalogCategories, setCatalogCategories] = useState<ShoppingCatalogCategory[]>([]);
   const [catalogItems, setCatalogItems] = useState<ShoppingCatalogItem[]>([]);
@@ -128,8 +136,7 @@ export default function ShoppingPage() {
   const uncheckedCount = remainingItems.length;
   const hasMultipleFamilies = families.length > 1;
   const selectedShoppingListName = formatShoppingListName(shoppingList?.name);
-  const isDefaultShoppingList =
-    selectedShoppingListName === "Familiehandleliste";
+  const isDefaultShoppingList = shoppingList?.isDefault ?? selectedShoppingListName === "Familiehandleliste";
   const isSearchingCatalog = normalizeShoppingSearchValue(label).length >= 2;
   const visibleCatalogCategories = useMemo(
     () =>
@@ -170,7 +177,7 @@ export default function ShoppingPage() {
     };
   }, [isSearchingCatalog, label]);
 
-  async function loadShoppingList(familyId = activeFamilyId) {
+  async function loadShoppingList(familyId = activeFamilyId, listId = activeShoppingListId ?? undefined) {
     if (!familyId) {
       setStatus("no-family");
       setMessage("Velg familie før du åpner handlelisten.");
@@ -181,12 +188,15 @@ export default function ShoppingPage() {
     setMessage("Laster handleliste …");
 
     try {
-      const [nextShoppingList, nextCatalogCategories, nextCatalogItems] = await Promise.all([
-        getShoppingList(familyId),
+      const [nextShoppingLists, nextShoppingList, nextCatalogCategories, nextCatalogItems] = await Promise.all([
+        getShoppingLists(familyId),
+        getShoppingList(familyId, listId),
         getShoppingCatalogCategories(),
         getShoppingCatalogItems(),
       ]);
+      setShoppingLists(nextShoppingLists);
       setShoppingList(nextShoppingList);
+      setActiveShoppingListId(nextShoppingList.id);
       setCatalogCategories(nextCatalogCategories);
       setCatalogItems(nextCatalogItems);
       setOpenCatalogCategories((currentCategories) => ({
@@ -240,8 +250,8 @@ export default function ShoppingPage() {
         ...(nextCategory ? { category: nextCategory } : {}),
       };
       const item = editingItemId
-        ? await updateShoppingItem(activeFamilyId, editingItemId, input)
-        : await addShoppingItem(activeFamilyId, input);
+        ? await updateShoppingItem(activeFamilyId, editingItemId, input, shoppingList?.id)
+        : await addShoppingItem(activeFamilyId, input, shoppingList?.id);
       setShoppingList((currentList) =>
         currentList
           ? {
@@ -284,7 +294,7 @@ export default function ShoppingPage() {
     setMessage("");
 
     try {
-      const updatedItem = await toggleShoppingItem(activeFamilyId, itemId);
+      const updatedItem = await toggleShoppingItem(activeFamilyId, itemId, shoppingList?.id);
       setShoppingList((currentList) =>
         currentList
           ? {
@@ -315,7 +325,7 @@ export default function ShoppingPage() {
     setMessage("");
 
     try {
-      await deleteShoppingItem(activeFamilyId, itemId);
+      await deleteShoppingItem(activeFamilyId, itemId, shoppingList?.id);
       setShoppingList((currentList) =>
         currentList
           ? {
@@ -362,7 +372,7 @@ export default function ShoppingPage() {
         quantity: String(item.suggestedQuantity),
         unit: item.defaultUnit,
         category: item.categorySlug,
-      });
+      }, shoppingList?.id);
       setShoppingList((currentList) =>
         currentList
           ? {
@@ -447,6 +457,50 @@ export default function ShoppingPage() {
     );
   }
 
+
+  async function handleSelectShoppingList(listId: string) {
+    if (!activeFamilyId || listId === shoppingList?.id) {
+      setIsListSheetOpen(false);
+      return;
+    }
+    setActiveShoppingListId(listId);
+    setIsListSheetOpen(false);
+    await loadShoppingList(activeFamilyId, listId);
+  }
+
+  async function handleCreateShoppingList(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    if (!activeFamilyId || newListName.trim().length === 0) return;
+    try {
+      const created = await createShoppingList(activeFamilyId, newListName.trim());
+      setShoppingLists((lists) => [...lists, created]);
+      setShoppingList(created);
+      setActiveShoppingListId(created.id);
+      setNewListName("");
+      setIsCreateListSheetOpen(false);
+      setStatus("ready");
+    } catch (error) {
+      handleActionError(error, "Kunne ikke opprette handlelisten. Prøv igjen.");
+    }
+  }
+
+  async function handleShareShoppingList(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    if (!activeFamilyId || !shoppingList || shoppingList.isDefault || inviteEmail.trim().length === 0 || isSharing) return;
+    setIsSharing(true);
+    try {
+      const response = await inviteToShoppingList(activeFamilyId, shoppingList.id, inviteEmail.trim());
+      setShoppingList((current) => current ? { ...current, invitations: [response.invitation, ...(current.invitations ?? []).filter((invite) => invite.id !== response.invitation.id)] } : current);
+      setShoppingLists((lists) => lists.map((list) => list.id === shoppingList.id ? { ...list, invitations: [response.invitation, ...(list.invitations ?? []).filter((invite) => invite.id !== response.invitation.id)] } : list));
+      setInviteEmail("");
+      setMessage("Invitasjonen er sendt.");
+    } catch (error) {
+      handleActionError(error, "Kunne ikke sende invitasjonen. Prøv igjen.");
+    } finally {
+      setIsSharing(false);
+    }
+  }
+
   function handleLoadError(error: unknown) {
     if (error instanceof ApiError && error.status === 401) {
       handleMissingOrInvalidAuth(error, router);
@@ -511,6 +565,7 @@ export default function ShoppingPage() {
             description="Vent litt mens vi bekrefter familietilknytningen din."
           />
         </Card>
+
       </PageContainer>
     );
   }
@@ -552,7 +607,7 @@ export default function ShoppingPage() {
               <ChevronDown aria-hidden="true" size={18} strokeWidth={2.5} />
             </button>
             {!isDefaultShoppingList ? (
-              <button className="husk-filter-button" type="button">
+              <button className="husk-filter-button" type="button" onClick={() => setIsShareSheetOpen(true)}>
                 <Share2 aria-hidden="true" size={20} strokeWidth={2.4} />
                 <span>Del</span>
               </button>
@@ -857,17 +912,20 @@ export default function ShoppingPage() {
               </button>
             </div>
             <div className="calendar-filter-sheet__content shopping-list-sheet__content">
-              <button
-                className="shopping-list-sheet__option shopping-list-sheet__option--selected"
-                type="button"
-                onClick={() => setIsListSheetOpen(false)}
-              >
-                <span>
-                  <strong>Familiehandleliste</strong>
-                  <small>Standardlisten for familien</small>
-                </span>
-                <Check aria-hidden="true" size={20} strokeWidth={2.6} />
-              </button>
+              {shoppingLists.map((list) => (
+                <button
+                  className={`shopping-list-sheet__option${list.id === shoppingList?.id ? " shopping-list-sheet__option--selected" : ""}`}
+                  key={list.id}
+                  type="button"
+                  onClick={() => handleSelectShoppingList(list.id)}
+                >
+                  <span>
+                    <strong>{formatShoppingListName(list.name)}</strong>
+                    <small>{list.isDefault ? "Standardlisten for familien" : "Delt handleliste"}</small>
+                  </span>
+                  {list.id === shoppingList?.id ? <Check aria-hidden="true" size={20} strokeWidth={2.6} /> : null}
+                </button>
+              ))}
             </div>
             <div className="calendar-filter-sheet__actions">
               <button
@@ -890,7 +948,7 @@ export default function ShoppingPage() {
           labelledBy="shopping-create-list-sheet-title"
           onClose={() => setIsCreateListSheetOpen(false)}
         >
-          <form className="shopping-sheet shopping-create-list-sheet">
+          <form className="shopping-sheet shopping-create-list-sheet" onSubmit={handleCreateShoppingList}>
             <div className="calendar-filter-sheet__header">
               <div>
                 <p className="husk-school-sheet__eyebrow">Handleliste</p>
@@ -920,10 +978,7 @@ export default function ShoppingPage() {
                   value={newListName}
                 />
               </label>
-              <p className="shopping-create-list-sheet__notice">
-                Flere handlelister kommer senere. Du kan gjøre klar navnet nå,
-                men det er ikke mulig å lagre nye handlelister ennå.
-              </p>
+              <p className="shopping-create-list-sheet__notice">Listen opprettes som en egen handleliste du kan dele.</p>
             </div>
             <div className="calendar-filter-sheet__actions">
               <button
@@ -935,11 +990,44 @@ export default function ShoppingPage() {
               </button>
               <button
                 className="calendar-filter-sheet__action calendar-filter-sheet__action--primary"
-                disabled
-                type="button"
+                disabled={newListName.trim().length === 0}
+                type="submit"
               >
-                Lagring er ikke tilgjengelig ennå
+                Opprett handleliste
               </button>
+            </div>
+          </form>
+        </HuskMobileSheet>
+
+        <HuskMobileSheet
+          isOpen={isShareSheetOpen}
+          labelledBy="shopping-share-sheet-title"
+          onClose={() => setIsShareSheetOpen(false)}
+        >
+          <form className="shopping-sheet shopping-create-list-sheet" onSubmit={handleShareShoppingList}>
+            <div className="calendar-filter-sheet__header">
+              <div>
+                <p className="husk-school-sheet__eyebrow">Del handleliste</p>
+                <h2 id="shopping-share-sheet-title" className="calendar-filter-sheet__title">Inviter på e-post</h2>
+              </div>
+              <button className="calendar-filter-sheet__close" type="button" aria-label="Lukk" onClick={() => setIsShareSheetOpen(false)}><X aria-hidden="true" size={18} strokeWidth={2.5} /></button>
+            </div>
+            <div className="calendar-filter-sheet__content shopping-create-list-sheet__content">
+              <label className="husk-school-field">
+                <span>E-postadresse</span>
+                <input maxLength={160} onChange={(event) => setInviteEmail(event.target.value)} placeholder="navn@eksempel.no" type="email" value={inviteEmail} />
+              </label>
+              {(shoppingList?.invitations ?? []).length > 0 ? (
+                <div className="shopping-create-list-sheet__notice">
+                  {(shoppingList?.invitations ?? []).map((invite) => (
+                    <p key={invite.id}>{invite.invitedEmail}: {invite.status === "accepted" ? "Akseptert" : invite.status === "pending" ? "Venter" : invite.status}</p>
+                  ))}
+                </div>
+              ) : null}
+            </div>
+            <div className="calendar-filter-sheet__actions">
+              <button className="calendar-filter-sheet__action calendar-filter-sheet__action--secondary" type="button" onClick={() => setIsShareSheetOpen(false)}>Lukk</button>
+              <button className="calendar-filter-sheet__action calendar-filter-sheet__action--primary" disabled={isSharing || inviteEmail.trim().length === 0} type="submit">{isSharing ? "Sender …" : "Send invitasjon"}</button>
             </div>
           </form>
         </HuskMobileSheet>

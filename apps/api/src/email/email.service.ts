@@ -5,13 +5,15 @@ import { EmailRenderResult } from "./templates/base.template";
 import { familyInviteTemplate, FamilyInviteTemplateData } from "./templates/family-invite.template";
 import { forgotPasswordTemplate, ForgotPasswordTemplateData } from "./templates/forgot-password.template";
 import { wishlistInviteTemplate, WishlistInviteTemplateData } from "./templates/wishlist-invite.template";
+import { shoppingListInviteTemplate, ShoppingListInviteTemplateData } from "./templates/shopping-list-invite.template";
 
-export type EmailTemplate = "forgot-password" | "wishlist-invite" | "family-invite";
+export type EmailTemplate = "forgot-password" | "wishlist-invite" | "family-invite" | "shopping-list-invite";
 
 export type EmailTemplateData = {
   "forgot-password": ForgotPasswordTemplateData;
   "wishlist-invite": WishlistInviteTemplateData;
   "family-invite": FamilyInviteTemplateData;
+  "shopping-list-invite": ShoppingListInviteTemplateData;
 };
 
 export type SendEmailInput<TTemplate extends EmailTemplate = EmailTemplate> = {
@@ -31,7 +33,8 @@ export type EmailSendResult = {
 const renderers: { [TTemplate in EmailTemplate]: (data: EmailTemplateData[TTemplate]) => EmailRenderResult } = {
   "forgot-password": forgotPasswordTemplate,
   "wishlist-invite": wishlistInviteTemplate,
-  "family-invite": familyInviteTemplate
+  "family-invite": familyInviteTemplate,
+  "shopping-list-invite": shoppingListInviteTemplate
 };
 
 function normalizeRecipients(to: SendEmailInput["to"]): string[] {

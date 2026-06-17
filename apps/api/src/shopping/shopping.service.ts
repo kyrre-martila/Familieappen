@@ -1,331 +1,56 @@
-import { BadRequestException, Injectable, NotFoundException } from "@nestjs/common";
+import { BadRequestException, ConflictException, ForbiddenException, Injectable, NotFoundException } from "@nestjs/common";
+import { createHash, randomBytes } from "node:crypto";
+import { EmailService } from "../email";
 import { FamilyAuthorizationService } from "../families";
 import { PrismaService } from "../prisma";
-import { AddShoppingItemRequestDto, ShoppingCatalogCategoryDto, ShoppingCatalogItemDto, ShoppingListDto, ShoppingListItemDto, UpdateShoppingItemRequestDto } from "./dto/shopping.dto";
+import { AddShoppingItemRequestDto, CreateShoppingListRequestDto, ShoppingCatalogCategoryDto, ShoppingCatalogItemDto, ShoppingListDto, ShoppingListInvitationDto, ShoppingListInviteRequestDto, ShoppingListInviteResponseDto, ShoppingListInvitePreviewDto, ShoppingListItemDto, ShoppingListSummaryDto, UpdateShoppingItemRequestDto } from "./dto/shopping.dto";
 
 const DEFAULT_SHOPPING_LIST_NAME = "Family Shopping";
+const ACTIVE_INVITE_STATUSES = ["pending", "accepted"];
 
-function normalizeShoppingSearchValue(value: string): string {
-  return value
-    .trim()
-    .toLocaleLowerCase("nb-NO")
-    .normalize("NFD")
-    .replace(/[\u0300-\u036f]/g, "")
-    .replace(/æ/g, "ae")
-    .replace(/ø/g, "o")
-    .replace(/å/g, "a")
-    .replace(/[^a-z0-9]+/g, " ")
-    .replace(/\s+/g, " ")
-    .trim();
-}
-
-
-
-type ShoppingCatalogCategoryRecord = {
-  id: string;
-  name: string;
-  slug: string;
-  sortOrder: number;
-  _count?: { items: number };
-};
-
-type ShoppingCatalogItemRecord = {
-  id: string;
-  name: string;
-  aliases: string[];
-  defaultUnit: string;
-  suggestedQuantity: number;
-  category: { slug: string };
-  searchValues?: string[];
-};
-
-type ShoppingListRecord = {
-  id: string;
-  familyId: string;
-  name: string;
-  createdAt: Date;
-  updatedAt: Date;
-};
-
-type ShoppingListItemRecord = {
-  id: string;
-  shoppingListId: string;
-  label: string;
-  quantity: string | null;
-  unit: string | null;
-  note: string | null;
-  category: string | null;
-  checked: boolean;
-  createdByUserId: string | null;
-  checkedByUserId: string | null;
-  checkedAt: Date | null;
-  createdAt: Date;
-  updatedAt: Date;
-};
+type AnyClient = typeof PrismaService.prototype.client & { shoppingListInvitation: any; shoppingListAccess: any };
+type Rec = any;
+function normalizeShoppingSearchValue(value: string): string { return value.trim().toLocaleLowerCase("nb-NO").normalize("NFD").replace(/[\u0300-\u036f]/g, "").replace(/æ/g, "ae").replace(/ø/g, "o").replace(/å/g, "a").replace(/[^a-z0-9]+/g, " ").replace(/\s+/g, " ").trim(); }
 
 @Injectable()
 export class ShoppingService {
-  constructor(
-    private readonly prisma: PrismaService,
-    private readonly familyAuthorization: FamilyAuthorizationService
-  ) {}
+  constructor(private readonly prisma: PrismaService, private readonly familyAuthorization: FamilyAuthorizationService, private readonly emailService: EmailService) {}
+  private get db(): AnyClient { return this.prisma.client as AnyClient; }
 
+  async getCatalogCategories(): Promise<ShoppingCatalogCategoryDto[]> { const categories = await this.prisma.client.shoppingCatalogCategory.findMany({ orderBy: [{ sortOrder: "asc" }, { name: "asc" }], include: { _count: { select: { items: true } } } }); return (categories as Rec[]).map((c) => ({ id: c.id, name: c.name, slug: c.slug, sortOrder: c.sortOrder, totalItemCount: c._count?.items ?? 0 })); }
+  async getCatalogItems(): Promise<ShoppingCatalogItemDto[]> { const items = await this.prisma.client.shoppingCatalogItem.findMany({ orderBy: [{ category: { sortOrder: "asc" } }, { sortOrder: "asc" }, { name: "asc" }], include: { category: { select: { slug: true } } } }); return (items as Rec[]).map((item) => this.toShoppingCatalogItemDto(item)); }
+  async searchCatalog(query: string): Promise<ShoppingCatalogItemDto[]> { const q = normalizeShoppingSearchValue(query); if (q.length < 2) return []; const items = await this.prisma.client.shoppingCatalogItem.findMany({ orderBy: [{ category: { sortOrder: "asc" } }, { sortOrder: "asc" }, { name: "asc" }], include: { category: { select: { slug: true } } } }); return (items as Rec[]).filter((item) => (item.searchValues ?? [item.name, ...item.aliases].map(normalizeShoppingSearchValue)).some((v: string) => v.includes(q))).map((item) => this.toShoppingCatalogItemDto(item)); }
 
-  async getCatalogCategories(): Promise<ShoppingCatalogCategoryDto[]> {
-    const categories = await this.prisma.client.shoppingCatalogCategory.findMany({
-      orderBy: [{ sortOrder: "asc" }, { name: "asc" }],
-      include: { _count: { select: { items: true } } }
-    });
+  async listShoppingLists(userId: string, familyId: string): Promise<ShoppingListSummaryDto[]> { await this.familyAuthorization.requireFamilyMember(userId, familyId); await this.getOrCreateFamilyShoppingList(familyId); const lists = await this.db.shoppingList.findMany({ where: { OR: [{ familyId, isDefault: true }, { ownerUserId: userId }, { accesses: { some: { userId } } }] }, include: { invitations: { orderBy: { createdAt: "desc" } } }, orderBy: [{ isDefault: "desc" }, { createdAt: "asc" }] }); return lists.map((l: Rec) => this.toShoppingListSummaryDto(l)); }
+  async createShoppingList(userId: string, familyId: string, input: CreateShoppingListRequestDto = {}): Promise<ShoppingListDto> { await this.familyAuthorization.requireFamilyMember(userId, familyId); const name = this.validateName(input.name); const list = await this.db.shoppingList.create({ data: { familyId, name, isDefault: false, ownerUserId: userId, accesses: { create: { userId } } }, include: { items: true, invitations: true } }); return this.toShoppingListDto(list); }
+  async getShoppingList(userId: string, familyId: string, listId?: string): Promise<ShoppingListDto> { await this.familyAuthorization.requireFamilyMember(userId, familyId); const list = listId ? await this.getAccessibleListOrThrow(userId, familyId, listId) : await this.getOrCreateFamilyShoppingList(familyId); return this.toShoppingListDto(list); }
 
-    return (categories as ShoppingCatalogCategoryRecord[]).map((category) => ({
-      id: category.id,
-      name: category.name,
-      slug: category.slug,
-      sortOrder: category.sortOrder,
-      totalItemCount: category._count?.items ?? 0
-    }));
-  }
+  async addItem(userId: string, familyId: string, input: AddShoppingItemRequestDto = {}, listId?: string): Promise<ShoppingListItemDto> { const list = await this.getAccessibleListOrThrow(userId, familyId, listId ?? (await this.getOrCreateFamilyShoppingList(familyId)).id); const item = await this.prisma.client.shoppingListItem.create({ data: { shoppingListId: list.id, label: this.validateLabel(input.label), quantity: this.validateOptionalText(input.quantity, "Shopping item quantity", 60), unit: this.validateOptionalText(input.unit, "Shopping item unit", 40), note: this.validateOptionalText(input.note, "Shopping item note", 240), category: this.validateOptionalText(input.category, "Shopping item category", 60), createdByUserId: userId } }); return this.toShoppingListItemDto(item); }
+  async updateItem(userId: string, familyId: string, itemId: string, input: UpdateShoppingItemRequestDto = {}, listId?: string): Promise<ShoppingListItemDto> { const item = await this.getAccessibleShoppingItemOrThrow(userId, familyId, itemId, listId); const updated = await this.prisma.client.shoppingListItem.update({ where: { id: item.id }, data: { label: this.validateLabel(input.label), quantity: this.validateOptionalText(input.quantity, "Shopping item quantity", 60), unit: this.validateOptionalText(input.unit, "Shopping item unit", 40), note: this.validateOptionalText(input.note, "Shopping item note", 240), category: this.validateOptionalText(input.category, "Shopping item category", 60) } }); return this.toShoppingListItemDto(updated); }
+  async toggleItem(userId: string, familyId: string, itemId: string, listId?: string): Promise<ShoppingListItemDto> { const item = await this.getAccessibleShoppingItemOrThrow(userId, familyId, itemId, listId); const checked = !item.checked; const updated = await this.prisma.client.shoppingListItem.update({ where: { id: item.id }, data: { checked, checkedByUserId: checked ? userId : null, checkedAt: checked ? new Date() : null } }); return this.toShoppingListItemDto(updated); }
+  async deleteItem(userId: string, familyId: string, itemId: string, listId?: string): Promise<ShoppingListItemDto> { const item = await this.getAccessibleShoppingItemOrThrow(userId, familyId, itemId, listId); const deleted = await this.prisma.client.shoppingListItem.delete({ where: { id: item.id } }); return this.toShoppingListItemDto(deleted); }
+  async getShoppingSummary(userId: string, familyId: string) { await this.familyAuthorization.requireFamilyMember(userId, familyId); const list = await this.getOrCreateFamilyShoppingList(familyId); const [uncheckedCount, totalItems] = await Promise.all([this.prisma.client.shoppingListItem.count({ where: { shoppingListId: list.id, checked: false } }), this.prisma.client.shoppingListItem.count({ where: { shoppingListId: list.id } })]); return { uncheckedCount, totalItems }; }
 
-  async getCatalogItems(): Promise<ShoppingCatalogItemDto[]> {
-    const items = await this.prisma.client.shoppingCatalogItem.findMany({
-      orderBy: [{ category: { sortOrder: "asc" } }, { sortOrder: "asc" }, { name: "asc" }],
-      include: { category: { select: { slug: true } } }
-    });
+  async inviteByEmail(userId: string, familyId: string, listId: string, input: ShoppingListInviteRequestDto = {}): Promise<ShoppingListInviteResponseDto> { const list = await this.getAccessibleListOrThrow(userId, familyId, listId); if (list.isDefault) throw new BadRequestException("Standardlisten kan ikke deles ennå"); if (list.ownerUserId !== userId) throw new ForbiddenException("Bare eieren kan dele handlelisten"); const invitedEmail = this.validateEmail((input.email ?? input.invitedEmail ?? input.invited_email) as unknown); const inviter = await this.prisma.client.user.findUnique({ where: { id: userId } }) as Rec; if (inviter.email.toLowerCase() === invitedEmail) throw new BadRequestException("Du kan ikke invitere deg selv"); const invitedUser = await this.prisma.client.user.findUnique({ where: { email: invitedEmail } }) as Rec | null; if (invitedUser && await this.hasExplicitListAccess(invitedUser.id, list.id)) throw new ConflictException("Denne e-postadressen har allerede tilgang"); const existing = await this.db.shoppingListInvitation.findFirst({ where: { shoppingListId: list.id, invitedEmail: { equals: invitedEmail, mode: "insensitive" }, status: { in: ACTIVE_INVITE_STATUSES } } }); if (existing?.status === "accepted") throw new ConflictException("Denne e-postadressen har allerede tilgang"); const token = randomBytes(32).toString("base64url"); const data = { invitedUserId: invitedUser?.id ?? null, tokenHash: this.hashToken(token), status: "pending", revokedAt: null, declinedAt: null, acceptedAt: null }; const invitation = existing ? await this.db.shoppingListInvitation.update({ where: { id: existing.id }, data }) : await this.db.shoppingListInvitation.create({ data: { ...data, shoppingListId: list.id, familyId, invitedEmail, createdByUserId: userId } }); const inviteUrl = `${process.env.WEB_APP_URL ?? "http://localhost:3000"}/shopping/invite/${token}`; const email = await this.emailService.sendEmail({ to: invitedEmail, template: "shopping-list-invite", data: { inviteUrl, inviterName: inviter.name, listName: this.formatListName(list) } }); return { invitation: this.toInvitationDto(invitation), email: { ok: email.ok, mode: email.mode } }; }
+  async acceptInvite(userId: string, token: string): Promise<ShoppingListInvitationDto> { const inv = await this.getInvitationByTokenOrThrow(token); if (inv.status !== "pending") throw new BadRequestException("Invitasjonen kan ikke aksepteres"); await this.assertRecipient(userId, inv); const updated = await this.db.$transaction(async (transaction) => { const tx = transaction as unknown as AnyClient; await tx.shoppingListAccess.upsert({ where: { shoppingListId_userId: { shoppingListId: inv.shoppingListId, userId } }, update: {}, create: { shoppingListId: inv.shoppingListId, userId } }); return tx.shoppingListInvitation.update({ where: { id: inv.id }, data: { status: "accepted", invitedUserId: userId, acceptedAt: new Date() } }); }); return this.toInvitationDto(updated); }
+  async getInvitePreview(token: string): Promise<ShoppingListInvitePreviewDto> { const inv = await this.getInvitationByTokenOrThrow(token); return { id: inv.id, shoppingListId: inv.shoppingListId, listName: this.formatListName(inv.shoppingList), invitedEmail: inv.invitedEmail, inviterName: inv.createdByUser?.name ?? "FamilieAppen", status: inv.status, requiresAuth: true }; }
 
-    return (items as ShoppingCatalogItemRecord[]).map((item) => this.toShoppingCatalogItemDto(item));
-  }
-
-  async searchCatalog(query: string): Promise<ShoppingCatalogItemDto[]> {
-    const normalizedQuery = normalizeShoppingSearchValue(query);
-
-    if (normalizedQuery.length < 2) {
-      return [];
-    }
-
-    const items = await this.prisma.client.shoppingCatalogItem.findMany({
-      orderBy: [{ category: { sortOrder: "asc" } }, { sortOrder: "asc" }, { name: "asc" }],
-      include: { category: { select: { slug: true } } }
-    });
-
-    return (items as ShoppingCatalogItemRecord[])
-      .filter((item) => (item.searchValues ?? [item.name, ...item.aliases].map(normalizeShoppingSearchValue)).some((value) => value.includes(normalizedQuery)))
-      .map((item) => this.toShoppingCatalogItemDto(item));
-  }
-
-  async getShoppingList(userId: string, familyId: string): Promise<ShoppingListDto> {
-    await this.familyAuthorization.requireFamilyMember(userId, familyId);
-    const shoppingList = await this.getOrCreateFamilyShoppingList(familyId);
-
-    return this.toShoppingListDto(shoppingList);
-  }
-
-  async addItem(userId: string, familyId: string, input: AddShoppingItemRequestDto = {}): Promise<ShoppingListItemDto> {
-    await this.familyAuthorization.requireFamilyMember(userId, familyId);
-    const shoppingList = await this.getOrCreateFamilyShoppingList(familyId);
-    const label = this.validateLabel(input.label);
-    const quantity = this.validateOptionalText(input.quantity, "Shopping item quantity", 60);
-    const unit = this.validateOptionalText(input.unit, "Shopping item unit", 40);
-    const note = this.validateOptionalText(input.note, "Shopping item note", 240);
-    const category = this.validateOptionalText(input.category, "Shopping item category", 60);
-
-    const item = await this.prisma.client.shoppingListItem.create({
-      data: {
-        shoppingListId: shoppingList.id,
-        label,
-        quantity,
-        unit,
-        note,
-        category,
-        createdByUserId: userId
-      }
-    });
-
-    return this.toShoppingListItemDto(item);
-  }
-
-  async updateItem(userId: string, familyId: string, itemId: string, input: UpdateShoppingItemRequestDto = {}): Promise<ShoppingListItemDto> {
-    await this.familyAuthorization.requireFamilyMember(userId, familyId);
-    const item = await this.getFamilyShoppingItemOrThrow(familyId, itemId);
-    const label = this.validateLabel(input.label);
-    const quantity = this.validateOptionalText(input.quantity, "Shopping item quantity", 60);
-    const unit = this.validateOptionalText(input.unit, "Shopping item unit", 40);
-    const note = this.validateOptionalText(input.note, "Shopping item note", 240);
-    const category = this.validateOptionalText(input.category, "Shopping item category", 60);
-
-    const updatedItem = await this.prisma.client.shoppingListItem.update({
-      where: { id: item.id },
-      data: {
-        label,
-        quantity,
-        unit,
-        note,
-        category
-      }
-    });
-
-    return this.toShoppingListItemDto(updatedItem);
-  }
-
-  async toggleItem(userId: string, familyId: string, itemId: string): Promise<ShoppingListItemDto> {
-    await this.familyAuthorization.requireFamilyMember(userId, familyId);
-    const item = await this.getFamilyShoppingItemOrThrow(familyId, itemId);
-    const nextChecked = !item.checked;
-
-    const updatedItem = await this.prisma.client.shoppingListItem.update({
-      where: { id: item.id },
-      data: {
-        checked: nextChecked,
-        checkedByUserId: nextChecked ? userId : null,
-        checkedAt: nextChecked ? new Date() : null
-      }
-    });
-
-    return this.toShoppingListItemDto(updatedItem);
-  }
-
-  async deleteItem(userId: string, familyId: string, itemId: string): Promise<ShoppingListItemDto> {
-    await this.familyAuthorization.requireFamilyMember(userId, familyId);
-    const item = await this.getFamilyShoppingItemOrThrow(familyId, itemId);
-    const deletedItem = await this.prisma.client.shoppingListItem.delete({
-      where: { id: item.id }
-    });
-
-    return this.toShoppingListItemDto(deletedItem);
-  }
-
-  async getShoppingSummary(userId: string, familyId: string): Promise<{ uncheckedCount: number; totalItems: number }> {
-    await this.familyAuthorization.requireFamilyMember(userId, familyId);
-    const shoppingList = await this.getOrCreateFamilyShoppingList(familyId);
-    const [uncheckedCount, totalItems] = await Promise.all([
-      this.prisma.client.shoppingListItem.count({
-        where: {
-          shoppingListId: shoppingList.id,
-          checked: false
-        }
-      }),
-      this.prisma.client.shoppingListItem.count({
-        where: {
-          shoppingListId: shoppingList.id
-        }
-      })
-    ]);
-
-    return { uncheckedCount, totalItems };
-  }
-
-  private async getOrCreateFamilyShoppingList(familyId: string): Promise<ShoppingListRecord & { items: ShoppingListItemRecord[] }> {
-    const existingList = await this.prisma.client.shoppingList.findUnique({
-      where: { familyId },
-      include: {
-        items: {
-          orderBy: [{ checked: "asc" }, { createdAt: "asc" }]
-        }
-      }
-    });
-
-    if (existingList) {
-      return existingList;
-    }
-
-    return this.prisma.client.shoppingList.create({
-      data: {
-        familyId,
-        name: DEFAULT_SHOPPING_LIST_NAME
-      },
-      include: {
-        items: {
-          orderBy: [{ checked: "asc" }, { createdAt: "asc" }]
-        }
-      }
-    });
-  }
-
-  private async getFamilyShoppingItemOrThrow(familyId: string, itemId: string): Promise<ShoppingListItemRecord> {
-    const item = await this.prisma.client.shoppingListItem.findFirst({
-      where: {
-        id: itemId,
-        shoppingList: {
-          familyId
-        }
-      }
-    });
-
-    if (!item) {
-      throw new NotFoundException("Shopping item was not found");
-    }
-
-    return item;
-  }
-
-  private validateLabel(value: unknown): string {
-    if (typeof value !== "string") {
-      throw new BadRequestException("Shopping item label is required");
-    }
-
-    const label = value.trim();
-
-    if (label.length < 1 || label.length > 120) {
-      throw new BadRequestException("Shopping item label must be between 1 and 120 characters");
-    }
-
-    return label;
-  }
-
-  private validateOptionalText(value: unknown, fieldName: string, maxLength: number): string | null {
-    if (value === undefined || value === null) {
-      return null;
-    }
-
-    if (typeof value !== "string") {
-      throw new BadRequestException(`${fieldName} must be text`);
-    }
-
-    const text = value.trim();
-
-    if (text.length > maxLength) {
-      throw new BadRequestException(`${fieldName} must be ${maxLength} characters or fewer`);
-    }
-
-    return text.length === 0 ? null : text;
-  }
-
-  private toShoppingCatalogItemDto(item: ShoppingCatalogItemRecord): ShoppingCatalogItemDto {
-    return {
-      id: item.id,
-      name: item.name,
-      categorySlug: item.category.slug,
-      aliases: item.aliases,
-      defaultUnit: item.defaultUnit,
-      suggestedQuantity: item.suggestedQuantity
-    };
-  }
-
-  private toShoppingListDto(shoppingList: ShoppingListRecord & { items: ShoppingListItemRecord[] }): ShoppingListDto {
-    return {
-      id: shoppingList.id,
-      familyId: shoppingList.familyId,
-      name: shoppingList.name,
-      createdAt: shoppingList.createdAt.toISOString(),
-      updatedAt: shoppingList.updatedAt.toISOString(),
-      items: shoppingList.items.map((item) => this.toShoppingListItemDto(item))
-    };
-  }
-
-  private toShoppingListItemDto(item: ShoppingListItemRecord): ShoppingListItemDto {
-    return {
-      id: item.id,
-      shoppingListId: item.shoppingListId,
-      label: item.label,
-      quantity: item.quantity,
-      unit: item.unit,
-      note: item.note,
-      category: item.category,
-      checked: item.checked,
-      createdByUserId: item.createdByUserId,
-      checkedByUserId: item.checkedByUserId,
-      checkedAt: item.checkedAt?.toISOString() ?? null,
-      createdAt: item.createdAt.toISOString(),
-      updatedAt: item.updatedAt.toISOString()
-    };
-  }
+  private async getOrCreateFamilyShoppingList(familyId: string): Promise<Rec> { let list = await this.db.shoppingList.findFirst({ where: { familyId, isDefault: true }, include: this.listInclude() }); if (list) return list; list = await this.db.shoppingList.findFirst({ where: { familyId }, include: this.listInclude() }); if (list) return this.db.shoppingList.update({ where: { id: list.id }, data: { isDefault: true }, include: this.listInclude() }); return this.db.shoppingList.create({ data: { familyId, name: DEFAULT_SHOPPING_LIST_NAME, isDefault: true }, include: this.listInclude() }); }
+  private async getAccessibleListOrThrow(userId: string, familyId: string, listId: string): Promise<Rec> { const list = await this.db.shoppingList.findFirst({ where: { id: listId, OR: [{ familyId, isDefault: true }, { ownerUserId: userId }, { accesses: { some: { userId } } }] }, include: this.listInclude() }); if (!list) throw new NotFoundException("Shopping list was not found"); if (list.isDefault) await this.familyAuthorization.requireFamilyMember(userId, list.familyId); return list; }
+  private async getAccessibleShoppingItemOrThrow(userId: string, familyId: string, itemId: string, listId?: string): Promise<Rec> { const item = await this.prisma.client.shoppingListItem.findFirst({ where: { id: itemId, ...(listId ? { shoppingListId: listId } : {}), shoppingList: { OR: [{ familyId, isDefault: true }, { ownerUserId: userId }, { accesses: { some: { userId } } }] } } }); if (!item) throw new NotFoundException("Shopping item was not found"); if ((item as Rec).shoppingList?.isDefault) await this.familyAuthorization.requireFamilyMember(userId, (item as Rec).shoppingList.familyId); return item; }
+  private async getInvitationByTokenOrThrow(token: string): Promise<Rec> { const inv = await this.db.shoppingListInvitation.findFirst({ where: { tokenHash: this.hashToken(token) }, include: { shoppingList: true, createdByUser: true } }); if (!inv) throw new NotFoundException("Invitasjonen finnes ikke"); return inv; }
+  private async assertRecipient(userId: string, inv: Rec) { const user = await this.prisma.client.user.findUnique({ where: { id: userId } }) as Rec | null; if (!user || user.email.toLowerCase() !== inv.invitedEmail.toLowerCase()) throw new ForbiddenException("Invitasjonen tilhører en annen e-postadresse"); }
+  private async hasExplicitListAccess(userId: string, listId: string): Promise<boolean> { return Boolean(await this.db.shoppingListAccess.findFirst({ where: { userId, shoppingListId: listId } })); }
+  private listInclude() { return { items: { orderBy: [{ checked: "asc" }, { createdAt: "asc" }] }, invitations: { orderBy: { createdAt: "desc" } } }; }
+  private hashToken(token: string) { return createHash("sha256").update(token).digest("hex"); }
+  private validateName(v: unknown) { if (typeof v !== "string") throw new BadRequestException("Shopping list name is required"); const name = v.trim(); if (name.length < 1 || name.length > 80) throw new BadRequestException("Shopping list name must be between 1 and 80 characters"); return name; }
+  private validateEmail(v: unknown) { if (typeof v !== "string") throw new BadRequestException("E-post er påkrevd"); const email = v.trim().toLowerCase(); if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) throw new BadRequestException("Ugyldig e-postadresse"); return email; }
+  private validateLabel(v: unknown) { if (typeof v !== "string") throw new BadRequestException("Shopping item label is required"); const label = v.trim(); if (label.length < 1 || label.length > 120) throw new BadRequestException("Shopping item label must be between 1 and 120 characters"); return label; }
+  private validateOptionalText(v: unknown, name: string, max: number): string | null { if (v == null) return null; if (typeof v !== "string") throw new BadRequestException(`${name} must be text`); const text = v.trim(); if (text.length > max) throw new BadRequestException(`${name} must be ${max} characters or fewer`); return text || null; }
+  private formatListName(l: Rec) { return !l.name || l.name === DEFAULT_SHOPPING_LIST_NAME ? "Familiehandleliste" : l.name; }
+  private toShoppingCatalogItemDto(item: Rec): ShoppingCatalogItemDto { return { id: item.id, name: item.name, categorySlug: item.category.slug, aliases: item.aliases, defaultUnit: item.defaultUnit, suggestedQuantity: item.suggestedQuantity }; }
+  private toShoppingListSummaryDto(l: Rec): ShoppingListSummaryDto { return { id: l.id, familyId: l.familyId, name: this.formatListName(l), isDefault: Boolean(l.isDefault), ownerUserId: l.ownerUserId ?? null, createdAt: l.createdAt.toISOString(), updatedAt: l.updatedAt.toISOString(), invitations: l.invitations?.map((i: Rec) => this.toInvitationDto(i)) }; }
+  private toShoppingListDto(l: Rec): ShoppingListDto { return { ...this.toShoppingListSummaryDto(l), items: (l.items ?? []).map((i: Rec) => this.toShoppingListItemDto(i)) }; }
+  private toInvitationDto(i: Rec): ShoppingListInvitationDto { return { id: i.id, shoppingListId: i.shoppingListId, invitedEmail: i.invitedEmail, invitedUserId: i.invitedUserId ?? null, status: i.status, acceptedAt: i.acceptedAt?.toISOString() ?? null, createdAt: i.createdAt.toISOString(), updatedAt: i.updatedAt.toISOString() }; }
+  private toShoppingListItemDto(i: Rec): ShoppingListItemDto { return { id: i.id, shoppingListId: i.shoppingListId, label: i.label, quantity: i.quantity, unit: i.unit, note: i.note, category: i.category, checked: i.checked, createdByUserId: i.createdByUserId, checkedByUserId: i.checkedByUserId, checkedAt: i.checkedAt?.toISOString() ?? null, createdAt: i.createdAt.toISOString(), updatedAt: i.updatedAt.toISOString() }; }
 }
