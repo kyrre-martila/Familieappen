@@ -167,7 +167,756 @@ export const SHOPPING_CATALOG: ShoppingCatalogItem[] = [
   defaultUnit: "kg",
   suggestedQuantity: 1,
 },
+{
+  name: "Basilikum",
+  categorySlug: "frukt-og-gront",
+  aliases: ["fersk basilikum"],
+  defaultUnit: "pk",
+  suggestedQuantity: 1,
+},
 
+{
+  name: "Bjørnebær",
+  categorySlug: "frukt-og-gront",
+  aliases: ["blackberries"],
+  defaultUnit: "pk",
+  suggestedQuantity: 1,
+},
+{
+  name: "Bladbete",
+  categorySlug: "frukt-og-gront",
+  aliases: ["mangold", "bladbeter"],
+  defaultUnit: "stk",
+  suggestedQuantity: 1,
+},
+{
+  name: "Bladsalat",
+  categorySlug: "frukt-og-gront",
+  aliases: ["salatblader", "grønn salat"],
+  defaultUnit: "stk",
+  suggestedQuantity: 1,
+},
+{
+  name: "Blodappelsin",
+  categorySlug: "frukt-og-gront",
+  aliases: ["rød appelsin"],
+  defaultUnit: "kg",
+  suggestedQuantity: 1,
+},
+{
+  name: "Blomkål",
+  categorySlug: "frukt-og-gront",
+  aliases: ["cauliflower"],
+  defaultUnit: "stk",
+  suggestedQuantity: 1,
+},
+{
+  name: "Blåbær",
+  categorySlug: "frukt-og-gront",
+  aliases: ["blueberries"],
+  defaultUnit: "pk",
+  suggestedQuantity: 1,
+},
+{
+  name: "Bringebær",
+  categorySlug: "frukt-og-gront",
+  aliases: ["raspberries"],
+  defaultUnit: "pk",
+  suggestedQuantity: 1,
+},
+{
+  name: "Brokkoli",
+  categorySlug: "frukt-og-gront",
+  aliases: ["broccoli"],
+  defaultUnit: "stk",
+  suggestedQuantity: 1,
+},
+{
+  name: "Bær",
+  categorySlug: "frukt-og-gront",
+  aliases: ["blandede bær", "bærmiks"],
+  defaultUnit: "pk",
+  suggestedQuantity: 1,
+},
+{
+  name: "Cherrytomater",
+  categorySlug: "frukt-og-gront",
+  aliases: ["cherrytomater", "små tomater"],
+  defaultUnit: "pk",
+  suggestedQuantity: 1,
+},
+{
+  name: "Chillipepper",
+  categorySlug: "frukt-og-gront",
+  aliases: ["chili", "chilier", "pepperfrukt"],
+  defaultUnit: "stk",
+  suggestedQuantity: 2,
+},
+{
+  name: "Dadler",
+  categorySlug: "frukt-og-gront",
+  aliases: ["dates"],
+  defaultUnit: "pk",
+  suggestedQuantity: 1,
+},
+{
+  name: "Dill",
+  categorySlug: "frukt-og-gront",
+  aliases: ["fersk dill"],
+  defaultUnit: "pk",
+  suggestedQuantity: 1,
+},
+{
+  name: "Dragefrukt",
+  categorySlug: "frukt-og-gront",
+  aliases: ["pitaya", "dragon fruit"],
+  defaultUnit: "stk",
+  suggestedQuantity: 1,
+},
+{
+  name: "Druer",
+  categorySlug: "frukt-og-gront",
+  aliases: ["grønne druer", "røde druer"],
+  defaultUnit: "pk",
+  suggestedQuantity: 1,
+},
+{
+  name: "Eggplante",
+  categorySlug: "frukt-og-gront",
+  aliases: ["aubergine"],
+  defaultUnit: "stk",
+  suggestedQuantity: 1,
+},
+{
+  name: "Epler",
+  categorySlug: "frukt-og-gront",
+  aliases: ["eple", "røde epler", "grønne epler"],
+  defaultUnit: "kg",
+  suggestedQuantity: 1,
+},
+{
+  name: "Erter",
+  categorySlug: "frukt-og-gront",
+  aliases: ["grønne erter", "sukkererter"],
+  defaultUnit: "pk",
+  suggestedQuantity: 1,
+},
+{
+  name: "Fennikel",
+  categorySlug: "frukt-og-gront",
+  aliases: ["fenikkel"],
+  defaultUnit: "stk",
+  suggestedQuantity: 1,
+},
+{
+  name: "Fersken",
+  categorySlug: "frukt-og-gront",
+  aliases: ["ferskener"],
+  defaultUnit: "kg",
+  suggestedQuantity: 1,
+},
+{
+  name: "Fiken",
+  categorySlug: "frukt-og-gront",
+  aliases: ["fikener"],
+  defaultUnit: "pk",
+  suggestedQuantity: 1,
+},
+{
+  name: "Flaskegresskar",
+  categorySlug: "frukt-og-gront",
+  aliases: ["butternut squash"],
+  defaultUnit: "stk",
+  suggestedQuantity: 1,
+},
+{
+  name: "Frukt",
+  categorySlug: "frukt-og-gront",
+  aliases: ["fruktmiks", "blandet frukt"],
+  defaultUnit: "kg",
+  suggestedQuantity: 1,
+},
+{
+  name: "Goji-bær",
+  categorySlug: "frukt-og-gront",
+  aliases: ["gojibær"],
+  defaultUnit: "pk",
+  suggestedQuantity: 1,
+},
+{
+  name: "Grapefrukt",
+  categorySlug: "frukt-og-gront",
+  aliases: ["grapefruit"],
+  defaultUnit: "kg",
+  suggestedQuantity: 1,
+},
+{
+  name: "Gresskar",
+  categorySlug: "frukt-og-gront",
+  aliases: ["pumpkin"],
+  defaultUnit: "stk",
+  suggestedQuantity: 1,
+},
+{
+  name: "Gressløk",
+  categorySlug: "frukt-og-gront",
+  aliases: ["fersk gressløk"],
+  defaultUnit: "pk",
+  suggestedQuantity: 1,
+},
+{
+  name: "Grønnsaker",
+  categorySlug: "frukt-og-gront",
+  aliases: ["grønnsaksmiks", "blandede grønnsaker"],
+  defaultUnit: "kg",
+  suggestedQuantity: 1,
+},
+{
+  name: "Guava",
+  categorySlug: "frukt-og-gront",
+  aliases: [],
+  defaultUnit: "stk",
+  suggestedQuantity: 1,
+},
+{
+  name: "Gulrot",
+  categorySlug: "frukt-og-gront",
+  aliases: ["gulrøtter"],
+  defaultUnit: "kg",
+  suggestedQuantity: 1,
+},
+{
+  name: "Halloween gresskar",
+  categorySlug: "frukt-og-gront",
+  aliases: ["utskjæringsgresskar"],
+  defaultUnit: "stk",
+  suggestedQuantity: 1,
+},
+{
+  name: "Hodekål",
+  categorySlug: "frukt-og-gront",
+  aliases: ["hvitkål"],
+  defaultUnit: "stk",
+  suggestedQuantity: 1,
+},
+{
+  name: "Hokkaido gresskar",
+  categorySlug: "frukt-og-gront",
+  aliases: ["hokkaido"],
+  defaultUnit: "stk",
+  suggestedQuantity: 1,
+},
+{
+  name: "Honningmelon",
+  categorySlug: "frukt-og-gront",
+  aliases: ["honeydew melon"],
+  defaultUnit: "stk",
+  suggestedQuantity: 1,
+},
+{
+  name: "Hvetegress",
+  categorySlug: "frukt-og-gront",
+  aliases: ["wheatgrass"],
+  defaultUnit: "pk",
+  suggestedQuantity: 1,
+},
+{
+  name: "Hvitløk",
+  categorySlug: "frukt-og-gront",
+  aliases: ["hvitløk"],
+  defaultUnit: "stk",
+  suggestedQuantity: 1,
+},
+{
+  name: "Ingefær",
+  categorySlug: "frukt-og-gront",
+  aliases: ["ingefærrot"],
+  defaultUnit: "stk",
+  suggestedQuantity: 1,
+},
+{
+  name: "Jordbær",
+  categorySlug: "frukt-og-gront",
+  aliases: ["strawberries"],
+  defaultUnit: "pk",
+  suggestedQuantity: 1,
+},
+{
+  name: "Kantareller",
+  categorySlug: "frukt-og-gront",
+  aliases: ["kantarell"],
+  defaultUnit: "pk",
+  suggestedQuantity: 1,
+},
+{
+  name: "Karse",
+  categorySlug: "frukt-og-gront",
+  aliases: ["hagekarse"],
+  defaultUnit: "pk",
+  suggestedQuantity: 1,
+},
+{
+  name: "Kastanjer",
+  categorySlug: "frukt-og-gront",
+  aliases: ["spiselige kastanjer"],
+  defaultUnit: "pk",
+  suggestedQuantity: 1,
+},
+{
+  name: "Kinakål",
+  categorySlug: "frukt-og-gront",
+  aliases: ["napa cabbage"],
+  defaultUnit: "stk",
+  suggestedQuantity: 1,
+},
+{
+  name: "Kirsebær",
+  categorySlug: "frukt-og-gront",
+  aliases: ["cherries"],
+  defaultUnit: "kg",
+  suggestedQuantity: 1,
+},
+{
+  name: "Kiwi",
+  categorySlug: "frukt-og-gront",
+  aliases: ["kiwier"],
+  defaultUnit: "stk",
+  suggestedQuantity: 4,
+},
+{
+  name: "Klementin",
+  categorySlug: "frukt-og-gront",
+  aliases: ["clementine"],
+  defaultUnit: "kg",
+  suggestedQuantity: 1,
+},
+{
+  name: "Klementiner",
+  categorySlug: "frukt-og-gront",
+  aliases: ["klementin"],
+  defaultUnit: "kg",
+  suggestedQuantity: 1,
+},
+{
+  name: "Knollselleri",
+  categorySlug: "frukt-og-gront",
+  aliases: ["sellerirot", "celeriac"],
+  defaultUnit: "stk",
+  suggestedQuantity: 1,
+},
+{
+  name: "Kokosnøtt",
+  categorySlug: "frukt-og-gront",
+  aliases: ["kokos"],
+  defaultUnit: "stk",
+  suggestedQuantity: 1,
+},
+{
+  name: "Kokosolje",
+  categorySlug: "frukt-og-gront",
+  aliases: ["coconut oil"],
+  defaultUnit: "glass",
+  suggestedQuantity: 1,
+},
+{
+  name: "Koriander",
+  categorySlug: "frukt-og-gront",
+  aliases: ["fersk koriander"],
+  defaultUnit: "pk",
+  suggestedQuantity: 1,
+},
+{
+  name: "Kvede",
+  categorySlug: "frukt-og-gront",
+  aliases: ["quince"],
+  defaultUnit: "kg",
+  suggestedQuantity: 1,
+},
+{
+  name: "Kål",
+  categorySlug: "frukt-og-gront",
+  aliases: ["grønnkål", "kålhode"],
+  defaultUnit: "stk",
+  suggestedQuantity: 1,
+},
+{
+  name: "Lime",
+  categorySlug: "frukt-og-gront",
+  aliases: ["limes"],
+  defaultUnit: "stk",
+  suggestedQuantity: 2,
+},
+{
+  name: "Linfrø",
+  categorySlug: "frukt-og-gront",
+  aliases: ["flax seeds"],
+  defaultUnit: "pk",
+  suggestedQuantity: 1,
+},
+{
+  name: "Litchi",
+  categorySlug: "frukt-og-gront",
+  aliases: ["lychee"],
+  defaultUnit: "pk",
+  suggestedQuantity: 1,
+},
+{
+  name: "Løk",
+  categorySlug: "frukt-og-gront",
+  aliases: ["gul løk", "rødløk", "løk"],
+  defaultUnit: "kg",
+  suggestedQuantity: 1,
+},
+{
+  name: "Mais",
+  categorySlug: "frukt-og-gront",
+  aliases: ["søtmais"],
+  defaultUnit: "boks",
+  suggestedQuantity: 1,
+},
+{
+  name: "Maiskolber",
+  categorySlug: "frukt-og-gront",
+  aliases: ["maiskolbe"],
+  defaultUnit: "pk",
+  suggestedQuantity: 2,
+},
+{
+  name: "Mango",
+  categorySlug: "frukt-og-gront",
+  aliases: ["mangoer"],
+  defaultUnit: "stk",
+  suggestedQuantity: 1,
+},
+{
+  name: "Melon",
+  categorySlug: "frukt-og-gront",
+  aliases: ["meloner"],
+  defaultUnit: "stk",
+  suggestedQuantity: 1,
+},
+{
+  name: "Merian",
+  categorySlug: "frukt-og-gront",
+  aliases: ["marjoram"],
+  defaultUnit: "pk",
+  suggestedQuantity: 1,
+},
+{
+  name: "Mirabelle-plomme",
+  categorySlug: "frukt-og-gront",
+  aliases: ["mirabelle", "gul plomme"],
+  defaultUnit: "kg",
+  suggestedQuantity: 1,
+},
+{
+  name: "Nektarin",
+  categorySlug: "frukt-og-gront",
+  aliases: ["nektariner"],
+  defaultUnit: "kg",
+  suggestedQuantity: 1,
+},
+{
+  name: "Oliven",
+  categorySlug: "frukt-og-gront",
+  aliases: ["grønne oliven", "svarte oliven"],
+  defaultUnit: "glass",
+  suggestedQuantity: 1,
+},
+{
+  name: "Pak choy",
+  categorySlug: "frukt-og-gront",
+  aliases: ["bok choy"],
+  defaultUnit: "stk",
+  suggestedQuantity: 1,
+},
+{
+  name: "Papaya",
+  categorySlug: "frukt-og-gront",
+  aliases: ["papayafrukt"],
+  defaultUnit: "stk",
+  suggestedQuantity: 1,
+},
+{
+  name: "Paprika",
+  categorySlug: "frukt-og-gront",
+  aliases: ["rød paprika", "gul paprika", "grønn paprika"],
+  defaultUnit: "stk",
+  suggestedQuantity: 2,
+},
+{
+  name: "Pasjonsfrukt",
+  categorySlug: "frukt-og-gront",
+  aliases: ["passion fruit"],
+  defaultUnit: "stk",
+  suggestedQuantity: 2,
+},
+{
+  name: "Pastinakk",
+  categorySlug: "frukt-og-gront",
+  aliases: ["pastinakker"],
+  defaultUnit: "kg",
+  suggestedQuantity: 1,
+},
+{
+  name: "Peppermynte",
+  categorySlug: "frukt-og-gront",
+  aliases: ["mynte", "fersk mynte"],
+  defaultUnit: "pk",
+  suggestedQuantity: 1,
+},
+{
+  name: "Persille",
+  categorySlug: "frukt-og-gront",
+  aliases: ["fersk persille"],
+  defaultUnit: "pk",
+  suggestedQuantity: 1,
+},
+{
+  name: "Plommer",
+  categorySlug: "frukt-og-gront",
+  aliases: ["plomme"],
+  defaultUnit: "kg",
+  suggestedQuantity: 1,
+},
+{
+  name: "Portulak",
+  categorySlug: "frukt-og-gront",
+  aliases: ["purslane"],
+  defaultUnit: "pk",
+  suggestedQuantity: 1,
+},
+{
+  name: "Potet",
+  categorySlug: "frukt-og-gront",
+  aliases: ["poteter"],
+  defaultUnit: "kg",
+  suggestedQuantity: 1,
+},
+{
+  name: "Purre",
+  categorySlug: "frukt-og-gront",
+  aliases: ["purreløk"],
+  defaultUnit: "stk",
+  suggestedQuantity: 1,
+},
+{
+  name: "Pære",
+  categorySlug: "frukt-og-gront",
+  aliases: ["pærer"],
+  defaultUnit: "kg",
+  suggestedQuantity: 1,
+},
+{
+  name: "Rabarbra",
+  categorySlug: "frukt-og-gront",
+  aliases: ["rabarbrastenger"],
+  defaultUnit: "pk",
+  suggestedQuantity: 1,
+},
+{
+  name: "Rapsolje",
+  categorySlug: "frukt-og-gront",
+  aliases: ["rapsolje"],
+  defaultUnit: "flaske",
+  suggestedQuantity: 1,
+},
+{
+  name: "Reddik",
+  categorySlug: "frukt-og-gront",
+  aliases: ["reddiker"],
+  defaultUnit: "pk",
+  suggestedQuantity: 1,
+},
+{
+  name: "Rosenkål",
+  categorySlug: "frukt-og-gront",
+  aliases: ["rosenkålhoder"],
+  defaultUnit: "pk",
+  suggestedQuantity: 1,
+},
+{
+  name: "Ruccola",
+  categorySlug: "frukt-og-gront",
+  aliases: ["ruccolasalat", "arugula"],
+  defaultUnit: "pk",
+  suggestedQuantity: 1,
+},
+{
+  name: "Rødbeter",
+  categorySlug: "frukt-og-gront",
+  aliases: ["rødbete"],
+  defaultUnit: "kg",
+  suggestedQuantity: 1,
+},
+{
+  name: "Rødkål",
+  categorySlug: "frukt-og-gront",
+  aliases: ["rød kål"],
+  defaultUnit: "stk",
+  suggestedQuantity: 1,
+},
+{
+  name: "Salat",
+  categorySlug: "frukt-og-gront",
+  aliases: ["grønn salat", "salathode"],
+  defaultUnit: "stk",
+  suggestedQuantity: 1,
+},
+{
+  name: "Salvie",
+  categorySlug: "frukt-og-gront",
+  aliases: ["fersk salvie"],
+  defaultUnit: "pk",
+  suggestedQuantity: 1,
+},
+{
+  name: "Savoykål",
+  categorySlug: "frukt-og-gront",
+  aliases: ["savoykålhode"],
+  defaultUnit: "stk",
+  suggestedQuantity: 1,
+},
+{
+  name: "Sikori",
+  categorySlug: "frukt-og-gront",
+  aliases: ["chicory"],
+  defaultUnit: "stk",
+  suggestedQuantity: 1,
+},
+{
+  name: "Sitron",
+  categorySlug: "frukt-og-gront",
+  aliases: ["sitroner"],
+  defaultUnit: "kg",
+  suggestedQuantity: 1,
+},
+{
+  name: "Sitrongress",
+  categorySlug: "frukt-og-gront",
+  aliases: ["lemongrass"],
+  defaultUnit: "pk",
+  suggestedQuantity: 1,
+},
+{
+  name: "Skorsonerrot",
+  categorySlug: "frukt-og-gront",
+  aliases: ["svartrøtter"],
+  defaultUnit: "kg",
+  suggestedQuantity: 1,
+},
+{
+  name: "Solbær",
+  categorySlug: "frukt-og-gront",
+  aliases: ["blackcurrants"],
+  defaultUnit: "pk",
+  suggestedQuantity: 1,
+},
+{
+  name: "Sopp",
+  categorySlug: "frukt-og-gront",
+  aliases: ["champignon", "matsopp"],
+  defaultUnit: "pk",
+  suggestedQuantity: 1,
+},
+{
+  name: "Spinat",
+  categorySlug: "frukt-og-gront",
+  aliases: ["babyspinat"],
+  defaultUnit: "pk",
+  suggestedQuantity: 1,
+},
+{
+  name: "Squash",
+  categorySlug: "frukt-og-gront",
+  aliases: ["zucchini"],
+  defaultUnit: "stk",
+  suggestedQuantity: 1,
+},
+{
+  name: "Stangselleri",
+  categorySlug: "frukt-og-gront",
+  aliases: ["selleristang"],
+  defaultUnit: "stk",
+  suggestedQuantity: 1,
+},
+{
+  name: "Stikkelsbær",
+  categorySlug: "frukt-og-gront",
+  aliases: ["gooseberries"],
+  defaultUnit: "pk",
+  suggestedQuantity: 1,
+},
+{
+  name: "Stjernefrukt",
+  categorySlug: "frukt-og-gront",
+  aliases: ["carambola"],
+  defaultUnit: "stk",
+  suggestedQuantity: 1,
+},
+{
+  name: "Søtpotet",
+  categorySlug: "frukt-og-gront",
+  aliases: ["søtpoteter"],
+  defaultUnit: "kg",
+  suggestedQuantity: 1,
+},
+{
+  name: "Thai-basilikum",
+  categorySlug: "frukt-og-gront",
+  aliases: ["thai basilikum"],
+  defaultUnit: "pk",
+  suggestedQuantity: 1,
+},
+{
+  name: "Timian",
+  categorySlug: "frukt-og-gront",
+  aliases: ["fersk timian"],
+  defaultUnit: "pk",
+  suggestedQuantity: 1,
+},
+{
+  name: "Tomat",
+  categorySlug: "frukt-og-gront",
+  aliases: ["tomater"],
+  defaultUnit: "kg",
+  suggestedQuantity: 1,
+},
+{
+  name: "Tranebær",
+  categorySlug: "frukt-og-gront",
+  aliases: ["cranberries"],
+  defaultUnit: "pk",
+  suggestedQuantity: 1,
+},
+{
+  name: "Urter",
+  categorySlug: "frukt-og-gront",
+  aliases: ["ferske urter"],
+  defaultUnit: "pk",
+  suggestedQuantity: 1,
+},
+{
+  name: "Vannmelon",
+  categorySlug: "frukt-og-gront",
+  aliases: ["watermelon"],
+  defaultUnit: "stk",
+  suggestedQuantity: 1,
+},
+{
+  name: "Vårløk",
+  categorySlug: "frukt-og-gront",
+  aliases: ["spring onion"],
+  defaultUnit: "pk",
+  suggestedQuantity: 1,
+},
+{
+  name: "Vårsalat",
+  categorySlug: "frukt-og-gront",
+  aliases: ["mâchesalat", "feltsalat"],
+  defaultUnit: "pk",
+  suggestedQuantity: 1,
+},
 {
   name: "Bagel",
   categorySlug: "brod-og-bakevarer",
@@ -175,7 +924,6 @@ export const SHOPPING_CATALOG: ShoppingCatalogItem[] = [
   defaultUnit: "pk",
   suggestedQuantity: 1,
 },
-
 {
   name: "Baguette",
   categorySlug: "brod-og-bakevarer",
@@ -183,7 +931,6 @@ export const SHOPPING_CATALOG: ShoppingCatalogItem[] = [
   defaultUnit: "stk",
   suggestedQuantity: 1,
 },
-
 {
   name: "Boller",
   categorySlug: "brod-og-bakevarer",
@@ -191,7 +938,6 @@ export const SHOPPING_CATALOG: ShoppingCatalogItem[] = [
   defaultUnit: "pk",
   suggestedQuantity: 1,
 },
-
 {
   name: "Brød",
   categorySlug: "brod-og-bakevarer",
@@ -199,7 +945,6 @@ export const SHOPPING_CATALOG: ShoppingCatalogItem[] = [
   defaultUnit: "stk",
   suggestedQuantity: 1,
 },
-
 {
   name: "Butterdeig",
   categorySlug: "brod-og-bakevarer",
@@ -207,7 +952,6 @@ export const SHOPPING_CATALOG: ShoppingCatalogItem[] = [
   defaultUnit: "pk",
   suggestedQuantity: 1,
 },
-
 {
   name: "Croissant",
   categorySlug: "brod-og-bakevarer",
@@ -215,7 +959,6 @@ export const SHOPPING_CATALOG: ShoppingCatalogItem[] = [
   defaultUnit: "pk",
   suggestedQuantity: 1,
 },
-
 {
   name: "Knekkebrød",
   categorySlug: "brod-og-bakevarer",
@@ -223,7 +966,6 @@ export const SHOPPING_CATALOG: ShoppingCatalogItem[] = [
   defaultUnit: "pk",
   suggestedQuantity: 1,
 },
-
 {
   name: "Muffins",
   categorySlug: "brod-og-bakevarer",
@@ -231,7 +973,6 @@ export const SHOPPING_CATALOG: ShoppingCatalogItem[] = [
   defaultUnit: "pk",
   suggestedQuantity: 1,
 },
-
 {
   name: "Oppskåret brød",
   categorySlug: "brod-og-bakevarer",
@@ -239,7 +980,6 @@ export const SHOPPING_CATALOG: ShoppingCatalogItem[] = [
   defaultUnit: "stk",
   suggestedQuantity: 1,
 },
-
 {
   name: "Pai",
   categorySlug: "brod-og-bakevarer",
@@ -247,7 +987,6 @@ export const SHOPPING_CATALOG: ShoppingCatalogItem[] = [
   defaultUnit: "stk",
   suggestedQuantity: 1,
 },
-
 {
   name: "Pannekakemiks",
   categorySlug: "brod-og-bakevarer",
@@ -255,7 +994,6 @@ export const SHOPPING_CATALOG: ShoppingCatalogItem[] = [
   defaultUnit: "pk",
   suggestedQuantity: 1,
 },
-
 {
   name: "Pizzadeig",
   categorySlug: "brod-og-bakevarer",
@@ -263,7 +1001,6 @@ export const SHOPPING_CATALOG: ShoppingCatalogItem[] = [
   defaultUnit: "stk",
   suggestedQuantity: 1,
 },
-
 {
   name: "Ristet brød",
   categorySlug: "brod-og-bakevarer",
@@ -271,7 +1008,6 @@ export const SHOPPING_CATALOG: ShoppingCatalogItem[] = [
   defaultUnit: "stk",
   suggestedQuantity: 1,
 },
-
 {
   name: "Smultringer",
   categorySlug: "brod-og-bakevarer",
@@ -279,7 +1015,6 @@ export const SHOPPING_CATALOG: ShoppingCatalogItem[] = [
   defaultUnit: "pk",
   suggestedQuantity: 1,
 },
-
 {
   name: "Tortilla",
   categorySlug: "brod-og-bakevarer",
@@ -287,7 +1022,6 @@ export const SHOPPING_CATALOG: ShoppingCatalogItem[] = [
   defaultUnit: "pk",
   suggestedQuantity: 1,
 },
-
 {
   name: "Vaffel",
   categorySlug: "brod-og-bakevarer",
@@ -295,7 +1029,6 @@ export const SHOPPING_CATALOG: ShoppingCatalogItem[] = [
   defaultUnit: "pk",
   suggestedQuantity: 1,
 },
-
 {
   name: "Blåmuggost",
   categorySlug: "meieriprodukter",
@@ -303,7 +1036,6 @@ export const SHOPPING_CATALOG: ShoppingCatalogItem[] = [
   defaultUnit: "stk",
   suggestedQuantity: 1,
 },
-
 {
   name: "Brunost",
   categorySlug: "meieriprodukter",
@@ -311,7 +1043,6 @@ export const SHOPPING_CATALOG: ShoppingCatalogItem[] = [
   defaultUnit: "stk",
   suggestedQuantity: 1,
 },
-
 {
   name: "Cheddar",
   categorySlug: "meieriprodukter",
@@ -319,7 +1050,6 @@ export const SHOPPING_CATALOG: ShoppingCatalogItem[] = [
   defaultUnit: "stk",
   suggestedQuantity: 1,
 },
-
 {
   name: "Cottage cheese",
   categorySlug: "meieriprodukter",
@@ -327,7 +1057,6 @@ export const SHOPPING_CATALOG: ShoppingCatalogItem[] = [
   defaultUnit: "boks",
   suggestedQuantity: 1,
 },
-
 {
   name: "Egg",
   categorySlug: "meieriprodukter",
@@ -335,7 +1064,6 @@ export const SHOPPING_CATALOG: ShoppingCatalogItem[] = [
   defaultUnit: "pk",
   suggestedQuantity: 1,
 },
-
 {
   name: "Fetaost",
   categorySlug: "meieriprodukter",
@@ -343,7 +1071,6 @@ export const SHOPPING_CATALOG: ShoppingCatalogItem[] = [
   defaultUnit: "stk",
   suggestedQuantity: 1,
 },
-
 {
   name: "Fløte",
   categorySlug: "meieriprodukter",
@@ -351,7 +1078,6 @@ export const SHOPPING_CATALOG: ShoppingCatalogItem[] = [
   defaultUnit: "l",
   suggestedQuantity: 1,
 },
-
 {
   name: "Grillet ost",
   categorySlug: "meieriprodukter",
@@ -359,7 +1085,6 @@ export const SHOPPING_CATALOG: ShoppingCatalogItem[] = [
   defaultUnit: "stk",
   suggestedQuantity: 1,
 },
-
 {
   name: "Margarin",
   categorySlug: "meieriprodukter",
@@ -367,7 +1092,6 @@ export const SHOPPING_CATALOG: ShoppingCatalogItem[] = [
   defaultUnit: "pk",
   suggestedQuantity: 1,
 },
-
 {
   name: "Mascarpone",
   categorySlug: "meieriprodukter",
@@ -375,7 +1099,6 @@ export const SHOPPING_CATALOG: ShoppingCatalogItem[] = [
   defaultUnit: "boks",
   suggestedQuantity: 1,
 },
-
 {
   name: "Melk",
   categorySlug: "meieriprodukter",
@@ -383,7 +1106,6 @@ export const SHOPPING_CATALOG: ShoppingCatalogItem[] = [
   defaultUnit: "l",
   suggestedQuantity: 1,
 },
-
 {
   name: "Mozzarella",
   categorySlug: "meieriprodukter",
@@ -391,7 +1113,6 @@ export const SHOPPING_CATALOG: ShoppingCatalogItem[] = [
   defaultUnit: "stk",
   suggestedQuantity: 1,
 },
-
 {
   name: "Ost",
   categorySlug: "meieriprodukter",
@@ -399,7 +1120,6 @@ export const SHOPPING_CATALOG: ShoppingCatalogItem[] = [
   defaultUnit: "stk",
   suggestedQuantity: 1,
 },
-
 {
   name: "Parmesan",
   categorySlug: "meieriprodukter",
@@ -407,7 +1127,6 @@ export const SHOPPING_CATALOG: ShoppingCatalogItem[] = [
   defaultUnit: "stk",
   suggestedQuantity: 1,
 },
-
 {
   name: "Revet ost",
   categorySlug: "meieriprodukter",
@@ -415,7 +1134,6 @@ export const SHOPPING_CATALOG: ShoppingCatalogItem[] = [
   defaultUnit: "pk",
   suggestedQuantity: 1,
 },
-
 {
   name: "Rømme",
   categorySlug: "meieriprodukter",
@@ -423,7 +1141,6 @@ export const SHOPPING_CATALOG: ShoppingCatalogItem[] = [
   defaultUnit: "boks",
   suggestedQuantity: 1,
 },
-
 {
   name: "Smør",
   categorySlug: "meieriprodukter",
@@ -431,7 +1148,6 @@ export const SHOPPING_CATALOG: ShoppingCatalogItem[] = [
   defaultUnit: "pk",
   suggestedQuantity: 1,
 },
-
 {
   name: "Smøreost",
   categorySlug: "meieriprodukter",
@@ -439,7 +1155,6 @@ export const SHOPPING_CATALOG: ShoppingCatalogItem[] = [
   defaultUnit: "boks",
   suggestedQuantity: 1,
 },
-
 {
   name: "Soyamelk",
   categorySlug: "meieriprodukter",
@@ -447,7 +1162,6 @@ export const SHOPPING_CATALOG: ShoppingCatalogItem[] = [
   defaultUnit: "l",
   suggestedQuantity: 1,
 },
-
 {
   name: "Soyayoghurt",
   categorySlug: "meieriprodukter",
@@ -455,7 +1169,6 @@ export const SHOPPING_CATALOG: ShoppingCatalogItem[] = [
   defaultUnit: "boks",
   suggestedQuantity: 1,
 },
-
 {
   name: "Surmelk",
   categorySlug: "meieriprodukter",
@@ -463,7 +1176,6 @@ export const SHOPPING_CATALOG: ShoppingCatalogItem[] = [
   defaultUnit: "l",
   suggestedQuantity: 1,
 },
-
 {
   name: "Yoghurt",
   categorySlug: "meieriprodukter",
@@ -471,7 +1183,6 @@ export const SHOPPING_CATALOG: ShoppingCatalogItem[] = [
   defaultUnit: "boks",
   suggestedQuantity: 1,
 },
-
 {
   name: "Ansjos",
   categorySlug: "kjott-og-fisk",
@@ -479,7 +1190,6 @@ export const SHOPPING_CATALOG: ShoppingCatalogItem[] = [
   defaultUnit: "boks",
   suggestedQuantity: 1,
 },
-
 {
   name: "Bacon",
   categorySlug: "kjott-og-fisk",
@@ -487,7 +1197,6 @@ export const SHOPPING_CATALOG: ShoppingCatalogItem[] = [
   defaultUnit: "pk",
   suggestedQuantity: 1,
 },
-
 {
   name: "Biff",
   categorySlug: "kjott-og-fisk",
@@ -495,7 +1204,6 @@ export const SHOPPING_CATALOG: ShoppingCatalogItem[] = [
   defaultUnit: "kg",
   suggestedQuantity: 1,
 },
-
 {
   name: "Biffstrimler",
   categorySlug: "kjott-og-fisk",
@@ -503,7 +1211,6 @@ export const SHOPPING_CATALOG: ShoppingCatalogItem[] = [
   defaultUnit: "pk",
   suggestedQuantity: 1,
 },
-
 {
   name: "Blåskjell",
   categorySlug: "kjott-og-fisk",
@@ -511,7 +1218,6 @@ export const SHOPPING_CATALOG: ShoppingCatalogItem[] = [
   defaultUnit: "kg",
   suggestedQuantity: 1,
 },
-
 {
   name: "Fisk",
   categorySlug: "kjott-og-fisk",
@@ -519,7 +1225,6 @@ export const SHOPPING_CATALOG: ShoppingCatalogItem[] = [
   defaultUnit: "kg",
   suggestedQuantity: 1,
 },
-
 {
   name: "Fiskekaker",
   categorySlug: "kjott-og-fisk",
@@ -527,7 +1232,6 @@ export const SHOPPING_CATALOG: ShoppingCatalogItem[] = [
   defaultUnit: "pk",
   suggestedQuantity: 1,
 },
-
 {
   name: "Grillpølser",
   categorySlug: "kjott-og-fisk",
@@ -535,7 +1239,6 @@ export const SHOPPING_CATALOG: ShoppingCatalogItem[] = [
   defaultUnit: "pk",
   suggestedQuantity: 1,
 },
-
 {
   name: "Hamburger",
   categorySlug: "kjott-og-fisk",
@@ -543,7 +1246,6 @@ export const SHOPPING_CATALOG: ShoppingCatalogItem[] = [
   defaultUnit: "pk",
   suggestedQuantity: 1,
 },
-
 {
   name: "Hummer",
   categorySlug: "kjott-og-fisk",
@@ -551,7 +1253,6 @@ export const SHOPPING_CATALOG: ShoppingCatalogItem[] = [
   defaultUnit: "stk",
   suggestedQuantity: 1,
 },
-
 {
   name: "Kalkun",
   categorySlug: "kjott-og-fisk",
@@ -559,7 +1260,6 @@ export const SHOPPING_CATALOG: ShoppingCatalogItem[] = [
   defaultUnit: "kg",
   suggestedQuantity: 1,
 },
-
 {
   name: "Kalvekjøtt",
   categorySlug: "kjott-og-fisk",
@@ -567,7 +1267,6 @@ export const SHOPPING_CATALOG: ShoppingCatalogItem[] = [
   defaultUnit: "kg",
   suggestedQuantity: 1,
 },
-
 {
   name: "Kaviar",
   categorySlug: "kjott-og-fisk",
@@ -575,7 +1274,6 @@ export const SHOPPING_CATALOG: ShoppingCatalogItem[] = [
   defaultUnit: "tube",
   suggestedQuantity: 1,
 },
-
 {
   name: "Kjøtt",
   categorySlug: "kjott-og-fisk",
@@ -583,7 +1281,6 @@ export const SHOPPING_CATALOG: ShoppingCatalogItem[] = [
   defaultUnit: "kg",
   suggestedQuantity: 1,
 },
-
 {
   name: "Kjøttdeig",
   categorySlug: "kjott-og-fisk",
@@ -591,7 +1288,6 @@ export const SHOPPING_CATALOG: ShoppingCatalogItem[] = [
   defaultUnit: "pk",
   suggestedQuantity: 1,
 },
-
 {
   name: "Kjøttpølse",
   categorySlug: "kjott-og-fisk",
@@ -599,7 +1295,6 @@ export const SHOPPING_CATALOG: ShoppingCatalogItem[] = [
   defaultUnit: "pk",
   suggestedQuantity: 1,
 },
-
 {
   name: "Kjøttpålegg",
   categorySlug: "kjott-og-fisk",
@@ -607,7 +1302,6 @@ export const SHOPPING_CATALOG: ShoppingCatalogItem[] = [
   defaultUnit: "pk",
   suggestedQuantity: 1,
 },
-
 {
   name: "Kylling",
   categorySlug: "kjott-og-fisk",
@@ -615,7 +1309,6 @@ export const SHOPPING_CATALOG: ShoppingCatalogItem[] = [
   defaultUnit: "kg",
   suggestedQuantity: 1,
 },
-
 {
   name: "Kyllinglår",
   categorySlug: "kjott-og-fisk",
@@ -623,7 +1316,6 @@ export const SHOPPING_CATALOG: ShoppingCatalogItem[] = [
   defaultUnit: "pk",
   suggestedQuantity: 1,
 },
-
 {
   name: "Laks",
   categorySlug: "kjott-og-fisk",
@@ -631,7 +1323,6 @@ export const SHOPPING_CATALOG: ShoppingCatalogItem[] = [
   defaultUnit: "kg",
   suggestedQuantity: 1,
 },
-
 {
   name: "Lammekjøtt",
   categorySlug: "kjott-og-fisk",
@@ -639,7 +1330,6 @@ export const SHOPPING_CATALOG: ShoppingCatalogItem[] = [
   defaultUnit: "kg",
   suggestedQuantity: 1,
 },
-
 {
   name: "Pølser",
   categorySlug: "kjott-og-fisk",
@@ -647,7 +1337,6 @@ export const SHOPPING_CATALOG: ShoppingCatalogItem[] = [
   defaultUnit: "pk",
   suggestedQuantity: 1,
 },
-
 {
   name: "Reker",
   categorySlug: "kjott-og-fisk",
@@ -655,7 +1344,6 @@ export const SHOPPING_CATALOG: ShoppingCatalogItem[] = [
   defaultUnit: "kg",
   suggestedQuantity: 1,
 },
-
 {
   name: "Røkt laks",
   categorySlug: "kjott-og-fisk",
@@ -663,7 +1351,6 @@ export const SHOPPING_CATALOG: ShoppingCatalogItem[] = [
   defaultUnit: "pk",
   suggestedQuantity: 1,
 },
-
 {
   name: "Salami",
   categorySlug: "kjott-og-fisk",
@@ -671,7 +1358,6 @@ export const SHOPPING_CATALOG: ShoppingCatalogItem[] = [
   defaultUnit: "pk",
   suggestedQuantity: 1,
 },
-
 {
   name: "Skinke",
   categorySlug: "kjott-og-fisk",
@@ -679,7 +1365,6 @@ export const SHOPPING_CATALOG: ShoppingCatalogItem[] = [
   defaultUnit: "pk",
   suggestedQuantity: 1,
 },
-
 {
   name: "Spekekjøtt",
   categorySlug: "kjott-og-fisk",
@@ -687,7 +1372,6 @@ export const SHOPPING_CATALOG: ShoppingCatalogItem[] = [
   defaultUnit: "pk",
   suggestedQuantity: 1,
 },
-
 {
   name: "Storfekjøtt",
   categorySlug: "kjott-og-fisk",
@@ -695,7 +1379,6 @@ export const SHOPPING_CATALOG: ShoppingCatalogItem[] = [
   defaultUnit: "kg",
   suggestedQuantity: 1,
 },
-
 {
   name: "Svinekjøtt",
   categorySlug: "kjott-og-fisk",
@@ -703,7 +1386,6 @@ export const SHOPPING_CATALOG: ShoppingCatalogItem[] = [
   defaultUnit: "kg",
   suggestedQuantity: 1,
 },
-
 {
   name: "Tunfisk",
   categorySlug: "kjott-og-fisk",
@@ -711,7 +1393,6 @@ export const SHOPPING_CATALOG: ShoppingCatalogItem[] = [
   defaultUnit: "boks",
   suggestedQuantity: 1,
 },
-
 {
   name: "Viltkjøtt",
   categorySlug: "kjott-og-fisk",
@@ -719,7 +1400,6 @@ export const SHOPPING_CATALOG: ShoppingCatalogItem[] = [
   defaultUnit: "kg",
   suggestedQuantity: 1,
 },
-
 {
   name: "Østers",
   categorySlug: "kjott-og-fisk",
@@ -727,7 +1407,6 @@ export const SHOPPING_CATALOG: ShoppingCatalogItem[] = [
   defaultUnit: "stk",
   suggestedQuantity: 6,
 },
-
 {
   name: "Amaranth",
   categorySlug: "ingredienser-og-krydder",
@@ -735,7 +1414,6 @@ export const SHOPPING_CATALOG: ShoppingCatalogItem[] = [
   defaultUnit: "pk",
   suggestedQuantity: 1,
 },
-
 {
   name: "Anis",
   categorySlug: "ingredienser-og-krydder",
@@ -743,7 +1421,6 @@ export const SHOPPING_CATALOG: ShoppingCatalogItem[] = [
   defaultUnit: "pk",
   suggestedQuantity: 1,
 },
-
 {
   name: "Bakepulver",
   categorySlug: "ingredienser-og-krydder",
@@ -751,7 +1428,6 @@ export const SHOPPING_CATALOG: ShoppingCatalogItem[] = [
   defaultUnit: "pk",
   suggestedQuantity: 1,
 },
-
 {
   name: "Balsamico eddik",
   categorySlug: "ingredienser-og-krydder",
@@ -759,7 +1435,6 @@ export const SHOPPING_CATALOG: ShoppingCatalogItem[] = [
   defaultUnit: "flaske",
   suggestedQuantity: 1,
 },
-
 {
   name: "BBQ-saus",
   categorySlug: "ingredienser-og-krydder",
@@ -767,7 +1442,6 @@ export const SHOPPING_CATALOG: ShoppingCatalogItem[] = [
   defaultUnit: "flaske",
   suggestedQuantity: 1,
 },
-
 {
   name: "Bourbon vanilje",
   categorySlug: "ingredienser-og-krydder",
@@ -775,7 +1449,6 @@ export const SHOPPING_CATALOG: ShoppingCatalogItem[] = [
   defaultUnit: "pk",
   suggestedQuantity: 1,
 },
-
 {
   name: "Bønner",
   categorySlug: "ingredienser-og-krydder",
@@ -783,7 +1456,6 @@ export const SHOPPING_CATALOG: ShoppingCatalogItem[] = [
   defaultUnit: "boks",
   suggestedQuantity: 1,
 },
-
 {
   name: "Cashewnøtter",
   categorySlug: "ingredienser-og-krydder",
@@ -791,7 +1463,6 @@ export const SHOPPING_CATALOG: ShoppingCatalogItem[] = [
   defaultUnit: "pk",
   suggestedQuantity: 1,
 },
-
 {
   name: "Chilisaus",
   categorySlug: "ingredienser-og-krydder",
@@ -799,7 +1470,6 @@ export const SHOPPING_CATALOG: ShoppingCatalogItem[] = [
   defaultUnit: "flaske",
   suggestedQuantity: 1,
 },
-
 {
   name: "Chutney",
   categorySlug: "ingredienser-og-krydder",
@@ -807,7 +1477,6 @@ export const SHOPPING_CATALOG: ShoppingCatalogItem[] = [
   defaultUnit: "glass",
   suggestedQuantity: 1,
 },
-
 {
   name: "Dip",
   categorySlug: "ingredienser-og-krydder",
@@ -815,7 +1484,6 @@ export const SHOPPING_CATALOG: ShoppingCatalogItem[] = [
   defaultUnit: "pk",
   suggestedQuantity: 1,
 },
-
 {
   name: "Dressing",
   categorySlug: "ingredienser-og-krydder",
@@ -823,7 +1491,6 @@ export const SHOPPING_CATALOG: ShoppingCatalogItem[] = [
   defaultUnit: "flaske",
   suggestedQuantity: 1,
 },
-
 {
   name: "Eddik",
   categorySlug: "ingredienser-og-krydder",
@@ -831,7 +1498,6 @@ export const SHOPPING_CATALOG: ShoppingCatalogItem[] = [
   defaultUnit: "flaske",
   suggestedQuantity: 1,
 },
-
 {
   name: "Eplemos",
   categorySlug: "ingredienser-og-krydder",
@@ -839,7 +1505,6 @@ export const SHOPPING_CATALOG: ShoppingCatalogItem[] = [
   defaultUnit: "glass",
   suggestedQuantity: 1,
 },
-
 {
   name: "Fiskesaus",
   categorySlug: "ingredienser-og-krydder",
@@ -847,7 +1512,6 @@ export const SHOPPING_CATALOG: ShoppingCatalogItem[] = [
   defaultUnit: "flaske",
   suggestedQuantity: 1,
 },
-
 {
   name: "Gjær",
   categorySlug: "ingredienser-og-krydder",
@@ -855,7 +1519,6 @@ export const SHOPPING_CATALOG: ShoppingCatalogItem[] = [
   defaultUnit: "pk",
   suggestedQuantity: 1,
 },
-
 {
   name: "Glasur",
   categorySlug: "ingredienser-og-krydder",
@@ -863,7 +1526,6 @@ export const SHOPPING_CATALOG: ShoppingCatalogItem[] = [
   defaultUnit: "pk",
   suggestedQuantity: 1,
 },
-
 {
   name: "Grønnsaksbuljong",
   categorySlug: "ingredienser-og-krydder",
@@ -871,7 +1533,6 @@ export const SHOPPING_CATALOG: ShoppingCatalogItem[] = [
   defaultUnit: "pk",
   suggestedQuantity: 1,
 },
-
 {
   name: "Gresskarfrø",
   categorySlug: "ingredienser-og-krydder",
@@ -879,7 +1540,6 @@ export const SHOPPING_CATALOG: ShoppingCatalogItem[] = [
   defaultUnit: "pk",
   suggestedQuantity: 1,
 },
-
 {
   name: "Hampfrø",
   categorySlug: "ingredienser-og-krydder",
@@ -887,7 +1547,6 @@ export const SHOPPING_CATALOG: ShoppingCatalogItem[] = [
   defaultUnit: "pk",
   suggestedQuantity: 1,
 },
-
 {
   name: "Hasselnøtter",
   categorySlug: "ingredienser-og-krydder",
@@ -895,7 +1554,6 @@ export const SHOPPING_CATALOG: ShoppingCatalogItem[] = [
   defaultUnit: "pk",
   suggestedQuantity: 1,
 },
-
 {
   name: "Hel sort pepper",
   categorySlug: "ingredienser-og-krydder",
@@ -903,7 +1561,6 @@ export const SHOPPING_CATALOG: ShoppingCatalogItem[] = [
   defaultUnit: "pk",
   suggestedQuantity: 1,
 },
-
 {
   name: "Hermetiske tomater",
   categorySlug: "ingredienser-og-krydder",
@@ -911,7 +1568,6 @@ export const SHOPPING_CATALOG: ShoppingCatalogItem[] = [
   defaultUnit: "boks",
   suggestedQuantity: 1,
 },
-
 {
   name: "Kanel",
   categorySlug: "ingredienser-og-krydder",
@@ -919,7 +1575,6 @@ export const SHOPPING_CATALOG: ShoppingCatalogItem[] = [
   defaultUnit: "pk",
   suggestedQuantity: 1,
 },
-
 {
   name: "Kapers",
   categorySlug: "ingredienser-og-krydder",
@@ -927,7 +1582,6 @@ export const SHOPPING_CATALOG: ShoppingCatalogItem[] = [
   defaultUnit: "glass",
   suggestedQuantity: 1,
 },
-
 {
   name: "Karripasta",
   categorySlug: "ingredienser-og-krydder",
@@ -935,7 +1589,6 @@ export const SHOPPING_CATALOG: ShoppingCatalogItem[] = [
   defaultUnit: "glass",
   suggestedQuantity: 1,
 },
-
 {
   name: "Ketchup",
   categorySlug: "ingredienser-og-krydder",
@@ -943,7 +1596,6 @@ export const SHOPPING_CATALOG: ShoppingCatalogItem[] = [
   defaultUnit: "flaske",
   suggestedQuantity: 1,
 },
-
 {
   name: "Kidneybønner",
   categorySlug: "ingredienser-og-krydder",
@@ -951,7 +1603,6 @@ export const SHOPPING_CATALOG: ShoppingCatalogItem[] = [
   defaultUnit: "boks",
   suggestedQuantity: 1,
 },
-
 {
   name: "Kjernemelk",
   categorySlug: "ingredienser-og-krydder",
@@ -959,7 +1610,6 @@ export const SHOPPING_CATALOG: ShoppingCatalogItem[] = [
   defaultUnit: "l",
   suggestedQuantity: 1,
 },
-
 {
   name: "Kokosmelk",
   categorySlug: "ingredienser-og-krydder",
@@ -967,7 +1617,6 @@ export const SHOPPING_CATALOG: ShoppingCatalogItem[] = [
   defaultUnit: "boks",
   suggestedQuantity: 1,
 },
-
 {
   name: "Limeblader",
   categorySlug: "ingredienser-og-krydder",
@@ -975,7 +1624,6 @@ export const SHOPPING_CATALOG: ShoppingCatalogItem[] = [
   defaultUnit: "pk",
   suggestedQuantity: 1,
 },
-
 {
   name: "Linser",
   categorySlug: "ingredienser-og-krydder",
@@ -983,7 +1631,6 @@ export const SHOPPING_CATALOG: ShoppingCatalogItem[] = [
   defaultUnit: "pk",
   suggestedQuantity: 1,
 },
-
 {
   name: "Lønnesirup",
   categorySlug: "ingredienser-og-krydder",
@@ -991,7 +1638,6 @@ export const SHOPPING_CATALOG: ShoppingCatalogItem[] = [
   defaultUnit: "flaske",
   suggestedQuantity: 1,
 },
-
 {
   name: "Maisstivelse",
   categorySlug: "ingredienser-og-krydder",
@@ -999,7 +1645,6 @@ export const SHOPPING_CATALOG: ShoppingCatalogItem[] = [
   defaultUnit: "pk",
   suggestedQuantity: 1,
 },
-
 {
   name: "Majones",
   categorySlug: "ingredienser-og-krydder",
@@ -1007,7 +1652,6 @@ export const SHOPPING_CATALOG: ShoppingCatalogItem[] = [
   defaultUnit: "glass",
   suggestedQuantity: 1,
 },
-
 {
   name: "Malte mandler",
   categorySlug: "ingredienser-og-krydder",
@@ -1015,7 +1659,6 @@ export const SHOPPING_CATALOG: ShoppingCatalogItem[] = [
   defaultUnit: "pk",
   suggestedQuantity: 1,
 },
-
 {
   name: "Mandelessens",
   categorySlug: "ingredienser-og-krydder",
@@ -1023,7 +1666,6 @@ export const SHOPPING_CATALOG: ShoppingCatalogItem[] = [
   defaultUnit: "flaske",
   suggestedQuantity: 1,
 },
-
 {
   name: "Mandler",
   categorySlug: "ingredienser-og-krydder",
@@ -1031,7 +1673,6 @@ export const SHOPPING_CATALOG: ShoppingCatalogItem[] = [
   defaultUnit: "pk",
   suggestedQuantity: 1,
 },
-
 {
   name: "Marinade",
   categorySlug: "ingredienser-og-krydder",
@@ -1039,7 +1680,6 @@ export const SHOPPING_CATALOG: ShoppingCatalogItem[] = [
   defaultUnit: "flaske",
   suggestedQuantity: 1,
 },
-
 {
   name: "Matfarger",
   categorySlug: "ingredienser-og-krydder",
@@ -1047,7 +1687,6 @@ export const SHOPPING_CATALOG: ShoppingCatalogItem[] = [
   defaultUnit: "pk",
   suggestedQuantity: 1,
 },
-
 {
   name: "Melis",
   categorySlug: "ingredienser-og-krydder",
@@ -1055,7 +1694,6 @@ export const SHOPPING_CATALOG: ShoppingCatalogItem[] = [
   defaultUnit: "pk",
   suggestedQuantity: 1,
 },
-
 {
   name: "Muskat",
   categorySlug: "ingredienser-og-krydder",
@@ -1063,7 +1701,6 @@ export const SHOPPING_CATALOG: ShoppingCatalogItem[] = [
   defaultUnit: "pk",
   suggestedQuantity: 1,
 },
-
 {
   name: "Natron",
   categorySlug: "ingredienser-og-krydder",
@@ -1071,7 +1708,6 @@ export const SHOPPING_CATALOG: ShoppingCatalogItem[] = [
   defaultUnit: "pk",
   suggestedQuantity: 1,
 },
-
 {
   name: "Næringsgjær",
   categorySlug: "ingredienser-og-krydder",
@@ -1079,7 +1715,6 @@ export const SHOPPING_CATALOG: ShoppingCatalogItem[] = [
   defaultUnit: "pk",
   suggestedQuantity: 1,
 },
-
 {
   name: "Nøtter",
   categorySlug: "ingredienser-og-krydder",
@@ -1087,7 +1722,6 @@ export const SHOPPING_CATALOG: ShoppingCatalogItem[] = [
   defaultUnit: "pk",
   suggestedQuantity: 1,
 },
-
 {
   name: "Olivenolje",
   categorySlug: "ingredienser-og-krydder",
@@ -1095,7 +1729,6 @@ export const SHOPPING_CATALOG: ShoppingCatalogItem[] = [
   defaultUnit: "flaske",
   suggestedQuantity: 1,
 },
-
 {
   name: "Olje",
   categorySlug: "ingredienser-og-krydder",
@@ -1103,7 +1736,6 @@ export const SHOPPING_CATALOG: ShoppingCatalogItem[] = [
   defaultUnit: "flaske",
   suggestedQuantity: 1,
 },
-
 {
   name: "Oregano",
   categorySlug: "ingredienser-og-krydder",
@@ -1111,7 +1743,6 @@ export const SHOPPING_CATALOG: ShoppingCatalogItem[] = [
   defaultUnit: "pk",
   suggestedQuantity: 1,
 },
-
 {
   name: "Paprikapulver",
   categorySlug: "ingredienser-og-krydder",
@@ -1119,7 +1750,6 @@ export const SHOPPING_CATALOG: ShoppingCatalogItem[] = [
   defaultUnit: "pk",
   suggestedQuantity: 1,
 },
-
 {
   name: "Pastasaus",
   categorySlug: "ingredienser-og-krydder",
@@ -1127,7 +1757,6 @@ export const SHOPPING_CATALOG: ShoppingCatalogItem[] = [
   defaultUnit: "glass",
   suggestedQuantity: 1,
 },
-
 {
   name: "Peanøttsmør",
   categorySlug: "ingredienser-og-krydder",
@@ -1135,7 +1764,6 @@ export const SHOPPING_CATALOG: ShoppingCatalogItem[] = [
   defaultUnit: "glass",
   suggestedQuantity: 1,
 },
-
 {
   name: "Pesto",
   categorySlug: "ingredienser-og-krydder",
@@ -1143,7 +1771,6 @@ export const SHOPPING_CATALOG: ShoppingCatalogItem[] = [
   defaultUnit: "glass",
   suggestedQuantity: 1,
 },
-
 {
   name: "Pinjekjerner",
   categorySlug: "ingredienser-og-krydder",
@@ -1151,7 +1778,6 @@ export const SHOPPING_CATALOG: ShoppingCatalogItem[] = [
   defaultUnit: "pk",
   suggestedQuantity: 1,
 },
-
 {
   name: "Pistasj",
   categorySlug: "ingredienser-og-krydder",
@@ -1159,7 +1785,6 @@ export const SHOPPING_CATALOG: ShoppingCatalogItem[] = [
   defaultUnit: "pk",
   suggestedQuantity: 1,
 },
-
 {
   name: "Polenta",
   categorySlug: "ingredienser-og-krydder",
@@ -1167,7 +1792,6 @@ export const SHOPPING_CATALOG: ShoppingCatalogItem[] = [
   defaultUnit: "pk",
   suggestedQuantity: 1,
 },
-
 {
   name: "Potetmos",
   categorySlug: "ingredienser-og-krydder",
@@ -1175,7 +1799,6 @@ export const SHOPPING_CATALOG: ShoppingCatalogItem[] = [
   defaultUnit: "pk",
   suggestedQuantity: 1,
 },
-
 {
   name: "Romessens",
   categorySlug: "ingredienser-og-krydder",
@@ -1183,7 +1806,6 @@ export const SHOPPING_CATALOG: ShoppingCatalogItem[] = [
   defaultUnit: "flaske",
   suggestedQuantity: 1,
 },
-
 {
   name: "Rosmarin",
   categorySlug: "ingredienser-og-krydder",
@@ -1191,7 +1813,6 @@ export const SHOPPING_CATALOG: ShoppingCatalogItem[] = [
   defaultUnit: "pk",
   suggestedQuantity: 1,
 },
-
 {
   name: "Salt",
   categorySlug: "ingredienser-og-krydder",
@@ -1199,7 +1820,6 @@ export const SHOPPING_CATALOG: ShoppingCatalogItem[] = [
   defaultUnit: "pk",
   suggestedQuantity: 1,
 },
-
 {
   name: "Saus",
   categorySlug: "ingredienser-og-krydder",
@@ -1207,7 +1827,6 @@ export const SHOPPING_CATALOG: ShoppingCatalogItem[] = [
   defaultUnit: "pk",
   suggestedQuantity: 1,
 },
-
 {
   name: "Sennep",
   categorySlug: "ingredienser-og-krydder",
@@ -1215,7 +1834,6 @@ export const SHOPPING_CATALOG: ShoppingCatalogItem[] = [
   defaultUnit: "glass",
   suggestedQuantity: 1,
 },
-
 {
   name: "Sjøsalt",
   categorySlug: "ingredienser-og-krydder",
@@ -1223,7 +1841,6 @@ export const SHOPPING_CATALOG: ShoppingCatalogItem[] = [
   defaultUnit: "pk",
   suggestedQuantity: 1,
 },
-
 {
   name: "Solsikkefrø",
   categorySlug: "ingredienser-og-krydder",
@@ -1231,7 +1848,6 @@ export const SHOPPING_CATALOG: ShoppingCatalogItem[] = [
   defaultUnit: "pk",
   suggestedQuantity: 1,
 },
-
 {
   name: "Soyasaus",
   categorySlug: "ingredienser-og-krydder",
@@ -1239,7 +1855,6 @@ export const SHOPPING_CATALOG: ShoppingCatalogItem[] = [
   defaultUnit: "flaske",
   suggestedQuantity: 1,
 },
-
 {
   name: "Strø",
   categorySlug: "ingredienser-og-krydder",
@@ -1247,7 +1862,6 @@ export const SHOPPING_CATALOG: ShoppingCatalogItem[] = [
   defaultUnit: "pk",
   suggestedQuantity: 1,
 },
-
 {
   name: "Strøkavring",
   categorySlug: "ingredienser-og-krydder",
@@ -1255,7 +1869,6 @@ export const SHOPPING_CATALOG: ShoppingCatalogItem[] = [
   defaultUnit: "pk",
   suggestedQuantity: 1,
 },
-
 {
   name: "Sukker",
   categorySlug: "ingredienser-og-krydder",
@@ -1263,7 +1876,6 @@ export const SHOPPING_CATALOG: ShoppingCatalogItem[] = [
   defaultUnit: "kg",
   suggestedQuantity: 1,
 },
-
 {
   name: "Svart pepper",
   categorySlug: "ingredienser-og-krydder",
@@ -1271,7 +1883,6 @@ export const SHOPPING_CATALOG: ShoppingCatalogItem[] = [
   defaultUnit: "pk",
   suggestedQuantity: 1,
 },
-
 {
   name: "Sylteagurk",
   categorySlug: "ingredienser-og-krydder",
@@ -1279,7 +1890,6 @@ export const SHOPPING_CATALOG: ShoppingCatalogItem[] = [
   defaultUnit: "glass",
   suggestedQuantity: 1,
 },
-
 {
   name: "Tahini",
   categorySlug: "ingredienser-og-krydder",
@@ -1287,7 +1897,6 @@ export const SHOPPING_CATALOG: ShoppingCatalogItem[] = [
   defaultUnit: "glass",
   suggestedQuantity: 1,
 },
-
 {
   name: "Tamarindpasta",
   categorySlug: "ingredienser-og-krydder",
@@ -1295,7 +1904,6 @@ export const SHOPPING_CATALOG: ShoppingCatalogItem[] = [
   defaultUnit: "glass",
   suggestedQuantity: 1,
 },
-
 {
   name: "Tomatpuré",
   categorySlug: "ingredienser-og-krydder",
@@ -1303,7 +1911,6 @@ export const SHOPPING_CATALOG: ShoppingCatalogItem[] = [
   defaultUnit: "tube",
   suggestedQuantity: 1,
 },
-
 {
   name: "Tomatsaus",
   categorySlug: "ingredienser-og-krydder",
@@ -1311,7 +1918,6 @@ export const SHOPPING_CATALOG: ShoppingCatalogItem[] = [
   defaultUnit: "glass",
   suggestedQuantity: 1,
 },
-
 {
   name: "Tranebærsaus",
   categorySlug: "ingredienser-og-krydder",
@@ -1319,7 +1925,6 @@ export const SHOPPING_CATALOG: ShoppingCatalogItem[] = [
   defaultUnit: "glass",
   suggestedQuantity: 1,
 },
-
 {
   name: "Trøffel",
   categorySlug: "ingredienser-og-krydder",
@@ -1327,7 +1932,6 @@ export const SHOPPING_CATALOG: ShoppingCatalogItem[] = [
   defaultUnit: "stk",
   suggestedQuantity: 1,
 },
-
 {
   name: "Valnøtter",
   categorySlug: "ingredienser-og-krydder",
@@ -1335,7 +1939,6 @@ export const SHOPPING_CATALOG: ShoppingCatalogItem[] = [
   defaultUnit: "pk",
   suggestedQuantity: 1,
 },
-
 {
   name: "Vaniljesukker",
   categorySlug: "ingredienser-og-krydder",
@@ -1343,7 +1946,6 @@ export const SHOPPING_CATALOG: ShoppingCatalogItem[] = [
   defaultUnit: "pk",
   suggestedQuantity: 1,
 },
-
 {
   name: "Østerssaus",
   categorySlug: "ingredienser-og-krydder",
@@ -1351,7 +1953,6 @@ export const SHOPPING_CATALOG: ShoppingCatalogItem[] = [
   defaultUnit: "flaske",
   suggestedQuantity: 1,
 },
-
 {
   name: "Burritos",
   categorySlug: "frysevarer-og-ferdigmaltid",
@@ -1359,7 +1960,6 @@ export const SHOPPING_CATALOG: ShoppingCatalogItem[] = [
   defaultUnit: "pk",
   suggestedQuantity: 1,
 },
-
 {
   name: "Dumplings",
   categorySlug: "frysevarer-og-ferdigmaltid",
@@ -1367,7 +1967,6 @@ export const SHOPPING_CATALOG: ShoppingCatalogItem[] = [
   defaultUnit: "pk",
   suggestedQuantity: 1,
 },
-
 {
   name: "Fiskepinner",
   categorySlug: "frysevarer-og-ferdigmaltid",
@@ -1375,7 +1974,6 @@ export const SHOPPING_CATALOG: ShoppingCatalogItem[] = [
   defaultUnit: "pk",
   suggestedQuantity: 1,
 },
-
 {
   name: "Frosne grønnsaker",
   categorySlug: "frysevarer-og-ferdigmaltid",
@@ -1383,7 +1981,6 @@ export const SHOPPING_CATALOG: ShoppingCatalogItem[] = [
   defaultUnit: "pk",
   suggestedQuantity: 1,
 },
-
 {
   name: "Hermetiske bønner",
   categorySlug: "frysevarer-og-ferdigmaltid",
@@ -1391,7 +1988,6 @@ export const SHOPPING_CATALOG: ShoppingCatalogItem[] = [
   defaultUnit: "boks",
   suggestedQuantity: 1,
 },
-
 {
   name: "Indisk ferdigmat",
   categorySlug: "frysevarer-og-ferdigmaltid",
@@ -1399,7 +1995,6 @@ export const SHOPPING_CATALOG: ShoppingCatalogItem[] = [
   defaultUnit: "pk",
   suggestedQuantity: 1,
 },
-
 {
   name: "Iskrem",
   categorySlug: "frysevarer-og-ferdigmaltid",
@@ -1407,7 +2002,6 @@ export const SHOPPING_CATALOG: ShoppingCatalogItem[] = [
   defaultUnit: "boks",
   suggestedQuantity: 1,
 },
-
 {
   name: "Italiensk ferdigmat",
   categorySlug: "frysevarer-og-ferdigmaltid",
@@ -1415,7 +2009,6 @@ export const SHOPPING_CATALOG: ShoppingCatalogItem[] = [
   defaultUnit: "pk",
   suggestedQuantity: 1,
 },
-
 {
   name: "Kinesisk ferdigmat",
   categorySlug: "frysevarer-og-ferdigmaltid",
@@ -1423,7 +2016,6 @@ export const SHOPPING_CATALOG: ShoppingCatalogItem[] = [
   defaultUnit: "pk",
   suggestedQuantity: 1,
 },
-
 {
   name: "Kyllingvinger",
   categorySlug: "frysevarer-og-ferdigmaltid",
@@ -1431,7 +2023,6 @@ export const SHOPPING_CATALOG: ShoppingCatalogItem[] = [
   defaultUnit: "pk",
   suggestedQuantity: 1,
 },
-
 {
   name: "Lasagne",
   categorySlug: "frysevarer-og-ferdigmaltid",
@@ -1439,7 +2030,6 @@ export const SHOPPING_CATALOG: ShoppingCatalogItem[] = [
   defaultUnit: "pk",
   suggestedQuantity: 1,
 },
-
 {
   name: "Meksikansk ferdigmat",
   categorySlug: "frysevarer-og-ferdigmaltid",
@@ -1447,7 +2037,6 @@ export const SHOPPING_CATALOG: ShoppingCatalogItem[] = [
   defaultUnit: "pk",
   suggestedQuantity: 1,
 },
-
 {
   name: "Pizza",
   categorySlug: "frysevarer-og-ferdigmaltid",
@@ -1455,7 +2044,6 @@ export const SHOPPING_CATALOG: ShoppingCatalogItem[] = [
   defaultUnit: "stk",
   suggestedQuantity: 1,
 },
-
 {
   name: "Pommes frites",
   categorySlug: "frysevarer-og-ferdigmaltid",
@@ -1463,7 +2051,6 @@ export const SHOPPING_CATALOG: ShoppingCatalogItem[] = [
   defaultUnit: "pk",
   suggestedQuantity: 1,
 },
-
 {
   name: "Rømmegrøt",
   categorySlug: "frysevarer-og-ferdigmaltid",
@@ -1471,7 +2058,6 @@ export const SHOPPING_CATALOG: ShoppingCatalogItem[] = [
   defaultUnit: "pk",
   suggestedQuantity: 1,
 },
-
 {
   name: "Suppe",
   categorySlug: "frysevarer-og-ferdigmaltid",
@@ -1479,7 +2065,6 @@ export const SHOPPING_CATALOG: ShoppingCatalogItem[] = [
   defaultUnit: "pk",
   suggestedQuantity: 1,
 },
-
 {
   name: "Taco",
   categorySlug: "frysevarer-og-ferdigmaltid",
@@ -1487,7 +2072,6 @@ export const SHOPPING_CATALOG: ShoppingCatalogItem[] = [
   defaultUnit: "pk",
   suggestedQuantity: 1,
 },
-
 {
   name: "Thai ferdigmat",
   categorySlug: "frysevarer-og-ferdigmaltid",
@@ -1495,7 +2079,6 @@ export const SHOPPING_CATALOG: ShoppingCatalogItem[] = [
   defaultUnit: "pk",
   suggestedQuantity: 1,
 },
-
 {
   name: "Chiafrø",
   categorySlug: "kornprodukter",
@@ -1503,7 +2086,6 @@ export const SHOPPING_CATALOG: ShoppingCatalogItem[] = [
   defaultUnit: "pk",
   suggestedQuantity: 1,
 },
-
 {
   name: "Corn Flakes",
   categorySlug: "kornprodukter",
@@ -1511,7 +2093,6 @@ export const SHOPPING_CATALOG: ShoppingCatalogItem[] = [
   defaultUnit: "pk",
   suggestedQuantity: 1,
 },
-
 {
   name: "Couscous",
   categorySlug: "kornprodukter",
@@ -1519,7 +2100,6 @@ export const SHOPPING_CATALOG: ShoppingCatalogItem[] = [
   defaultUnit: "pk",
   suggestedQuantity: 1,
 },
-
 {
   name: "Frokostblanding",
   categorySlug: "kornprodukter",
@@ -1527,7 +2107,6 @@ export const SHOPPING_CATALOG: ShoppingCatalogItem[] = [
   defaultUnit: "pk",
   suggestedQuantity: 1,
 },
-
 {
   name: "Fusilli",
   categorySlug: "kornprodukter",
@@ -1535,7 +2114,6 @@ export const SHOPPING_CATALOG: ShoppingCatalogItem[] = [
   defaultUnit: "pk",
   suggestedQuantity: 1,
 },
-
 {
   name: "Havregryn",
   categorySlug: "kornprodukter",
@@ -1543,7 +2121,6 @@ export const SHOPPING_CATALOG: ShoppingCatalogItem[] = [
   defaultUnit: "pk",
   suggestedQuantity: 1,
 },
-
 {
   name: "Kikerter",
   categorySlug: "kornprodukter",
@@ -1551,7 +2128,6 @@ export const SHOPPING_CATALOG: ShoppingCatalogItem[] = [
   defaultUnit: "boks",
   suggestedQuantity: 1,
 },
-
 {
   name: "Mel",
   categorySlug: "kornprodukter",
@@ -1559,7 +2135,6 @@ export const SHOPPING_CATALOG: ShoppingCatalogItem[] = [
   defaultUnit: "kg",
   suggestedQuantity: 1,
 },
-
 {
   name: "Müsli",
   categorySlug: "kornprodukter",
@@ -1567,7 +2142,6 @@ export const SHOPPING_CATALOG: ShoppingCatalogItem[] = [
   defaultUnit: "pk",
   suggestedQuantity: 1,
 },
-
 {
   name: "Nudler",
   categorySlug: "kornprodukter",
@@ -1575,7 +2149,6 @@ export const SHOPPING_CATALOG: ShoppingCatalogItem[] = [
   defaultUnit: "pk",
   suggestedQuantity: 1,
 },
-
 {
   name: "Pasta",
   categorySlug: "kornprodukter",
@@ -1583,7 +2156,6 @@ export const SHOPPING_CATALOG: ShoppingCatalogItem[] = [
   defaultUnit: "pk",
   suggestedQuantity: 1,
 },
-
 {
   name: "Pasta penne",
   categorySlug: "kornprodukter",
@@ -1591,7 +2163,6 @@ export const SHOPPING_CATALOG: ShoppingCatalogItem[] = [
   defaultUnit: "pk",
   suggestedQuantity: 1,
 },
-
 {
   name: "Ris",
   categorySlug: "kornprodukter",
@@ -1599,7 +2170,6 @@ export const SHOPPING_CATALOG: ShoppingCatalogItem[] = [
   defaultUnit: "kg",
   suggestedQuantity: 1,
 },
-
 {
   name: "Risnudler",
   categorySlug: "kornprodukter",
@@ -1607,7 +2177,6 @@ export const SHOPPING_CATALOG: ShoppingCatalogItem[] = [
   defaultUnit: "pk",
   suggestedQuantity: 1,
 },
-
 {
   name: "Rispapir",
   categorySlug: "kornprodukter",
@@ -1615,7 +2184,6 @@ export const SHOPPING_CATALOG: ShoppingCatalogItem[] = [
   defaultUnit: "pk",
   suggestedQuantity: 1,
 },
-
 {
   name: "Semulegryn",
   categorySlug: "kornprodukter",
@@ -1623,7 +2191,6 @@ export const SHOPPING_CATALOG: ShoppingCatalogItem[] = [
   defaultUnit: "pk",
   suggestedQuantity: 1,
 },
-
 {
   name: "Sjasminris",
   categorySlug: "kornprodukter",
@@ -1631,7 +2198,6 @@ export const SHOPPING_CATALOG: ShoppingCatalogItem[] = [
   defaultUnit: "kg",
   suggestedQuantity: 1,
 },
-
 {
   name: "Speltmel",
   categorySlug: "kornprodukter",
@@ -1639,7 +2205,6 @@ export const SHOPPING_CATALOG: ShoppingCatalogItem[] = [
   defaultUnit: "kg",
   suggestedQuantity: 1,
 },
-
 {
   name: "Spirulina",
   categorySlug: "kornprodukter",
@@ -1647,7 +2212,6 @@ export const SHOPPING_CATALOG: ShoppingCatalogItem[] = [
   defaultUnit: "pk",
   suggestedQuantity: 1,
 },
-
 {
   name: "Tempeh",
   categorySlug: "kornprodukter",
@@ -1655,7 +2219,6 @@ export const SHOPPING_CATALOG: ShoppingCatalogItem[] = [
   defaultUnit: "pk",
   suggestedQuantity: 1,
 },
-
 {
   name: "Tofu",
   categorySlug: "kornprodukter",
@@ -1663,7 +2226,6 @@ export const SHOPPING_CATALOG: ShoppingCatalogItem[] = [
   defaultUnit: "pk",
   suggestedQuantity: 1,
 },
-
 {
   name: "Tortellini",
   categorySlug: "kornprodukter",
@@ -1671,7 +2233,6 @@ export const SHOPPING_CATALOG: ShoppingCatalogItem[] = [
   defaultUnit: "pk",
   suggestedQuantity: 1,
 },
-
 {
   name: "Cookies",
   categorySlug: "snacks-og-godteri",
@@ -1679,7 +2240,6 @@ export const SHOPPING_CATALOG: ShoppingCatalogItem[] = [
   defaultUnit: "pk",
   suggestedQuantity: 1,
 },
-
 {
   name: "Dessert",
   categorySlug: "snacks-og-godteri",
@@ -1687,7 +2247,6 @@ export const SHOPPING_CATALOG: ShoppingCatalogItem[] = [
   defaultUnit: "pk",
   suggestedQuantity: 1,
 },
-
 {
   name: "Gelé",
   categorySlug: "snacks-og-godteri",
@@ -1695,7 +2254,6 @@ export const SHOPPING_CATALOG: ShoppingCatalogItem[] = [
   defaultUnit: "pk",
   suggestedQuantity: 1,
 },
-
 {
   name: "Honning",
   categorySlug: "snacks-og-godteri",
@@ -1703,7 +2261,6 @@ export const SHOPPING_CATALOG: ShoppingCatalogItem[] = [
   defaultUnit: "glass",
   suggestedQuantity: 1,
 },
-
 {
   name: "Kake",
   categorySlug: "snacks-og-godteri",
@@ -1711,7 +2268,6 @@ export const SHOPPING_CATALOG: ShoppingCatalogItem[] = [
   defaultUnit: "stk",
   suggestedQuantity: 1,
 },
-
 {
   name: "Kjeks",
   categorySlug: "snacks-og-godteri",
@@ -1719,7 +2275,6 @@ export const SHOPPING_CATALOG: ShoppingCatalogItem[] = [
   defaultUnit: "pk",
   suggestedQuantity: 1,
 },
-
 {
   name: "Konfekt",
   categorySlug: "snacks-og-godteri",
@@ -1727,7 +2282,6 @@ export const SHOPPING_CATALOG: ShoppingCatalogItem[] = [
   defaultUnit: "eske",
   suggestedQuantity: 1,
 },
-
 {
   name: "Müslibar",
   categorySlug: "snacks-og-godteri",
@@ -1735,7 +2289,6 @@ export const SHOPPING_CATALOG: ShoppingCatalogItem[] = [
   defaultUnit: "pk",
   suggestedQuantity: 1,
 },
-
 {
   name: "Nougatkrem",
   categorySlug: "snacks-og-godteri",
@@ -1743,7 +2296,6 @@ export const SHOPPING_CATALOG: ShoppingCatalogItem[] = [
   defaultUnit: "glass",
   suggestedQuantity: 1,
 },
-
 {
   name: "Panettone",
   categorySlug: "snacks-og-godteri",
@@ -1751,7 +2303,6 @@ export const SHOPPING_CATALOG: ShoppingCatalogItem[] = [
   defaultUnit: "stk",
   suggestedQuantity: 1,
 },
-
 {
   name: "Peanøtter",
   categorySlug: "snacks-og-godteri",
@@ -1759,7 +2310,6 @@ export const SHOPPING_CATALOG: ShoppingCatalogItem[] = [
   defaultUnit: "pk",
   suggestedQuantity: 1,
 },
-
 {
   name: "Popkorn",
   categorySlug: "snacks-og-godteri",
@@ -1767,7 +2317,6 @@ export const SHOPPING_CATALOG: ShoppingCatalogItem[] = [
   defaultUnit: "pk",
   suggestedQuantity: 1,
 },
-
 {
   name: "Potetgull",
   categorySlug: "snacks-og-godteri",
@@ -1775,7 +2324,6 @@ export const SHOPPING_CATALOG: ShoppingCatalogItem[] = [
   defaultUnit: "pk",
   suggestedQuantity: 1,
 },
-
 {
   name: "Pudding",
   categorySlug: "snacks-og-godteri",
@@ -1783,7 +2331,6 @@ export const SHOPPING_CATALOG: ShoppingCatalogItem[] = [
   defaultUnit: "pk",
   suggestedQuantity: 1,
 },
-
 {
   name: "Saltstenger",
   categorySlug: "snacks-og-godteri",
@@ -1791,7 +2338,6 @@ export const SHOPPING_CATALOG: ShoppingCatalogItem[] = [
   defaultUnit: "pk",
   suggestedQuantity: 1,
 },
-
 {
   name: "Sjokolade",
   categorySlug: "snacks-og-godteri",
@@ -1799,7 +2345,6 @@ export const SHOPPING_CATALOG: ShoppingCatalogItem[] = [
   defaultUnit: "stk",
   suggestedQuantity: 1,
 },
-
 {
   name: "Snacks",
   categorySlug: "snacks-og-godteri",
@@ -1807,7 +2352,6 @@ export const SHOPPING_CATALOG: ShoppingCatalogItem[] = [
   defaultUnit: "pk",
   suggestedQuantity: 1,
 },
-
 {
   name: "Snop",
   categorySlug: "snacks-og-godteri",
@@ -1815,7 +2359,6 @@ export const SHOPPING_CATALOG: ShoppingCatalogItem[] = [
   defaultUnit: "pk",
   suggestedQuantity: 1,
 },
-
 {
   name: "Sukkertøy",
   categorySlug: "snacks-og-godteri",
@@ -1823,7 +2366,6 @@ export const SHOPPING_CATALOG: ShoppingCatalogItem[] = [
   defaultUnit: "pk",
   suggestedQuantity: 1,
 },
-
 {
   name: "Syltetøy",
   categorySlug: "snacks-og-godteri",
@@ -1831,7 +2373,6 @@ export const SHOPPING_CATALOG: ShoppingCatalogItem[] = [
   defaultUnit: "glass",
   suggestedQuantity: 1,
 },
-
 {
   name: "Tortillachips",
   categorySlug: "snacks-og-godteri",
@@ -1839,7 +2380,6 @@ export const SHOPPING_CATALOG: ShoppingCatalogItem[] = [
   defaultUnit: "pk",
   suggestedQuantity: 1,
 },
-
 {
   name: "Tyggegummi",
   categorySlug: "snacks-og-godteri",
@@ -1847,7 +2387,6 @@ export const SHOPPING_CATALOG: ShoppingCatalogItem[] = [
   defaultUnit: "pk",
   suggestedQuantity: 1,
 },
-
 {
   name: "Tørket frukt",
   categorySlug: "snacks-og-godteri",
@@ -1855,7 +2394,6 @@ export const SHOPPING_CATALOG: ShoppingCatalogItem[] = [
   defaultUnit: "pk",
   suggestedQuantity: 1,
 },
-
 {
   name: "Vaniljesaus",
   categorySlug: "snacks-og-godteri",
@@ -1863,7 +2401,6 @@ export const SHOPPING_CATALOG: ShoppingCatalogItem[] = [
   defaultUnit: "pk",
   suggestedQuantity: 1,
 },
-
 {
   name: "Ale",
   categorySlug: "drikkevarer",
@@ -1871,7 +2408,6 @@ export const SHOPPING_CATALOG: ShoppingCatalogItem[] = [
   defaultUnit: "flaske",
   suggestedQuantity: 1,
 },
-
 {
   name: "Appelsinjuice",
   categorySlug: "drikkevarer",
@@ -1879,7 +2415,6 @@ export const SHOPPING_CATALOG: ShoppingCatalogItem[] = [
   defaultUnit: "l",
   suggestedQuantity: 1,
 },
-
 {
   name: "Brus",
   categorySlug: "drikkevarer",
@@ -1887,7 +2422,6 @@ export const SHOPPING_CATALOG: ShoppingCatalogItem[] = [
   defaultUnit: "flaske",
   suggestedQuantity: 1,
 },
-
 {
   name: "Champagne",
   categorySlug: "drikkevarer",
@@ -1895,7 +2429,6 @@ export const SHOPPING_CATALOG: ShoppingCatalogItem[] = [
   defaultUnit: "flaske",
   suggestedQuantity: 1,
 },
-
 {
   name: "Coca Cola",
   categorySlug: "drikkevarer",
@@ -1903,7 +2436,6 @@ export const SHOPPING_CATALOG: ShoppingCatalogItem[] = [
   defaultUnit: "flaske",
   suggestedQuantity: 1,
 },
-
 {
   name: "Cola light",
   categorySlug: "drikkevarer",
@@ -1911,7 +2443,6 @@ export const SHOPPING_CATALOG: ShoppingCatalogItem[] = [
   defaultUnit: "flaske",
   suggestedQuantity: 1,
 },
-
 {
   name: "Energidrikk",
   categorySlug: "drikkevarer",
@@ -1919,7 +2450,6 @@ export const SHOPPING_CATALOG: ShoppingCatalogItem[] = [
   defaultUnit: "boks",
   suggestedQuantity: 1,
 },
-
 {
   name: "Eplejuice",
   categorySlug: "drikkevarer",
@@ -1927,7 +2457,6 @@ export const SHOPPING_CATALOG: ShoppingCatalogItem[] = [
   defaultUnit: "l",
   suggestedQuantity: 1,
 },
-
 {
   name: "Gin",
   categorySlug: "drikkevarer",
@@ -1935,7 +2464,6 @@ export const SHOPPING_CATALOG: ShoppingCatalogItem[] = [
   defaultUnit: "flaske",
   suggestedQuantity: 1,
 },
-
 {
   name: "Hvitvin",
   categorySlug: "drikkevarer",
@@ -1943,7 +2471,6 @@ export const SHOPPING_CATALOG: ShoppingCatalogItem[] = [
   defaultUnit: "flaske",
   suggestedQuantity: 1,
 },
-
 {
   name: "Ingefærøl",
   categorySlug: "drikkevarer",
@@ -1951,7 +2478,6 @@ export const SHOPPING_CATALOG: ShoppingCatalogItem[] = [
   defaultUnit: "flaske",
   suggestedQuantity: 1,
 },
-
 {
   name: "Iste",
   categorySlug: "drikkevarer",
@@ -1959,7 +2485,6 @@ export const SHOPPING_CATALOG: ShoppingCatalogItem[] = [
   defaultUnit: "flaske",
   suggestedQuantity: 1,
 },
-
 {
   name: "Juice",
   categorySlug: "drikkevarer",
@@ -1967,7 +2492,6 @@ export const SHOPPING_CATALOG: ShoppingCatalogItem[] = [
   defaultUnit: "l",
   suggestedQuantity: 1,
 },
-
 {
   name: "Kaffe",
   categorySlug: "drikkevarer",
@@ -1975,7 +2499,6 @@ export const SHOPPING_CATALOG: ShoppingCatalogItem[] = [
   defaultUnit: "pk",
   suggestedQuantity: 1,
 },
-
 {
   name: "Kaffebønner",
   categorySlug: "drikkevarer",
@@ -1983,7 +2506,6 @@ export const SHOPPING_CATALOG: ShoppingCatalogItem[] = [
   defaultUnit: "pk",
   suggestedQuantity: 1,
 },
-
 {
   name: "Kaffekapsler",
   categorySlug: "drikkevarer",
@@ -1991,7 +2513,6 @@ export const SHOPPING_CATALOG: ShoppingCatalogItem[] = [
   defaultUnit: "pk",
   suggestedQuantity: 1,
 },
-
 {
   name: "Kaffeputer",
   categorySlug: "drikkevarer",
@@ -1999,7 +2520,6 @@ export const SHOPPING_CATALOG: ShoppingCatalogItem[] = [
   defaultUnit: "pk",
   suggestedQuantity: 1,
 },
-
 {
   name: "Kakao",
   categorySlug: "drikkevarer",
@@ -2007,7 +2527,6 @@ export const SHOPPING_CATALOG: ShoppingCatalogItem[] = [
   defaultUnit: "pk",
   suggestedQuantity: 1,
 },
-
 {
   name: "Lettbrus",
   categorySlug: "drikkevarer",
@@ -2015,7 +2534,6 @@ export const SHOPPING_CATALOG: ShoppingCatalogItem[] = [
   defaultUnit: "flaske",
   suggestedQuantity: 1,
 },
-
 {
   name: "Mineralvann",
   categorySlug: "drikkevarer",
@@ -2023,7 +2541,6 @@ export const SHOPPING_CATALOG: ShoppingCatalogItem[] = [
   defaultUnit: "flaske",
   suggestedQuantity: 1,
 },
-
 {
   name: "Punsj",
   categorySlug: "drikkevarer",
@@ -2031,7 +2548,6 @@ export const SHOPPING_CATALOG: ShoppingCatalogItem[] = [
   defaultUnit: "flaske",
   suggestedQuantity: 1,
 },
-
 {
   name: "Rom",
   categorySlug: "drikkevarer",
@@ -2039,7 +2555,6 @@ export const SHOPPING_CATALOG: ShoppingCatalogItem[] = [
   defaultUnit: "flaske",
   suggestedQuantity: 1,
 },
-
 {
   name: "Rødvin",
   categorySlug: "drikkevarer",
@@ -2047,7 +2562,6 @@ export const SHOPPING_CATALOG: ShoppingCatalogItem[] = [
   defaultUnit: "flaske",
   suggestedQuantity: 1,
 },
-
 {
   name: "Smoothie",
   categorySlug: "drikkevarer",
@@ -2055,7 +2569,6 @@ export const SHOPPING_CATALOG: ShoppingCatalogItem[] = [
   defaultUnit: "flaske",
   suggestedQuantity: 1,
 },
-
 {
   name: "Sportsdrikk",
   categorySlug: "drikkevarer",
@@ -2063,7 +2576,6 @@ export const SHOPPING_CATALOG: ShoppingCatalogItem[] = [
   defaultUnit: "flaske",
   suggestedQuantity: 1,
 },
-
 {
   name: "Sprit",
   categorySlug: "drikkevarer",
@@ -2071,7 +2583,6 @@ export const SHOPPING_CATALOG: ShoppingCatalogItem[] = [
   defaultUnit: "flaske",
   suggestedQuantity: 1,
 },
-
 {
   name: "Te",
   categorySlug: "drikkevarer",
@@ -2079,7 +2590,6 @@ export const SHOPPING_CATALOG: ShoppingCatalogItem[] = [
   defaultUnit: "pk",
   suggestedQuantity: 1,
 },
-
 {
   name: "Tonic",
   categorySlug: "drikkevarer",
@@ -2087,7 +2597,6 @@ export const SHOPPING_CATALOG: ShoppingCatalogItem[] = [
   defaultUnit: "flaske",
   suggestedQuantity: 1,
 },
-
 {
   name: "Urtete",
   categorySlug: "drikkevarer",
@@ -2095,7 +2604,6 @@ export const SHOPPING_CATALOG: ShoppingCatalogItem[] = [
   defaultUnit: "pk",
   suggestedQuantity: 1,
 },
-
 {
   name: "Vann",
   categorySlug: "drikkevarer",
@@ -2103,7 +2611,6 @@ export const SHOPPING_CATALOG: ShoppingCatalogItem[] = [
   defaultUnit: "flaske",
   suggestedQuantity: 1,
 },
-
 {
   name: "Vodka",
   categorySlug: "drikkevarer",
@@ -2111,7 +2618,6 @@ export const SHOPPING_CATALOG: ShoppingCatalogItem[] = [
   defaultUnit: "flaske",
   suggestedQuantity: 1,
 },
-
 {
   name: "Whisky",
   categorySlug: "drikkevarer",
@@ -2119,7 +2625,6 @@ export const SHOPPING_CATALOG: ShoppingCatalogItem[] = [
   defaultUnit: "flaske",
   suggestedQuantity: 1,
 },
-
 {
   name: "Øl",
   categorySlug: "drikkevarer",
@@ -2127,7 +2632,6 @@ export const SHOPPING_CATALOG: ShoppingCatalogItem[] = [
   defaultUnit: "flaske",
   suggestedQuantity: 1,
 },
-
 {
   name: "Aluminiumsfolie",
   categorySlug: "husholdning",
@@ -2135,7 +2639,6 @@ export const SHOPPING_CATALOG: ShoppingCatalogItem[] = [
   defaultUnit: "pk",
   suggestedQuantity: 1,
 },
-
 {
   name: "Avfallsposer",
   categorySlug: "husholdning",
@@ -2143,7 +2646,6 @@ export const SHOPPING_CATALOG: ShoppingCatalogItem[] = [
   defaultUnit: "pk",
   suggestedQuantity: 1,
 },
-
 {
   name: "Avkalkningsmiddel",
   categorySlug: "husholdning",
@@ -2151,7 +2653,6 @@ export const SHOPPING_CATALOG: ShoppingCatalogItem[] = [
   defaultUnit: "flaske",
   suggestedQuantity: 1,
 },
-
 {
   name: "Avløpsrengjøring",
   categorySlug: "husholdning",
@@ -2159,7 +2660,6 @@ export const SHOPPING_CATALOG: ShoppingCatalogItem[] = [
   defaultUnit: "flaske",
   suggestedQuantity: 1,
 },
-
 {
   name: "Babymat",
   categorySlug: "husholdning",
@@ -2167,7 +2667,6 @@ export const SHOPPING_CATALOG: ShoppingCatalogItem[] = [
   defaultUnit: "glass",
   suggestedQuantity: 1,
 },
-
 {
   name: "Bakepapir",
   categorySlug: "husholdning",
@@ -2175,7 +2674,6 @@ export const SHOPPING_CATALOG: ShoppingCatalogItem[] = [
   defaultUnit: "pk",
   suggestedQuantity: 1,
 },
-
 {
   name: "Bakepensel",
   categorySlug: "husholdning",
@@ -2183,7 +2681,6 @@ export const SHOPPING_CATALOG: ShoppingCatalogItem[] = [
   defaultUnit: "stk",
   suggestedQuantity: 1,
 },
-
 {
   name: "Ballong",
   categorySlug: "husholdning",
@@ -2191,7 +2688,6 @@ export const SHOPPING_CATALOG: ShoppingCatalogItem[] = [
   defaultUnit: "pk",
   suggestedQuantity: 1,
 },
-
 {
   name: "Batterier",
   categorySlug: "husholdning",
@@ -2199,7 +2695,6 @@ export const SHOPPING_CATALOG: ShoppingCatalogItem[] = [
   defaultUnit: "pk",
   suggestedQuantity: 1,
 },
-
 {
   name: "Binders",
   categorySlug: "husholdning",
@@ -2207,7 +2702,6 @@ export const SHOPPING_CATALOG: ShoppingCatalogItem[] = [
   defaultUnit: "pk",
   suggestedQuantity: 1,
 },
-
 {
   name: "Blomster",
   categorySlug: "husholdning",
@@ -2215,7 +2709,6 @@ export const SHOPPING_CATALOG: ShoppingCatalogItem[] = [
   defaultUnit: "stk",
   suggestedQuantity: 1,
 },
-
 {
   name: "Blomsterjord",
   categorySlug: "husholdning",
@@ -2223,7 +2716,6 @@ export const SHOPPING_CATALOG: ShoppingCatalogItem[] = [
   defaultUnit: "pose",
   suggestedQuantity: 1,
 },
-
 {
   name: "Blyant",
   categorySlug: "husholdning",
@@ -2231,7 +2723,6 @@ export const SHOPPING_CATALOG: ShoppingCatalogItem[] = [
   defaultUnit: "pk",
   suggestedQuantity: 1,
 },
-
 {
   name: "Blyantspisser",
   categorySlug: "husholdning",
@@ -2239,7 +2730,6 @@ export const SHOPPING_CATALOG: ShoppingCatalogItem[] = [
   defaultUnit: "stk",
   suggestedQuantity: 1,
 },
-
 {
   name: "Bolle",
   categorySlug: "husholdning",
@@ -2247,7 +2737,6 @@ export const SHOPPING_CATALOG: ShoppingCatalogItem[] = [
   defaultUnit: "stk",
   suggestedQuantity: 1,
 },
-
 {
   name: "Bordbombe",
   categorySlug: "husholdning",
@@ -2255,7 +2744,6 @@ export const SHOPPING_CATALOG: ShoppingCatalogItem[] = [
   defaultUnit: "stk",
   suggestedQuantity: 1,
 },
-
 {
   name: "Caps",
   categorySlug: "husholdning",
@@ -2263,7 +2751,6 @@ export const SHOPPING_CATALOG: ShoppingCatalogItem[] = [
   defaultUnit: "stk",
   suggestedQuantity: 1,
 },
-
 {
   name: "Carta",
   categorySlug: "husholdning",
@@ -2271,7 +2758,6 @@ export const SHOPPING_CATALOG: ShoppingCatalogItem[] = [
   defaultUnit: "pk",
   suggestedQuantity: 1,
 },
-
 {
   name: "Cocktail paraplyer",
   categorySlug: "husholdning",
@@ -2279,7 +2765,6 @@ export const SHOPPING_CATALOG: ShoppingCatalogItem[] = [
   defaultUnit: "pk",
   suggestedQuantity: 1,
 },
-
 {
   name: "Gave",
   categorySlug: "husholdning",
@@ -2287,7 +2772,6 @@ export const SHOPPING_CATALOG: ShoppingCatalogItem[] = [
   defaultUnit: "stk",
   suggestedQuantity: 1,
 },
-
 {
   name: "Gavepapir",
   categorySlug: "husholdning",
@@ -2295,7 +2779,6 @@ export const SHOPPING_CATALOG: ShoppingCatalogItem[] = [
   defaultUnit: "pk",
   suggestedQuantity: 1,
 },
-
 {
   name: "Gavesløyfe",
   categorySlug: "husholdning",
@@ -2303,7 +2786,6 @@ export const SHOPPING_CATALOG: ShoppingCatalogItem[] = [
   defaultUnit: "pk",
   suggestedQuantity: 1,
 },
-
 {
   name: "Glassrens",
   categorySlug: "husholdning",
@@ -2311,7 +2793,6 @@ export const SHOPPING_CATALOG: ShoppingCatalogItem[] = [
   defaultUnit: "flaske",
   suggestedQuantity: 1,
 },
-
 {
   name: "Glitter",
   categorySlug: "husholdning",
@@ -2319,7 +2800,6 @@ export const SHOPPING_CATALOG: ShoppingCatalogItem[] = [
   defaultUnit: "pk",
   suggestedQuantity: 1,
 },
-
 {
   name: "Grill-lighter",
   categorySlug: "husholdning",
@@ -2327,7 +2807,6 @@ export const SHOPPING_CATALOG: ShoppingCatalogItem[] = [
   defaultUnit: "stk",
   suggestedQuantity: 1,
 },
-
 {
   name: "Grillklype",
   categorySlug: "husholdning",
@@ -2335,7 +2814,6 @@ export const SHOPPING_CATALOG: ShoppingCatalogItem[] = [
   defaultUnit: "stk",
   suggestedQuantity: 1,
 },
-
 {
   name: "Grillspyd",
   categorySlug: "husholdning",
@@ -2343,7 +2821,6 @@ export const SHOPPING_CATALOG: ShoppingCatalogItem[] = [
   defaultUnit: "pk",
   suggestedQuantity: 1,
 },
-
 {
   name: "Gummihansker",
   categorySlug: "husholdning",
@@ -2351,7 +2828,6 @@ export const SHOPPING_CATALOG: ShoppingCatalogItem[] = [
   defaultUnit: "pk",
   suggestedQuantity: 1,
 },
-
 {
   name: "Hansker",
   categorySlug: "husholdning",
@@ -2359,7 +2835,6 @@ export const SHOPPING_CATALOG: ShoppingCatalogItem[] = [
   defaultUnit: "pk",
   suggestedQuantity: 1,
 },
-
 {
   name: "Hviskelær",
   categorySlug: "husholdning",
@@ -2367,7 +2842,6 @@ export const SHOPPING_CATALOG: ShoppingCatalogItem[] = [
   defaultUnit: "stk",
   suggestedQuantity: 1,
 },
-
 {
   name: "Juicer",
   categorySlug: "husholdning",
@@ -2375,7 +2849,6 @@ export const SHOPPING_CATALOG: ShoppingCatalogItem[] = [
   defaultUnit: "stk",
   suggestedQuantity: 1,
 },
-
 {
   name: "Juletrelys",
   categorySlug: "husholdning",
@@ -2383,7 +2856,6 @@ export const SHOPPING_CATALOG: ShoppingCatalogItem[] = [
   defaultUnit: "pk",
   suggestedQuantity: 1,
 },
-
 {
   name: "Juletrepynt",
   categorySlug: "husholdning",
@@ -2391,7 +2863,6 @@ export const SHOPPING_CATALOG: ShoppingCatalogItem[] = [
   defaultUnit: "pk",
   suggestedQuantity: 1,
 },
-
 {
   name: "Konvolutter",
   categorySlug: "husholdning",
@@ -2399,7 +2870,6 @@ export const SHOPPING_CATALOG: ShoppingCatalogItem[] = [
   defaultUnit: "pk",
   suggestedQuantity: 1,
 },
-
 {
   name: "Kostyme",
   categorySlug: "husholdning",
@@ -2407,7 +2877,6 @@ export const SHOPPING_CATALOG: ShoppingCatalogItem[] = [
   defaultUnit: "stk",
   suggestedQuantity: 1,
 },
-
 {
   name: "Kull",
   categorySlug: "husholdning",
@@ -2415,7 +2884,6 @@ export const SHOPPING_CATALOG: ShoppingCatalogItem[] = [
   defaultUnit: "pose",
   suggestedQuantity: 1,
 },
-
 {
   name: "Lighter",
   categorySlug: "husholdning",
@@ -2423,7 +2891,6 @@ export const SHOPPING_CATALOG: ShoppingCatalogItem[] = [
   defaultUnit: "stk",
   suggestedQuantity: 1,
 },
-
 {
   name: "Lommelykt",
   categorySlug: "husholdning",
@@ -2431,7 +2898,6 @@ export const SHOPPING_CATALOG: ShoppingCatalogItem[] = [
   defaultUnit: "stk",
   suggestedQuantity: 1,
 },
-
 {
   name: "Lyspærer",
   categorySlug: "husholdning",
@@ -2439,7 +2905,6 @@ export const SHOPPING_CATALOG: ShoppingCatalogItem[] = [
   defaultUnit: "pk",
   suggestedQuantity: 1,
 },
-
 {
   name: "Merkepenn",
   categorySlug: "husholdning",
@@ -2447,7 +2912,6 @@ export const SHOPPING_CATALOG: ShoppingCatalogItem[] = [
   defaultUnit: "stk",
   suggestedQuantity: 1,
 },
-
 {
   name: "Møbelpolish",
   categorySlug: "husholdning",
@@ -2455,7 +2919,6 @@ export const SHOPPING_CATALOG: ShoppingCatalogItem[] = [
   defaultUnit: "flaske",
   suggestedQuantity: 1,
 },
-
 {
   name: "Notisblokk",
   categorySlug: "husholdning",
@@ -2463,7 +2926,6 @@ export const SHOPPING_CATALOG: ShoppingCatalogItem[] = [
   defaultUnit: "stk",
   suggestedQuantity: 1,
 },
-
 {
   name: "Oppvaskmaskinsalt",
   categorySlug: "husholdning",
@@ -2471,7 +2933,6 @@ export const SHOPPING_CATALOG: ShoppingCatalogItem[] = [
   defaultUnit: "pk",
   suggestedQuantity: 1,
 },
-
 {
   name: "Oppvaskmaskintabletter",
   categorySlug: "husholdning",
@@ -2479,7 +2940,6 @@ export const SHOPPING_CATALOG: ShoppingCatalogItem[] = [
   defaultUnit: "pk",
   suggestedQuantity: 1,
 },
-
 {
   name: "Oppvaskmiddel",
   categorySlug: "husholdning",
@@ -2487,7 +2947,6 @@ export const SHOPPING_CATALOG: ShoppingCatalogItem[] = [
   defaultUnit: "flaske",
   suggestedQuantity: 1,
 },
-
 {
   name: "Penn",
   categorySlug: "husholdning",
@@ -2495,7 +2954,6 @@ export const SHOPPING_CATALOG: ShoppingCatalogItem[] = [
   defaultUnit: "pk",
   suggestedQuantity: 1,
 },
-
 {
   name: "Pepperkakeformer",
   categorySlug: "husholdning",
@@ -2503,7 +2961,6 @@ export const SHOPPING_CATALOG: ShoppingCatalogItem[] = [
   defaultUnit: "pk",
   suggestedQuantity: 1,
 },
-
 {
   name: "Pepperkaker",
   categorySlug: "husholdning",
@@ -2511,7 +2968,6 @@ export const SHOPPING_CATALOG: ShoppingCatalogItem[] = [
   defaultUnit: "pk",
   suggestedQuantity: 1,
 },
-
 {
   name: "Plastfolie",
   categorySlug: "husholdning",
@@ -2519,7 +2975,6 @@ export const SHOPPING_CATALOG: ShoppingCatalogItem[] = [
   defaultUnit: "pk",
   suggestedQuantity: 1,
 },
-
 {
   name: "Post-it lapper",
   categorySlug: "husholdning",
@@ -2527,7 +2982,6 @@ export const SHOPPING_CATALOG: ShoppingCatalogItem[] = [
   defaultUnit: "pk",
   suggestedQuantity: 1,
 },
-
 {
   name: "Propan",
   categorySlug: "husholdning",
@@ -2535,7 +2989,6 @@ export const SHOPPING_CATALOG: ShoppingCatalogItem[] = [
   defaultUnit: "stk",
   suggestedQuantity: 1,
 },
-
 {
   name: "Punsj",
   categorySlug: "husholdning",
@@ -2543,7 +2996,6 @@ export const SHOPPING_CATALOG: ShoppingCatalogItem[] = [
   defaultUnit: "stk",
   suggestedQuantity: 1,
 },
-
 {
   name: "Reflekser",
   categorySlug: "husholdning",
@@ -2551,7 +3003,6 @@ export const SHOPPING_CATALOG: ShoppingCatalogItem[] = [
   defaultUnit: "pk",
   suggestedQuantity: 1,
 },
-
 {
   name: "Rengjøringsmiddel",
   categorySlug: "husholdning",
@@ -2559,7 +3010,6 @@ export const SHOPPING_CATALOG: ShoppingCatalogItem[] = [
   defaultUnit: "flaske",
   suggestedQuantity: 1,
 },
-
 {
   name: "Rengjøringsmiddel bad",
   categorySlug: "husholdning",
@@ -2567,7 +3017,6 @@ export const SHOPPING_CATALOG: ShoppingCatalogItem[] = [
   defaultUnit: "flaske",
   suggestedQuantity: 1,
 },
-
 {
   name: "Servitter",
   categorySlug: "husholdning",
@@ -2575,7 +3024,6 @@ export const SHOPPING_CATALOG: ShoppingCatalogItem[] = [
   defaultUnit: "pk",
   suggestedQuantity: 1,
 },
-
 {
   name: "Skjerf",
   categorySlug: "husholdning",
@@ -2583,7 +3031,6 @@ export const SHOPPING_CATALOG: ShoppingCatalogItem[] = [
   defaultUnit: "stk",
   suggestedQuantity: 1,
 },
-
 {
   name: "Stearinlys",
   categorySlug: "husholdning",
@@ -2591,7 +3038,6 @@ export const SHOPPING_CATALOG: ShoppingCatalogItem[] = [
   defaultUnit: "pk",
   suggestedQuantity: 1,
 },
-
 {
   name: "Stekespade",
   categorySlug: "husholdning",
@@ -2599,7 +3045,6 @@ export const SHOPPING_CATALOG: ShoppingCatalogItem[] = [
   defaultUnit: "stk",
   suggestedQuantity: 1,
 },
-
 {
   name: "Støvkoster",
   categorySlug: "husholdning",
@@ -2607,7 +3052,6 @@ export const SHOPPING_CATALOG: ShoppingCatalogItem[] = [
   defaultUnit: "stk",
   suggestedQuantity: 1,
 },
-
 {
   name: "Støvsugerposer",
   categorySlug: "husholdning",
@@ -2615,7 +3059,6 @@ export const SHOPPING_CATALOG: ShoppingCatalogItem[] = [
   defaultUnit: "pk",
   suggestedQuantity: 1,
 },
-
 {
   name: "Svamp",
   categorySlug: "husholdning",
@@ -2623,7 +3066,6 @@ export const SHOPPING_CATALOG: ShoppingCatalogItem[] = [
   defaultUnit: "pk",
   suggestedQuantity: 1,
 },
-
 {
   name: "Toalettbørste",
   categorySlug: "husholdning",
@@ -2631,7 +3073,6 @@ export const SHOPPING_CATALOG: ShoppingCatalogItem[] = [
   defaultUnit: "stk",
   suggestedQuantity: 1,
 },
-
 {
   name: "Toner",
   categorySlug: "husholdning",
@@ -2639,7 +3080,6 @@ export const SHOPPING_CATALOG: ShoppingCatalogItem[] = [
   defaultUnit: "stk",
   suggestedQuantity: 1,
 },
-
 {
   name: "Tørkepapir",
   categorySlug: "husholdning",
@@ -2647,7 +3087,6 @@ export const SHOPPING_CATALOG: ShoppingCatalogItem[] = [
   defaultUnit: "pk",
   suggestedQuantity: 1,
 },
-
 {
   name: "Tøymykner",
   categorySlug: "husholdning",
@@ -2655,7 +3094,6 @@ export const SHOPPING_CATALOG: ShoppingCatalogItem[] = [
   defaultUnit: "flaske",
   suggestedQuantity: 1,
 },
-
 {
   name: "Ullsokker",
   categorySlug: "husholdning",
@@ -2663,7 +3101,6 @@ export const SHOPPING_CATALOG: ShoppingCatalogItem[] = [
   defaultUnit: "par",
   suggestedQuantity: 1,
 },
-
 {
   name: "Universalrengjøringsmiddel",
   categorySlug: "husholdning",
@@ -2671,7 +3108,6 @@ export const SHOPPING_CATALOG: ShoppingCatalogItem[] = [
   defaultUnit: "flaske",
   suggestedQuantity: 1,
 },
-
 {
   name: "Vaskekluter",
   categorySlug: "husholdning",
@@ -2679,7 +3115,6 @@ export const SHOPPING_CATALOG: ShoppingCatalogItem[] = [
   defaultUnit: "pk",
   suggestedQuantity: 1,
 },
-
 {
   name: "Vaskemiddel",
   categorySlug: "husholdning",
@@ -2687,7 +3122,6 @@ export const SHOPPING_CATALOG: ShoppingCatalogItem[] = [
   defaultUnit: "pk",
   suggestedQuantity: 1,
 },
-
 {
   name: "Visp",
   categorySlug: "husholdning",
@@ -2695,7 +3129,6 @@ export const SHOPPING_CATALOG: ShoppingCatalogItem[] = [
   defaultUnit: "stk",
   suggestedQuantity: 1,
 },
-
 {
   name: "WC-rens",
   categorySlug: "husholdning",
@@ -2703,7 +3136,6 @@ export const SHOPPING_CATALOG: ShoppingCatalogItem[] = [
   defaultUnit: "flaske",
   suggestedQuantity: 1,
 },
-
 {
   name: "After sun",
   categorySlug: "omsorg-helse",
@@ -2711,7 +3143,6 @@ export const SHOPPING_CATALOG: ShoppingCatalogItem[] = [
   defaultUnit: "flaske",
   suggestedQuantity: 1,
 },
-
 {
   name: "Aftershave",
   categorySlug: "omsorg-helse",
@@ -2719,7 +3150,6 @@ export const SHOPPING_CATALOG: ShoppingCatalogItem[] = [
   defaultUnit: "flaske",
   suggestedQuantity: 1,
 },
-
 {
   name: "Ansiktskrem",
   categorySlug: "omsorg-helse",
@@ -2727,7 +3157,6 @@ export const SHOPPING_CATALOG: ShoppingCatalogItem[] = [
   defaultUnit: "tube",
   suggestedQuantity: 1,
 },
-
 {
   name: "Ansiktsmaling til barna",
   categorySlug: "omsorg-helse",
@@ -2735,7 +3164,6 @@ export const SHOPPING_CATALOG: ShoppingCatalogItem[] = [
   defaultUnit: "pk",
   suggestedQuantity: 1,
 },
-
 {
   name: "Ansiktsmaske",
   categorySlug: "omsorg-helse",
@@ -2743,7 +3171,6 @@ export const SHOPPING_CATALOG: ShoppingCatalogItem[] = [
   defaultUnit: "pk",
   suggestedQuantity: 1,
 },
-
 {
   name: "Ansiktsservietter",
   categorySlug: "omsorg-helse",
@@ -2751,7 +3178,6 @@ export const SHOPPING_CATALOG: ShoppingCatalogItem[] = [
   defaultUnit: "pk",
   suggestedQuantity: 1,
 },
-
 {
   name: "Antiseptisk krem",
   categorySlug: "omsorg-helse",
@@ -2759,7 +3185,6 @@ export const SHOPPING_CATALOG: ShoppingCatalogItem[] = [
   defaultUnit: "tube",
   suggestedQuantity: 1,
 },
-
 {
   name: "Badeolje",
   categorySlug: "omsorg-helse",
@@ -2767,7 +3192,6 @@ export const SHOPPING_CATALOG: ShoppingCatalogItem[] = [
   defaultUnit: "flaske",
   suggestedQuantity: 1,
 },
-
 {
   name: "Badesalt",
   categorySlug: "omsorg-helse",
@@ -2775,7 +3199,6 @@ export const SHOPPING_CATALOG: ShoppingCatalogItem[] = [
   defaultUnit: "pk",
   suggestedQuantity: 1,
 },
-
 {
   name: "Balsam",
   categorySlug: "omsorg-helse",
@@ -2783,7 +3206,6 @@ export const SHOPPING_CATALOG: ShoppingCatalogItem[] = [
   defaultUnit: "flaske",
   suggestedQuantity: 1,
 },
-
 {
   name: "Bandasjer",
   categorySlug: "omsorg-helse",
@@ -2791,7 +3213,6 @@ export const SHOPPING_CATALOG: ShoppingCatalogItem[] = [
   defaultUnit: "pk",
   suggestedQuantity: 1,
 },
-
 {
   name: "Barberblader",
   categorySlug: "omsorg-helse",
@@ -2799,7 +3220,6 @@ export const SHOPPING_CATALOG: ShoppingCatalogItem[] = [
   defaultUnit: "pk",
   suggestedQuantity: 1,
 },
-
 {
   name: "Barberhøvel",
   categorySlug: "omsorg-helse",
@@ -2807,7 +3227,6 @@ export const SHOPPING_CATALOG: ShoppingCatalogItem[] = [
   defaultUnit: "stk",
   suggestedQuantity: 1,
 },
-
 {
   name: "Barberskum",
   categorySlug: "omsorg-helse",
@@ -2815,7 +3234,6 @@ export const SHOPPING_CATALOG: ShoppingCatalogItem[] = [
   defaultUnit: "flaske",
   suggestedQuantity: 1,
 },
-
 {
   name: "Bind",
   categorySlug: "omsorg-helse",
@@ -2823,7 +3241,6 @@ export const SHOPPING_CATALOG: ShoppingCatalogItem[] = [
   defaultUnit: "pk",
   suggestedQuantity: 1,
 },
-
 {
   name: "Bleier",
   categorySlug: "omsorg-helse",
@@ -2831,7 +3248,6 @@ export const SHOPPING_CATALOG: ShoppingCatalogItem[] = [
   defaultUnit: "pk",
   suggestedQuantity: 1,
 },
-
 {
   name: "Bomullspads",
   categorySlug: "omsorg-helse",
@@ -2839,7 +3255,6 @@ export const SHOPPING_CATALOG: ShoppingCatalogItem[] = [
   defaultUnit: "pk",
   suggestedQuantity: 1,
 },
-
 {
   name: "Bomullspinner",
   categorySlug: "omsorg-helse",
@@ -2847,7 +3262,6 @@ export const SHOPPING_CATALOG: ShoppingCatalogItem[] = [
   defaultUnit: "pk",
   suggestedQuantity: 1,
 },
-
 {
   name: "Deodorant",
   categorySlug: "omsorg-helse",
@@ -2855,7 +3269,6 @@ export const SHOPPING_CATALOG: ShoppingCatalogItem[] = [
   defaultUnit: "stk",
   suggestedQuantity: 1,
 },
-
 {
   name: "Desinfeksjonsspray",
   categorySlug: "omsorg-helse",
@@ -2863,7 +3276,6 @@ export const SHOPPING_CATALOG: ShoppingCatalogItem[] = [
   defaultUnit: "flaske",
   suggestedQuantity: 1,
 },
-
 {
   name: "Dopapir",
   categorySlug: "omsorg-helse",
@@ -2871,7 +3283,6 @@ export const SHOPPING_CATALOG: ShoppingCatalogItem[] = [
   defaultUnit: "pk",
   suggestedQuantity: 1,
 },
-
 {
   name: "Dusjsåpe",
   categorySlug: "omsorg-helse",
@@ -2879,7 +3290,6 @@ export const SHOPPING_CATALOG: ShoppingCatalogItem[] = [
   defaultUnit: "flaske",
   suggestedQuantity: 1,
 },
-
 {
   name: "Fuktighetskrem",
   categorySlug: "omsorg-helse",
@@ -2887,7 +3297,6 @@ export const SHOPPING_CATALOG: ShoppingCatalogItem[] = [
   defaultUnit: "tube",
   suggestedQuantity: 1,
 },
-
 {
   name: "Gnagsårplaster",
   categorySlug: "omsorg-helse",
@@ -2895,7 +3304,6 @@ export const SHOPPING_CATALOG: ShoppingCatalogItem[] = [
   defaultUnit: "pk",
   suggestedQuantity: 1,
 },
-
 {
   name: "Halstabletter",
   categorySlug: "omsorg-helse",
@@ -2903,7 +3311,6 @@ export const SHOPPING_CATALOG: ShoppingCatalogItem[] = [
   defaultUnit: "pk",
   suggestedQuantity: 1,
 },
-
 {
   name: "Håndkrem",
   categorySlug: "omsorg-helse",
@@ -2911,7 +3318,6 @@ export const SHOPPING_CATALOG: ShoppingCatalogItem[] = [
   defaultUnit: "tube",
   suggestedQuantity: 1,
 },
-
 {
   name: "Hårgelé",
   categorySlug: "omsorg-helse",
@@ -2919,7 +3325,6 @@ export const SHOPPING_CATALOG: ShoppingCatalogItem[] = [
   defaultUnit: "tube",
   suggestedQuantity: 1,
 },
-
 {
   name: "Hårolje",
   categorySlug: "omsorg-helse",
@@ -2927,7 +3332,6 @@ export const SHOPPING_CATALOG: ShoppingCatalogItem[] = [
   defaultUnit: "flaske",
   suggestedQuantity: 1,
 },
-
 {
   name: "Hårspray",
   categorySlug: "omsorg-helse",
@@ -2935,7 +3339,6 @@ export const SHOPPING_CATALOG: ShoppingCatalogItem[] = [
   defaultUnit: "flaske",
   suggestedQuantity: 1,
 },
-
 {
   name: "Insektsmiddel",
   categorySlug: "omsorg-helse",
@@ -2943,7 +3346,6 @@ export const SHOPPING_CATALOG: ShoppingCatalogItem[] = [
   defaultUnit: "flaske",
   suggestedQuantity: 1,
 },
-
 {
   name: "Kjølegelé",
   categorySlug: "omsorg-helse",
@@ -2951,7 +3353,6 @@ export const SHOPPING_CATALOG: ShoppingCatalogItem[] = [
   defaultUnit: "tube",
   suggestedQuantity: 1,
 },
-
 {
   name: "Kompresser",
   categorySlug: "omsorg-helse",
@@ -2959,7 +3360,6 @@ export const SHOPPING_CATALOG: ShoppingCatalogItem[] = [
   defaultUnit: "pk",
   suggestedQuantity: 1,
 },
-
 {
   name: "Kondomer",
   categorySlug: "omsorg-helse",
@@ -2967,7 +3367,6 @@ export const SHOPPING_CATALOG: ShoppingCatalogItem[] = [
   defaultUnit: "pk",
   suggestedQuantity: 1,
 },
-
 {
   name: "Kontaktlinsevæske",
   categorySlug: "omsorg-helse",
@@ -2975,7 +3374,6 @@ export const SHOPPING_CATALOG: ShoppingCatalogItem[] = [
   defaultUnit: "flaske",
   suggestedQuantity: 1,
 },
-
 {
   name: "Leppepomade",
   categorySlug: "omsorg-helse",
@@ -2983,7 +3381,6 @@ export const SHOPPING_CATALOG: ShoppingCatalogItem[] = [
   defaultUnit: "stk",
   suggestedQuantity: 1,
 },
-
 {
   name: "Leppestift",
   categorySlug: "omsorg-helse",
@@ -2991,7 +3388,6 @@ export const SHOPPING_CATALOG: ShoppingCatalogItem[] = [
   defaultUnit: "stk",
   suggestedQuantity: 1,
 },
-
 {
   name: "Medisinsk kull",
   categorySlug: "omsorg-helse",
@@ -2999,7 +3395,6 @@ export const SHOPPING_CATALOG: ShoppingCatalogItem[] = [
   defaultUnit: "pk",
   suggestedQuantity: 1,
 },
-
 {
   name: "Munnskyll",
   categorySlug: "omsorg-helse",
@@ -3007,7 +3402,6 @@ export const SHOPPING_CATALOG: ShoppingCatalogItem[] = [
   defaultUnit: "flaske",
   suggestedQuantity: 1,
 },
-
 {
   name: "Muskelkrem",
   categorySlug: "omsorg-helse",
@@ -3015,7 +3409,6 @@ export const SHOPPING_CATALOG: ShoppingCatalogItem[] = [
   defaultUnit: "tube",
   suggestedQuantity: 1,
 },
-
 {
   name: "Neglefil",
   categorySlug: "omsorg-helse",
@@ -3023,7 +3416,6 @@ export const SHOPPING_CATALOG: ShoppingCatalogItem[] = [
   defaultUnit: "stk",
   suggestedQuantity: 1,
 },
-
 {
   name: "Neglelakk",
   categorySlug: "omsorg-helse",
@@ -3031,7 +3423,6 @@ export const SHOPPING_CATALOG: ShoppingCatalogItem[] = [
   defaultUnit: "stk",
   suggestedQuantity: 1,
 },
-
 {
   name: "Neglelakkfjerner",
   categorySlug: "omsorg-helse",
@@ -3039,7 +3430,6 @@ export const SHOPPING_CATALOG: ShoppingCatalogItem[] = [
   defaultUnit: "flaske",
   suggestedQuantity: 1,
 },
-
 {
   name: "Nesesalve",
   categorySlug: "omsorg-helse",
@@ -3047,7 +3437,6 @@ export const SHOPPING_CATALOG: ShoppingCatalogItem[] = [
   defaultUnit: "tube",
   suggestedQuantity: 1,
 },
-
 {
   name: "Papirlommetørkle",
   categorySlug: "omsorg-helse",
@@ -3055,7 +3444,6 @@ export const SHOPPING_CATALOG: ShoppingCatalogItem[] = [
   defaultUnit: "pk",
   suggestedQuantity: 1,
 },
-
 {
   name: "Parfyme",
   categorySlug: "omsorg-helse",
@@ -3063,7 +3451,6 @@ export const SHOPPING_CATALOG: ShoppingCatalogItem[] = [
   defaultUnit: "flaske",
   suggestedQuantity: 1,
 },
-
 {
   name: "Peeling",
   categorySlug: "omsorg-helse",
@@ -3071,7 +3458,6 @@ export const SHOPPING_CATALOG: ShoppingCatalogItem[] = [
   defaultUnit: "tube",
   suggestedQuantity: 1,
 },
-
 {
   name: "Pinsetter",
   categorySlug: "omsorg-helse",
@@ -3079,7 +3465,6 @@ export const SHOPPING_CATALOG: ShoppingCatalogItem[] = [
   defaultUnit: "stk",
   suggestedQuantity: 1,
 },
-
 {
   name: "Plaster",
   categorySlug: "omsorg-helse",
@@ -3087,7 +3472,6 @@ export const SHOPPING_CATALOG: ShoppingCatalogItem[] = [
   defaultUnit: "pk",
   suggestedQuantity: 1,
 },
-
 {
   name: "Pudder",
   categorySlug: "omsorg-helse",
@@ -3095,7 +3479,6 @@ export const SHOPPING_CATALOG: ShoppingCatalogItem[] = [
   defaultUnit: "stk",
   suggestedQuantity: 1,
 },
-
 {
   name: "Salve",
   categorySlug: "omsorg-helse",
@@ -3103,7 +3486,6 @@ export const SHOPPING_CATALOG: ShoppingCatalogItem[] = [
   defaultUnit: "tube",
   suggestedQuantity: 1,
 },
-
 {
   name: "Shampo",
   categorySlug: "omsorg-helse",
@@ -3111,7 +3493,6 @@ export const SHOPPING_CATALOG: ShoppingCatalogItem[] = [
   defaultUnit: "flaske",
   suggestedQuantity: 1,
 },
-
 {
   name: "Skjeggolje",
   categorySlug: "omsorg-helse",
@@ -3119,7 +3500,6 @@ export const SHOPPING_CATALOG: ShoppingCatalogItem[] = [
   defaultUnit: "flaske",
   suggestedQuantity: 1,
 },
-
 {
   name: "Smertestillende",
   categorySlug: "omsorg-helse",
@@ -3127,7 +3507,6 @@ export const SHOPPING_CATALOG: ShoppingCatalogItem[] = [
   defaultUnit: "pk",
   suggestedQuantity: 1,
 },
-
 {
   name: "Sminkefjerner",
   categorySlug: "omsorg-helse",
@@ -3135,7 +3514,6 @@ export const SHOPPING_CATALOG: ShoppingCatalogItem[] = [
   defaultUnit: "flaske",
   suggestedQuantity: 1,
 },
-
 {
   name: "Solkrem",
   categorySlug: "omsorg-helse",
@@ -3143,7 +3521,6 @@ export const SHOPPING_CATALOG: ShoppingCatalogItem[] = [
   defaultUnit: "flaske",
   suggestedQuantity: 1,
 },
-
 {
   name: "Såpe",
   categorySlug: "omsorg-helse",
@@ -3151,7 +3528,6 @@ export const SHOPPING_CATALOG: ShoppingCatalogItem[] = [
   defaultUnit: "stk",
   suggestedQuantity: 1,
 },
-
 {
   name: "Tamponger",
   categorySlug: "omsorg-helse",
@@ -3159,7 +3535,6 @@ export const SHOPPING_CATALOG: ShoppingCatalogItem[] = [
   defaultUnit: "pk",
   suggestedQuantity: 1,
 },
-
 {
   name: "Tannbørste",
   categorySlug: "omsorg-helse",
@@ -3167,7 +3542,6 @@ export const SHOPPING_CATALOG: ShoppingCatalogItem[] = [
   defaultUnit: "stk",
   suggestedQuantity: 1,
 },
-
 {
   name: "Tannkrem",
   categorySlug: "omsorg-helse",
@@ -3175,7 +3549,6 @@ export const SHOPPING_CATALOG: ShoppingCatalogItem[] = [
   defaultUnit: "tube",
   suggestedQuantity: 1,
 },
-
 {
   name: "Tanntråd",
   categorySlug: "omsorg-helse",
@@ -3183,7 +3556,6 @@ export const SHOPPING_CATALOG: ShoppingCatalogItem[] = [
   defaultUnit: "stk",
   suggestedQuantity: 1,
 },
-
 {
   name: "Termometer",
   categorySlug: "omsorg-helse",
@@ -3191,7 +3563,6 @@ export const SHOPPING_CATALOG: ShoppingCatalogItem[] = [
   defaultUnit: "stk",
   suggestedQuantity: 1,
 },
-
 {
   name: "Tran",
   categorySlug: "omsorg-helse",
@@ -3199,7 +3570,6 @@ export const SHOPPING_CATALOG: ShoppingCatalogItem[] = [
   defaultUnit: "flaske",
   suggestedQuantity: 1,
 },
-
 {
   name: "Vitaminer",
   categorySlug: "omsorg-helse",
@@ -3207,7 +3577,6 @@ export const SHOPPING_CATALOG: ShoppingCatalogItem[] = [
   defaultUnit: "pk",
   suggestedQuantity: 1,
 },
-
 {
   name: "Våtservitter",
   categorySlug: "omsorg-helse",
@@ -3215,7 +3584,6 @@ export const SHOPPING_CATALOG: ShoppingCatalogItem[] = [
   defaultUnit: "pk",
   suggestedQuantity: 1,
 },
-
 {
   name: "Øyedråper",
   categorySlug: "omsorg-helse",
@@ -3223,7 +3591,6 @@ export const SHOPPING_CATALOG: ShoppingCatalogItem[] = [
   defaultUnit: "flaske",
   suggestedQuantity: 1,
 },
-
 {
   name: "Fiskemat",
   categorySlug: "dyreprodukter",
@@ -3231,7 +3598,6 @@ export const SHOPPING_CATALOG: ShoppingCatalogItem[] = [
   defaultUnit: "pk",
   suggestedQuantity: 1,
 },
-
 {
   name: "Fuglefrø",
   categorySlug: "dyreprodukter",
@@ -3239,7 +3605,6 @@ export const SHOPPING_CATALOG: ShoppingCatalogItem[] = [
   defaultUnit: "pk",
   suggestedQuantity: 1,
 },
-
 {
   name: "Fuglemat",
   categorySlug: "dyreprodukter",
@@ -3247,7 +3612,6 @@ export const SHOPPING_CATALOG: ShoppingCatalogItem[] = [
   defaultUnit: "pk",
   suggestedQuantity: 1,
 },
-
 {
   name: "Hundegodt",
   categorySlug: "dyreprodukter",
@@ -3255,7 +3619,6 @@ export const SHOPPING_CATALOG: ShoppingCatalogItem[] = [
   defaultUnit: "pk",
   suggestedQuantity: 1,
 },
-
 {
   name: "Hundeposer",
   categorySlug: "dyreprodukter",
@@ -3263,7 +3626,6 @@ export const SHOPPING_CATALOG: ShoppingCatalogItem[] = [
   defaultUnit: "pk",
   suggestedQuantity: 1,
 },
-
 {
   name: "Hundetørrfór",
   categorySlug: "dyreprodukter",
@@ -3271,7 +3633,6 @@ export const SHOPPING_CATALOG: ShoppingCatalogItem[] = [
   defaultUnit: "pk",
   suggestedQuantity: 1,
 },
-
 {
   name: "Hundevåtfór",
   categorySlug: "dyreprodukter",
@@ -3279,7 +3640,6 @@ export const SHOPPING_CATALOG: ShoppingCatalogItem[] = [
   defaultUnit: "boks",
   suggestedQuantity: 1,
 },
-
 {
   name: "Kattegodt",
   categorySlug: "dyreprodukter",
@@ -3287,7 +3647,6 @@ export const SHOPPING_CATALOG: ShoppingCatalogItem[] = [
   defaultUnit: "pk",
   suggestedQuantity: 1,
 },
-
 {
   name: "Kattemat tørrfór",
   categorySlug: "dyreprodukter",
@@ -3295,7 +3654,6 @@ export const SHOPPING_CATALOG: ShoppingCatalogItem[] = [
   defaultUnit: "pk",
   suggestedQuantity: 1,
 },
-
 {
   name: "Kattemat våtfór",
   categorySlug: "dyreprodukter",
@@ -3303,7 +3661,6 @@ export const SHOPPING_CATALOG: ShoppingCatalogItem[] = [
   defaultUnit: "boks",
   suggestedQuantity: 1,
 },
-
 {
   name: "Kattesand",
   categorySlug: "dyreprodukter",
@@ -3311,7 +3668,6 @@ export const SHOPPING_CATALOG: ShoppingCatalogItem[] = [
   defaultUnit: "pk",
   suggestedQuantity: 1,
 },
-
 {
   name: "Smådyrmat",
   categorySlug: "dyreprodukter",
