@@ -149,7 +149,8 @@ export default function ShoppingPage() {
 
         return {
           ...categoryOption,
-          items: items.slice(0, 8),
+          previewItems: items.slice(0, 8),
+          items,
           totalItemCount: items.length,
         };
       }).filter((categoryOption) => categoryOption.totalItemCount > 0),
@@ -687,7 +688,11 @@ export default function ShoppingPage() {
                             id={`shopping-catalog-category-${categoryOption.slug}`}
                           >
                             <CatalogItemGrid
-                              items={categoryOption.items}
+                              items={
+                                isCategoryOpen
+                                  ? categoryOption.items
+                                  : categoryOption.previewItems
+                              }
                               shoppingItems={shoppingList.items}
                               onAddItem={addItemFromCatalog}
                             />
