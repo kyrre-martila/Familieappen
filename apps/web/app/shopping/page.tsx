@@ -299,7 +299,7 @@ export default function ShoppingPage() {
       if (customEditId) {
         const updatedCustomItem = await updateFamilyCustomShoppingItem(activeFamilyId, customEditId, { name: nextLabel, defaultUnit: nextUnit, suggestedQuantity: nextQuantity || 1, categorySlug: nextCategory });
         setCatalogItems((items) => items.map((catalogItem) => catalogItem.id === updatedCustomItem.id ? updatedCustomItem : catalogItem));
-        await refreshShoppingData(activeFamilyId, shoppingList?.id);
+        await refreshShoppingData(activeFamilyId, activeShoppingListId ?? shoppingList?.id);
       }
       setShoppingList((currentList) =>
         currentList
@@ -319,7 +319,7 @@ export default function ShoppingPage() {
       setUnit(DEFAULT_SHOPPING_UNIT);
       setNote("");
       setCategory(DEFAULT_CUSTOM_CATEGORY_SLUG);
-      await refreshShoppingData(activeFamilyId, shoppingList?.id);
+      await refreshShoppingData(activeFamilyId, activeShoppingListId ?? shoppingList?.id);
       setIsNewSheetOpen(false);
       setItemSheetError("");
       setEditingItemId(null);
@@ -539,7 +539,7 @@ export default function ShoppingPage() {
     setMessage("");
     try {
       await deleteFamilyCustomShoppingItem(activeFamilyId, itemId);
-      await refreshShoppingData(activeFamilyId, shoppingList?.id);
+      await refreshShoppingData(activeFamilyId, activeShoppingListId ?? shoppingList?.id);
       setOpenMenuItemId(null);
     } catch (error) {
       handleActionError(error, "Kunne ikke slette egen vare. Prøv igjen.");
@@ -1371,6 +1371,14 @@ function findMatchingShoppingItem(
   shoppingItems: ShoppingItem[],
   checked: boolean,
 ) {
+  if (catalogItem.isCustom) {
+    return shoppingItems.find(
+      (shoppingItem) =>
+        shoppingItem.checked === checked &&
+        shoppingItem.familyCustomShoppingItemId === catalogItem.id,
+    );
+  }
+
   const itemValues = [catalogItem.name, ...catalogItem.aliases].map(
     normalizeShoppingSearchValue,
   );
@@ -1386,6 +1394,16 @@ function getCatalogItemForShoppingItem(
   shoppingItem: ShoppingItem,
   catalogItems: ShoppingCatalogItem[],
 ) {
+  if (shoppingItem.familyCustomShoppingItemId) {
+    const customCatalogItem = catalogItems.find(
+      (catalogItem) => catalogItem.id === shoppingItem.familyCustomShoppingItemId,
+    );
+
+    if (customCatalogItem) {
+      return customCatalogItem;
+    }
+  }
+
   const normalizedLabel = normalizeShoppingSearchValue(shoppingItem.label);
 
   return catalogItems.find((catalogItem) =>

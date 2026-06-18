@@ -310,7 +310,7 @@ model FamilyCustomShoppingItem {
   createdByUser     User?     @relation("FamilyCustomShoppingItemCreatedBy", fields: [createdByUserId], references: [id], onDelete: SetNull)
   shoppingListItems ShoppingListItem[]
 
-  @@unique([familyId, normalizedName])
+  @@index([familyId, normalizedName, deletedAt])
   @@index([familyId, categorySlug, deletedAt])
   @@index([createdByUserId])
   @@map("family_custom_shopping_items")
