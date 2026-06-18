@@ -20,6 +20,9 @@ type IcsSourceRecord = {
   lastSyncedAt: Date | null;
   lastSyncStatus: string | null;
   lastSyncError: string | null;
+  syncIntervalMinutes: number;
+  nextSyncAt: Date | null;
+  lastSyncStartedAt: Date | null;
   createdAt: Date;
   updatedAt: Date;
 };
@@ -49,6 +52,9 @@ type SyncCounts = {
 const VALID_ICONS = new Set(["sport", "school", "birthday", "health", "travel", "family", "meal"]);
 const ADMIN_ROLES: FamilyMemberRoleDto[] = ["OWNER", "PARENT"];
 const MAX_ICS_BYTES = 5 * 1024 * 1024;
+const DEFAULT_SYNC_INTERVAL_MINUTES = 60;
+const MIN_SYNC_INTERVAL_MINUTES = 5;
+const MAX_SYNC_INTERVAL_MINUTES = 24 * 60;
 
 @Injectable()
 export class CalendarIcsSyncService {
@@ -70,8 +76,13 @@ export class CalendarIcsSyncService {
   async createSource(userId: string, familyId: string, input: CreateCalendarIcsSourceRequestDto): Promise<CalendarIcsSourceDto> {
     await this.familyAuthorization.requireFamilyRole(userId, familyId, ADMIN_ROLES);
     const data = await this.validateSourceInput(familyId, input, true);
+    const syncIntervalMinutes = getSyncIntervalMinutes(data);
     const source = await (this.prisma.client as any).calendarIcsSource.create({ data: { familyId, ...data } }) as IcsSourceRecord;
-    return toSourceDto(source);
+    const updatedSource = await (this.prisma.client as any).calendarIcsSource.update({
+      where: { id: source.id },
+      data: { nextSyncAt: addRandomMinutes(new Date(), 0, syncIntervalMinutes) }
+    }) as IcsSourceRecord;
+    return toSourceDto(updatedSource);
   }
 
   async updateSource(userId: string, familyId: string, sourceId: string, input: UpdateCalendarIcsSourceRequestDto): Promise<CalendarIcsSourceDto> {
@@ -110,13 +121,23 @@ export class CalendarIcsSyncService {
       throw new BadRequestException("ICS source is inactive");
     }
 
+    await (this.prisma.client as any).calendarIcsSource.update({
+      where: { id: source.id },
+      data: { lastSyncStartedAt: new Date() }
+    });
+
     try {
       const icsText = await this.fetchIcs(source.url);
       const parsedEvents = parseIcsEvents(icsText);
       const counts = await this.applyParsedEvents(source, parsedEvents);
       const updatedSource = await (this.prisma.client as any).calendarIcsSource.update({
         where: { id: source.id },
-        data: { lastSyncedAt: new Date(), lastSyncStatus: "success", lastSyncError: null }
+        data: {
+          lastSyncedAt: new Date(),
+          lastSyncStatus: "success",
+          lastSyncError: null,
+          nextSyncAt: addRandomMinutes(new Date(), source.syncIntervalMinutes, source.syncIntervalMinutes + 15)
+        }
       }) as IcsSourceRecord;
 
       return { source: toSourceDto(updatedSource), ...counts };
@@ -124,7 +145,12 @@ export class CalendarIcsSyncService {
       const message = error instanceof Error ? error.message : "Unknown ICS sync error";
       const updatedSource = await (this.prisma.client as any).calendarIcsSource.update({
         where: { id: source.id },
-        data: { lastSyncedAt: new Date(), lastSyncStatus: "error", lastSyncError: message.slice(0, 500) }
+        data: {
+          lastSyncedAt: new Date(),
+          lastSyncStatus: "error",
+          lastSyncError: message.slice(0, 500),
+          nextSyncAt: addRandomMinutes(new Date(), 15, 30)
+        }
       }) as IcsSourceRecord;
 
       return { source: toSourceDto(updatedSource), imported: 0, updated: 0, removed: 0, skipped: 0 };
@@ -263,6 +289,7 @@ export class CalendarIcsSyncService {
     if (input.active !== undefined) data.active = validateBoolean(input.active, "Active");
     if (input.defaultCategory !== undefined) data.defaultCategory = validateIcon(input.defaultCategory);
     if (input.defaultFamilyMemberId !== undefined) data.defaultFamilyMemberId = await this.validateOptionalFamilyMemberId(familyId, input.defaultFamilyMemberId);
+    if (input.syncIntervalMinutes !== undefined) data.syncIntervalMinutes = validateSyncIntervalMinutes(input.syncIntervalMinutes);
 
     return data;
   }
@@ -529,7 +556,27 @@ function toSourceDto(source: IcsSourceRecord): CalendarIcsSourceDto {
     lastSyncedAt: source.lastSyncedAt?.toISOString() ?? null,
     lastSyncStatus: source.lastSyncStatus,
     lastSyncError: source.lastSyncError,
+    syncIntervalMinutes: source.syncIntervalMinutes,
+    nextSyncAt: source.nextSyncAt?.toISOString() ?? null,
+    lastSyncStartedAt: source.lastSyncStartedAt?.toISOString() ?? null,
     createdAt: source.createdAt.toISOString(),
     updatedAt: source.updatedAt.toISOString()
   };
+}
+
+function getSyncIntervalMinutes(data: Record<string, unknown>): number {
+  return typeof data.syncIntervalMinutes === "number" ? data.syncIntervalMinutes : DEFAULT_SYNC_INTERVAL_MINUTES;
+}
+
+function addRandomMinutes(date: Date, minMinutes: number, maxMinutes: number): Date {
+  const jitterMinutes = minMinutes + Math.random() * (maxMinutes - minMinutes);
+  return new Date(date.getTime() + Math.round(jitterMinutes * 60 * 1000));
+}
+
+function validateSyncIntervalMinutes(value: unknown): number {
+  if (typeof value !== "number" || !Number.isInteger(value)) throw new BadRequestException("Sync interval must be an integer number of minutes");
+  if (value < MIN_SYNC_INTERVAL_MINUTES || value > MAX_SYNC_INTERVAL_MINUTES) {
+    throw new BadRequestException(`Sync interval must be between ${MIN_SYNC_INTERVAL_MINUTES} and ${MAX_SYNC_INTERVAL_MINUTES} minutes`);
+  }
+  return value;
 }
