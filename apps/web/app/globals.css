@@ -15391,3 +15391,7 @@ button.family-settings-row:focus-visible:not(:disabled) {
   color: var(--app-metadata-text-color);
   font-size: var(--app-metadata-text-size);
 }
+
+.task-edit-sheet__actions {
+  padding-bottom: calc(env(safe-area-inset-bottom) + var(--space-m));
+}
