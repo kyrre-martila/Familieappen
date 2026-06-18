@@ -291,10 +291,10 @@ export default function ShoppingPage() {
         ...(!editingItemId ? { createCustom: true } : {}),
       };
       const customEditId = editingItemId?.startsWith("custom:") ? editingItemId.slice("custom:".length) : null;
-      const item = customEditId
+      const item: ShoppingItem | null = customEditId
         ? null
         : editingItemId
-          ? await updateShoppingItem(activeFamilyId, editingItemId, input, shoppingList?.id)
+          ? (await updateShoppingItem(activeFamilyId, editingItemId, input, shoppingList?.id)).item
           : (await addShoppingItem(activeFamilyId, input, shoppingList?.id)).item;
       if (customEditId) {
         const updatedCustomItem = await updateFamilyCustomShoppingItem(activeFamilyId, customEditId, { name: nextLabel, defaultUnit: nextUnit, suggestedQuantity: nextQuantity || 1, categorySlug: nextCategory });

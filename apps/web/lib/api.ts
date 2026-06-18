@@ -69,6 +69,11 @@ export interface AddShoppingItemResponse {
   catalogItem: ShoppingCatalogItem | null;
 }
 
+export interface UpdateShoppingItemResponse {
+  item: ShoppingListItem;
+  catalogItem: ShoppingCatalogItem | null;
+}
+
 export interface Wishlist {
   id: string;
   familyId: string;
@@ -715,9 +720,9 @@ export async function updateShoppingItem(
   itemId: string,
   input: { label: string; quantity?: string; unit?: string; note?: string; category?: string },
   listId?: string
-): Promise<ShoppingListItem> {
+): Promise<UpdateShoppingItemResponse> {
   const suffix = listId ? `?${new URLSearchParams({ listId }).toString()}` : "";
-  return apiRequest<ShoppingListItem>(`/shopping/items/${encodeURIComponent(itemId)}${suffix}`, {
+  return apiRequest<UpdateShoppingItemResponse>(`/shopping/items/${encodeURIComponent(itemId)}${suffix}`, {
     method: "PATCH",
     body: input,
     familyId

@@ -3,7 +3,7 @@ import { createHash, randomBytes } from "node:crypto";
 import { EmailService, getAppBaseUrl } from "../email";
 import { FamilyAuthorizationService } from "../families";
 import { PrismaService } from "../prisma";
-import { AddShoppingItemRequestDto, CreateShoppingListRequestDto, ShoppingCatalogCategoryDto, ShoppingCatalogItemDto, ShoppingListDto, ShoppingListInvitationDto, ShoppingListInviteRequestDto, ShoppingListInviteResponseDto, ShoppingListInvitePreviewDto, ShoppingListItemDto, ShoppingListSummaryDto, UpdateShoppingItemRequestDto, UpdateFamilyCustomShoppingItemRequestDto, AddShoppingItemResponseDto } from "./dto/shopping.dto";
+import { AddShoppingItemRequestDto, CreateShoppingListRequestDto, ShoppingCatalogCategoryDto, ShoppingCatalogItemDto, ShoppingListDto, ShoppingListInvitationDto, ShoppingListInviteRequestDto, ShoppingListInviteResponseDto, ShoppingListInvitePreviewDto, ShoppingListItemDto, ShoppingListSummaryDto, UpdateShoppingItemRequestDto, UpdateFamilyCustomShoppingItemRequestDto, AddShoppingItemResponseDto, UpdateShoppingItemResponseDto } from "./dto/shopping.dto";
 
 const DEFAULT_SHOPPING_LIST_NAME = "Family Shopping";
 const ACTIVE_INVITE_STATUSES = ["pending", "accepted"];
@@ -40,7 +40,52 @@ export class ShoppingService {
   async getShoppingList(userId: string, familyId: string, listId?: string): Promise<ShoppingListDto> { await this.familyAuthorization.requireFamilyMember(userId, familyId); const list = listId ? await this.getAccessibleListOrThrow(userId, familyId, listId) : await this.getOrCreateFamilyShoppingList(familyId); return this.toShoppingListDto(list); }
 
   async addItem(userId: string, familyId: string, input: AddShoppingItemRequestDto = {}, listId?: string): Promise<AddShoppingItemResponseDto> { const label = this.validateLabel(input.label); const unit = this.validateOptionalText(input.unit, "Shopping item unit", 40) ?? "stk"; const category = this.validateOptionalText(input.category, "Shopping item category", 60) ?? "egne-varer"; const customItemId = this.validateOptionalText(input.customItemId, "Custom item id", 80); const shouldCreateCustom = input.createCustom === true; const catalogItem = customItemId ? await this.getFamilyCustomItemOrThrow(familyId, customItemId) : shouldCreateCustom ? await this.createCustomItemOrThrow(userId, familyId, label, unit, input.quantity, category, input.note) : await this.findFamilyCustomItem(familyId, label); const list = await this.getAccessibleListOrThrow(userId, familyId, listId ?? (await this.getOrCreateFamilyShoppingList(familyId)).id); const itemLabel = catalogItem?.name ?? label; const itemUnit = catalogItem?.defaultUnit ?? unit; const itemQuantity = this.validateOptionalText(input.quantity, "Shopping item quantity", 60) ?? (catalogItem ? String(catalogItem.suggestedQuantity) : null); const itemCategory = catalogItem?.categorySlug ?? category; const item = await this.prisma.client.shoppingListItem.create({ data: { shoppingListId: list.id, familyCustomShoppingItemId: catalogItem?.id ?? null, label: itemLabel, quantity: itemQuantity, unit: itemUnit, note: this.validateOptionalText(input.note, "Shopping item note", 240), category: itemCategory, createdByUserId: userId } }); return { item: this.toShoppingListItemDto(item), catalogItem: catalogItem ? this.toFamilyCustomItemDto(catalogItem) : null }; }
-  async updateItem(userId: string, familyId: string, itemId: string, input: UpdateShoppingItemRequestDto = {}, listId?: string): Promise<ShoppingListItemDto> { const item = await this.getAccessibleShoppingItemOrThrow(userId, familyId, itemId, listId); const updated = await this.prisma.client.shoppingListItem.update({ where: { id: item.id }, data: { label: this.validateLabel(input.label), quantity: this.validateOptionalText(input.quantity, "Shopping item quantity", 60), unit: this.validateOptionalText(input.unit, "Shopping item unit", 40), note: this.validateOptionalText(input.note, "Shopping item note", 240), category: this.validateOptionalText(input.category, "Shopping item category", 60) } }); return this.toShoppingListItemDto(updated); }
+  async updateItem(userId: string, familyId: string, itemId: string, input: UpdateShoppingItemRequestDto = {}, listId?: string): Promise<UpdateShoppingItemResponseDto> {
+    const item = await this.getAccessibleShoppingItemOrThrow(userId, familyId, itemId, listId);
+    const label = this.validateLabel(input.label);
+    const quantity = this.validateOptionalText(input.quantity, "Shopping item quantity", 60);
+    const unit = this.validateOptionalText(input.unit, "Shopping item unit", 40);
+    const note = this.validateOptionalText(input.note, "Shopping item note", 240);
+    const category = this.validateOptionalText(input.category, "Shopping item category", 60);
+
+    if (!item.familyCustomShoppingItemId) {
+      const updated = await this.prisma.client.shoppingListItem.update({ where: { id: item.id }, data: { label, quantity, unit, note, category } });
+      return { item: this.toShoppingListItemDto(updated), catalogItem: null };
+    }
+
+    const existingCustomItem = await this.db.familyCustomShoppingItem.findFirst({ where: { id: item.familyCustomShoppingItemId, familyId, deletedAt: null } });
+    if (!existingCustomItem) {
+      const updated = await this.prisma.client.shoppingListItem.update({ where: { id: item.id }, data: { label, quantity, unit, note, category } });
+      return { item: this.toShoppingListItemDto(updated), catalogItem: null };
+    }
+
+    const normalizedName = normalizeShoppingSearchValue(label);
+    const global = await this.prisma.client.shoppingCatalogItem.findUnique({ where: { normalizedName } });
+    if (global) throw new ConflictException("Denne varen finnes allerede i varekatalogen.");
+    const duplicate = await this.db.familyCustomShoppingItem.findFirst({ where: { familyId, normalizedName, deletedAt: null, id: { not: existingCustomItem.id } } });
+    if (duplicate) throw new ConflictException("Denne varen finnes allerede i Egne varer.");
+
+    const result = await this.db.$transaction(async (transaction) => {
+      const tx = transaction as unknown as AnyClient;
+      const updatedCustomItem = await tx.familyCustomShoppingItem.update({
+        where: { id: existingCustomItem.id },
+        data: {
+          name: label,
+          normalizedName,
+          defaultUnit: unit ?? existingCustomItem.defaultUnit,
+          suggestedQuantity: this.validateQuantity(quantity, existingCustomItem.suggestedQuantity),
+          categorySlug: category ?? existingCustomItem.categorySlug,
+        }
+      });
+      await tx.shoppingListItem.updateMany({
+        where: { familyCustomShoppingItemId: updatedCustomItem.id, shoppingList: { familyId } },
+        data: { label: updatedCustomItem.name, unit: updatedCustomItem.defaultUnit, quantity: String(updatedCustomItem.suggestedQuantity), category: updatedCustomItem.categorySlug }
+      });
+      const updatedItem = await tx.shoppingListItem.update({ where: { id: item.id }, data: { note } });
+      return { item: updatedItem, catalogItem: updatedCustomItem };
+    });
+    return { item: this.toShoppingListItemDto(result.item), catalogItem: this.toFamilyCustomItemDto(result.catalogItem) };
+  }
   async toggleItem(userId: string, familyId: string, itemId: string, listId?: string): Promise<ShoppingListItemDto> { const item = await this.getAccessibleShoppingItemOrThrow(userId, familyId, itemId, listId); const checked = !item.checked; const updated = await this.prisma.client.shoppingListItem.update({ where: { id: item.id }, data: { checked, checkedByUserId: checked ? userId : null, checkedAt: checked ? new Date() : null } }); return this.toShoppingListItemDto(updated); }
   async deleteItem(userId: string, familyId: string, itemId: string, listId?: string): Promise<ShoppingListItemDto> { const item = await this.getAccessibleShoppingItemOrThrow(userId, familyId, itemId, listId); const deleted = await this.prisma.client.shoppingListItem.delete({ where: { id: item.id } }); return this.toShoppingListItemDto(deleted); }
   async updateCustomItem(userId: string, familyId: string, itemId: string, input: UpdateFamilyCustomShoppingItemRequestDto = {}): Promise<ShoppingCatalogItemDto> { await this.familyAuthorization.requireFamilyMember(userId, familyId); const existing = await this.db.familyCustomShoppingItem.findFirst({ where: { id: itemId, familyId, deletedAt: null } }); if (!existing) throw new NotFoundException("Egen vare finnes ikke"); const name = input.name == null ? existing.name : this.validateLabel(input.name); const normalizedName = normalizeShoppingSearchValue(name); const global = await this.prisma.client.shoppingCatalogItem.findUnique({ where: { normalizedName } }); if (global) throw new ConflictException("Denne varen finnes allerede i varekatalogen."); const duplicate = await this.db.familyCustomShoppingItem.findFirst({ where: { familyId, normalizedName, deletedAt: null, id: { not: existing.id } } }); if (duplicate) throw new ConflictException("Denne varen finnes allerede i Egne varer."); const updated = await this.db.familyCustomShoppingItem.update({ where: { id: existing.id }, data: { name, normalizedName, defaultUnit: this.validateOptionalText(input.defaultUnit, "Default unit", 40) ?? existing.defaultUnit, suggestedQuantity: this.validateQuantity(input.suggestedQuantity, existing.suggestedQuantity), categorySlug: this.validateOptionalText(input.categorySlug, "Category", 60) ?? existing.categorySlug, iconKey: this.validateOptionalText(input.iconKey, "Icon", 80) } }); await this.prisma.client.shoppingListItem.updateMany({ where: { familyCustomShoppingItemId: updated.id, shoppingList: { familyId } }, data: { label: updated.name, unit: updated.defaultUnit, quantity: String(updated.suggestedQuantity), category: updated.categorySlug } }); return this.toFamilyCustomItemDto(updated); }

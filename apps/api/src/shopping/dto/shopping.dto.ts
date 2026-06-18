@@ -13,4 +13,5 @@ export interface ShoppingListDto extends ShoppingListSummaryDto { items: Shoppin
 export interface ShoppingCatalogCategoryDto { id: string; name: string; slug: string; sortOrder: number; totalItemCount: number; }
 export interface ShoppingCatalogItemDto { id: string; name: string; categorySlug: string; aliases: string[]; defaultUnit: string; suggestedQuantity: number; isCustom?: boolean; categoryLabel?: string; }
 export interface AddShoppingItemResponseDto { item: ShoppingListItemDto; catalogItem: ShoppingCatalogItemDto | null; }
+export interface UpdateShoppingItemResponseDto { item: ShoppingListItemDto; catalogItem: ShoppingCatalogItemDto | null; }
 export interface UpdateFamilyCustomShoppingItemRequestDto { name?: unknown; defaultUnit?: unknown; suggestedQuantity?: unknown; categorySlug?: unknown; iconKey?: unknown; }
