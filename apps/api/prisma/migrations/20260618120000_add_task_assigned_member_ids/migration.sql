@@ -1,5 +1,6 @@
-ALTER TABLE "Task" ADD COLUMN "assignedMemberIds" TEXT[] NOT NULL DEFAULT ARRAY[]::TEXT[];
+ALTER TABLE "tasks"
+ADD COLUMN "assignedMemberIds" TEXT[] NOT NULL DEFAULT ARRAY[]::TEXT[];
 
-UPDATE "Task"
-SET "assignedMemberIds" = ARRAY["assignedFamilyMemberId"]
+UPDATE "tasks"
+SET "assignedMemberIds" = ARRAY["assignedFamilyMemberId"::text]
 WHERE "assignedFamilyMemberId" IS NOT NULL;
