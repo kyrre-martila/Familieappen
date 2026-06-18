@@ -5,13 +5,14 @@ import { PrismaModule } from "../prisma";
 import { CalendarController } from "./calendar.controller";
 import { CalendarIcsController, CalendarIcsFeedController } from "./calendar-ics.controller";
 import { CalendarIcsFeedService } from "./calendar-ics-feed.service";
+import { CalendarIcsSyncCron } from "./calendar-ics-sync.cron";
 import { CalendarIcsSyncService } from "./calendar-ics-sync.service";
 import { CalendarService } from "./calendar.service";
 
 @Module({
   imports: [PrismaModule, FamiliesModule, AuthModule],
   controllers: [CalendarController, CalendarIcsController, CalendarIcsFeedController],
-  providers: [CalendarService, CalendarIcsSyncService, CalendarIcsFeedService],
+  providers: [CalendarService, CalendarIcsSyncService, CalendarIcsFeedService, CalendarIcsSyncCron],
   exports: [CalendarService, CalendarIcsSyncService, CalendarIcsFeedService]
 })
 export class CalendarModule {}

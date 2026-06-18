@@ -12,6 +12,9 @@ export interface CalendarIcsSourceDto {
   lastSyncedAt: string | null;
   lastSyncStatus: string | null;
   lastSyncError: string | null;
+  syncIntervalMinutes: number;
+  nextSyncAt: string | null;
+  lastSyncStartedAt: string | null;
   createdAt: string;
   updatedAt: string;
 }
@@ -22,6 +25,7 @@ export interface CreateCalendarIcsSourceRequestDto {
   active?: unknown;
   defaultFamilyMemberId?: unknown;
   defaultCategory?: unknown;
+  syncIntervalMinutes?: unknown;
 }
 
 export interface UpdateCalendarIcsSourceRequestDto {
@@ -30,6 +34,7 @@ export interface UpdateCalendarIcsSourceRequestDto {
   active?: unknown;
   defaultFamilyMemberId?: unknown;
   defaultCategory?: unknown;
+  syncIntervalMinutes?: unknown;
 }
 
 export interface CalendarIcsSyncResultDto {

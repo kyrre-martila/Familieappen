@@ -218,6 +218,9 @@ export interface CalendarIcsSource {
   lastSyncedAt: string | null;
   lastSyncStatus: string | null;
   lastSyncError: string | null;
+  syncIntervalMinutes: number;
+  nextSyncAt: string | null;
+  lastSyncStartedAt: string | null;
   createdAt: string;
   updatedAt: string;
 }

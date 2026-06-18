@@ -459,6 +459,9 @@ model CalendarIcsSource {
   lastSyncedAt          DateTime?
   lastSyncStatus        String?
   lastSyncError         String?
+  syncIntervalMinutes   Int             @default(60)
+  nextSyncAt            DateTime?
+  lastSyncStartedAt     DateTime?
   createdAt             DateTime        @default(now())
   updatedAt             DateTime        @updatedAt
   family                Family          @relation(fields: [familyId], references: [id], onDelete: Cascade)
@@ -467,6 +470,7 @@ model CalendarIcsSource {
 
   @@index([familyId])
   @@index([defaultFamilyMemberId])
+  @@index([active, nextSyncAt])
   @@map("calendar_ics_sources")
 }
 
