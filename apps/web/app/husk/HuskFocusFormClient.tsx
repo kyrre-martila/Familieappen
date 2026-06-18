@@ -11,6 +11,7 @@ import {
   ListChecks,
   Trash2,
   Users,
+  X,
 } from "lucide-react";
 
 import {
@@ -19,6 +20,13 @@ import {
   type EventFormIconId,
 } from "../calendar/events/eventFormModel";
 import { UserAvatar } from "../../components/avatar/UserAvatar";
+import {
+  AppActionFooter,
+  AppField,
+  AppSelect,
+  AppSheet,
+  AppTextarea,
+} from "../../components/app-ui";
 import { Button, Card, EmptyState, PageContainer } from "../../components/ui";
 
 import {
@@ -579,6 +587,307 @@ export function HuskFocusFormClient({
         return;
       }
     }
+  }
+
+  if (isReminder) {
+    return (
+      <main
+        className="husk-focus-sheet-page"
+        aria-labelledby="husk-focus-form-title"
+      >
+        <AppSheet
+          baseClassName="husk-school-sheet"
+          className="husk-focus-sheet__panel"
+          isOpen
+          labelledBy="husk-focus-form-title"
+          onClose={() => router.back()}
+          onSubmit={(submitEvent) => {
+            submitEvent.preventDefault();
+            void handleSave();
+          }}
+          panelAs="form"
+          portal={false}
+          wrapContent={false}
+        >
+          <div className="husk-school-sheet__header">
+            <div className="husk-reminder-edit-sheet__heading">
+              <span
+                className="husk-reminder-edit-sheet__icon"
+                aria-hidden="true"
+              >
+                <Bell size={22} strokeWidth={2.35} />
+              </span>
+              <div>
+                <p className="husk-school-sheet__eyebrow">Påminnelser</p>
+                <h1 className="husk-school-sheet__title" id="husk-focus-form-title">
+                  {title}
+                </h1>
+              </div>
+            </div>
+            <button
+              className="husk-school-sheet__close"
+              type="button"
+              aria-label="Lukk"
+              onClick={() => router.back()}
+            >
+              <X aria-hidden="true" size={18} strokeWidth={2.5} />
+            </button>
+          </div>
+
+          <div className="husk-school-sheet__content husk-reminder-edit-sheet__content">
+            <AppField className="husk-school-field">
+              <span>Tittel</span>
+              <input
+                autoComplete="off"
+                id="husk-focus-title"
+                name="title"
+                onChange={(changeEvent) =>
+                  updateDraft("title", changeEvent.target.value)
+                }
+                placeholder={titlePlaceholder}
+                type="text"
+                value={draft.title}
+              />
+            </AppField>
+
+            <AppField className="husk-school-field">
+              <span>Notat</span>
+              <AppTextarea
+                onChange={(changeEvent) =>
+                  updateDraft("description", changeEvent.target.value)
+                }
+                placeholder="Valgfritt notat …"
+                rows={3}
+                value={draft.description}
+              />
+            </AppField>
+
+            <section
+              className="event-form-card event-form-card--compact"
+              aria-labelledby="husk-focus-people-title"
+            >
+              <button
+                className="event-form-picker-row"
+                type="button"
+                onClick={() => setIsAudienceOpen((open) => !open)}
+                aria-expanded={isAudienceOpen}
+                aria-controls="husk-focus-audience-picker"
+              >
+                <span
+                  className="event-form-picker-row__label"
+                  id="husk-focus-people-title"
+                >
+                  Gjelder
+                </span>
+                <span
+                  className="event-form-scope-summary event-form-scope-summary--inline"
+                  aria-live="polite"
+                >
+                  <ScopePreview
+                    audience={draft.audience}
+                    familyMembers={familyMembers}
+                    participantIds={draft.participantIds}
+                  />
+                  <span>{scopeSummary} ▼</span>
+                </span>
+              </button>
+              {isAudienceOpen ? (
+                <div
+                  className="event-form-avatar-list"
+                  id="husk-focus-audience-picker"
+                  aria-label="Velg personer"
+                >
+                  <button
+                    className={`event-form-avatar-chip event-form-avatar-chip--family${draft.audience === "family" ? " event-form-avatar-chip--selected" : ""}`}
+                    type="button"
+                    onClick={selectFamilyAudience}
+                    aria-pressed={draft.audience === "family"}
+                  >
+                    <span
+                      className="event-form-avatar-chip__avatar event-form-avatar-chip__avatar--family"
+                      aria-hidden="true"
+                    >
+                      <Users size={19} strokeWidth={2.5} />
+                      {draft.audience === "family" ? (
+                        <span className="event-form-avatar-chip__check">
+                          <Check size={13} strokeWidth={3.2} />
+                        </span>
+                      ) : null}
+                    </span>
+                    <span>Hele familien</span>
+                  </button>
+                  {getOrderedFamilyMembers(familyMembers).map((member) => {
+                    const isSelected = draft.participantIds.includes(
+                      member.id,
+                    );
+
+                    return (
+                      <button
+                        className={`event-form-avatar-chip${isSelected ? " event-form-avatar-chip--selected" : ""}`}
+                        type="button"
+                        key={member.id}
+                        onClick={() => toggleParticipant(member.id)}
+                        aria-pressed={isSelected}
+                      >
+                        <span className="event-form-avatar-chip__avatar-wrap">
+                          <UserAvatar
+                            identity={member}
+                            avatarUrl={member.avatarUrl}
+                            size="sm"
+                            className="event-form-avatar-chip__avatar"
+                            decorative
+                          />
+                          {isSelected ? (
+                            <span className="event-form-avatar-chip__check">
+                              <Check size={13} strokeWidth={3.2} />
+                            </span>
+                          ) : null}
+                        </span>
+                        <span>{member.name}</span>
+                      </button>
+                    );
+                  })}
+                </div>
+              ) : null}
+            </section>
+
+            <div
+              className="event-form-card event-form-card--rows husk-reminder-edit-sheet__rows"
+              aria-label="Dato og påminnelse"
+            >
+              <label className="event-form-row">
+                <CalendarDays aria-hidden="true" size={22} strokeWidth={2.4} />
+                <span>Dato</span>
+                <input
+                  type="date"
+                  value={draft.date}
+                  onChange={(changeEvent) =>
+                    updateDraft("date", changeEvent.target.value)
+                  }
+                />
+              </label>
+              <div className="event-form-row event-form-row--toggle">
+                <Bell aria-hidden="true" size={22} strokeWidth={2.4} />
+                <label htmlFor="husk-reminder-enabled">Påminnelse</label>
+                <span className="event-form-reminder-control">
+                  {draft.reminderEnabled ? (
+                    <AppSelect
+                      value={draft.reminderMinutesBefore}
+                      onChange={(event) =>
+                        updateDraft(
+                          "reminderMinutesBefore",
+                          Number(event.target.value),
+                        )
+                      }
+                      aria-label="Tidspunkt for påminnelse"
+                    >
+                      <option value={0}>På dagen</option>
+                      <option value={60}>1 t før</option>
+                      <option value={1440}>Dagen før</option>
+                      <option value={10080}>Uken før</option>
+                    </AppSelect>
+                  ) : null}
+                  <input
+                    id="husk-reminder-enabled"
+                    className="event-form-toggle"
+                    checked={draft.reminderEnabled}
+                    onChange={(changeEvent) =>
+                      updateDraft("reminderEnabled", changeEvent.target.checked)
+                    }
+                    type="checkbox"
+                  />
+                </span>
+              </div>
+              <label className="event-form-row event-form-row--toggle">
+                <FileText aria-hidden="true" size={22} strokeWidth={2.4} />
+                <span>
+                  <strong>Privat</strong>
+                  <small>Bare du kan se denne påminnelsen.</small>
+                </span>
+                <input
+                  className="event-form-toggle"
+                  checked={draft.isPrivate}
+                  onChange={(changeEvent) =>
+                    updateDraft("isPrivate", changeEvent.target.checked)
+                  }
+                  type="checkbox"
+                />
+              </label>
+            </div>
+
+            <section className="event-form-card event-form-card--compact">
+              <Link
+                className="event-form-picker-row"
+                href={iconPickerHref}
+                aria-label={`Endre ikon, valgt ${selectedIcon.label}`}
+              >
+                <span className="event-form-picker-row__label">Kategori</span>
+                <span className="event-form-scope-summary event-form-scope-summary--inline">
+                  <span
+                    className="event-form-scope-summary__family"
+                    aria-hidden="true"
+                  >
+                    <selectedIcon.Icon size={18} strokeWidth={2.4} />
+                  </span>
+                  <span>{selectedIcon.label} ▼</span>
+                </span>
+              </Link>
+            </section>
+
+            {mode === "create" ? (
+              <section className="event-form-card" aria-label="Raske forslag">
+                <div className="event-form-section-heading event-form-section-heading--compact">
+                  <ListChecks aria-hidden="true" size={22} strokeWidth={2.4} />
+                  <h2>Raske forslag</h2>
+                </div>
+                <div className="husk-school-quick">
+                  {quickReminderExamples.map((example) => (
+                    <button
+                      className="husk-school-quick__chip"
+                      key={example}
+                      onClick={() => updateDraft("title", example)}
+                      type="button"
+                    >
+                      {example}
+                    </button>
+                  ))}
+                </div>
+              </section>
+            ) : null}
+
+            {mode === "edit" ? (
+              <div className="event-form-actions event-form-actions--single">
+                <button
+                  className="event-form-delete"
+                  type="button"
+                  onClick={handleDelete}
+                >
+                  <Trash2 aria-hidden="true" size={19} strokeWidth={2.4} />
+                  Slett husk
+                </button>
+              </div>
+            ) : null}
+          </div>
+
+          <AppActionFooter className="husk-school-sheet__actions">
+            <button
+              className="husk-school-sheet__action husk-school-sheet__action--secondary"
+              type="button"
+              onClick={() => router.back()}
+            >
+              Avbryt
+            </button>
+            <button
+              className="husk-school-sheet__action husk-school-sheet__action--primary"
+              disabled={!isValid}
+              type="submit"
+            >
+              Lagre
+            </button>
+          </AppActionFooter>
+        </AppSheet>
+      </main>
+    );
   }
 
   return (
