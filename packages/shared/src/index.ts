@@ -55,6 +55,7 @@ export interface Task {
   title: string;
   description: string | null;
   assignedFamilyMemberId: string | null;
+  assignedMemberIds?: string[];
   createdByUserId: string | null;
   completed: boolean;
   completedAt: string | null;

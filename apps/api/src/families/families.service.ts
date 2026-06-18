@@ -51,6 +51,7 @@ type TaskRecord = {
   title: string;
   description: string | null;
   assignedFamilyMemberId: string | null;
+  assignedMemberIds: string[];
   createdByUserId: string | null;
   completed: boolean;
   completedAt: Date | null;
@@ -695,6 +696,7 @@ export class FamiliesService {
       title: task.title,
       description: task.description,
       assignedFamilyMemberId: task.assignedFamilyMemberId,
+      assignedMemberIds: task.assignedMemberIds?.length ? task.assignedMemberIds : (task.assignedFamilyMemberId ? [task.assignedFamilyMemberId] : []),
       createdByUserId: task.createdByUserId,
       completed: task.completed,
       completedAt: task.completedAt?.toISOString() ?? null,

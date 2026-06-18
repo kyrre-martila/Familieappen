@@ -9,6 +9,7 @@ type TaskRecord = {
   title: string;
   description: string | null;
   assignedFamilyMemberId: string | null;
+  assignedMemberIds: string[];
   createdByUserId: string | null;
   completed: boolean;
   completedAt: Date | null;
@@ -40,7 +41,8 @@ export class TasksService {
     await this.familyAuthorization.requireFamilyMember(userId, familyId);
     const title = this.validateTitle(input.title);
     const description = this.validateDescription(input.description);
-    const assignedFamilyMemberId = await this.validateAssignedFamilyMember(familyId, input.assignedFamilyMemberId);
+    const assignedMemberIds = await this.validateAssignedFamilyMembers(familyId, input.assignedMemberIds ?? input.assignedFamilyMemberId);
+    const assignedFamilyMemberId = assignedMemberIds[0] ?? null;
     const dueDate = this.validateDueDate(input.dueDate);
 
     const task = await this.prisma.client.task.create({
@@ -49,6 +51,7 @@ export class TasksService {
         title,
         description,
         assignedFamilyMemberId,
+        assignedMemberIds,
         createdByUserId: userId,
         dueDate
       }
@@ -79,7 +82,9 @@ export class TasksService {
     const task = await this.getFamilyTaskOrThrow(familyId, taskId);
     const title = input.title !== undefined ? this.validateTitle(input.title) : undefined;
     const description = input.description !== undefined ? this.validateDescription(input.description) : undefined;
-    const assignedFamilyMemberId = input.assignedFamilyMemberId !== undefined ? await this.validateAssignedFamilyMember(familyId, input.assignedFamilyMemberId) : undefined;
+    const shouldUpdateAssignees = input.assignedMemberIds !== undefined || input.assignedFamilyMemberId !== undefined;
+    const assignedMemberIds = shouldUpdateAssignees ? await this.validateAssignedFamilyMembers(familyId, input.assignedMemberIds ?? input.assignedFamilyMemberId) : undefined;
+    const assignedFamilyMemberId = assignedMemberIds ? assignedMemberIds[0] ?? null : undefined;
     const dueDate = input.dueDate !== undefined ? this.validateDueDate(input.dueDate) : undefined;
 
     if (title === undefined && description === undefined && assignedFamilyMemberId === undefined && dueDate === undefined) {
@@ -91,7 +96,7 @@ export class TasksService {
       data: {
         ...(title !== undefined ? { title } : {}),
         ...(description !== undefined ? { description } : {}),
-        ...(assignedFamilyMemberId !== undefined ? { assignedFamilyMemberId } : {}),
+        ...(assignedFamilyMemberId !== undefined && assignedMemberIds !== undefined ? { assignedFamilyMemberId, assignedMemberIds } : {}),
         ...(dueDate !== undefined ? { dueDate } : {})
       }
     });
@@ -169,28 +174,37 @@ export class TasksService {
     return description.length === 0 ? null : description;
   }
 
-  private async validateAssignedFamilyMember(familyId: string, value: unknown): Promise<string | null> {
+  private async validateAssignedFamilyMembers(familyId: string, value: unknown): Promise<string[]> {
     if (value === undefined || value === null || value === "") {
-      return null;
+      return [];
     }
 
-    if (typeof value !== "string") {
-      throw new BadRequestException("Assigned family member must be a valid family member");
+    const rawMemberIds = Array.isArray(value) ? value : [value];
+
+    if (!rawMemberIds.every((memberId): memberId is string => typeof memberId === "string" && memberId.length > 0)) {
+      throw new BadRequestException("Assigned family members must be valid family members");
     }
 
-    const member = await this.prisma.client.familyMember.findFirst({
+    const memberIds = [...new Set(rawMemberIds)];
+
+    if (memberIds.length === 0) {
+      return [];
+    }
+
+    const members = await this.prisma.client.familyMember.findMany({
       where: {
-        id: value,
+        id: { in: memberIds },
         familyId
       },
       select: { id: true }
     });
 
-    if (!member) {
-      throw new BadRequestException("Assigned family member must belong to this family");
+    if (members.length !== memberIds.length) {
+      throw new BadRequestException("Assigned family members must belong to this family");
     }
 
-    return member.id;
+    const validIds = new Set(members.map((member) => member.id));
+    return memberIds.filter((memberId) => validIds.has(memberId));
   }
 
   private validateDueDate(value: unknown): Date | null {
@@ -218,6 +232,7 @@ export class TasksService {
       title: task.title,
       description: task.description,
       assignedFamilyMemberId: task.assignedFamilyMemberId,
+      assignedMemberIds: task.assignedMemberIds?.length ? task.assignedMemberIds : (task.assignedFamilyMemberId ? [task.assignedFamilyMemberId] : []),
       createdByUserId: task.createdByUserId,
       completed: task.completed,
       completedAt: task.completedAt?.toISOString() ?? null,

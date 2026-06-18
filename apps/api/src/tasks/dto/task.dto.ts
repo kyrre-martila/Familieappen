@@ -2,6 +2,7 @@ export interface TaskMutationRequestDto {
   title?: unknown;
   description?: unknown;
   assignedFamilyMemberId?: unknown;
+  assignedMemberIds?: unknown;
   dueDate?: unknown;
 }
 
@@ -14,6 +15,7 @@ export interface TaskDto {
   title: string;
   description: string | null;
   assignedFamilyMemberId: string | null;
+  assignedMemberIds: string[];
   createdByUserId: string | null;
   completed: boolean;
   completedAt: string | null;
