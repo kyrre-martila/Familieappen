@@ -2,9 +2,10 @@
 
 import { FormEvent, useEffect, useMemo, useState, type ChangeEvent } from "react";
 import { createPortal } from "react-dom";
-import { ListTodo, MoreHorizontal, X } from "lucide-react";
+import { CalendarDays, Check, ListTodo, MoreHorizontal, Users, X } from "lucide-react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
+import { UserAvatar } from "../../../components/avatar/UserAvatar";
 import { LockedFeatureState } from "../../../components/PendingAccess";
 import { useFamilyAccess } from "../../../components/ProtectedFamilyRoute";
 import { Badge, Button, Card, EmptyState, ErrorState, LoadingState, PageContainer, SectionHeader } from "../../../components/ui";
@@ -347,6 +348,11 @@ export function OppgaverSection({ query, createRequest = 0 }: { query: string; c
   );
 }
 
+function getTaskAssigneeSummary(assignedFamilyMemberId: string, members: FamilyMember[]) {
+  if (!assignedFamilyMemberId) return "Hele familien";
+  return members.find((member) => member.id === assignedFamilyMemberId)?.displayName ?? "1 person";
+}
+
 function TaskFormSheet({
   assignedFamilyMemberId,
   description,
@@ -381,6 +387,17 @@ function TaskFormSheet({
   setTitle: (value: string) => void;
   title: string;
 }) {
+  const [isAssigneeOpen, setIsAssigneeOpen] = useState(false);
+  const assigneeSummary = getTaskAssigneeSummary(assignedFamilyMemberId, members);
+
+  function selectFamilyAssignee() {
+    setAssignedFamilyMemberId("");
+  }
+
+  function toggleAssignee(memberId: string) {
+    setAssignedFamilyMemberId(assignedFamilyMemberId === memberId ? "" : memberId);
+  }
+
   const sheet = (
     <div aria-hidden={!isOpen} className={`husk-school-sheet${isOpen ? " husk-school-sheet--open" : ""}`}>
       <button className="husk-school-sheet__backdrop" type="button" aria-label="Lukk oppgave" onClick={onClose} />
@@ -409,17 +426,68 @@ function TaskFormSheet({
             <span>Notat</span>
             <textarea maxLength={500} onChange={(event) => setDescription(event.target.value)} placeholder="Valgfri detalj …" rows={3} value={description} />
           </label>
-          <div className="event-form-card event-form-card--rows husk-reminder-edit-sheet__rows" aria-label="Oppgavedetaljer">
+          <section className="event-form-card event-form-card--compact" aria-labelledby="task-assignee-title">
+            <button className="event-form-picker-row" type="button" onClick={() => setIsAssigneeOpen((open) => !open)} aria-expanded={isAssigneeOpen} aria-controls="task-assignee-picker">
+              <span className="event-form-picker-row__label" id="task-assignee-title">Tildel</span>
+              <span className="event-form-scope-summary event-form-scope-summary--inline" aria-live="polite">
+                <span>{assigneeSummary} ▼</span>
+              </span>
+            </button>
+            {isAssigneeOpen ? (
+              <div className="event-form-avatar-list" id="task-assignee-picker" aria-label="Velg personer">
+                <button
+                  className={`event-form-avatar-chip event-form-avatar-chip--family${!assignedFamilyMemberId ? " event-form-avatar-chip--selected" : ""}`}
+                  type="button"
+                  onClick={selectFamilyAssignee}
+                  aria-pressed={!assignedFamilyMemberId}
+                >
+                  <span
+                    className="event-form-avatar-chip__avatar event-form-avatar-chip__avatar--family"
+                    aria-hidden="true"
+                  >
+                    <Users size={19} strokeWidth={2.5} />
+                    {!assignedFamilyMemberId ? (
+                      <span className="event-form-avatar-chip__check">
+                        <Check size={13} strokeWidth={3.2} />
+                      </span>
+                    ) : null}
+                  </span>
+                  <span>Hele familien</span>
+                </button>
+                {members.map((member) => {
+                  const isSelected = assignedFamilyMemberId === member.id;
+                  return (
+                    <button
+                      className={`event-form-avatar-chip${isSelected ? " event-form-avatar-chip--selected" : ""}`}
+                      type="button"
+                      key={member.id}
+                      onClick={() => toggleAssignee(member.id)}
+                      aria-pressed={isSelected}
+                    >
+                      <span className="event-form-avatar-chip__avatar-wrap">
+                        <UserAvatar
+                          identity={member}
+                          avatarUrl={member.avatarUrl}
+                          size="sm"
+                          className="event-form-avatar-chip__avatar"
+                          decorative
+                        />
+                        {isSelected ? (
+                          <span className="event-form-avatar-chip__check">
+                            <Check size={13} strokeWidth={3.2} />
+                          </span>
+                        ) : null}
+                      </span>
+                      <span>{member.displayName}</span>
+                    </button>
+                  );
+                })}
+              </div>
+            ) : null}
+          </section>
+          <div className="event-form-card event-form-card--rows husk-reminder-edit-sheet__rows" aria-label="Oppgavefrist">
             <label className="event-form-row">
-              <span>Tildel</span>
-              <select onChange={(event) => setAssignedFamilyMemberId(event.target.value)} value={assignedFamilyMemberId}>
-                <option value="">Alle</option>
-                {members.map((member) => (
-                  <option key={member.id} value={member.id}>{member.displayName}</option>
-                ))}
-              </select>
-            </label>
-            <label className="event-form-row">
+              <CalendarDays aria-hidden="true" size={22} strokeWidth={2.4} />
               <span>Frist</span>
               <input onChange={(event) => setDueDate(event.target.value)} type="date" value={dueDate} />
             </label>
