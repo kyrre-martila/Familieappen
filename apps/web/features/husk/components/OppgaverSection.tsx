@@ -37,7 +37,7 @@ export function OppgaverSection({ query, createRequest = 0 }: { query: string; c
   const [message, setMessage] = useState("Laster oppgaver …");
   const [title, setTitle] = useState("");
   const [description, setDescription] = useState("");
-  const [assignedFamilyMemberId, setAssignedFamilyMemberId] = useState("");
+  const [assignedMemberIds, setAssignedMemberIds] = useState<string[]>([]);
   const [dueDate, setDueDate] = useState("");
   const [pendingTaskId, setPendingTaskId] = useState<string | null>(null);
   const [isAdding, setIsAdding] = useState(false);
@@ -113,7 +113,7 @@ export function OppgaverSection({ query, createRequest = 0 }: { query: string; c
     const familyId = event.target.value;
     chooseActiveFamily(familyId);
     setActiveFamilyIdState(familyId);
-    setAssignedFamilyMemberId("");
+    setAssignedMemberIds([]);
     await loadOppgaver(familyId);
   }
 
@@ -135,13 +135,14 @@ export function OppgaverSection({ query, createRequest = 0 }: { query: string; c
         ? await updateTask(activeFamilyId, editingTaskId, {
             title: nextTitle,
             description: nextDescription || null,
-            assignedFamilyMemberId: assignedFamilyMemberId || null,
+            assignedMemberIds,
+            assignedFamilyMemberId: assignedMemberIds[0] ?? null,
             dueDate: dueDate || null
           })
         : await addTask(activeFamilyId, {
             title: nextTitle,
             ...(nextDescription ? { description: nextDescription } : {}),
-            ...(assignedFamilyMemberId ? { assignedFamilyMemberId } : {}),
+            ...(assignedMemberIds.length > 0 ? { assignedMemberIds, assignedFamilyMemberId: assignedMemberIds[0] } : {}),
             ...(dueDate ? { dueDate } : {})
           });
       if (editingTaskId) {
@@ -200,7 +201,7 @@ export function OppgaverSection({ query, createRequest = 0 }: { query: string; c
     setEditingTaskId(task.id);
     setTitle(task.title);
     setDescription(task.description ?? "");
-    setAssignedFamilyMemberId(task.assignedFamilyMemberId ?? "");
+    setAssignedMemberIds(getTaskAssignedMemberIds(task));
     setDueDate(task.dueDate ? task.dueDate.slice(0, 10) : "");
     setOpenTaskMenuId(null);
     setIsTaskSheetOpen(true);
@@ -210,7 +211,7 @@ export function OppgaverSection({ query, createRequest = 0 }: { query: string; c
   function resetTaskForm() {
     setTitle("");
     setDescription("");
-    setAssignedFamilyMemberId("");
+    setAssignedMemberIds([]);
     setDueDate("");
     setEditingTaskId(null);
   }
@@ -311,7 +312,7 @@ export function OppgaverSection({ query, createRequest = 0 }: { query: string; c
           {status !== "unauthorized" && status !== "no-family" ? (
             <TaskFormSheet
               activeFamilyId={activeFamilyId}
-              assignedFamilyMemberId={assignedFamilyMemberId}
+              assignedMemberIds={assignedMemberIds}
               description={description}
               dueDate={dueDate}
               editingTaskId={editingTaskId}
@@ -321,7 +322,7 @@ export function OppgaverSection({ query, createRequest = 0 }: { query: string; c
               members={members}
               onClose={() => { setIsTaskSheetOpen(false); resetTaskForm(); }}
               onSubmit={handleAddOppgave}
-              setAssignedFamilyMemberId={setAssignedFamilyMemberId}
+              setAssignedMemberIds={setAssignedMemberIds}
               setDescription={setDescription}
               setDueDate={setDueDate}
               setTitle={setTitle}
@@ -348,13 +349,20 @@ export function OppgaverSection({ query, createRequest = 0 }: { query: string; c
   );
 }
 
-function getTaskAssigneeSummary(assignedFamilyMemberId: string, members: FamilyMember[]) {
-  if (!assignedFamilyMemberId) return "Hele familien";
-  return members.find((member) => member.id === assignedFamilyMemberId)?.displayName ?? "1 person";
+function getTaskAssignedMemberIds(task: Task): string[] {
+  return task.assignedMemberIds ?? (task.assignedFamilyMemberId ? [task.assignedFamilyMemberId] : []);
+}
+
+function getTaskAssigneeSummary(assignedMemberIds: string[], members: FamilyMember[]) {
+  if (assignedMemberIds.length === 0) return "Hele familien";
+  const names = assignedMemberIds
+    .map((memberId) => members.find((member) => member.id === memberId)?.displayName)
+    .filter((name): name is string => Boolean(name));
+  return names.length > 0 ? names.join(", ") : `${assignedMemberIds.length} person${assignedMemberIds.length === 1 ? "" : "er"}`;
 }
 
 function TaskFormSheet({
-  assignedFamilyMemberId,
+  assignedMemberIds,
   description,
   dueDate,
   editingTaskId,
@@ -364,14 +372,14 @@ function TaskFormSheet({
   members,
   onClose,
   onSubmit,
-  setAssignedFamilyMemberId,
+  setAssignedMemberIds,
   setDescription,
   setDueDate,
   setTitle,
   title
 }: {
   activeFamilyId: string | null;
-  assignedFamilyMemberId: string;
+  assignedMemberIds: string[];
   description: string;
   dueDate: string;
   editingTaskId: string | null;
@@ -381,21 +389,21 @@ function TaskFormSheet({
   members: FamilyMember[];
   onClose: () => void;
   onSubmit: (event: FormEvent<HTMLFormElement>) => void;
-  setAssignedFamilyMemberId: (value: string) => void;
+  setAssignedMemberIds: (value: string[] | ((currentIds: string[]) => string[])) => void;
   setDescription: (value: string) => void;
   setDueDate: (value: string) => void;
   setTitle: (value: string) => void;
   title: string;
 }) {
   const [isAssigneeOpen, setIsAssigneeOpen] = useState(false);
-  const assigneeSummary = getTaskAssigneeSummary(assignedFamilyMemberId, members);
+  const assigneeSummary = getTaskAssigneeSummary(assignedMemberIds, members);
 
   function selectFamilyAssignee() {
-    setAssignedFamilyMemberId("");
+    setAssignedMemberIds([]);
   }
 
   function toggleAssignee(memberId: string) {
-    setAssignedFamilyMemberId(assignedFamilyMemberId === memberId ? "" : memberId);
+    setAssignedMemberIds((currentIds) => currentIds.includes(memberId) ? currentIds.filter((id) => id !== memberId) : [...currentIds, memberId]);
   }
 
   const sheet = (
@@ -436,17 +444,17 @@ function TaskFormSheet({
             {isAssigneeOpen ? (
               <div className="event-form-avatar-list" id="task-assignee-picker" aria-label="Velg personer">
                 <button
-                  className={`event-form-avatar-chip event-form-avatar-chip--family${!assignedFamilyMemberId ? " event-form-avatar-chip--selected" : ""}`}
+                  className={`event-form-avatar-chip event-form-avatar-chip--family${assignedMemberIds.length === 0 ? " event-form-avatar-chip--selected" : ""}`}
                   type="button"
                   onClick={selectFamilyAssignee}
-                  aria-pressed={!assignedFamilyMemberId}
+                  aria-pressed={assignedMemberIds.length === 0}
                 >
                   <span
                     className="event-form-avatar-chip__avatar event-form-avatar-chip__avatar--family"
                     aria-hidden="true"
                   >
                     <Users size={19} strokeWidth={2.5} />
-                    {!assignedFamilyMemberId ? (
+                    {assignedMemberIds.length === 0 ? (
                       <span className="event-form-avatar-chip__check">
                         <Check size={13} strokeWidth={3.2} />
                       </span>
@@ -455,7 +463,7 @@ function TaskFormSheet({
                   <span>Hele familien</span>
                 </button>
                 {members.map((member) => {
-                  const isSelected = assignedFamilyMemberId === member.id;
+                  const isSelected = assignedMemberIds.includes(member.id);
                   return (
                     <button
                       className={`event-form-avatar-chip${isSelected ? " event-form-avatar-chip--selected" : ""}`}
@@ -610,7 +618,8 @@ function formatOppgaveCount(count: number): string {
 }
 
 function formatOppgaveMeta(task: Task, members: FamilyMember[]): string {
-  const assignee = members.find((member) => member.id === task.assignedFamilyMemberId)?.displayName ?? "Alle";
+  const assignedMemberIds = getTaskAssignedMemberIds(task);
+  const assignee = assignedMemberIds.length > 0 ? getTaskAssigneeSummary(assignedMemberIds, members) : "Alle";
   const due = task.dueDate ? ` · ${new Date(task.dueDate).toLocaleDateString(undefined, { month: "short", day: "numeric" })}` : "";
 
   return `${assignee}${due}`;

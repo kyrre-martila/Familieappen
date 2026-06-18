@@ -1074,7 +1074,7 @@ export async function getTasks(familyId: string): Promise<Task[]> {
 
 export async function addTask(
   familyId: string,
-  input: { title: string; description?: string; assignedFamilyMemberId?: string; dueDate?: string }
+  input: { title: string; description?: string; assignedFamilyMemberId?: string; assignedMemberIds?: string[]; dueDate?: string }
 ): Promise<Task> {
   return apiRequest<Task>("/tasks", {
     method: "POST",
@@ -1086,7 +1086,7 @@ export async function addTask(
 export async function updateTask(
   familyId: string,
   taskId: string,
-  input: { title?: string; description?: string | null; assignedFamilyMemberId?: string | null; dueDate?: string | null }
+  input: { title?: string; description?: string | null; assignedFamilyMemberId?: string | null; assignedMemberIds?: string[]; dueDate?: string | null }
 ): Promise<Task> {
   return apiRequest<Task>(`/tasks/${encodeURIComponent(taskId)}`, {
     method: "PATCH",
