@@ -720,7 +720,7 @@ function TaskFormSheet({
           </label>
         </div>
       </div>
-      <AppActionFooter className="husk-school-sheet__actions task-edit-sheet__actions">
+      <AppActionFooter className="husk-school-sheet__actions">
         <button
           className="husk-school-sheet__action husk-school-sheet__action--secondary"
           type="button"
