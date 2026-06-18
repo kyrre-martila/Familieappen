@@ -4,6 +4,7 @@ import {
   FormEvent,
   useEffect,
   useMemo,
+  useRef,
   useState,
   type ChangeEvent,
 } from "react";
@@ -133,6 +134,19 @@ export function OppgaverSection({
   );
   const hasMultipleFamilies = families.length > 1;
   const members = familyDetails?.members ?? [];
+  const previousCreateRequest = useRef(createRequest);
+
+  useEffect(() => {
+    if (createRequest === previousCreateRequest.current) {
+      return;
+    }
+
+    previousCreateRequest.current = createRequest;
+    resetTaskForm();
+    setOpenTaskMenuId(null);
+    setIsTaskSheetOpen(true);
+    setMessage("");
+  }, [createRequest]);
 
   async function loadOppgaver(familyId = activeFamilyId) {
     if (!familyId) {
@@ -706,7 +720,7 @@ function TaskFormSheet({
           </label>
         </div>
       </div>
-      <AppActionFooter className="husk-school-sheet__actions">
+      <AppActionFooter className="husk-school-sheet__actions task-edit-sheet__actions">
         <button
           className="husk-school-sheet__action husk-school-sheet__action--secondary"
           type="button"
