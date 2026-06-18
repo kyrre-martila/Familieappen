@@ -260,7 +260,7 @@ export class CalendarIcsSyncService {
       throw new BadRequestException("ICS feed is too large");
     }
 
-    if (!text.includes("BEGIN:VCALENDAR") || !text.includes("BEGIN:VEVENT")) {
+    if (!text.includes("BEGIN:VCALENDAR")) {
       throw new BadRequestException("ICS feed did not contain calendar events");
     }
 

@@ -81,7 +81,10 @@ export class CalendarIcsSyncCron {
         active: true,
         OR: [{ nextSyncAt: null }, { nextSyncAt: { lte: dueAt } }]
       },
-      data: { nextSyncAt: addMinutes(new Date(), CLAIM_MINUTES) }
+      data: {
+        lastSyncStartedAt: new Date(),
+        nextSyncAt: addMinutes(new Date(), CLAIM_MINUTES)
+      }
     }) as { count: number };
 
     return result.count === 1;
