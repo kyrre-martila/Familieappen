@@ -3,21 +3,19 @@
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { useEffect, useMemo, useState } from "react";
-import {
-  CalendarCheck,
-  Check,
-  Clock,
-  FileText,
-  MapPin,
-  Repeat,
-  Trash2,
-  Users,
-  X,
-} from "lucide-react";
+import { Check, Trash2, Users, X } from "lucide-react";
 import type { CalendarMvpEvent } from "@familieappen/shared";
 
 import { useCalendar } from "../../../features/calendar/hooks/useCalendar";
 import { UserAvatar } from "../../../components/avatar/UserAvatar";
+import {
+  AppActionFooter,
+  AppCard,
+  AppField,
+  AppListRow,
+  AppSelect,
+  AppTextarea,
+} from "../../../components/app-ui";
 import {
   FamilyMembersEmptyState,
   FamilyMembersErrorState,
@@ -285,8 +283,8 @@ export function CalendarEventFormClient({
 
         <div className="husk-school-sheet__content calendar-event-form-sheet__content">
           {event?.isImported ? (
-            <section
-              className="event-form-card event-form-source-note"
+            <AppCard
+              className="event-form-source-note"
               role="note"
               aria-label="Importert hendelse"
             >
@@ -295,64 +293,144 @@ export function CalendarEventFormClient({
                 fortsatt sannhet for tittel, tid og sted; FamilieAppen-lagring
                 er lokal/mock i denne MVP-en.
               </p>
-            </section>
+            </AppCard>
           ) : null}
-          <section
-            className="event-form-card event-form-card--title"
-            aria-label="Tittel og ikon"
-          >
-            <div className="event-form-field event-form-field--title">
-              <label className="event-form-label" htmlFor="event-title">
-                Tittel
-              </label>
-              <input
-                className="event-form-title-input"
-                id="event-title"
-                name="title"
-                type="text"
-                value={draft.title}
-                onChange={(changeEvent) =>
-                  updateDraft("title", changeEvent.target.value)
-                }
-                placeholder="Tittel på hendelse"
-                autoComplete="off"
-              />
-            </div>
-            <Link
-              className="event-form-icon-link"
-              href={iconPickerHref}
-              aria-label={
-                selectedIcon
-                  ? `Endre ikon, valgt ${selectedIcon.label}`
-                  : "Velg ikon"
-              }
-            >
-              {selectedIcon ? (
-                <>
-                  <span
-                    className="event-form-icon-link__icon"
-                    aria-hidden="true"
-                  >
-                    <selectedIcon.Icon size={20} strokeWidth={2.5} />
-                  </span>
-                  <span>{selectedIcon.label}</span>
-                </>
-              ) : (
-                <span>+ Velg ikon</span>
-              )}
-            </Link>
-          </section>
 
-          <section
-            className="event-form-card"
-            aria-labelledby="event-participants-title"
-          >
-            <div className="event-form-section-heading">
-              <Users aria-hidden="true" size={20} />
-              <div>
-                <h2 id="event-participants-title">Gjelder</h2>
-                <p>{participantSummary}</p>
-              </div>
+          <AppCard aria-labelledby="event-basics-title">
+            <h2 className="event-form-card-title" id="event-basics-title">
+              Grunnleggende informasjon
+            </h2>
+            <div className="event-form-title-row">
+              <AppField htmlFor="event-title">
+                <span>Tittel</span>
+                <input
+                  id="event-title"
+                  name="title"
+                  type="text"
+                  value={draft.title}
+                  onChange={(changeEvent) =>
+                    updateDraft("title", changeEvent.target.value)
+                  }
+                  placeholder="Tittel på hendelse"
+                  autoComplete="off"
+                />
+              </AppField>
+              <Link
+                className="event-form-icon-button"
+                href={iconPickerHref}
+                aria-label={
+                  selectedIcon
+                    ? `Endre ikon, valgt ${selectedIcon.label}`
+                    : "Velg ikon"
+                }
+                title={selectedIcon ? selectedIcon.label : "Velg ikon"}
+              >
+                {selectedIcon ? (
+                  <selectedIcon.Icon
+                    aria-hidden="true"
+                    size={20}
+                    strokeWidth={2.5}
+                  />
+                ) : (
+                  <span aria-hidden="true">+</span>
+                )}
+              </Link>
+            </div>
+            <AppField htmlFor="event-location">
+              <span>Sted</span>
+              <input
+                id="event-location"
+                type="text"
+                value={draft.location}
+                onChange={(changeEvent) =>
+                  updateDraft("location", changeEvent.target.value)
+                }
+                placeholder="Legg til sted"
+              />
+            </AppField>
+            <div className="event-form-field-grid">
+              <AppField htmlFor="event-date">
+                <span>Dato</span>
+                <input
+                  id="event-date"
+                  type="date"
+                  value={draft.date}
+                  onChange={(changeEvent) =>
+                    updateDraft("date", changeEvent.target.value)
+                  }
+                  required
+                />
+              </AppField>
+              {!draft.allDay ? (
+                <>
+                  <AppField htmlFor="event-start-time">
+                    <span>Starttid</span>
+                    <input
+                      id="event-start-time"
+                      type="time"
+                      value={draft.startTime}
+                      onChange={(changeEvent) =>
+                        updateDraft("startTime", changeEvent.target.value)
+                      }
+                    />
+                  </AppField>
+                  <AppField htmlFor="event-end-time">
+                    <span>Sluttid</span>
+                    <input
+                      id="event-end-time"
+                      type="time"
+                      value={draft.endTime}
+                      onChange={(changeEvent) =>
+                        updateDraft("endTime", changeEvent.target.value)
+                      }
+                    />
+                  </AppField>
+                </>
+              ) : null}
+            </div>
+            <AppListRow
+              as="label"
+              htmlFor="event-all-day"
+              className="event-form-toggle-row"
+            >
+              <span>Heldag</span>
+              <input
+                id="event-all-day"
+                className="event-form-toggle"
+                type="checkbox"
+                checked={draft.allDay}
+                onChange={(changeEvent) =>
+                  updateDraft("allDay", changeEvent.target.checked)
+                }
+              />
+            </AppListRow>
+            <AppField htmlFor="event-reminder">
+              <span>Påminnelse</span>
+              <AppSelect
+                id="event-reminder"
+                value={draft.reminder}
+                onChange={(changeEvent) =>
+                  updateDraft("reminder", changeEvent.target.value)
+                }
+              >
+                {reminderOptions.map((option) => (
+                  <option key={option} value={option}>
+                    {option}
+                  </option>
+                ))}
+              </AppSelect>
+            </AppField>
+          </AppCard>
+
+          <AppCard aria-labelledby="event-participants-title">
+            <div className="event-form-card-heading">
+              <h2
+                className="event-form-card-title"
+                id="event-participants-title"
+              >
+                Gjelder
+              </h2>
+              <p>{participantSummary}</p>
             </div>
             {familyMembersLoading ? (
               <FamilyMembersLoadingState />
@@ -383,7 +461,7 @@ export function CalendarEventFormClient({
                       </span>
                     ) : null}
                   </span>
-                  <span>Alle</span>
+                  <span>Hele familien</span>
                 </button>
                 {getOrderedFamilyMembers(familyMembers).map((member) => {
                   const isSelected = draft.participantIds.includes(member.id);
@@ -418,179 +496,48 @@ export function CalendarEventFormClient({
                 })}
               </div>
             )}
-          </section>
+          </AppCard>
 
-          <section
-            className="event-form-card event-form-card--rows"
-            aria-labelledby="event-date-title"
-          >
-            <div className="event-form-section-heading event-form-section-heading--compact calendar-event-form-sheet__section-heading">
-              <CalendarCheck aria-hidden="true" size={20} />
-              <h2 id="event-date-title">Dato og tid</h2>
-            </div>
-            <label className="event-form-row" htmlFor="event-date">
-              <CalendarCheck aria-hidden="true" size={20} />
-              <span>Dato</span>
-              <input
-                id="event-date"
-                type="date"
-                value={draft.date}
+          <AppCard aria-labelledby="event-repeat-title">
+            <h2 className="event-form-card-title" id="event-repeat-title">
+              Gjentakelse
+            </h2>
+            <AppField htmlFor="event-repeat">
+              <span>Hvor ofte gjentas hendelsen?</span>
+              <AppSelect
+                id="event-repeat"
+                value={draft.repeat}
                 onChange={(changeEvent) =>
-                  updateDraft("date", changeEvent.target.value)
+                  updateDraft("repeat", changeEvent.target.value)
                 }
-                required
-              />
-            </label>
-            {!draft.allDay ? (
-              <div className="event-form-time-grid">
-                <label className="event-form-row" htmlFor="event-start-time">
-                  <Clock aria-hidden="true" size={20} />
-                  <span>Starttid</span>
-                  <input
-                    id="event-start-time"
-                    type="time"
-                    value={draft.startTime}
-                    onChange={(changeEvent) =>
-                      updateDraft("startTime", changeEvent.target.value)
-                    }
-                  />
-                </label>
-                <label className="event-form-row" htmlFor="event-end-time">
-                  <Clock aria-hidden="true" size={20} />
-                  <span>Sluttid</span>
-                  <input
-                    id="event-end-time"
-                    type="time"
-                    value={draft.endTime}
-                    onChange={(changeEvent) =>
-                      updateDraft("endTime", changeEvent.target.value)
-                    }
-                  />
-                </label>
-              </div>
-            ) : null}
-            <label
-              className="event-form-row event-form-row--toggle"
-              htmlFor="event-all-day"
-            >
-              <Clock aria-hidden="true" size={20} />
-              <span>Heldag</span>
-              <input
-                id="event-all-day"
-                className="event-form-toggle"
-                type="checkbox"
-                checked={draft.allDay}
-                onChange={(changeEvent) =>
-                  updateDraft("allDay", changeEvent.target.checked)
-                }
-              />
-            </label>
-          </section>
+              >
+                {repeatOptions.map((option) => (
+                  <option key={option} value={option}>
+                    {option}
+                  </option>
+                ))}
+              </AppSelect>
+            </AppField>
+          </AppCard>
 
-          <section
-            className="event-form-card event-form-card--rows"
-            aria-labelledby="event-repeat-title"
-          >
-            <div className="event-form-section-heading event-form-section-heading--compact">
-              <Repeat aria-hidden="true" size={20} />
-              <h2 id="event-repeat-title">Gjentakelse</h2>
-            </div>
-            <div
-              className="event-form-options"
-              role="radiogroup"
-              aria-labelledby="event-repeat-title"
-            >
-              {repeatOptions.map((option) => (
-                <label className="event-form-option" key={option}>
-                  <input
-                    type="radio"
-                    name="repeat"
-                    value={option}
-                    checked={draft.repeat === option}
-                    onChange={() => updateDraft("repeat", option)}
-                  />
-                  <span>
-                    {option}
-                    {option === "Tilpasset" ? " (TODO)" : ""}
-                  </span>
-                </label>
-              ))}
-            </div>
-          </section>
-          <section
-            className="event-form-card event-form-card--rows"
-            aria-labelledby="event-reminder-title"
-          >
-            <div className="event-form-section-heading event-form-section-heading--compact">
-              <Clock aria-hidden="true" size={20} />
-              <h2 id="event-reminder-title">Påminnelse</h2>
-            </div>
-            <div
-              className="event-form-options"
-              role="radiogroup"
-              aria-labelledby="event-reminder-title"
-            >
-              {reminderOptions.map((option) => (
-                <label className="event-form-option" key={option}>
-                  <input
-                    type="radio"
-                    name="reminder"
-                    value={option}
-                    checked={draft.reminder === option}
-                    onChange={() => updateDraft("reminder", option)}
-                  />
-                  <span>
-                    {option}
-                    {option === "Tilpasset" ? " (TODO)" : ""}
-                  </span>
-                </label>
-              ))}
-            </div>
-          </section>
-          <section
-            className="event-form-card"
-            aria-labelledby="event-location-title"
-          >
-            <div className="event-form-section-heading event-form-section-heading--compact">
-              <MapPin aria-hidden="true" size={20} />
-              <h2 id="event-location-title">Sted</h2>
-            </div>
-            <label className="sr-only" htmlFor="event-location">
-              Sted
-            </label>
-            <input
-              className="event-form-text-input"
-              id="event-location"
-              type="text"
-              value={draft.location}
-              onChange={(changeEvent) =>
-                updateDraft("location", changeEvent.target.value)
-              }
-              placeholder="Legg til sted"
-            />
-          </section>
-          <section
-            className="event-form-card"
-            aria-labelledby="event-description-title"
-          >
-            <div className="event-form-section-heading event-form-section-heading--compact">
-              <FileText aria-hidden="true" size={20} />
-              <h2 id="event-description-title">Beskrivelse</h2>
-            </div>
-            <label className="sr-only" htmlFor="event-description">
+          <AppCard aria-labelledby="event-description-title">
+            <h2 className="event-form-card-title" id="event-description-title">
               Beskrivelse
-            </label>
-            <textarea
-              className="event-form-textarea"
-              id="event-description"
-              value={draft.description}
-              onChange={(changeEvent) =>
-                updateDraft("description", changeEvent.target.value)
-              }
-              placeholder="Legg til beskrivelse, noter eller annen informasjon..."
-              rows={4}
-            />
-          </section>
+            </h2>
+            <AppField htmlFor="event-description">
+              <span>Beskrivelse</span>
+              <AppTextarea
+                id="event-description"
+                value={draft.description}
+                onChange={(changeEvent) =>
+                  updateDraft("description", changeEvent.target.value)
+                }
+                placeholder="Legg til beskrivelse, noter eller annen informasjon …"
+                rows={4}
+              />
+            </AppField>
+          </AppCard>
+
           {mode === "edit" ? (
             <button
               className="event-form-delete"
@@ -610,7 +557,7 @@ export function CalendarEventFormClient({
           ) : null}
         </div>
 
-        <div className="husk-school-sheet__actions">
+        <AppActionFooter>
           <button
             className="husk-school-sheet__action husk-school-sheet__action--secondary"
             type="button"
@@ -627,7 +574,7 @@ export function CalendarEventFormClient({
           >
             {isSaving ? "Lagrer …" : "Lagre"}
           </button>
-        </div>
+        </AppActionFooter>
       </form>
     </main>
   );
