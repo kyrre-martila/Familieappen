@@ -223,7 +223,7 @@ export default function ShoppingPage() {
         getShoppingCatalogItems(familyId),
       ]);
       setShoppingLists(nextShoppingLists);
-      setShoppingList(nextShoppingList);
+      setShoppingList(dedupeShoppingListItems(nextShoppingList));
       setActiveShoppingListId(nextShoppingList.id);
       setCatalogCategories(getCategoryOptions(nextCatalogCategories.length > 0 ? nextCatalogCategories : FALLBACK_SHOPPING_CATEGORIES));
       setCatalogItems(nextCatalogItems);
@@ -253,7 +253,7 @@ export default function ShoppingPage() {
       getShoppingCatalogItems(familyId),
     ]);
     const categories = getCategoryOptions(nextCatalogCategories.length > 0 ? nextCatalogCategories : FALLBACK_SHOPPING_CATEGORIES);
-    setShoppingList(nextShoppingList);
+    setShoppingList(dedupeShoppingListItems(nextShoppingList));
     setActiveShoppingListId(nextShoppingList.id);
     setCatalogCategories(categories);
     setCatalogItems(nextCatalogItems);
@@ -305,12 +305,7 @@ export default function ShoppingPage() {
         currentList
           ? {
               ...currentList,
-              items: item ? (editingItemId
-                ? currentList.items.map((currentItem) =>
-                    currentItem.id === item.id ? item : currentItem,
-                  )
-                : [...currentList.items, item]
-              ).sort(sortShoppingItems) : currentList.items,
+              items: item ? reconcileShoppingListItems(currentList.items, item, Boolean(editingItemId)).sort(sortShoppingItems) : dedupeShoppingItemsById(currentList.items),
             }
           : currentList,
       );
@@ -352,11 +347,7 @@ export default function ShoppingPage() {
         currentList
           ? {
               ...currentList,
-              items: currentList.items
-                .map((item) =>
-                  item.id === updatedItem.id ? updatedItem : item,
-                )
-                .sort(sortShoppingItems),
+              items: reconcileShoppingListItems(currentList.items, updatedItem, true).sort(sortShoppingItems),
             }
           : currentList,
       );
@@ -431,7 +422,7 @@ export default function ShoppingPage() {
         currentList
           ? {
               ...currentList,
-              items: [...currentList.items, addedItem].sort(sortShoppingItems),
+              items: reconcileShoppingListItems(currentList.items, addedItem, false).sort(sortShoppingItems),
             }
           : currentList,
       );
@@ -566,7 +557,7 @@ export default function ShoppingPage() {
       const created = await createShoppingList(activeFamilyId, newListName.trim());
       const nextShoppingLists = await getShoppingLists(activeFamilyId);
       setShoppingLists(nextShoppingLists.some((list) => list.id === created.id) ? nextShoppingLists : [...nextShoppingLists, created]);
-      setShoppingList(created);
+      setShoppingList(dedupeShoppingListItems(created));
       setActiveShoppingListId(created.id);
       setNewListName("");
       setIsCreateListSheetOpen(false);
@@ -1204,6 +1195,40 @@ export default function ShoppingPage() {
 }
 
 type ShoppingItem = ShoppingList["items"][number];
+
+
+function dedupeShoppingListItems<T extends ShoppingList | null>(list: T): T {
+  if (!list) return list;
+  return { ...list, items: dedupeShoppingItemsById(list.items) } as T;
+}
+
+function dedupeShoppingItemsById(items: ShoppingItem[]) {
+  const byId = new Map<string, ShoppingItem>();
+
+  for (const item of items) {
+    byId.set(item.id, item);
+  }
+
+  return [...byId.values()];
+}
+
+function reconcileShoppingListItems(items: ShoppingItem[], nextItem: ShoppingItem, replaceOnly: boolean) {
+  let didReplace = false;
+  const nextItems = dedupeShoppingItemsById(items).map((item) => {
+    if (item.id !== nextItem.id) {
+      return item;
+    }
+
+    didReplace = true;
+    return nextItem;
+  });
+
+  if (!didReplace && !replaceOnly) {
+    nextItems.push(nextItem);
+  }
+
+  return nextItems;
+}
 
 function formatShoppingListName(name?: string | null) {
   if (!name || name === "Family Shopping") {
