@@ -158,13 +158,25 @@ export function AppSelect({
   );
 }
 
+interface AppActionFooterProps extends ComponentPropsWithoutRef<"div"> {
+  bottomNavAware?: boolean;
+}
+
 export function AppActionFooter({
+  bottomNavAware = false,
   children,
   className,
   ...props
-}: ComponentPropsWithoutRef<"div">) {
+}: AppActionFooterProps) {
   return (
-    <div className={cx("app-action-footer", className)} {...props}>
+    <div
+      className={cx(
+        "app-action-footer",
+        bottomNavAware && "app-action-footer--bottom-nav-aware",
+        className,
+      )}
+      {...props}
+    >
       {children}
     </div>
   );

@@ -15288,8 +15288,7 @@ button.family-settings-row:focus-visible:not(:disabled) {
   grid-template-columns: 1fr 1.2fr;
   gap: var(--space-s);
   border-top: 1px solid var(--app-card-border);
-  padding: var(--space-m) var(--space-m)
-    calc(var(--app-bottom-nav-height, 88px) + var(--app-footer-safe-area-spacing));
+  padding: var(--space-m) var(--space-m) var(--app-footer-safe-area-spacing);
   background: color-mix(in srgb, var(--color-surface) 94%, var(--color-background-soft));
 }
 
@@ -15392,6 +15391,8 @@ button.family-settings-row:focus-visible:not(:disabled) {
   font-size: var(--app-metadata-text-size);
 }
 
-.task-edit-sheet__actions {
-  padding-bottom: calc(env(safe-area-inset-bottom) + var(--space-m));
+.app-action-footer--bottom-nav-aware {
+  padding-bottom: calc(
+    var(--app-bottom-nav-height, 88px) + var(--app-footer-safe-area-spacing)
+  );
 }
