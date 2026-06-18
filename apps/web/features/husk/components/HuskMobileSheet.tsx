@@ -1,5 +1,6 @@
-import { useEffect, useState, type ReactNode } from "react";
-import { createPortal } from "react-dom";
+import type { ReactNode } from "react";
+
+import { AppSheet } from "../../../components/app-ui";
 
 export function HuskMobileSheet({
   children,
@@ -12,45 +13,15 @@ export function HuskMobileSheet({
   labelledBy: string;
   onClose: () => void;
 }) {
-  const [isMounted, setIsMounted] = useState(false);
-
-  useEffect(() => {
-    setIsMounted(true);
-  }, []);
-
-  useEffect(() => {
-    if (!isOpen) return;
-
-    const previousOverflow = document.body.style.overflow;
-    document.body.style.overflow = "hidden";
-
-    return () => {
-      document.body.style.overflow = previousOverflow;
-    };
-  }, [isOpen]);
-
-  const sheet = (
-    <div
-      aria-hidden={!isOpen}
-      className={`calendar-filter-sheet${isOpen ? " calendar-filter-sheet--open" : ""}`}
+  return (
+    <AppSheet
+      baseClassName="calendar-filter-sheet"
+      isOpen={isOpen}
+      labelledBy={labelledBy}
+      onClose={onClose}
+      wrapContent={false}
     >
-      <button
-        className="calendar-filter-sheet__backdrop"
-        type="button"
-        aria-label="Lukk"
-        onClick={onClose}
-      />
-      <section
-        aria-labelledby={labelledBy}
-        aria-modal="true"
-        className="calendar-filter-sheet__panel"
-        role="dialog"
-      >
-        <div className="calendar-filter-sheet__handle" aria-hidden="true" />
-        {children}
-      </section>
-    </div>
+      {children}
+    </AppSheet>
   );
-
-  return isMounted ? createPortal(sheet, document.body) : sheet;
 }

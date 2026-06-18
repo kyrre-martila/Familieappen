@@ -2,6 +2,7 @@ import Link from "next/link";
 import { ChevronRight } from "lucide-react";
 
 import { UserAvatar } from "../../../components/avatar/UserAvatar";
+import { AppCard, AppListRow } from "../../../components/app-ui";
 import type { HuskFamilyMember, HuskListGroup } from "../types";
 import { listIcons } from "./huskConfig";
 
@@ -83,21 +84,22 @@ export function HuskListCard({
 
   if (isArchived) {
     return (
-      <article
+      <AppCard
         className={`husk-list-card husk-list-card--${group.tone} husk-list-card--archived`}
       >
         {cardContent}
-      </article>
+      </AppCard>
     );
   }
 
   return (
-    <Link
+    <AppListRow
+      as={Link}
       className={`husk-list-card husk-list-card--${group.tone}`}
       href={`/husk/lister/${group.id}`}
       aria-label={`Åpne listen ${group.title}. ${progressText}`}
     >
       {cardContent}
-    </Link>
+    </AppListRow>
   );
 }

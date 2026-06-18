@@ -5,6 +5,7 @@ import { createPortal } from "react-dom";
 import { MoreHorizontal } from "lucide-react";
 
 import { UserAvatar } from "../../../components/avatar/UserAvatar";
+import { AppCard, AppMenuButton } from "../../../components/app-ui";
 import type { HuskFamilyMember, HuskReminder } from "../types";
 import { reminderIcons } from "./huskConfig";
 
@@ -123,7 +124,7 @@ export function HuskReminderCard({
       : null;
 
   return (
-    <article
+    <AppCard
       className={`husk-reminder-card husk-reminder-card--${reminder.tone}`}
     >
       <button
@@ -145,7 +146,7 @@ export function HuskReminderCard({
         <ReminderAvatars members={members} />
       </button>
       <div className="husk-reminder-card__menu-wrap">
-        <button
+        <AppMenuButton
           className="husk-reminder-card__menu-button"
           ref={menuButtonRef}
           type="button"
@@ -154,9 +155,9 @@ export function HuskReminderCard({
           onClick={() => setOpenMenuReminderId(isMenuOpen ? null : reminder.id)}
         >
           <MoreHorizontal aria-hidden="true" size={20} strokeWidth={2.5} />
-        </button>
+        </AppMenuButton>
         {menu}
       </div>
-    </article>
+    </AppCard>
   );
 }
