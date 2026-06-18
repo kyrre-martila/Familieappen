@@ -368,12 +368,12 @@ export function HuskFocusFormClient({
   const isReminder = kind === "reminder";
   const title = isReminder
     ? mode === "create"
-      ? "Ny husk"
+      ? "Ny påminnelse"
       : "Rediger husk"
     : mode === "create"
       ? "Ny liste"
       : "Rediger liste";
-  const titlePlaceholder = isReminder ? "Hva skal huskes?" : "Navn på listen";
+  const titlePlaceholder = isReminder ? "Påminnelse" : "Navn på listen";
   const hasAudience =
     draft.audience === "family" || draft.participantIds.length > 0;
   const isValid =
@@ -650,6 +650,27 @@ export function HuskFocusFormClient({
               />
             </AppField>
 
+            {mode === "create" ? (
+              <section className="event-form-card" aria-label="Raske forslag">
+                <div className="event-form-section-heading event-form-section-heading--compact">
+                  <ListChecks aria-hidden="true" size={22} strokeWidth={2.4} />
+                  <h2>Raske forslag</h2>
+                </div>
+                <div className="husk-school-quick">
+                  {quickReminderExamples.map((example) => (
+                    <button
+                      className="husk-school-quick__chip"
+                      key={example}
+                      onClick={() => updateDraft("title", example)}
+                      type="button"
+                    >
+                      {example}
+                    </button>
+                  ))}
+                </div>
+              </section>
+            ) : null}
+
             <AppField className="husk-school-field">
               <span>Notat</span>
               <AppTextarea
@@ -749,11 +770,23 @@ export function HuskFocusFormClient({
                   })}
                 </div>
               ) : null}
+              <label className="event-form-row event-form-row--toggle husk-focus-private-row">
+                <FileText aria-hidden="true" size={22} strokeWidth={2.4} />
+                <span>Privat</span>
+                <input
+                  className="event-form-toggle"
+                  checked={draft.isPrivate}
+                  onChange={(changeEvent) =>
+                    updateDraft("isPrivate", changeEvent.target.checked)
+                  }
+                  type="checkbox"
+                />
+              </label>
             </section>
 
             <div
               className="event-form-card event-form-card--rows husk-reminder-edit-sheet__rows"
-              aria-label="Dato og påminnelse"
+              aria-label="Dato, påminnelse og kategori"
             >
               <label className="event-form-row">
                 <CalendarDays aria-hidden="true" size={22} strokeWidth={2.4} />
@@ -798,62 +831,17 @@ export function HuskFocusFormClient({
                   />
                 </span>
               </div>
-              <label className="event-form-row event-form-row--toggle">
-                <FileText aria-hidden="true" size={22} strokeWidth={2.4} />
-                <span>
-                  <strong>Privat</strong>
-                  <small>Bare du kan se denne påminnelsen.</small>
-                </span>
-                <input
-                  className="event-form-toggle"
-                  checked={draft.isPrivate}
-                  onChange={(changeEvent) =>
-                    updateDraft("isPrivate", changeEvent.target.checked)
-                  }
-                  type="checkbox"
-                />
-              </label>
+              <Link
+                className="event-form-row event-form-row--picker"
+                href={iconPickerHref}
+                aria-label={`Endre kategori, valgt ${selectedIcon.label}`}
+              >
+                <selectedIcon.Icon aria-hidden="true" size={22} strokeWidth={2.4} />
+                <span>Kategori</span>
+                <span className="event-form-row__value">{selectedIcon.label} ▼</span>
+              </Link>
             </div>
 
-            <section className="event-form-card event-form-card--compact">
-              <Link
-                className="event-form-picker-row"
-                href={iconPickerHref}
-                aria-label={`Endre ikon, valgt ${selectedIcon.label}`}
-              >
-                <span className="event-form-picker-row__label">Kategori</span>
-                <span className="event-form-scope-summary event-form-scope-summary--inline">
-                  <span
-                    className="event-form-scope-summary__family"
-                    aria-hidden="true"
-                  >
-                    <selectedIcon.Icon size={18} strokeWidth={2.4} />
-                  </span>
-                  <span>{selectedIcon.label} ▼</span>
-                </span>
-              </Link>
-            </section>
-
-            {mode === "create" ? (
-              <section className="event-form-card" aria-label="Raske forslag">
-                <div className="event-form-section-heading event-form-section-heading--compact">
-                  <ListChecks aria-hidden="true" size={22} strokeWidth={2.4} />
-                  <h2>Raske forslag</h2>
-                </div>
-                <div className="husk-school-quick">
-                  {quickReminderExamples.map((example) => (
-                    <button
-                      className="husk-school-quick__chip"
-                      key={example}
-                      onClick={() => updateDraft("title", example)}
-                      type="button"
-                    >
-                      {example}
-                    </button>
-                  ))}
-                </div>
-              </section>
-            ) : null}
 
             {mode === "edit" ? (
               <div className="event-form-actions event-form-actions--single">
