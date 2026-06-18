@@ -1,14 +1,42 @@
 "use client";
 
-import { FormEvent, useEffect, useMemo, useState, type ChangeEvent } from "react";
-import { createPortal } from "react-dom";
-import { CalendarDays, Check, ListTodo, MoreHorizontal, Users, X } from "lucide-react";
+import {
+  FormEvent,
+  useEffect,
+  useMemo,
+  useState,
+  type ChangeEvent,
+} from "react";
+import {
+  CalendarDays,
+  Check,
+  ListTodo,
+  MoreHorizontal,
+  Users,
+  X,
+} from "lucide-react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { UserAvatar } from "../../../components/avatar/UserAvatar";
+import {
+  AppActionFooter,
+  AppField,
+  AppMenuButton,
+  AppSheet,
+  AppTextarea,
+} from "../../../components/app-ui";
 import { LockedFeatureState } from "../../../components/PendingAccess";
 import { useFamilyAccess } from "../../../components/ProtectedFamilyRoute";
-import { Badge, Button, Card, EmptyState, ErrorState, LoadingState, PageContainer, SectionHeader } from "../../../components/ui";
+import {
+  Badge,
+  Button,
+  Card,
+  EmptyState,
+  ErrorState,
+  LoadingState,
+  PageContainer,
+  SectionHeader,
+} from "../../../components/ui";
 import {
   ApiError,
   FamilyDetails,
@@ -20,19 +48,39 @@ import {
   getFamily,
   getTasks,
   toggleTask,
-  updateTask
+  updateTask,
 } from "../../../lib/api";
-import { chooseActiveFamily, getUserFacingApiMessage, handleMissingOrInvalidAuth } from "../../../lib/auth-family";
+import {
+  chooseActiveFamily,
+  getUserFacingApiMessage,
+  handleMissingOrInvalidAuth,
+} from "../../../lib/auth-family";
 import { clearActiveFamilyId } from "../../../lib/session";
 
-type OppgaverStatus = "loading" | "ready" | "pending" | "unauthorized" | "no-family" | "error";
+type OppgaverStatus =
+  | "loading"
+  | "ready"
+  | "pending"
+  | "unauthorized"
+  | "no-family"
+  | "error";
 
-export function OppgaverSection({ query, createRequest = 0 }: { query: string; createRequest?: number }) {
+export function OppgaverSection({
+  query,
+  createRequest = 0,
+}: {
+  query: string;
+  createRequest?: number;
+}) {
   const router = useRouter();
   const [tasks, setTasks] = useState<Task[]>([]);
-  const [familyDetails, setFamilyDetails] = useState<FamilyDetails | null>(null);
+  const [familyDetails, setFamilyDetails] = useState<FamilyDetails | null>(
+    null,
+  );
   const [families, setFamilies] = useState<FamilyWithMembership[]>([]);
-  const [activeFamilyId, setActiveFamilyIdState] = useState<string | null>(null);
+  const [activeFamilyId, setActiveFamilyIdState] = useState<string | null>(
+    null,
+  );
   const [status, setStatus] = useState<OppgaverStatus>("loading");
   const [message, setMessage] = useState("Laster oppgaver …");
   const [title, setTitle] = useState("");
@@ -44,28 +92,9 @@ export function OppgaverSection({ query, createRequest = 0 }: { query: string; c
   const [editingTaskId, setEditingTaskId] = useState<string | null>(null);
   const [openTaskMenuId, setOpenTaskMenuId] = useState<string | null>(null);
   const [isTaskSheetOpen, setIsTaskSheetOpen] = useState(false);
-  const [isMounted, setIsMounted] = useState(false);
-
   const familyAccess = useFamilyAccess();
-  const approvedFamilyContext = familyAccess.status === "approved" ? familyAccess.familyContext : null;
-
-  useEffect(() => {
-    setIsMounted(true);
-  }, []);
-
-  useEffect(() => {
-    if (createRequest > 0) {
-      resetTaskForm();
-      setIsTaskSheetOpen(true);
-    }
-  }, [createRequest]);
-
-  useEffect(() => {
-    if (!isTaskSheetOpen) return;
-    const previousOverflow = document.body.style.overflow;
-    document.body.style.overflow = "hidden";
-    return () => { document.body.style.overflow = previousOverflow; };
-  }, [isTaskSheetOpen]);
+  const approvedFamilyContext =
+    familyAccess.status === "approved" ? familyAccess.familyContext : null;
 
   useEffect(() => {
     if (!approvedFamilyContext) {
@@ -80,11 +109,28 @@ export function OppgaverSection({ query, createRequest = 0 }: { query: string; c
   const normalizedQuery = query.trim().toLocaleLowerCase("nb-NO");
   const filteredTasks = useMemo(() => {
     if (!normalizedQuery) return tasks;
-    return tasks.filter((task) => [task.title, task.description ?? "", formatOppgaveMeta(task, familyDetails?.members ?? [])].some((value) => value.toLocaleLowerCase("nb-NO").includes(normalizedQuery)));
+    return tasks.filter((task) =>
+      [
+        task.title,
+        task.description ?? "",
+        formatOppgaveMeta(task, familyDetails?.members ?? []),
+      ].some((value) =>
+        value.toLocaleLowerCase("nb-NO").includes(normalizedQuery),
+      ),
+    );
   }, [familyDetails?.members, normalizedQuery, tasks]);
-  const incompleteTasks = useMemo(() => filteredTasks.filter((task) => !task.completed), [filteredTasks]);
-  const completedTasks = useMemo(() => filteredTasks.filter((task) => task.completed), [filteredTasks]);
-  const incompleteCount = useMemo(() => tasks.filter((task) => !task.completed).length, [tasks]);
+  const incompleteTasks = useMemo(
+    () => filteredTasks.filter((task) => !task.completed),
+    [filteredTasks],
+  );
+  const completedTasks = useMemo(
+    () => filteredTasks.filter((task) => task.completed),
+    [filteredTasks],
+  );
+  const incompleteCount = useMemo(
+    () => tasks.filter((task) => !task.completed).length,
+    [tasks],
+  );
   const hasMultipleFamilies = families.length > 1;
   const members = familyDetails?.members ?? [];
 
@@ -99,7 +145,10 @@ export function OppgaverSection({ query, createRequest = 0 }: { query: string; c
     setMessage("Laster oppgaver …");
 
     try {
-      const [details, taskItems] = await Promise.all([getFamily(familyId), getTasks(familyId)]);
+      const [details, taskItems] = await Promise.all([
+        getFamily(familyId),
+        getTasks(familyId),
+      ]);
       setFamilyDetails(details);
       setTasks(taskItems.sort(sortTasks));
       setStatus("ready");
@@ -137,19 +186,32 @@ export function OppgaverSection({ query, createRequest = 0 }: { query: string; c
             description: nextDescription || null,
             assignedMemberIds,
             assignedFamilyMemberId: assignedMemberIds[0] ?? null,
-            dueDate: dueDate || null
+            dueDate: dueDate || null,
           })
         : await addTask(activeFamilyId, {
             title: nextTitle,
             ...(nextDescription ? { description: nextDescription } : {}),
-            ...(assignedMemberIds.length > 0 ? { assignedMemberIds, assignedFamilyMemberId: assignedMemberIds[0] } : {}),
-            ...(dueDate ? { dueDate } : {})
+            ...(assignedMemberIds.length > 0
+              ? {
+                  assignedMemberIds,
+                  assignedFamilyMemberId: assignedMemberIds[0],
+                }
+              : {}),
+            ...(dueDate ? { dueDate } : {}),
           });
       if (editingTaskId) {
-        setTasks((currentOppgaver) => currentOppgaver.map((currentTask) => (currentTask.id === editingTaskId ? task : currentTask)).sort(sortTasks));
+        setTasks((currentOppgaver) =>
+          currentOppgaver
+            .map((currentTask) =>
+              currentTask.id === editingTaskId ? task : currentTask,
+            )
+            .sort(sortTasks),
+        );
         setEditingTaskId(null);
       } else {
-        setTasks((currentOppgaver) => [...currentOppgaver, task].sort(sortTasks));
+        setTasks((currentOppgaver) =>
+          [...currentOppgaver, task].sort(sortTasks),
+        );
       }
       resetTaskForm();
       setIsTaskSheetOpen(false);
@@ -171,7 +233,11 @@ export function OppgaverSection({ query, createRequest = 0 }: { query: string; c
 
     try {
       const updatedOppgave = await toggleTask(activeFamilyId, taskId);
-      setTasks((currentOppgaver) => currentOppgaver.map((task) => (task.id === taskId ? updatedOppgave : task)).sort(sortTasks));
+      setTasks((currentOppgaver) =>
+        currentOppgaver
+          .map((task) => (task.id === taskId ? updatedOppgave : task))
+          .sort(sortTasks),
+      );
     } catch (error) {
       handleActionError(error, "Could not update the task. Please try again.");
     } finally {
@@ -189,7 +255,9 @@ export function OppgaverSection({ query, createRequest = 0 }: { query: string; c
 
     try {
       await deleteTask(activeFamilyId, taskId);
-      setTasks((currentOppgaver) => currentOppgaver.filter((task) => task.id !== taskId));
+      setTasks((currentOppgaver) =>
+        currentOppgaver.filter((task) => task.id !== taskId),
+      );
     } catch (error) {
       handleActionError(error, "Could not delete the task. Please try again.");
     } finally {
@@ -220,7 +288,12 @@ export function OppgaverSection({ query, createRequest = 0 }: { query: string; c
     if (error instanceof ApiError && error.status === 401) {
       handleMissingOrInvalidAuth(error, router);
       setStatus("unauthorized");
-      setMessage(getUserFacingApiMessage(error, "Your session has expired. Logg inn på nytt."));
+      setMessage(
+        getUserFacingApiMessage(
+          error,
+          "Your session has expired. Logg inn på nytt.",
+        ),
+      );
       return;
     }
 
@@ -230,7 +303,9 @@ export function OppgaverSection({ query, createRequest = 0 }: { query: string; c
       setFamilyDetails(null);
       setTasks([]);
       setStatus("error");
-      setMessage("Oppgavene for denne familien kunne ikke lastes for kontoen din.");
+      setMessage(
+        "Oppgavene for denne familien kunne ikke lastes for kontoen din.",
+      );
       return;
     }
 
@@ -242,7 +317,12 @@ export function OppgaverSection({ query, createRequest = 0 }: { query: string; c
     if (error instanceof ApiError && error.status === 401) {
       handleMissingOrInvalidAuth(error, router);
       setStatus("unauthorized");
-      setMessage(getUserFacingApiMessage(error, "Your session has expired. Logg inn på nytt."));
+      setMessage(
+        getUserFacingApiMessage(
+          error,
+          "Your session has expired. Logg inn på nytt.",
+        ),
+      );
       return;
     }
 
@@ -264,7 +344,10 @@ export function OppgaverSection({ query, createRequest = 0 }: { query: string; c
     return (
       <PageContainer>
         <Card tone="default">
-          <EmptyState title="Sjekker familietilgang" description="Vent litt mens vi bekrefter familietilknytningen din." />
+          <EmptyState
+            title="Sjekker familietilgang"
+            description="Vent litt mens vi bekrefter familietilknytningen din."
+          />
         </Card>
       </PageContainer>
     );
@@ -272,93 +355,158 @@ export function OppgaverSection({ query, createRequest = 0 }: { query: string; c
 
   return (
     <section className="tasks-page" aria-labelledby="tasks-title">
-        <div className="tasks-page__header">
-          <div className="tasks-page__copy">
-            <Badge tone="primary">Husk</Badge>
-            <h1 id="tasks-title" className="tasks-page__title">
-              Oppgaver
-            </h1>
-            <p className="tasks-page__description">
-              {status === "ready"
-                ? `${formatOppgaveCount(incompleteCount)} for ${familyDetails?.family.name ?? "familien din"}.`
-                : message}
-            </p>
-          </div>
-          {hasMultipleFamilies ? (
-            <label className="family-switcher">
-              <span className="family-switcher__label">Aktiv familie</span>
-              <select className="family-switcher__select" value={activeFamilyId ?? ""} onChange={handleFamilyChange}>
-                {families.map((family) => (
-                  <option key={family.family.id} value={family.family.id}>
-                    {family.family.name}
-                  </option>
-                ))}
-              </select>
-            </label>
-          ) : null}
+      <div className="tasks-page__header">
+        <div className="tasks-page__copy">
+          <Badge tone="primary">Husk</Badge>
+          <h1 id="tasks-title" className="tasks-page__title">
+            Oppgaver
+          </h1>
+          <p className="tasks-page__description">
+            {status === "ready"
+              ? `${formatOppgaveCount(incompleteCount)} for ${familyDetails?.family.name ?? "familien din"}.`
+              : message}
+          </p>
         </div>
+        {hasMultipleFamilies ? (
+          <label className="family-switcher">
+            <span className="family-switcher__label">Aktiv familie</span>
+            <select
+              className="family-switcher__select"
+              value={activeFamilyId ?? ""}
+              onChange={handleFamilyChange}
+            >
+              {families.map((family) => (
+                <option key={family.family.id} value={family.family.id}>
+                  {family.family.name}
+                </option>
+              ))}
+            </select>
+          </label>
+        ) : null}
+      </div>
 
-        <Card className="tasks-card" tone="warm">
-          <SectionHeader
-            action={<Badge tone="neutral">{tasks.length} totalt</Badge>}
-            eyebrow="Familieoppgaver"
-            title={formatOppgaveCount(incompleteCount)}
+      <Card className="tasks-card" tone="warm">
+        <SectionHeader
+          action={<Badge tone="neutral">{tasks.length} totalt</Badge>}
+          eyebrow="Familieoppgaver"
+          title={formatOppgaveCount(incompleteCount)}
+        />
+
+        {status === "unauthorized" ? (
+          <OppgaverStatusCard
+            message={message}
+            status={status}
+            onRetry={() => loadOppgaver()}
           />
+        ) : null}
+        {status === "no-family" ? (
+          <OppgaverStatusCard
+            message={message}
+            status={status}
+            onRetry={() => loadOppgaver()}
+          />
+        ) : null}
+        {status === "error" ? (
+          <OppgaverStatusCard
+            message={message}
+            status={status}
+            onRetry={() => loadOppgaver()}
+          />
+        ) : null}
 
-          {status === "unauthorized" ? <OppgaverStatusCard message={message} status={status} onRetry={() => loadOppgaver()} /> : null}
-          {status === "no-family" ? <OppgaverStatusCard message={message} status={status} onRetry={() => loadOppgaver()} /> : null}
-          {status === "error" ? <OppgaverStatusCard message={message} status={status} onRetry={() => loadOppgaver()} /> : null}
+        {status !== "unauthorized" && status !== "no-family" ? (
+          <TaskFormSheet
+            activeFamilyId={activeFamilyId}
+            assignedMemberIds={assignedMemberIds}
+            description={description}
+            dueDate={dueDate}
+            editingTaskId={editingTaskId}
+            isAdding={isAdding}
+            isOpen={isTaskSheetOpen}
+            members={members}
+            onClose={() => {
+              setIsTaskSheetOpen(false);
+              resetTaskForm();
+            }}
+            onSubmit={handleAddOppgave}
+            setAssignedMemberIds={setAssignedMemberIds}
+            setDescription={setDescription}
+            setDueDate={setDueDate}
+            setTitle={setTitle}
+            title={title}
+          />
+        ) : null}
 
-          {status !== "unauthorized" && status !== "no-family" ? (
-            <TaskFormSheet
-              activeFamilyId={activeFamilyId}
-              assignedMemberIds={assignedMemberIds}
-              description={description}
-              dueDate={dueDate}
-              editingTaskId={editingTaskId}
-              isAdding={isAdding}
-              isMounted={isMounted}
-              isOpen={isTaskSheetOpen}
+        {message && status === "ready" ? (
+          <p className="tasks-card__message">{message}</p>
+        ) : null}
+
+        {status === "loading" ? (
+          <LoadingState
+            title="Laster oppgaver"
+            description="Henter familiens nyeste oppgaver."
+          />
+        ) : null}
+
+        {status === "ready" && tasks.length === 0 ? (
+          <EmptyState
+            title="Ingen oppgaver i dag"
+            description="Legg til en oppgave når noe må gjøres."
+          />
+        ) : null}
+
+        {status === "ready" && filteredTasks.length > 0 ? (
+          <div className="tasks-sections">
+            <TaskGroup
+              title="Gjenstående oppgaver"
+              tasks={incompleteTasks}
               members={members}
-              onClose={() => { setIsTaskSheetOpen(false); resetTaskForm(); }}
-              onSubmit={handleAddOppgave}
-              setAssignedMemberIds={setAssignedMemberIds}
-              setDescription={setDescription}
-              setDueDate={setDueDate}
-              setTitle={setTitle}
-              title={title}
+              pendingTaskId={pendingTaskId}
+              openTaskMenuId={openTaskMenuId}
+              onToggle={handleToggleOppgave}
+              onMenuToggle={setOpenTaskMenuId}
+              onEdit={startEditingOppgave}
+              onDelete={handleSlettOppgave}
             />
-          ) : null}
-
-          {message && status === "ready" ? <p className="tasks-card__message">{message}</p> : null}
-
-          {status === "loading" ? <LoadingState title="Laster oppgaver" description="Henter familiens nyeste oppgaver." /> : null}
-
-          {status === "ready" && tasks.length === 0 ? (
-            <EmptyState title="Ingen oppgaver i dag" description="Legg til en oppgave når noe må gjøres." />
-          ) : null}
-
-          {status === "ready" && filteredTasks.length > 0 ? (
-            <div className="tasks-sections">
-              <TaskGroup title="Gjenstående oppgaver" tasks={incompleteTasks} members={members} pendingTaskId={pendingTaskId} openTaskMenuId={openTaskMenuId} onToggle={handleToggleOppgave} onMenuToggle={setOpenTaskMenuId} onEdit={startEditingOppgave} onDelete={handleSlettOppgave} />
-              <TaskGroup title="Fullførte oppgaver" tasks={completedTasks} members={members} pendingTaskId={pendingTaskId} openTaskMenuId={openTaskMenuId} onToggle={handleToggleOppgave} onMenuToggle={setOpenTaskMenuId} onEdit={startEditingOppgave} onDelete={handleSlettOppgave} />
-            </div>
-          ) : null}
-        </Card>
-      </section>
+            <TaskGroup
+              title="Fullførte oppgaver"
+              tasks={completedTasks}
+              members={members}
+              pendingTaskId={pendingTaskId}
+              openTaskMenuId={openTaskMenuId}
+              onToggle={handleToggleOppgave}
+              onMenuToggle={setOpenTaskMenuId}
+              onEdit={startEditingOppgave}
+              onDelete={handleSlettOppgave}
+            />
+          </div>
+        ) : null}
+      </Card>
+    </section>
   );
 }
 
 function getTaskAssignedMemberIds(task: Task): string[] {
-  return task.assignedMemberIds ?? (task.assignedFamilyMemberId ? [task.assignedFamilyMemberId] : []);
+  return (
+    task.assignedMemberIds ??
+    (task.assignedFamilyMemberId ? [task.assignedFamilyMemberId] : [])
+  );
 }
 
-function getTaskAssigneeSummary(assignedMemberIds: string[], members: FamilyMember[]) {
+function getTaskAssigneeSummary(
+  assignedMemberIds: string[],
+  members: FamilyMember[],
+) {
   if (assignedMemberIds.length === 0) return "Hele familien";
   const names = assignedMemberIds
-    .map((memberId) => members.find((member) => member.id === memberId)?.displayName)
+    .map(
+      (memberId) =>
+        members.find((member) => member.id === memberId)?.displayName,
+    )
     .filter((name): name is string => Boolean(name));
-  return names.length > 0 ? names.join(", ") : `${assignedMemberIds.length} person${assignedMemberIds.length === 1 ? "" : "er"}`;
+  return names.length > 0
+    ? names.join(", ")
+    : `${assignedMemberIds.length} person${assignedMemberIds.length === 1 ? "" : "er"}`;
 }
 
 function TaskFormSheet({
@@ -367,7 +515,6 @@ function TaskFormSheet({
   dueDate,
   editingTaskId,
   isAdding,
-  isMounted,
   isOpen,
   members,
   onClose,
@@ -376,7 +523,7 @@ function TaskFormSheet({
   setDescription,
   setDueDate,
   setTitle,
-  title
+  title,
 }: {
   activeFamilyId: string | null;
   assignedMemberIds: string[];
@@ -384,12 +531,13 @@ function TaskFormSheet({
   dueDate: string;
   editingTaskId: string | null;
   isAdding: boolean;
-  isMounted: boolean;
   isOpen: boolean;
   members: FamilyMember[];
   onClose: () => void;
   onSubmit: (event: FormEvent<HTMLFormElement>) => void;
-  setAssignedMemberIds: (value: string[] | ((currentIds: string[]) => string[])) => void;
+  setAssignedMemberIds: (
+    value: string[] | ((currentIds: string[]) => string[]),
+  ) => void;
   setDescription: (value: string) => void;
   setDueDate: (value: string) => void;
   setTitle: (value: string) => void;
@@ -403,113 +551,179 @@ function TaskFormSheet({
   }
 
   function toggleAssignee(memberId: string) {
-    setAssignedMemberIds((currentIds) => currentIds.includes(memberId) ? currentIds.filter((id) => id !== memberId) : [...currentIds, memberId]);
+    setAssignedMemberIds((currentIds) =>
+      currentIds.includes(memberId)
+        ? currentIds.filter((id) => id !== memberId)
+        : [...currentIds, memberId],
+    );
   }
 
-  const sheet = (
-    <div aria-hidden={!isOpen} className={`husk-school-sheet${isOpen ? " husk-school-sheet--open" : ""}`}>
-      <button className="husk-school-sheet__backdrop" type="button" aria-label="Lukk oppgave" onClick={onClose} />
-      <form className="husk-school-sheet__panel task-edit-sheet__panel" role="dialog" aria-modal="true" aria-labelledby="task-edit-title" onSubmit={onSubmit}>
-        <div className="husk-school-sheet__handle" aria-hidden="true" />
-        <div className="husk-school-sheet__header">
-          <div className="husk-reminder-edit-sheet__heading">
-            <span className="husk-reminder-edit-sheet__icon" aria-hidden="true">
-              <ListTodo size={22} strokeWidth={2.35} />
+  return (
+    <AppSheet
+      baseClassName="husk-school-sheet"
+      className="task-edit-sheet__panel"
+      isOpen={isOpen}
+      labelledBy="task-edit-title"
+      onClose={onClose}
+      onSubmit={onSubmit}
+      panelAs="form"
+      wrapContent={false}
+    >
+      <div className="husk-school-sheet__header">
+        <div className="husk-reminder-edit-sheet__heading">
+          <span className="husk-reminder-edit-sheet__icon" aria-hidden="true">
+            <ListTodo size={22} strokeWidth={2.35} />
+          </span>
+          <div>
+            <p className="husk-school-sheet__eyebrow">Oppgaver</p>
+            <h3 className="husk-school-sheet__title" id="task-edit-title">
+              {editingTaskId ? "Rediger oppgave" : "Ny oppgave"}
+            </h3>
+          </div>
+        </div>
+        <button
+          className="husk-school-sheet__close"
+          type="button"
+          aria-label="Lukk"
+          onClick={onClose}
+        >
+          <X aria-hidden="true" size={18} strokeWidth={2.5} />
+        </button>
+      </div>
+      <div className="husk-school-sheet__content husk-reminder-edit-sheet__content">
+        <AppField className="husk-school-field">
+          <span>Oppgave</span>
+          <input
+            maxLength={120}
+            onChange={(event) => setTitle(event.target.value)}
+            placeholder="Kjøp melk"
+            required
+            value={title}
+          />
+        </AppField>
+        <AppField className="husk-school-field">
+          <span>Notat</span>
+          <AppTextarea
+            maxLength={500}
+            onChange={(event) => setDescription(event.target.value)}
+            placeholder="Valgfri detalj …"
+            rows={3}
+            value={description}
+          />
+        </AppField>
+        <section
+          className="event-form-card event-form-card--compact"
+          aria-labelledby="task-assignee-title"
+        >
+          <button
+            className="event-form-picker-row"
+            type="button"
+            onClick={() => setIsAssigneeOpen((open) => !open)}
+            aria-expanded={isAssigneeOpen}
+            aria-controls="task-assignee-picker"
+          >
+            <span
+              className="event-form-picker-row__label"
+              id="task-assignee-title"
+            >
+              Tildel
             </span>
-            <div>
-              <p className="husk-school-sheet__eyebrow">Oppgaver</p>
-              <h3 className="husk-school-sheet__title" id="task-edit-title">{editingTaskId ? "Rediger oppgave" : "Ny oppgave"}</h3>
-            </div>
-          </div>
-          <button className="husk-school-sheet__close" type="button" aria-label="Lukk" onClick={onClose}>
-            <X aria-hidden="true" size={18} strokeWidth={2.5} />
+            <span
+              className="event-form-scope-summary event-form-scope-summary--inline"
+              aria-live="polite"
+            >
+              <span>{assigneeSummary} ▼</span>
+            </span>
           </button>
-        </div>
-        <div className="husk-school-sheet__content husk-reminder-edit-sheet__content">
-          <label className="husk-school-field">
-            <span>Oppgave</span>
-            <input maxLength={120} onChange={(event) => setTitle(event.target.value)} placeholder="Kjøp melk" required value={title} />
-          </label>
-          <label className="husk-school-field">
-            <span>Notat</span>
-            <textarea maxLength={500} onChange={(event) => setDescription(event.target.value)} placeholder="Valgfri detalj …" rows={3} value={description} />
-          </label>
-          <section className="event-form-card event-form-card--compact" aria-labelledby="task-assignee-title">
-            <button className="event-form-picker-row" type="button" onClick={() => setIsAssigneeOpen((open) => !open)} aria-expanded={isAssigneeOpen} aria-controls="task-assignee-picker">
-              <span className="event-form-picker-row__label" id="task-assignee-title">Tildel</span>
-              <span className="event-form-scope-summary event-form-scope-summary--inline" aria-live="polite">
-                <span>{assigneeSummary} ▼</span>
-              </span>
-            </button>
-            {isAssigneeOpen ? (
-              <div className="event-form-avatar-list" id="task-assignee-picker" aria-label="Velg personer">
-                <button
-                  className={`event-form-avatar-chip event-form-avatar-chip--family${assignedMemberIds.length === 0 ? " event-form-avatar-chip--selected" : ""}`}
-                  type="button"
-                  onClick={selectFamilyAssignee}
-                  aria-pressed={assignedMemberIds.length === 0}
+          {isAssigneeOpen ? (
+            <div
+              className="event-form-avatar-list"
+              id="task-assignee-picker"
+              aria-label="Velg personer"
+            >
+              <button
+                className={`event-form-avatar-chip event-form-avatar-chip--family${assignedMemberIds.length === 0 ? " event-form-avatar-chip--selected" : ""}`}
+                type="button"
+                onClick={selectFamilyAssignee}
+                aria-pressed={assignedMemberIds.length === 0}
+              >
+                <span
+                  className="event-form-avatar-chip__avatar event-form-avatar-chip__avatar--family"
+                  aria-hidden="true"
                 >
-                  <span
-                    className="event-form-avatar-chip__avatar event-form-avatar-chip__avatar--family"
-                    aria-hidden="true"
+                  <Users size={19} strokeWidth={2.5} />
+                  {assignedMemberIds.length === 0 ? (
+                    <span className="event-form-avatar-chip__check">
+                      <Check size={13} strokeWidth={3.2} />
+                    </span>
+                  ) : null}
+                </span>
+                <span>Hele familien</span>
+              </button>
+              {members.map((member) => {
+                const isSelected = assignedMemberIds.includes(member.id);
+                return (
+                  <button
+                    className={`event-form-avatar-chip${isSelected ? " event-form-avatar-chip--selected" : ""}`}
+                    type="button"
+                    key={member.id}
+                    onClick={() => toggleAssignee(member.id)}
+                    aria-pressed={isSelected}
                   >
-                    <Users size={19} strokeWidth={2.5} />
-                    {assignedMemberIds.length === 0 ? (
-                      <span className="event-form-avatar-chip__check">
-                        <Check size={13} strokeWidth={3.2} />
-                      </span>
-                    ) : null}
-                  </span>
-                  <span>Hele familien</span>
-                </button>
-                {members.map((member) => {
-                  const isSelected = assignedMemberIds.includes(member.id);
-                  return (
-                    <button
-                      className={`event-form-avatar-chip${isSelected ? " event-form-avatar-chip--selected" : ""}`}
-                      type="button"
-                      key={member.id}
-                      onClick={() => toggleAssignee(member.id)}
-                      aria-pressed={isSelected}
-                    >
-                      <span className="event-form-avatar-chip__avatar-wrap">
-                        <UserAvatar
-                          identity={member}
-                          avatarUrl={member.avatarUrl}
-                          size="sm"
-                          className="event-form-avatar-chip__avatar"
-                          decorative
-                        />
-                        {isSelected ? (
-                          <span className="event-form-avatar-chip__check">
-                            <Check size={13} strokeWidth={3.2} />
-                          </span>
-                        ) : null}
-                      </span>
-                      <span>{member.displayName}</span>
-                    </button>
-                  );
-                })}
-              </div>
-            ) : null}
-          </section>
-          <div className="event-form-card event-form-card--rows husk-reminder-edit-sheet__rows" aria-label="Oppgavefrist">
-            <label className="event-form-row">
-              <CalendarDays aria-hidden="true" size={22} strokeWidth={2.4} />
-              <span>Frist</span>
-              <input onChange={(event) => setDueDate(event.target.value)} type="date" value={dueDate} />
-            </label>
-          </div>
+                    <span className="event-form-avatar-chip__avatar-wrap">
+                      <UserAvatar
+                        identity={member}
+                        avatarUrl={member.avatarUrl}
+                        size="sm"
+                        className="event-form-avatar-chip__avatar"
+                        decorative
+                      />
+                      {isSelected ? (
+                        <span className="event-form-avatar-chip__check">
+                          <Check size={13} strokeWidth={3.2} />
+                        </span>
+                      ) : null}
+                    </span>
+                    <span>{member.displayName}</span>
+                  </button>
+                );
+              })}
+            </div>
+          ) : null}
+        </section>
+        <div
+          className="event-form-card event-form-card--rows husk-reminder-edit-sheet__rows"
+          aria-label="Oppgavefrist"
+        >
+          <label className="event-form-row">
+            <CalendarDays aria-hidden="true" size={22} strokeWidth={2.4} />
+            <span>Frist</span>
+            <input
+              onChange={(event) => setDueDate(event.target.value)}
+              type="date"
+              value={dueDate}
+            />
+          </label>
         </div>
-        <div className="husk-school-sheet__actions">
-          <button className="husk-school-sheet__action husk-school-sheet__action--secondary" type="button" onClick={onClose}>Avbryt</button>
-          <button className="husk-school-sheet__action husk-school-sheet__action--primary" disabled={isAdding || title.trim().length === 0} type="submit">{isAdding ? "Lagrer …" : "Lagre"}</button>
-        </div>
-      </form>
-    </div>
+      </div>
+      <AppActionFooter className="husk-school-sheet__actions">
+        <button
+          className="husk-school-sheet__action husk-school-sheet__action--secondary"
+          type="button"
+          onClick={onClose}
+        >
+          Avbryt
+        </button>
+        <button
+          className="husk-school-sheet__action husk-school-sheet__action--primary"
+          disabled={isAdding || title.trim().length === 0}
+          type="submit"
+        >
+          {isAdding ? "Lagrer …" : "Lagre"}
+        </button>
+      </AppActionFooter>
+    </AppSheet>
   );
-
-  return isMounted ? createPortal(sheet, document.body) : sheet;
 }
 
 function TaskGroup({
@@ -521,12 +735,14 @@ function TaskGroup({
   openTaskMenuId,
   pendingTaskId,
   tasks,
-  title
+  title,
 }: {
   members: FamilyMember[];
   onDelete: (taskId: string) => void;
   onEdit: (task: Task) => void;
-  onMenuToggle: (taskId: string | null | ((currentId: string | null) => string | null)) => void;
+  onMenuToggle: (
+    taskId: string | null | ((currentId: string | null) => string | null),
+  ) => void;
   onToggle: (taskId: string) => void;
   openTaskMenuId: string | null;
   pendingTaskId: string | null;
@@ -534,33 +750,99 @@ function TaskGroup({
   title: string;
 }) {
   return (
-    <section className="tasks-section" aria-labelledby={`${title.replaceAll(" ", "-").toLowerCase()}-heading`}>
+    <section
+      className="tasks-section"
+      aria-labelledby={`${title.replaceAll(" ", "-").toLowerCase()}-heading`}
+    >
       <div className="husk-reminder-group__heading">
-        <h2 className="husk-reminder-group__title" id={`${title.replaceAll(" ", "-").toLowerCase()}-heading`}>{title}</h2>
+        <h2
+          className="husk-reminder-group__title"
+          id={`${title.replaceAll(" ", "-").toLowerCase()}-heading`}
+        >
+          {title}
+        </h2>
         <span className="husk-reminder-group__count">{tasks.length}</span>
       </div>
       {tasks.length > 0 ? (
         <ul className="tasks-list" aria-label={title}>
           {tasks.map((task) => (
-            <li className={task.completed ? "tasks-list__item tasks-list__item--completed" : "tasks-list__item"} key={task.id}>
-              <button aria-label={`${task.completed ? "Marker som ikke ferdig" : "Fullfør"} ${task.title}`} className="tasks-list__toggle" disabled={pendingTaskId === task.id} onClick={() => onToggle(task.id)} type="button">
+            <li
+              className={
+                task.completed
+                  ? "tasks-list__item tasks-list__item--completed"
+                  : "tasks-list__item"
+              }
+              key={task.id}
+            >
+              <button
+                aria-label={`${task.completed ? "Marker som ikke ferdig" : "Fullfør"} ${task.title}`}
+                className="tasks-list__toggle"
+                disabled={pendingTaskId === task.id}
+                onClick={() => onToggle(task.id)}
+                type="button"
+              >
                 {task.completed ? "☑" : "☐"}
               </button>
               <div className="tasks-list__content">
                 <span className="tasks-list__title">{task.title}</span>
-                <span className="tasks-list__meta">{formatOppgaveMeta(task, members)}</span>
-                {task.description ? <span className="tasks-list__description">{task.description}</span> : null}
+                <span className="tasks-list__meta">
+                  {formatOppgaveMeta(task, members)}
+                </span>
+                {task.description ? (
+                  <span className="tasks-list__description">
+                    {task.description}
+                  </span>
+                ) : null}
               </div>
-              <span className="husk-reminder-card__menu-wrap tasks-list__menu-wrap" onBlur={(event) => {
-                if (!(event.relatedTarget instanceof Node && event.currentTarget.contains(event.relatedTarget))) onMenuToggle(null);
-              }}>
-                <button aria-expanded={openTaskMenuId === task.id} aria-label={`Åpne meny for ${task.title}`} className="husk-reminder-card__menu-button" disabled={pendingTaskId === task.id} onClick={() => onMenuToggle((currentId) => (currentId === task.id ? null : task.id))} type="button">
+              <span
+                className="husk-reminder-card__menu-wrap tasks-list__menu-wrap"
+                onBlur={(event) => {
+                  if (
+                    !(
+                      event.relatedTarget instanceof Node &&
+                      event.currentTarget.contains(event.relatedTarget)
+                    )
+                  )
+                    onMenuToggle(null);
+                }}
+              >
+                <AppMenuButton
+                  aria-expanded={openTaskMenuId === task.id}
+                  aria-label={`Åpne meny for ${task.title}`}
+                  className="husk-reminder-card__menu-button"
+                  disabled={pendingTaskId === task.id}
+                  onClick={() =>
+                    onMenuToggle((currentId) =>
+                      currentId === task.id ? null : task.id,
+                    )
+                  }
+                  type="button"
+                >
                   <MoreHorizontal aria-hidden="true" size={20} />
-                </button>
+                </AppMenuButton>
                 {openTaskMenuId === task.id ? (
-                  <span className="husk-reminder-card__menu tasks-list__menu-popover" role="menu">
-                    <button type="button" role="menuitem" onClick={() => onEdit(task)}>Rediger</button>
-                    <button className="husk-reminder-card__menu-delete" type="button" role="menuitem" onClick={() => { onMenuToggle(null); onDelete(task.id); }}>Slett</button>
+                  <span
+                    className="husk-reminder-card__menu tasks-list__menu-popover"
+                    role="menu"
+                  >
+                    <button
+                      type="button"
+                      role="menuitem"
+                      onClick={() => onEdit(task)}
+                    >
+                      Rediger
+                    </button>
+                    <button
+                      className="husk-reminder-card__menu-delete"
+                      type="button"
+                      role="menuitem"
+                      onClick={() => {
+                        onMenuToggle(null);
+                        onDelete(task.id);
+                      }}
+                    >
+                      Slett
+                    </button>
                   </span>
                 ) : null}
               </span>
@@ -575,7 +857,7 @@ function TaskGroup({
 function OppgaverStatusCard({
   message,
   onRetry,
-  status
+  status,
 }: {
   message: string;
   onRetry: () => void;
@@ -596,7 +878,10 @@ function OppgaverStatusCard({
     return (
       <div className="tasks-status">
         <EmptyState title="Opprett din første familie" description={message} />
-        <Link className="button button--primary" href="/onboarding/create-family">
+        <Link
+          className="button button--primary"
+          href="/onboarding/create-family"
+        >
           Opprett familie
         </Link>
       </div>
@@ -619,8 +904,13 @@ function formatOppgaveCount(count: number): string {
 
 function formatOppgaveMeta(task: Task, members: FamilyMember[]): string {
   const assignedMemberIds = getTaskAssignedMemberIds(task);
-  const assignee = assignedMemberIds.length > 0 ? getTaskAssigneeSummary(assignedMemberIds, members) : "Alle";
-  const due = task.dueDate ? ` · ${new Date(task.dueDate).toLocaleDateString(undefined, { month: "short", day: "numeric" })}` : "";
+  const assignee =
+    assignedMemberIds.length > 0
+      ? getTaskAssigneeSummary(assignedMemberIds, members)
+      : "Alle";
+  const due = task.dueDate
+    ? ` · ${new Date(task.dueDate).toLocaleDateString(undefined, { month: "short", day: "numeric" })}`
+    : "";
 
   return `${assignee}${due}`;
 }
@@ -630,12 +920,18 @@ function sortTasks(first: Task, second: Task) {
     return first.completed ? 1 : -1;
   }
 
-  const firstFrist = first.dueDate ? new Date(first.dueDate).getTime() : Number.MAX_SAFE_INTEGER;
-  const secondFrist = second.dueDate ? new Date(second.dueDate).getTime() : Number.MAX_SAFE_INTEGER;
+  const firstFrist = first.dueDate
+    ? new Date(first.dueDate).getTime()
+    : Number.MAX_SAFE_INTEGER;
+  const secondFrist = second.dueDate
+    ? new Date(second.dueDate).getTime()
+    : Number.MAX_SAFE_INTEGER;
 
   if (firstFrist !== secondFrist) {
     return firstFrist - secondFrist;
   }
 
-  return new Date(first.createdAt).getTime() - new Date(second.createdAt).getTime();
+  return (
+    new Date(first.createdAt).getTime() - new Date(second.createdAt).getTime()
+  );
 }

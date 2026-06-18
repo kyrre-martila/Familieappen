@@ -22,7 +22,13 @@ import {
   X,
 } from "lucide-react";
 import { LockedFeatureState } from "../../components/PendingAccess";
-import { HuskMobileSheet } from "../../features/husk/components/HuskMobileSheet";
+import {
+  AppField,
+  AppMenuButton,
+  AppSelect,
+  AppSheet,
+  AppTextarea,
+} from "../../components/app-ui";
 import { useFamilyAccess } from "../../components/ProtectedFamilyRoute";
 import {
   Badge,
@@ -75,19 +81,100 @@ type ShoppingStatus =
 
 const DEFAULT_SHOPPING_UNIT = "stk";
 const DEFAULT_CUSTOM_CATEGORY_SLUG = "egne-varer";
-const SHOPPING_UNIT_OPTIONS = ["stk", "pk", "kg", "g", "l", "dl", "cl", "ml", "boks", "pose", "flaske", "beger", "glass", "tube"];
+const SHOPPING_UNIT_OPTIONS = [
+  "stk",
+  "pk",
+  "kg",
+  "g",
+  "l",
+  "dl",
+  "cl",
+  "ml",
+  "boks",
+  "pose",
+  "flaske",
+  "beger",
+  "glass",
+  "tube",
+];
 const FALLBACK_SHOPPING_CATEGORIES: ShoppingCatalogCategory[] = [
-  { id: "fallback-frukt-og-gront", name: "Frukt og grønt", slug: "frukt-og-gront", sortOrder: 10, totalItemCount: 0 },
-  { id: "fallback-brod-og-bakevarer", name: "Brød og bakevarer", slug: "brod-og-bakevarer", sortOrder: 20, totalItemCount: 0 },
-  { id: "fallback-kjott-og-fisk", name: "Kjøtt og fisk", slug: "kjott-og-fisk", sortOrder: 30, totalItemCount: 0 },
-  { id: "fallback-meieri", name: "Meieri", slug: "meieri", sortOrder: 40, totalItemCount: 0 },
-  { id: "fallback-drikke", name: "Drikke", slug: "drikke", sortOrder: 50, totalItemCount: 0 },
-  { id: "fallback-frysevarer", name: "Frysevarer", slug: "frysevarer", sortOrder: 60, totalItemCount: 0 },
-  { id: "fallback-snacks", name: "Snacks", slug: "snacks", sortOrder: 70, totalItemCount: 0 },
-  { id: "fallback-hygiene", name: "Hygiene", slug: "hygiene", sortOrder: 80, totalItemCount: 0 },
-  { id: "fallback-vask-og-rengjoring", name: "Vask og rengjøring", slug: "vask-og-rengjoring", sortOrder: 90, totalItemCount: 0 },
-  { id: "fallback-dyremat", name: "Dyremat", slug: "dyremat", sortOrder: 100, totalItemCount: 0 },
-  { id: "fallback-egne-varer", name: "Egne varer", slug: DEFAULT_CUSTOM_CATEGORY_SLUG, sortOrder: 999, totalItemCount: 0 },
+  {
+    id: "fallback-frukt-og-gront",
+    name: "Frukt og grønt",
+    slug: "frukt-og-gront",
+    sortOrder: 10,
+    totalItemCount: 0,
+  },
+  {
+    id: "fallback-brod-og-bakevarer",
+    name: "Brød og bakevarer",
+    slug: "brod-og-bakevarer",
+    sortOrder: 20,
+    totalItemCount: 0,
+  },
+  {
+    id: "fallback-kjott-og-fisk",
+    name: "Kjøtt og fisk",
+    slug: "kjott-og-fisk",
+    sortOrder: 30,
+    totalItemCount: 0,
+  },
+  {
+    id: "fallback-meieri",
+    name: "Meieri",
+    slug: "meieri",
+    sortOrder: 40,
+    totalItemCount: 0,
+  },
+  {
+    id: "fallback-drikke",
+    name: "Drikke",
+    slug: "drikke",
+    sortOrder: 50,
+    totalItemCount: 0,
+  },
+  {
+    id: "fallback-frysevarer",
+    name: "Frysevarer",
+    slug: "frysevarer",
+    sortOrder: 60,
+    totalItemCount: 0,
+  },
+  {
+    id: "fallback-snacks",
+    name: "Snacks",
+    slug: "snacks",
+    sortOrder: 70,
+    totalItemCount: 0,
+  },
+  {
+    id: "fallback-hygiene",
+    name: "Hygiene",
+    slug: "hygiene",
+    sortOrder: 80,
+    totalItemCount: 0,
+  },
+  {
+    id: "fallback-vask-og-rengjoring",
+    name: "Vask og rengjøring",
+    slug: "vask-og-rengjoring",
+    sortOrder: 90,
+    totalItemCount: 0,
+  },
+  {
+    id: "fallback-dyremat",
+    name: "Dyremat",
+    slug: "dyremat",
+    sortOrder: 100,
+    totalItemCount: 0,
+  },
+  {
+    id: "fallback-egne-varer",
+    name: "Egne varer",
+    slug: DEFAULT_CUSTOM_CATEGORY_SLUG,
+    sortOrder: 999,
+    totalItemCount: 0,
+  },
 ];
 
 export default function ShoppingPage() {
@@ -112,17 +199,25 @@ export default function ShoppingPage() {
   const [isCreateListSheetOpen, setIsCreateListSheetOpen] = useState(false);
   const [newListName, setNewListName] = useState("");
   const [createListError, setCreateListError] = useState("");
-  const [activeShoppingListId, setActiveShoppingListId] = useState<string | null>(null);
+  const [activeShoppingListId, setActiveShoppingListId] = useState<
+    string | null
+  >(null);
   const [isShareSheetOpen, setIsShareSheetOpen] = useState(false);
   const [inviteEmail, setInviteEmail] = useState("");
   const [isSharing, setIsSharing] = useState(false);
   const [shareError, setShareError] = useState("");
   const [sharePendingId, setSharePendingId] = useState<string | null>(null);
   const [isRecentItemsOpen, setIsRecentItemsOpen] = useState(false);
-  const [catalogCategories, setCatalogCategories] = useState<ShoppingCatalogCategory[]>([]);
+  const [catalogCategories, setCatalogCategories] = useState<
+    ShoppingCatalogCategory[]
+  >([]);
   const [catalogItems, setCatalogItems] = useState<ShoppingCatalogItem[]>([]);
-  const [catalogSearchResults, setCatalogSearchResults] = useState<ShoppingCatalogItem[]>([]);
-  const [openCatalogCategories, setOpenCatalogCategories] = useState<Record<string, boolean>>({});
+  const [catalogSearchResults, setCatalogSearchResults] = useState<
+    ShoppingCatalogItem[]
+  >([]);
+  const [openCatalogCategories, setOpenCatalogCategories] = useState<
+    Record<string, boolean>
+  >({});
   const [pendingItemId, setPendingItemId] = useState<string | null>(null);
   const [isAdding, setIsAdding] = useState(false);
   const [itemSheetError, setItemSheetError] = useState("");
@@ -164,7 +259,9 @@ export default function ShoppingPage() {
   const uncheckedCount = remainingItems.length;
   const hasMultipleFamilies = families.length > 1;
   const selectedShoppingListName = formatShoppingListName(shoppingList?.name);
-  const isDefaultShoppingList = shoppingList?.isDefault ?? selectedShoppingListName === "Familiehandleliste";
+  const isDefaultShoppingList =
+    shoppingList?.isDefault ??
+    selectedShoppingListName === "Familiehandleliste";
   const isSearchingCatalog = normalizeShoppingSearchValue(label).length >= 2;
   const visibleCatalogCategories = useMemo(
     () =>
@@ -172,10 +269,16 @@ export default function ShoppingPage() {
         .map((categoryOption) => ({
           ...categoryOption,
           items: openCatalogCategories[categoryOption.slug]
-            ? catalogItems.filter((item) => item.categorySlug === categoryOption.slug)
+            ? catalogItems.filter(
+                (item) => item.categorySlug === categoryOption.slug,
+              )
             : [],
         }))
-        .filter((categoryOption) => categoryOption.slug === DEFAULT_CUSTOM_CATEGORY_SLUG || categoryOption.totalItemCount > 0),
+        .filter(
+          (categoryOption) =>
+            categoryOption.slug === DEFAULT_CUSTOM_CATEGORY_SLUG ||
+            categoryOption.totalItemCount > 0,
+        ),
     [catalogCategories, catalogItems, openCatalogCategories],
   );
 
@@ -188,15 +291,17 @@ export default function ShoppingPage() {
     }
 
     const timeout = window.setTimeout(() => {
-      void searchShoppingCatalogItems(label, activeFamilyId ?? undefined).then((items) => {
-        if (!isCancelled) {
-          setCatalogSearchResults(items);
-        }
-      }).catch(() => {
-        if (!isCancelled) {
-          setCatalogSearchResults([]);
-        }
-      });
+      void searchShoppingCatalogItems(label, activeFamilyId ?? undefined)
+        .then((items) => {
+          if (!isCancelled) {
+            setCatalogSearchResults(items);
+          }
+        })
+        .catch(() => {
+          if (!isCancelled) {
+            setCatalogSearchResults([]);
+          }
+        });
     }, 150);
 
     return () => {
@@ -205,7 +310,10 @@ export default function ShoppingPage() {
     };
   }, [activeFamilyId, isSearchingCatalog, label]);
 
-  async function loadShoppingList(familyId = activeFamilyId, listId = activeShoppingListId ?? undefined) {
+  async function loadShoppingList(
+    familyId = activeFamilyId,
+    listId = activeShoppingListId ?? undefined,
+  ) {
     if (!familyId) {
       setStatus("no-family");
       setMessage("Velg familie før du åpner handlelisten.");
@@ -216,7 +324,12 @@ export default function ShoppingPage() {
     setMessage("Laster handleliste …");
 
     try {
-      const [nextShoppingLists, nextShoppingList, nextCatalogCategories, nextCatalogItems] = await Promise.all([
+      const [
+        nextShoppingLists,
+        nextShoppingList,
+        nextCatalogCategories,
+        nextCatalogItems,
+      ] = await Promise.all([
         getShoppingLists(familyId),
         getShoppingList(familyId, listId),
         getShoppingCatalogCategories(familyId),
@@ -225,10 +338,21 @@ export default function ShoppingPage() {
       setShoppingLists(nextShoppingLists);
       setShoppingList(dedupeShoppingListItems(nextShoppingList));
       setActiveShoppingListId(nextShoppingList.id);
-      setCatalogCategories(getCategoryOptions(nextCatalogCategories.length > 0 ? nextCatalogCategories : FALLBACK_SHOPPING_CATEGORIES));
+      setCatalogCategories(
+        getCategoryOptions(
+          nextCatalogCategories.length > 0
+            ? nextCatalogCategories
+            : FALLBACK_SHOPPING_CATEGORIES,
+        ),
+      );
       setCatalogItems(nextCatalogItems);
       setOpenCatalogCategories((currentCategories) => ({
-        ...Object.fromEntries((nextCatalogCategories.length > 0 ? nextCatalogCategories : FALLBACK_SHOPPING_CATEGORIES).map((categoryOption) => [categoryOption.slug, false])),
+        ...Object.fromEntries(
+          (nextCatalogCategories.length > 0
+            ? nextCatalogCategories
+            : FALLBACK_SHOPPING_CATEGORIES
+          ).map((categoryOption) => [categoryOption.slug, false]),
+        ),
         ...currentCategories,
       }));
       setStatus("ready");
@@ -245,20 +369,30 @@ export default function ShoppingPage() {
     await loadShoppingList(familyId);
   }
 
-  async function refreshShoppingData(familyId = activeFamilyId, listId = activeShoppingListId ?? undefined) {
+  async function refreshShoppingData(
+    familyId = activeFamilyId,
+    listId = activeShoppingListId ?? undefined,
+  ) {
     if (!familyId) return;
-    const [nextShoppingList, nextCatalogCategories, nextCatalogItems] = await Promise.all([
-      getShoppingList(familyId, listId),
-      getShoppingCatalogCategories(familyId),
-      getShoppingCatalogItems(familyId),
-    ]);
-    const categories = getCategoryOptions(nextCatalogCategories.length > 0 ? nextCatalogCategories : FALLBACK_SHOPPING_CATEGORIES);
+    const [nextShoppingList, nextCatalogCategories, nextCatalogItems] =
+      await Promise.all([
+        getShoppingList(familyId, listId),
+        getShoppingCatalogCategories(familyId),
+        getShoppingCatalogItems(familyId),
+      ]);
+    const categories = getCategoryOptions(
+      nextCatalogCategories.length > 0
+        ? nextCatalogCategories
+        : FALLBACK_SHOPPING_CATEGORIES,
+    );
     setShoppingList(dedupeShoppingListItems(nextShoppingList));
     setActiveShoppingListId(nextShoppingList.id);
     setCatalogCategories(categories);
     setCatalogItems(nextCatalogItems);
     if (normalizeShoppingSearchValue(label).length >= 2) {
-      setCatalogSearchResults(await searchShoppingCatalogItems(label, familyId));
+      setCatalogSearchResults(
+        await searchShoppingCatalogItems(label, familyId),
+      );
     }
   }
 
@@ -269,7 +403,10 @@ export default function ShoppingPage() {
     const nextQuantity = quantity.trim();
     const nextUnit = unit.trim() || DEFAULT_SHOPPING_UNIT;
     const nextNote = note.trim();
-    const nextCategory = getShoppingCategorySubmissionValue(category, catalogCategories);
+    const nextCategory = getShoppingCategorySubmissionValue(
+      category,
+      catalogCategories,
+    );
     const saveAttempt = currentSaveAttemptRef.current + 1;
     currentSaveAttemptRef.current = saveAttempt;
     setItemSheetError("");
@@ -290,22 +427,56 @@ export default function ShoppingPage() {
         ...(nextCategory ? { category: nextCategory } : {}),
         ...(!editingItemId ? { createCustom: true } : {}),
       };
-      const customEditId = editingItemId?.startsWith("custom:") ? editingItemId.slice("custom:".length) : null;
+      const customEditId = editingItemId?.startsWith("custom:")
+        ? editingItemId.slice("custom:".length)
+        : null;
       const item: ShoppingItem | null = customEditId
         ? null
         : editingItemId
-          ? (await updateShoppingItem(activeFamilyId, editingItemId, input, shoppingList?.id)).item
-          : (await addShoppingItem(activeFamilyId, input, shoppingList?.id)).item;
+          ? (
+              await updateShoppingItem(
+                activeFamilyId,
+                editingItemId,
+                input,
+                shoppingList?.id,
+              )
+            ).item
+          : (await addShoppingItem(activeFamilyId, input, shoppingList?.id))
+              .item;
       if (customEditId) {
-        const updatedCustomItem = await updateFamilyCustomShoppingItem(activeFamilyId, customEditId, { name: nextLabel, defaultUnit: nextUnit, suggestedQuantity: nextQuantity || 1, categorySlug: nextCategory });
-        setCatalogItems((items) => items.map((catalogItem) => catalogItem.id === updatedCustomItem.id ? updatedCustomItem : catalogItem));
-        await refreshShoppingData(activeFamilyId, activeShoppingListId ?? shoppingList?.id);
+        const updatedCustomItem = await updateFamilyCustomShoppingItem(
+          activeFamilyId,
+          customEditId,
+          {
+            name: nextLabel,
+            defaultUnit: nextUnit,
+            suggestedQuantity: nextQuantity || 1,
+            categorySlug: nextCategory,
+          },
+        );
+        setCatalogItems((items) =>
+          items.map((catalogItem) =>
+            catalogItem.id === updatedCustomItem.id
+              ? updatedCustomItem
+              : catalogItem,
+          ),
+        );
+        await refreshShoppingData(
+          activeFamilyId,
+          activeShoppingListId ?? shoppingList?.id,
+        );
       }
       setShoppingList((currentList) =>
         currentList
           ? {
               ...currentList,
-              items: item ? reconcileShoppingListItems(currentList.items, item, Boolean(editingItemId)).sort(sortShoppingItems) : dedupeShoppingItemsById(currentList.items),
+              items: item
+                ? reconcileShoppingListItems(
+                    currentList.items,
+                    item,
+                    Boolean(editingItemId),
+                  ).sort(sortShoppingItems)
+                : dedupeShoppingItemsById(currentList.items),
             }
           : currentList,
       );
@@ -314,7 +485,10 @@ export default function ShoppingPage() {
       setUnit(DEFAULT_SHOPPING_UNIT);
       setNote("");
       setCategory(DEFAULT_CUSTOM_CATEGORY_SLUG);
-      await refreshShoppingData(activeFamilyId, activeShoppingListId ?? shoppingList?.id);
+      await refreshShoppingData(
+        activeFamilyId,
+        activeShoppingListId ?? shoppingList?.id,
+      );
       setIsNewSheetOpen(false);
       setItemSheetError("");
       setEditingItemId(null);
@@ -342,12 +516,20 @@ export default function ShoppingPage() {
     setMessage("");
 
     try {
-      const updatedItem = await toggleShoppingItem(activeFamilyId, itemId, shoppingList?.id);
+      const updatedItem = await toggleShoppingItem(
+        activeFamilyId,
+        itemId,
+        shoppingList?.id,
+      );
       setShoppingList((currentList) =>
         currentList
           ? {
               ...currentList,
-              items: reconcileShoppingListItems(currentList.items, updatedItem, true).sort(sortShoppingItems),
+              items: reconcileShoppingListItems(
+                currentList.items,
+                updatedItem,
+                true,
+              ).sort(sortShoppingItems),
             }
           : currentList,
       );
@@ -411,18 +593,26 @@ export default function ShoppingPage() {
     setMessage("");
 
     try {
-      const { item: addedItem } = await addShoppingItem(activeFamilyId, {
-        label: item.name,
-        quantity: String(item.suggestedQuantity),
-        unit: item.defaultUnit,
-        category: item.categorySlug,
-        ...(item.isCustom ? { customItemId: item.id } : {}),
-      }, shoppingList?.id);
+      const { item: addedItem } = await addShoppingItem(
+        activeFamilyId,
+        {
+          label: item.name,
+          quantity: String(item.suggestedQuantity),
+          unit: item.defaultUnit,
+          category: item.categorySlug,
+          ...(item.isCustom ? { customItemId: item.id } : {}),
+        },
+        shoppingList?.id,
+      );
       setShoppingList((currentList) =>
         currentList
           ? {
               ...currentList,
-              items: reconcileShoppingListItems(currentList.items, addedItem, false).sort(sortShoppingItems),
+              items: reconcileShoppingListItems(
+                currentList.items,
+                addedItem,
+                false,
+              ).sort(sortShoppingItems),
             }
           : currentList,
       );
@@ -481,9 +671,18 @@ export default function ShoppingPage() {
     setEditingItemId(itemId);
     setLabel(item.label);
     setQuantity(item.quantity ?? "");
-    setUnit(item.unit && SHOPPING_UNIT_OPTIONS.includes(item.unit) ? item.unit : DEFAULT_SHOPPING_UNIT);
+    setUnit(
+      item.unit && SHOPPING_UNIT_OPTIONS.includes(item.unit)
+        ? item.unit
+        : DEFAULT_SHOPPING_UNIT,
+    );
     setNote(item.note ?? "");
-    setCategory(getShoppingCategorySubmissionValue(item.category ?? DEFAULT_CUSTOM_CATEGORY_SLUG, catalogCategories));
+    setCategory(
+      getShoppingCategorySubmissionValue(
+        item.category ?? DEFAULT_CUSTOM_CATEGORY_SLUG,
+        catalogCategories,
+      ),
+    );
     setOpenMenuItemId(null);
     setItemSheetError("");
     setIsNewSheetOpen(true);
@@ -510,15 +709,20 @@ export default function ShoppingPage() {
     );
   }
 
-
   async function handleEditCustomCatalogItem(item: ShoppingCatalogItem) {
     currentSaveAttemptRef.current += 1;
     setEditingItemId(`custom:${item.id}`);
     setLabel(item.name);
     setQuantity(String(item.suggestedQuantity));
-    setUnit(item.defaultUnit && SHOPPING_UNIT_OPTIONS.includes(item.defaultUnit) ? item.defaultUnit : DEFAULT_SHOPPING_UNIT);
+    setUnit(
+      item.defaultUnit && SHOPPING_UNIT_OPTIONS.includes(item.defaultUnit)
+        ? item.defaultUnit
+        : DEFAULT_SHOPPING_UNIT,
+    );
     setNote("");
-    setCategory(getShoppingCategorySubmissionValue(item.categorySlug, catalogCategories));
+    setCategory(
+      getShoppingCategorySubmissionValue(item.categorySlug, catalogCategories),
+    );
     setOpenMenuItemId(null);
     setItemSheetError("");
     setIsNewSheetOpen(true);
@@ -530,7 +734,10 @@ export default function ShoppingPage() {
     setMessage("");
     try {
       await deleteFamilyCustomShoppingItem(activeFamilyId, itemId);
-      await refreshShoppingData(activeFamilyId, activeShoppingListId ?? shoppingList?.id);
+      await refreshShoppingData(
+        activeFamilyId,
+        activeShoppingListId ?? shoppingList?.id,
+      );
       setOpenMenuItemId(null);
     } catch (error) {
       handleActionError(error, "Kunne ikke slette egen vare. Prøv igjen.");
@@ -554,9 +761,16 @@ export default function ShoppingPage() {
     if (!activeFamilyId || newListName.trim().length === 0) return;
     setCreateListError("");
     try {
-      const created = await createShoppingList(activeFamilyId, newListName.trim());
+      const created = await createShoppingList(
+        activeFamilyId,
+        newListName.trim(),
+      );
       const nextShoppingLists = await getShoppingLists(activeFamilyId);
-      setShoppingLists(nextShoppingLists.some((list) => list.id === created.id) ? nextShoppingLists : [...nextShoppingLists, created]);
+      setShoppingLists(
+        nextShoppingLists.some((list) => list.id === created.id)
+          ? nextShoppingLists
+          : [...nextShoppingLists, created],
+      );
       setShoppingList(dedupeShoppingListItems(created));
       setActiveShoppingListId(created.id);
       setNewListName("");
@@ -564,7 +778,10 @@ export default function ShoppingPage() {
       setStatus("ready");
       setMessage("");
     } catch (error) {
-      const errorMessage = getUserFacingApiMessage(error, "Kunne ikke opprette handlelisten. Prøv igjen.");
+      const errorMessage = getUserFacingApiMessage(
+        error,
+        "Kunne ikke opprette handlelisten. Prøv igjen.",
+      );
       setCreateListError(errorMessage);
       setMessage(errorMessage);
       handleActionError(error, "Kunne ikke opprette handlelisten. Prøv igjen.");
@@ -573,17 +790,57 @@ export default function ShoppingPage() {
 
   async function handleShareShoppingList(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
-    if (!activeFamilyId || !shoppingList || shoppingList.isDefault || inviteEmail.trim().length === 0 || isSharing) return;
+    if (
+      !activeFamilyId ||
+      !shoppingList ||
+      shoppingList.isDefault ||
+      inviteEmail.trim().length === 0 ||
+      isSharing
+    )
+      return;
     setIsSharing(true);
     setShareError("");
     try {
-      const response = await inviteToShoppingList(activeFamilyId, shoppingList.id, inviteEmail.trim());
-      setShoppingList((current) => current ? { ...current, invitations: [response.invitation, ...(current.invitations ?? []).filter((invite) => invite.id !== response.invitation.id)] } : current);
-      setShoppingLists((lists) => lists.map((list) => list.id === shoppingList.id ? { ...list, invitations: [response.invitation, ...(list.invitations ?? []).filter((invite) => invite.id !== response.invitation.id)] } : list));
+      const response = await inviteToShoppingList(
+        activeFamilyId,
+        shoppingList.id,
+        inviteEmail.trim(),
+      );
+      setShoppingList((current) =>
+        current
+          ? {
+              ...current,
+              invitations: [
+                response.invitation,
+                ...(current.invitations ?? []).filter(
+                  (invite) => invite.id !== response.invitation.id,
+                ),
+              ],
+            }
+          : current,
+      );
+      setShoppingLists((lists) =>
+        lists.map((list) =>
+          list.id === shoppingList.id
+            ? {
+                ...list,
+                invitations: [
+                  response.invitation,
+                  ...(list.invitations ?? []).filter(
+                    (invite) => invite.id !== response.invitation.id,
+                  ),
+                ],
+              }
+            : list,
+        ),
+      );
       setInviteEmail("");
       setMessage("Invitasjonen er sendt.");
     } catch (error) {
-      const errorMessage = getUserFacingApiMessage(error, "Kunne ikke sende invitasjonen. Prøv igjen.");
+      const errorMessage = getUserFacingApiMessage(
+        error,
+        "Kunne ikke sende invitasjonen. Prøv igjen.",
+      );
       setShareError(errorMessage);
     } finally {
       setIsSharing(false);
@@ -595,11 +852,40 @@ export default function ShoppingPage() {
     setSharePendingId(invitationId);
     setShareError("");
     try {
-      const updated = await revokeShoppingListInvitation(activeFamilyId, shoppingList.id, invitationId);
-      setShoppingList((current) => current ? { ...current, invitations: (current.invitations ?? []).map((invite) => invite.id === updated.id ? updated : invite) } : current);
-      setShoppingLists((lists) => lists.map((list) => list.id === shoppingList.id ? { ...list, invitations: (list.invitations ?? []).map((invite) => invite.id === updated.id ? updated : invite) } : list));
+      const updated = await revokeShoppingListInvitation(
+        activeFamilyId,
+        shoppingList.id,
+        invitationId,
+      );
+      setShoppingList((current) =>
+        current
+          ? {
+              ...current,
+              invitations: (current.invitations ?? []).map((invite) =>
+                invite.id === updated.id ? updated : invite,
+              ),
+            }
+          : current,
+      );
+      setShoppingLists((lists) =>
+        lists.map((list) =>
+          list.id === shoppingList.id
+            ? {
+                ...list,
+                invitations: (list.invitations ?? []).map((invite) =>
+                  invite.id === updated.id ? updated : invite,
+                ),
+              }
+            : list,
+        ),
+      );
     } catch (error) {
-      setShareError(getUserFacingApiMessage(error, "Kunne ikke trekke tilbake invitasjonen."));
+      setShareError(
+        getUserFacingApiMessage(
+          error,
+          "Kunne ikke trekke tilbake invitasjonen.",
+        ),
+      );
     } finally {
       setSharePendingId(null);
     }
@@ -610,17 +896,38 @@ export default function ShoppingPage() {
     setSharePendingId(userId);
     setShareError("");
     try {
-      await removeShoppingListCollaborator(activeFamilyId, shoppingList.id, userId);
-      setShoppingList((current) => current ? { ...current, collaborators: (current.collaborators ?? []).filter((collaborator) => collaborator.userId !== userId) } : current);
+      await removeShoppingListCollaborator(
+        activeFamilyId,
+        shoppingList.id,
+        userId,
+      );
+      setShoppingList((current) =>
+        current
+          ? {
+              ...current,
+              collaborators: (current.collaborators ?? []).filter(
+                (collaborator) => collaborator.userId !== userId,
+              ),
+            }
+          : current,
+      );
     } catch (error) {
-      setShareError(getUserFacingApiMessage(error, "Kunne ikke fjerne tilgang."));
+      setShareError(
+        getUserFacingApiMessage(error, "Kunne ikke fjerne tilgang."),
+      );
     } finally {
       setSharePendingId(null);
     }
   }
 
   async function handleLeaveShoppingList() {
-    if (!activeFamilyId || !shoppingList || sharePendingId || shoppingList.ownerUserId === null) return;
+    if (
+      !activeFamilyId ||
+      !shoppingList ||
+      sharePendingId ||
+      shoppingList.ownerUserId === null
+    )
+      return;
     setSharePendingId("me");
     setShareError("");
     try {
@@ -631,7 +938,9 @@ export default function ShoppingPage() {
       if (nextList) await loadShoppingList(activeFamilyId, nextList.id);
       setIsShareSheetOpen(false);
     } catch (error) {
-      setShareError(getUserFacingApiMessage(error, "Kunne ikke forlate handlelisten."));
+      setShareError(
+        getUserFacingApiMessage(error, "Kunne ikke forlate handlelisten."),
+      );
     } finally {
       setSharePendingId(null);
     }
@@ -703,7 +1012,6 @@ export default function ShoppingPage() {
             description="Vent litt mens vi bekrefter familietilknytningen din."
           />
         </Card>
-
       </PageContainer>
     );
   }
@@ -745,7 +1053,11 @@ export default function ShoppingPage() {
               <ChevronDown aria-hidden="true" size={18} strokeWidth={2.5} />
             </button>
             {!isDefaultShoppingList ? (
-              <button className="husk-filter-button" type="button" onClick={() => setIsShareSheetOpen(true)}>
+              <button
+                className="husk-filter-button"
+                type="button"
+                onClick={() => setIsShareSheetOpen(true)}
+              >
                 <Share2 aria-hidden="true" size={20} strokeWidth={2.4} />
                 <span>Del</span>
               </button>
@@ -851,7 +1163,11 @@ export default function ShoppingPage() {
                       id="shopping-search-input"
                       className="husk-search__input"
                       maxLength={120}
-                      onChange={(event) => { setLabel(event.target.value); setItemSheetError(""); currentSaveAttemptRef.current += 1; }}
+                      onChange={(event) => {
+                        setLabel(event.target.value);
+                        setItemSheetError("");
+                        currentSaveAttemptRef.current += 1;
+                      }}
                       onFocus={() => setMessage("")}
                       placeholder="Jeg trenger ..."
                       value={label}
@@ -939,10 +1255,12 @@ export default function ShoppingPage() {
           ) : null}
         </section>
 
-        <HuskMobileSheet
+        <AppSheet
+          baseClassName="calendar-filter-sheet"
           isOpen={isNewSheetOpen}
           labelledBy="shopping-item-sheet-title"
           onClose={handleCloseItemSheet}
+          wrapContent={false}
         >
           <form className="shopping-edit-sheet" onSubmit={handleAddItem}>
             <div className="calendar-filter-sheet__header">
@@ -965,48 +1283,91 @@ export default function ShoppingPage() {
               </button>
             </div>
             <div className="calendar-filter-sheet__content shopping-edit-sheet__content">
-              {itemSheetError ? <p className="shopping-create-list-sheet__error" role="alert">{itemSheetError}</p> : null}
-              <label className="husk-school-field">
+              {itemSheetError ? (
+                <p className="shopping-create-list-sheet__error" role="alert">
+                  {itemSheetError}
+                </p>
+              ) : null}
+              <AppField className="husk-school-field">
                 <span>Navn</span>
                 <input
                   maxLength={120}
-                  onChange={(event) => { setLabel(event.target.value); setItemSheetError(""); currentSaveAttemptRef.current += 1; }}
+                  onChange={(event) => {
+                    setLabel(event.target.value);
+                    setItemSheetError("");
+                    currentSaveAttemptRef.current += 1;
+                  }}
                   placeholder="Jeg trenger ..."
                   value={label}
                 />
-              </label>
+              </AppField>
               <div className="shopping-edit-sheet__grid">
-                <label className="husk-school-field">
+                <AppField className="husk-school-field">
                   <span>Antall</span>
                   <input
                     maxLength={60}
-                    onChange={(event) => { setQuantity(event.target.value); setItemSheetError(""); currentSaveAttemptRef.current += 1; }}
+                    onChange={(event) => {
+                      setQuantity(event.target.value);
+                      setItemSheetError("");
+                      currentSaveAttemptRef.current += 1;
+                    }}
                     placeholder="2"
                     value={quantity}
                   />
-                </label>
-                <label className="husk-school-field">
+                </AppField>
+                <AppField className="husk-school-field">
                   <span>Enhet</span>
-                  <select onChange={(event) => { setUnit(event.target.value); setItemSheetError(""); currentSaveAttemptRef.current += 1; }} value={unit}>
-                    {SHOPPING_UNIT_OPTIONS.map((unitOption) => <option key={unitOption} value={unitOption}>{unitOption}</option>)}
-                  </select>
-                </label>
+                  <AppSelect
+                    onChange={(event) => {
+                      setUnit(event.target.value);
+                      setItemSheetError("");
+                      currentSaveAttemptRef.current += 1;
+                    }}
+                    value={unit}
+                  >
+                    {SHOPPING_UNIT_OPTIONS.map((unitOption) => (
+                      <option key={unitOption} value={unitOption}>
+                        {unitOption}
+                      </option>
+                    ))}
+                  </AppSelect>
+                </AppField>
               </div>
-              <label className="husk-school-field">
+              <AppField className="husk-school-field">
                 <span>Notat</span>
-                <textarea
+                <AppTextarea
                   maxLength={240}
-                  onChange={(event) => { setNote(event.target.value); setItemSheetError(""); currentSaveAttemptRef.current += 1; }}
+                  onChange={(event) => {
+                    setNote(event.target.value);
+                    setItemSheetError("");
+                    currentSaveAttemptRef.current += 1;
+                  }}
                   placeholder="F.eks. merke eller tilbud"
                   value={note}
                 />
-              </label>
-              <label className="husk-school-field">
+              </AppField>
+              <AppField className="husk-school-field">
                 <span>Kategori</span>
-                <select onChange={(event) => { setCategory(event.target.value); setItemSheetError(""); currentSaveAttemptRef.current += 1; }} value={category}>
-                  {getCategoryOptions(catalogCategories).map((categoryOption) => <option key={categoryOption.slug} value={categoryOption.slug}>{categoryOption.name}</option>)}
-                </select>
-              </label>
+                <AppSelect
+                  onChange={(event) => {
+                    setCategory(event.target.value);
+                    setItemSheetError("");
+                    currentSaveAttemptRef.current += 1;
+                  }}
+                  value={category}
+                >
+                  {getCategoryOptions(catalogCategories).map(
+                    (categoryOption) => (
+                      <option
+                        key={categoryOption.slug}
+                        value={categoryOption.slug}
+                      >
+                        {categoryOption.name}
+                      </option>
+                    ),
+                  )}
+                </AppSelect>
+              </AppField>
             </div>
             <div className="calendar-filter-sheet__actions">
               <button
@@ -1025,12 +1386,14 @@ export default function ShoppingPage() {
               </button>
             </div>
           </form>
-        </HuskMobileSheet>
+        </AppSheet>
 
-        <HuskMobileSheet
+        <AppSheet
+          baseClassName="calendar-filter-sheet"
           isOpen={isListSheetOpen}
           labelledBy="shopping-list-sheet-title"
           onClose={() => setIsListSheetOpen(false)}
+          wrapContent={false}
         >
           <div className="shopping-sheet shopping-list-sheet">
             <div className="calendar-filter-sheet__header">
@@ -1062,9 +1425,15 @@ export default function ShoppingPage() {
                 >
                   <span>
                     <strong>{formatShoppingListName(list.name)}</strong>
-                    <small>{list.isDefault ? "Standardlisten for familien" : "Delt handleliste"}</small>
+                    <small>
+                      {list.isDefault
+                        ? "Standardlisten for familien"
+                        : "Delt handleliste"}
+                    </small>
                   </span>
-                  {list.id === shoppingList?.id ? <Check aria-hidden="true" size={20} strokeWidth={2.6} /> : null}
+                  {list.id === shoppingList?.id ? (
+                    <Check aria-hidden="true" size={20} strokeWidth={2.6} />
+                  ) : null}
                 </button>
               ))}
             </div>
@@ -1082,17 +1451,22 @@ export default function ShoppingPage() {
               </button>
             </div>
           </div>
-        </HuskMobileSheet>
+        </AppSheet>
 
-        <HuskMobileSheet
+        <AppSheet
+          baseClassName="calendar-filter-sheet"
           isOpen={isCreateListSheetOpen}
           labelledBy="shopping-create-list-sheet-title"
           onClose={() => {
             setIsCreateListSheetOpen(false);
             setCreateListError("");
           }}
+          wrapContent={false}
         >
-          <form className="shopping-sheet shopping-create-list-sheet" onSubmit={handleCreateShoppingList}>
+          <form
+            className="shopping-sheet shopping-create-list-sheet"
+            onSubmit={handleCreateShoppingList}
+          >
             <div className="calendar-filter-sheet__header">
               <div>
                 <p className="husk-school-sheet__eyebrow">Handleliste</p>
@@ -1116,7 +1490,7 @@ export default function ShoppingPage() {
               </button>
             </div>
             <div className="calendar-filter-sheet__content shopping-create-list-sheet__content">
-              <label className="husk-school-field">
+              <AppField className="husk-school-field">
                 <span>Navn på handleliste</span>
                 <input
                   maxLength={80}
@@ -1127,8 +1501,10 @@ export default function ShoppingPage() {
                   placeholder="F.eks. Helgehandel"
                   value={newListName}
                 />
-              </label>
-              <p className="shopping-create-list-sheet__notice">Listen opprettes som en egen handleliste du kan dele.</p>
+              </AppField>
+              <p className="shopping-create-list-sheet__notice">
+                Listen opprettes som en egen handleliste du kan dele.
+              </p>
               {createListError ? (
                 <p className="shopping-create-list-sheet__error" role="alert">
                   {createListError}
@@ -1152,50 +1528,135 @@ export default function ShoppingPage() {
               </button>
             </div>
           </form>
-        </HuskMobileSheet>
+        </AppSheet>
 
-        <HuskMobileSheet
+        <AppSheet
+          baseClassName="calendar-filter-sheet"
           isOpen={isShareSheetOpen}
           labelledBy="shopping-share-sheet-title"
           onClose={() => setIsShareSheetOpen(false)}
+          wrapContent={false}
         >
-          <form className="shopping-sheet shopping-create-list-sheet" onSubmit={handleShareShoppingList}>
+          <form
+            className="shopping-sheet shopping-create-list-sheet"
+            onSubmit={handleShareShoppingList}
+          >
             <div className="calendar-filter-sheet__header">
               <div>
                 <p className="husk-school-sheet__eyebrow">Del handleliste</p>
-                <h2 id="shopping-share-sheet-title" className="calendar-filter-sheet__title">Inviter på e-post</h2>
+                <h2
+                  id="shopping-share-sheet-title"
+                  className="calendar-filter-sheet__title"
+                >
+                  Inviter på e-post
+                </h2>
               </div>
-              <button className="calendar-filter-sheet__close" type="button" aria-label="Lukk" onClick={() => setIsShareSheetOpen(false)}><X aria-hidden="true" size={18} strokeWidth={2.5} /></button>
+              <button
+                className="calendar-filter-sheet__close"
+                type="button"
+                aria-label="Lukk"
+                onClick={() => setIsShareSheetOpen(false)}
+              >
+                <X aria-hidden="true" size={18} strokeWidth={2.5} />
+              </button>
             </div>
             <div className="calendar-filter-sheet__content shopping-create-list-sheet__content">
-              <label className="husk-school-field">
+              <AppField className="husk-school-field">
                 <span>E-postadresse</span>
-                <input maxLength={160} onChange={(event) => { setInviteEmail(event.target.value); setShareError(""); }} placeholder="navn@eksempel.no" type="email" value={inviteEmail} />
-              </label>
-              {shareError ? <p className="shopping-create-list-sheet__error" role="alert">{shareError}</p> : null}
+                <input
+                  maxLength={160}
+                  onChange={(event) => {
+                    setInviteEmail(event.target.value);
+                    setShareError("");
+                  }}
+                  placeholder="navn@eksempel.no"
+                  type="email"
+                  value={inviteEmail}
+                />
+              </AppField>
+              {shareError ? (
+                <p className="shopping-create-list-sheet__error" role="alert">
+                  {shareError}
+                </p>
+              ) : null}
               {(shoppingList?.invitations ?? []).length > 0 ? (
                 <div className="shopping-create-list-sheet__notice">
                   {(shoppingList?.invitations ?? []).map((invite) => (
-                    <p key={invite.id}>{invite.invitedEmail}: {invite.status === "accepted" ? "Akseptert" : invite.status === "pending" ? "Venter" : invite.status} {invite.status === "pending" ? <button type="button" onClick={() => handleRevokeInvitation(invite.id)} disabled={sharePendingId === invite.id}>Trekk tilbake</button> : null}</p>
+                    <p key={invite.id}>
+                      {invite.invitedEmail}:{" "}
+                      {invite.status === "accepted"
+                        ? "Akseptert"
+                        : invite.status === "pending"
+                          ? "Venter"
+                          : invite.status}{" "}
+                      {invite.status === "pending" ? (
+                        <button
+                          type="button"
+                          onClick={() => handleRevokeInvitation(invite.id)}
+                          disabled={sharePendingId === invite.id}
+                        >
+                          Trekk tilbake
+                        </button>
+                      ) : null}
+                    </p>
                   ))}
                 </div>
               ) : null}
-              {(shoppingList?.collaborators ?? []).length > 0 ? <div className="shopping-create-list-sheet__notice">{(shoppingList?.collaborators ?? []).map((collaborator) => <p key={collaborator.id}>{collaborator.name ?? collaborator.email}: <button type="button" onClick={() => handleRemoveCollaborator(collaborator.userId)} disabled={sharePendingId === collaborator.userId}>Fjern tilgang</button></p>)}</div> : null}
-              {shoppingList && !shoppingList.isDefault && shoppingList.ownerUserId ? <button className="calendar-filter-sheet__action calendar-filter-sheet__action--secondary" type="button" onClick={handleLeaveShoppingList} disabled={sharePendingId === "me"}>Forlat delt liste</button> : null}
+              {(shoppingList?.collaborators ?? []).length > 0 ? (
+                <div className="shopping-create-list-sheet__notice">
+                  {(shoppingList?.collaborators ?? []).map((collaborator) => (
+                    <p key={collaborator.id}>
+                      {collaborator.name ?? collaborator.email}:{" "}
+                      <button
+                        type="button"
+                        onClick={() =>
+                          handleRemoveCollaborator(collaborator.userId)
+                        }
+                        disabled={sharePendingId === collaborator.userId}
+                      >
+                        Fjern tilgang
+                      </button>
+                    </p>
+                  ))}
+                </div>
+              ) : null}
+              {shoppingList &&
+              !shoppingList.isDefault &&
+              shoppingList.ownerUserId ? (
+                <button
+                  className="calendar-filter-sheet__action calendar-filter-sheet__action--secondary"
+                  type="button"
+                  onClick={handleLeaveShoppingList}
+                  disabled={sharePendingId === "me"}
+                >
+                  Forlat delt liste
+                </button>
+              ) : null}
             </div>
             <div className="calendar-filter-sheet__actions">
-              <button className="calendar-filter-sheet__action calendar-filter-sheet__action--secondary" type="button" onClick={() => setIsShareSheetOpen(false)}>Lukk</button>
-              <button className="calendar-filter-sheet__action calendar-filter-sheet__action--primary" disabled={isSharing || inviteEmail.trim().length === 0} type="submit">{isSharing ? "Sender …" : "Send invitasjon"}</button>
+              <button
+                className="calendar-filter-sheet__action calendar-filter-sheet__action--secondary"
+                type="button"
+                onClick={() => setIsShareSheetOpen(false)}
+              >
+                Lukk
+              </button>
+              <button
+                className="calendar-filter-sheet__action calendar-filter-sheet__action--primary"
+                disabled={isSharing || inviteEmail.trim().length === 0}
+                type="submit"
+              >
+                {isSharing ? "Sender …" : "Send invitasjon"}
+              </button>
             </div>
           </form>
-        </HuskMobileSheet>
+        </AppSheet>
       </PageContainer>
     </AppShell>
   );
 }
 
 type ShoppingItem = ShoppingList["items"][number];
-
 
 function dedupeShoppingListItems<T extends ShoppingList | null>(list: T): T {
   if (!list) return list;
@@ -1212,7 +1673,11 @@ function dedupeShoppingItemsById(items: ShoppingItem[]) {
   return [...byId.values()];
 }
 
-function reconcileShoppingListItems(items: ShoppingItem[], nextItem: ShoppingItem, replaceOnly: boolean) {
+function reconcileShoppingListItems(
+  items: ShoppingItem[],
+  nextItem: ShoppingItem,
+  replaceOnly: boolean,
+) {
   let didReplace = false;
   const nextItems = dedupeShoppingItemsById(items).map((item) => {
     if (item.id !== nextItem.id) {
@@ -1306,19 +1771,30 @@ function RecentItemGrid({
     <div className="shopping-catalog-grid">
       {items.map((item) => {
         const activeItem = findMatchingShoppingItem(item, shoppingItems, false);
-        const completedItem = findMatchingShoppingItem(item, shoppingItems, true);
-        const isBusy = completedItem ? pendingItemId === completedItem.id : false;
+        const completedItem = findMatchingShoppingItem(
+          item,
+          shoppingItems,
+          true,
+        );
+        const isBusy = completedItem
+          ? pendingItemId === completedItem.id
+          : false;
         return (
           <button
             className="shopping-catalog-item"
             disabled={Boolean(activeItem) || isBusy}
             key={`recent-${item.categorySlug}-${item.name}`}
             type="button"
-            onClick={() => completedItem ? onRestoreItem(completedItem.id) : onAddCatalogItem(item)}
+            onClick={() =>
+              completedItem
+                ? onRestoreItem(completedItem.id)
+                : onAddCatalogItem(item)
+            }
           >
             <span className="shopping-catalog-item__name">{item.name}</span>
             <span className="shopping-catalog-item__meta">
-              {item.suggestedQuantity} {item.defaultUnit} · {getShoppingCategoryName(item.categorySlug, catalogCategories)}
+              {item.suggestedQuantity} {item.defaultUnit} ·{" "}
+              {getShoppingCategoryName(item.categorySlug, catalogCategories)}
               {activeItem ? " · I listen" : ""}
             </span>
           </button>
@@ -1351,7 +1827,14 @@ function CatalogItemGrid({
       {items.map((item) => {
         const alreadyAdded = isCatalogItemInList(item, shoppingItems);
         return (
-          <div className={item.isCustom ? "shopping-catalog-item-shell shopping-catalog-item-shell--custom" : "shopping-catalog-item-shell"} key={`${item.categorySlug}-${item.name}`}>
+          <div
+            className={
+              item.isCustom
+                ? "shopping-catalog-item-shell shopping-catalog-item-shell--custom"
+                : "shopping-catalog-item-shell"
+            }
+            key={`${item.categorySlug}-${item.name}`}
+          >
             <button
               className="shopping-catalog-item"
               disabled={alreadyAdded}
@@ -1366,13 +1849,32 @@ function CatalogItemGrid({
             </button>
             {item.isCustom ? (
               <div className="shopping-catalog-item__menu-wrap">
-                <button className="shopping-item-card__menu-button" type="button" aria-label={`Meny for ${item.name}`} onClick={(event) => onMenuClick(event, item.id)}>
-                  <MoreHorizontal aria-hidden="true" size={18} strokeWidth={2.5} />
-                </button>
+                <AppMenuButton
+                  className="shopping-item-card__menu-button"
+                  type="button"
+                  aria-label={`Meny for ${item.name}`}
+                  onClick={(event) => onMenuClick(event, item.id)}
+                >
+                  <MoreHorizontal
+                    aria-hidden="true"
+                    size={18}
+                    strokeWidth={2.5}
+                  />
+                </AppMenuButton>
                 {openMenuItemId === item.id ? (
                   <div className="shopping-item-card__menu-popover">
-                    <button type="button" onClick={() => onEditCustomItem(item)}>Rediger</button>
-                    <button type="button" onClick={() => onDeleteCustomItem(item.id)}>Slett</button>
+                    <button
+                      type="button"
+                      onClick={() => onEditCustomItem(item)}
+                    >
+                      Rediger
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => onDeleteCustomItem(item.id)}
+                    >
+                      Slett
+                    </button>
                   </div>
                 ) : null}
               </div>
@@ -1421,7 +1923,8 @@ function getCatalogItemForShoppingItem(
 ) {
   if (shoppingItem.familyCustomShoppingItemId) {
     const customCatalogItem = catalogItems.find(
-      (catalogItem) => catalogItem.id === shoppingItem.familyCustomShoppingItemId,
+      (catalogItem) =>
+        catalogItem.id === shoppingItem.familyCustomShoppingItemId,
     );
 
     if (customCatalogItem) {
@@ -1445,7 +1948,10 @@ function getRecentShoppingCatalogItems(
   const recentItems = new Map<string, ShoppingCatalogItem>();
 
   for (const shoppingItem of shoppingItems) {
-    const catalogItem = getCatalogItemForShoppingItem(shoppingItem, catalogItems);
+    const catalogItem = getCatalogItemForShoppingItem(
+      shoppingItem,
+      catalogItems,
+    );
 
     if (!catalogItem) {
       continue;
@@ -1491,17 +1997,31 @@ function getShoppingCategoryName(
   categorySlug: string,
   catalogCategories: ShoppingCatalogCategory[],
 ) {
-  return catalogCategories.find((category) => category.slug === categorySlug)?.name ?? categorySlug;
+  return (
+    catalogCategories.find((category) => category.slug === categorySlug)
+      ?.name ?? categorySlug
+  );
 }
 
 function getCategoryOptions(catalogCategories: ShoppingCatalogCategory[]) {
-  const options = catalogCategories.length > 0 ? catalogCategories : FALLBACK_SHOPPING_CATEGORIES;
-  return options.some((categoryOption) => categoryOption.slug === DEFAULT_CUSTOM_CATEGORY_SLUG)
+  const options =
+    catalogCategories.length > 0
+      ? catalogCategories
+      : FALLBACK_SHOPPING_CATEGORIES;
+  return options.some(
+    (categoryOption) => categoryOption.slug === DEFAULT_CUSTOM_CATEGORY_SLUG,
+  )
     ? options
-    : [...options, FALLBACK_SHOPPING_CATEGORIES[FALLBACK_SHOPPING_CATEGORIES.length - 1]];
+    : [
+        ...options,
+        FALLBACK_SHOPPING_CATEGORIES[FALLBACK_SHOPPING_CATEGORIES.length - 1],
+      ];
 }
 
-function getShoppingCategorySubmissionValue(category: string, catalogCategories: ShoppingCatalogCategory[]) {
+function getShoppingCategorySubmissionValue(
+  category: string,
+  catalogCategories: ShoppingCatalogCategory[],
+) {
   const trimmedCategory = category.trim();
 
   if (!trimmedCategory) {
@@ -1522,7 +2042,10 @@ function getShoppingCategorySubmissionValue(category: string, catalogCategories:
   );
 }
 
-function getShoppingItemCategory(item: ShoppingItem, catalogCategories: ShoppingCatalogCategory[]) {
+function getShoppingItemCategory(
+  item: ShoppingItem,
+  catalogCategories: ShoppingCatalogCategory[],
+) {
   if (!item.category) {
     return { name: "Andre varer", slug: "andre-varer", sortOrder: 999 };
   }
@@ -1532,7 +2055,9 @@ function getShoppingItemCategory(item: ShoppingItem, catalogCategories: Shopping
   }
 
   return (
-    catalogCategories.find((categoryOption) => categoryOption.slug === item.category) ?? {
+    catalogCategories.find(
+      (categoryOption) => categoryOption.slug === item.category,
+    ) ?? {
       name: item.category,
       slug: normalizeShoppingSearchValue(item.category).replace(/ /g, "-"),
       sortOrder: 997,
@@ -1540,7 +2065,10 @@ function getShoppingItemCategory(item: ShoppingItem, catalogCategories: Shopping
   );
 }
 
-function groupShoppingItemsByCategory(items: ShoppingItem[], catalogCategories: ShoppingCatalogCategory[]) {
+function groupShoppingItemsByCategory(
+  items: ShoppingItem[],
+  catalogCategories: ShoppingCatalogCategory[],
+) {
   const groups = new Map<
     string,
     { items: ShoppingItem[]; name: string; slug: string; sortOrder: number }
@@ -1606,7 +2134,7 @@ function ShoppingItemCard({
         </span>
       </button>
       <div className="shopping-list__menu-wrap">
-        <button
+        <AppMenuButton
           aria-label={`Meny for ${item.label}`}
           className="shopping-list__menu-button"
           disabled={isBusy}
@@ -1614,7 +2142,7 @@ function ShoppingItemCard({
           type="button"
         >
           <MoreHorizontal aria-hidden="true" size={20} strokeWidth={2.5} />
-        </button>
+        </AppMenuButton>
         {isMenuOpen ? (
           <div className="shopping-list__menu" role="menu">
             <button
@@ -1638,11 +2166,16 @@ function ShoppingItemCard({
   );
 }
 
-function formatShoppingItemMeta(item: ShoppingItem, catalogCategories: ShoppingCatalogCategory[]) {
+function formatShoppingItemMeta(
+  item: ShoppingItem,
+  catalogCategories: ShoppingCatalogCategory[],
+) {
   return [
     item.quantity,
     item.unit,
-    item.category ? getShoppingItemCategory(item, catalogCategories).name : null,
+    item.category
+      ? getShoppingItemCategory(item, catalogCategories).name
+      : null,
     item.note,
   ]
     .filter(Boolean)
