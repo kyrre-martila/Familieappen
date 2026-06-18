@@ -6450,7 +6450,8 @@ button.calendar-chip {
   border-bottom: 0;
 }
 
-.event-form-row span {
+.event-form-row span,
+.event-form-row > label {
   color: var(--color-text);
   font-size: var(--text-body);
   font-weight: 800;
@@ -6477,6 +6478,17 @@ button.calendar-chip {
 
 .event-form-row--toggle {
   grid-template-columns: auto minmax(0, 1fr) auto;
+}
+
+.event-form-row--picker {
+  text-decoration: none;
+}
+
+.event-form-row__value {
+  color: var(--color-muted);
+  font-size: var(--text-small);
+  font-weight: 780;
+  text-align: right;
 }
 
 .event-form-toggle {
@@ -14185,6 +14197,11 @@ button.family-settings-row:focus-visible:not(:disabled) {
 
 .husk-reminder-edit-sheet__rows .event-form-row {
   padding: var(--space-s) var(--space-m);
+}
+
+.husk-focus-private-row {
+  border-bottom: 0;
+  padding: var(--space-s) 0 0;
 }
 
 @media (max-width: 520px) {
