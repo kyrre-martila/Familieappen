@@ -77,4 +77,31 @@
   --shadow-soft: 0 var(--space-s) var(--space-l) color-mix(in srgb, var(--color-text) 8%, transparent);
   --shadow-floating: 0 var(--space-m) var(--space-xl) color-mix(in srgb, var(--color-primary-strong) 24%, transparent);
   --shadow-sheet: 0 calc(var(--space-l) * -1) var(--space-xl) color-mix(in srgb, var(--color-text) 14%, transparent);
+
+  /*
+   * App design system baseline tokens.
+   * These values are centralized from the current Ny oppgave sheet,
+   * Handleliste page cards/rows, bottom navigation, and center plus action.
+   * Keep new shared primitives on these aliases so future screen migrations
+   * preserve the existing FamilieAppen visual language instead of inventing
+   * one-off styling.
+   */
+  --app-background: var(--color-background);
+  --app-card-background: var(--color-surface);
+  --app-card-border: var(--color-border);
+  --app-card-shadow: 0 var(--space-xs) var(--space-m) color-mix(in srgb, var(--color-text) 5%, transparent);
+  --app-card-radius: var(--radius-l);
+  --app-sheet-radius: calc(var(--radius-l) + var(--space-s));
+  --app-page-padding: var(--gutter);
+  --app-card-padding: var(--card-padding);
+  --app-section-gap: var(--section-gap);
+  --app-field-height: calc(var(--space-xl) + var(--space-xs));
+  --app-input-radius: var(--radius-m);
+  --app-label-text-size: var(--text-small);
+  --app-label-text-weight: 850;
+  --app-metadata-text-size: var(--text-small);
+  --app-metadata-text-color: var(--color-muted);
+  --app-footer-safe-area-spacing: calc(var(--space-m) + env(safe-area-inset-bottom));
+  --app-selected-border: color-mix(in srgb, var(--color-primary) 32%, var(--color-border));
+  --app-selected-background: color-mix(in srgb, var(--color-primary-soft) 42%, var(--color-surface));
 }

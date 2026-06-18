@@ -15171,3 +15171,223 @@ button.family-settings-row:focus-visible:not(:disabled) {
     grid-template-columns: auto minmax(4.7rem, 1fr) minmax(0, 1fr);
   }
 }
+
+/*
+ * Shared app-ui primitives: thin wrappers over Ny oppgave sheet and
+ * Handleliste mobile page styling. These classes should stay token-driven so
+ * future migrations can swap local markup without visual redesigns.
+ */
+.app-card {
+  display: grid;
+  gap: var(--content-gap);
+  border: 1px solid var(--app-card-border);
+  border-radius: var(--app-card-radius);
+  padding: var(--app-card-padding);
+  background: var(--app-card-background);
+}
+
+.app-sheet {
+  position: fixed;
+  inset: 0;
+  z-index: 70;
+  display: grid;
+  align-items: end;
+  pointer-events: none;
+}
+
+.app-sheet__backdrop {
+  position: absolute;
+  inset: 0;
+  border: 0;
+  background: color-mix(in srgb, var(--color-text) 28%, transparent);
+  opacity: 0;
+  transition: opacity 180ms ease;
+}
+
+.app-sheet__panel {
+  position: relative;
+  display: grid;
+  grid-template-rows: auto minmax(0, 1fr) auto;
+  width: min(100%, calc(var(--page-width) * 0.5));
+  max-height: min(84vh, 48rem);
+  margin: 0 auto;
+  overflow: hidden;
+  border: 1px solid var(--app-card-border);
+  border-radius: var(--app-sheet-radius) var(--app-sheet-radius) 0 0;
+  background: var(--app-card-background);
+  box-shadow: var(--shadow-sheet);
+  transform: translateY(100%);
+  transition: transform 220ms ease;
+}
+
+.app-sheet--open {
+  pointer-events: auto;
+}
+
+.app-sheet--open .app-sheet__backdrop {
+  opacity: 1;
+}
+
+.app-sheet--open .app-sheet__panel {
+  transform: translateY(0);
+}
+
+.app-sheet__handle {
+  width: calc(var(--space-xl) * 1.35);
+  height: calc(var(--space-xs) * 0.75);
+  margin: var(--space-s) auto 0;
+  border-radius: var(--radius-pill);
+  background: var(--color-border-strong);
+}
+
+.app-sheet__content {
+  display: grid;
+  gap: var(--space-m);
+  overflow-y: auto;
+  padding: var(--space-m);
+}
+
+.app-field {
+  display: grid;
+  gap: calc(var(--space-xs) * 0.5);
+  min-width: 0;
+  color: var(--app-metadata-text-color);
+  font-size: var(--app-label-text-size);
+  font-weight: var(--app-label-text-weight);
+}
+
+.app-field input,
+.app-textarea,
+.app-select {
+  width: 100%;
+  min-width: 0;
+  min-height: var(--app-field-height);
+  border: 1px solid transparent;
+  border-radius: var(--app-input-radius);
+  padding: var(--space-s) var(--space-m);
+  background: color-mix(in srgb, var(--color-background-soft) 50%, transparent);
+  color: var(--color-text);
+  font-size: var(--font-size-input);
+  font-weight: 700;
+}
+
+.app-textarea {
+  min-height: 5.75rem;
+  resize: vertical;
+  line-height: 1.6;
+}
+
+.app-select {
+  border-color: var(--app-card-border);
+  background: var(--app-card-background);
+  font-weight: 780;
+}
+
+.app-action-footer {
+  display: grid;
+  grid-template-columns: 1fr 1.2fr;
+  gap: var(--space-s);
+  border-top: 1px solid var(--app-card-border);
+  padding: var(--space-m) var(--space-m)
+    calc(var(--app-bottom-nav-height, 88px) + var(--app-footer-safe-area-spacing));
+  background: color-mix(in srgb, var(--color-surface) 94%, var(--color-background-soft));
+}
+
+.app-list-row {
+  display: flex;
+  width: 100%;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-m);
+  border: 1px solid var(--app-card-border);
+  border-radius: var(--app-card-radius);
+  padding: var(--space-m);
+  background: var(--app-card-background);
+  color: var(--color-text);
+  box-shadow: var(--app-card-shadow);
+}
+
+.app-list-row[aria-selected="true"],
+.app-list-row[data-selected="true"] {
+  border-color: var(--app-selected-border);
+  background: var(--app-selected-background);
+  color: var(--color-primary-strong);
+}
+
+.app-section-header {
+  display: flex;
+  align-items: start;
+  justify-content: space-between;
+  gap: var(--content-gap);
+}
+
+.app-section-header__eyebrow {
+  margin: 0 0 var(--space-xs);
+  color: var(--color-primary);
+  font-size: var(--text-small);
+  font-weight: 850;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.app-section-header__title {
+  margin: 0;
+  color: var(--color-text);
+  font-size: calc(var(--text-body) * 1.28);
+  line-height: 1.18;
+  letter-spacing: -0.035em;
+}
+
+.app-section-header__action {
+  flex: 0 0 auto;
+}
+
+.app-menu-button {
+  display: grid;
+  width: var(--app-field-height);
+  height: var(--app-field-height);
+  place-items: center;
+  border: 1px solid color-mix(in srgb, var(--color-primary) 16%, var(--app-card-border));
+  border-radius: var(--radius-pill);
+  background: var(--app-card-background);
+  color: var(--color-muted);
+  cursor: pointer;
+}
+
+.app-empty-state {
+  display: grid;
+  justify-items: center;
+  gap: var(--space-s);
+  border: 0;
+  border-radius: var(--app-card-radius);
+  padding: var(--app-card-padding);
+  background: color-mix(in srgb, var(--color-primary) 5%, var(--app-card-background));
+  text-align: center;
+}
+
+.app-empty-state__icon {
+  display: grid;
+  width: calc(var(--space-xl) + var(--space-m));
+  aspect-ratio: 1;
+  place-items: center;
+  border-radius: var(--radius-pill);
+  background: var(--color-primary-soft);
+  color: var(--color-primary-strong);
+}
+
+.app-empty-state__copy,
+.app-empty-state h3,
+.app-empty-state p {
+  margin: 0;
+}
+
+.app-empty-state h3 {
+  color: var(--color-text);
+  font-size: var(--text-body);
+  font-weight: 830;
+}
+
+.app-empty-state p {
+  color: var(--app-metadata-text-color);
+  font-size: var(--app-metadata-text-size);
+}
