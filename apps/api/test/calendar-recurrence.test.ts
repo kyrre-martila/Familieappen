@@ -121,3 +121,28 @@ const editedOccurrence = service.expandEventForRange(
 );
 assert.equal(editedOccurrence[1].title, "Changed");
 assert.equal(editedOccurrence[0].title, "Test event");
+
+const participantA = { id: "participant-1", eventId: "event-1", familyMemberId: "member-1", createdAt: new Date(), familyMember: { id: "member-1", userId: null, familyId: "family-1", displayName: "A", role: "child", createdAt: new Date(), updatedAt: new Date() } };
+const participantB = { id: "participant-2", eventId: "event-1", familyMemberId: "member-2", createdAt: new Date(), familyMember: { id: "member-2", userId: null, familyId: "family-1", displayName: "B", role: "child", createdAt: new Date(), updatedAt: new Date() } };
+
+const noParticipantOverride = service.expandEventForRange(
+  { ...event({ recurrenceFrequency: "daily", recurrenceUntil: new Date("2026-01-01T23:59:59.999Z"), participants: [participantA, participantB] }), recurrenceExceptions: [{ id: "ex-3", recurringEventId: "event-1", occurrenceDate: new Date("2026-01-01T00:00:00.000Z"), isDeleted: false, overrideStartsAt: null, overrideEndsAt: null, overrideTitle: null, overrideDescription: null, overrideLocation: null, overrideIcon: null, overrideReminderMinutesBefore: null, overrideAllDay: null, overrideParticipantsSet: false, overrideParticipantFamilyMemberIds: [], createdAt: new Date(), updatedAt: new Date() }] } as CalendarEventRecord,
+  new Date("2026-01-01T00:00:00.000Z"),
+  new Date("2026-01-01T23:59:59.999Z"),
+);
+assert.equal(noParticipantOverride[0].participants.length, 2);
+
+const emptyParticipantOverride = service.expandEventForRange(
+  { ...event({ recurrenceFrequency: "daily", recurrenceUntil: new Date("2026-01-01T23:59:59.999Z"), participants: [participantA, participantB] }), recurrenceExceptions: [{ id: "ex-4", recurringEventId: "event-1", occurrenceDate: new Date("2026-01-01T00:00:00.000Z"), isDeleted: false, overrideStartsAt: null, overrideEndsAt: null, overrideTitle: null, overrideDescription: null, overrideLocation: null, overrideIcon: null, overrideReminderMinutesBefore: null, overrideAllDay: null, overrideParticipantsSet: true, overrideParticipantFamilyMemberIds: [], createdAt: new Date(), updatedAt: new Date() }] } as CalendarEventRecord,
+  new Date("2026-01-01T00:00:00.000Z"),
+  new Date("2026-01-01T23:59:59.999Z"),
+);
+assert.equal(emptyParticipantOverride[0].participants.length, 0);
+
+const guardedStarts = (service as unknown as { getOccurrenceStartsInRange(seriesStart: Date, frequency: "daily", from: Date, to: Date): Date[] }).getOccurrenceStartsInRange(
+  new Date("2026-01-01T00:00:00.000Z"),
+  "daily",
+  new Date("2026-01-01T00:00:00.000Z"),
+  new Date("2030-01-01T00:00:00.000Z"),
+);
+assert.equal(guardedStarts.length, 300);

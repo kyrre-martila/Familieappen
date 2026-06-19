@@ -465,9 +465,10 @@ model CalendarEventException {
   overrideIcon                      String?
   overrideReminderMinutesBefore     Int?
   overrideAllDay                    Boolean?
+  overrideParticipantsSet           Boolean       @default(false)
   overrideParticipantFamilyMemberIds String[]      @default([])
   createdAt                         DateTime      @default(now())
-  updatedAt                         DateTime      @updatedAt
+  updatedAt                         DateTime      @default(now()) @updatedAt
   recurringEvent                    CalendarEvent @relation("CalendarEventRecurrenceExceptions", fields: [recurringEventId], references: [id], onDelete: Cascade)
 
   @@unique([recurringEventId, occurrenceDate])
