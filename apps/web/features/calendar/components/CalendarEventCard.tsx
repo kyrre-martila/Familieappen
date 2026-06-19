@@ -68,7 +68,7 @@ export function CalendarEventCard({ event }: { event: CalendarMvpEvent }) {
   const href =
     event.source === "school-week"
       ? `/husk?tab=skoleuka&date=${event.date}`
-      : `/calendar/events/${event.recurringEventId ?? event.id}`;
+      : `/calendar/events/${event.id}`;
 
   return (
     <Link

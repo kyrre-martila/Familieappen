@@ -15384,3 +15384,65 @@ button.family-settings-row:focus-visible:not(:disabled) {
     grid-template-columns: 1fr;
   }
 }
+
+.event-form-title-row {
+  grid-template-columns: minmax(0, 7fr) minmax(8.5rem, 3fr);
+  align-items: stretch;
+}
+
+.event-form-title-field {
+  min-width: 0;
+}
+
+.event-form-icon-selector {
+  display: grid;
+  align-content: center;
+  justify-items: center;
+  gap: calc(var(--space-xs) * 0.5);
+  min-height: 100%;
+  padding: var(--space-xs) var(--space-s);
+  border: 1px solid var(--app-card-border);
+  border-radius: var(--app-input-radius);
+  background: color-mix(in srgb, var(--color-background-soft) 50%, transparent);
+  color: var(--color-primary);
+  text-align: center;
+  text-decoration: none;
+}
+
+.event-form-icon-selector span {
+  color: var(--color-muted);
+  font-size: var(--text-xs);
+  font-weight: 800;
+}
+
+.event-form-compact-selector,
+.event-form-participant-list .app-list-row,
+.event-form-recurrence-choice .app-list-row {
+  width: 100%;
+  border: 0;
+  color: inherit;
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+
+.event-form-compact-selector,
+.event-form-participant-list .app-list-row {
+  justify-content: space-between;
+}
+
+.event-form-participant-list {
+  display: grid;
+  gap: var(--space-xs);
+}
+
+.event-form-recurrence-choice {
+  margin: 0 var(--space-m) var(--space-m);
+}
+
+.event-form-recurrence-choice p {
+  margin: 0;
+  color: var(--color-muted);
+  font-size: var(--text-small);
+  font-weight: 700;
+}
