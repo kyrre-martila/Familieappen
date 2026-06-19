@@ -47,6 +47,9 @@ export type CalendarEvent = {
   isImported: boolean;
   reminder: { minutesBefore: number; label: string } | null;
   recurrence: CalendarRecurrence | null;
+  recurringEventId?: string;
+  occurrenceDate?: string;
+  isRecurringOccurrence?: boolean;
   createdByMemberId?: string | null;
   createdAt?: string;
   updatedAt?: string;

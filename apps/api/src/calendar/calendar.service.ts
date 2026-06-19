@@ -51,6 +51,12 @@ type CalendarEventRecord = {
   participants: CalendarEventParticipantRecord[];
 };
 
+type CalendarEventOccurrence = CalendarEventRecord & {
+  recurringEventId?: string;
+  occurrenceDate?: string;
+  isRecurringOccurrence?: boolean;
+};
+
 @Injectable()
 export class CalendarService {
   constructor(
@@ -66,14 +72,23 @@ export class CalendarService {
       where: {
         familyId,
         startsAt: { lte: to },
-        OR: [{ endsAt: { gte: from } }, { endsAt: null, startsAt: { gte: from } }],
+        OR: [
+          { recurrenceFrequency: { not: "never" }, source: "manual", icsSourceId: null },
+          { endsAt: { gte: from } },
+          { endsAt: null, startsAt: { gte: from } }
+        ],
         AND: [{ OR: [{ icsSourceId: null }, { icsSource: { active: true } }] }]
       },
       include: this.eventInclude,
       orderBy: [{ startsAt: "asc" }, { createdAt: "asc" }]
     });
 
-    return events.map((event: CalendarEventRecord) => this.toCalendarEventDto(event));
+    return events
+      .flatMap((event: CalendarEventRecord) => this.expandEventForRange(event, from, to))
+      .sort((first: CalendarEventOccurrence, second: CalendarEventOccurrence) =>
+        first.startsAt.getTime() - second.startsAt.getTime() || first.createdAt.getTime() - second.createdAt.getTime()
+      )
+      .map((event: CalendarEventOccurrence) => this.toCalendarEventDto(event));
   }
 
   async createEvent(
@@ -251,6 +266,119 @@ export class CalendarService {
     }
 
     return event;
+  }
+
+  private expandEventForRange(event: CalendarEventRecord, from: Date, to: Date): CalendarEventOccurrence[] {
+    if (event.recurrenceFrequency === "never" || event.source !== "manual" || event.icsSourceId !== null) {
+      return this.eventOverlapsRange(event, from, to) ? [event] : [];
+    }
+
+    const occurrences: CalendarEventOccurrence[] = [];
+    const durationMs = event.endsAt ? event.endsAt.getTime() - event.startsAt.getTime() : 0;
+    const generationFrom = new Date(from.getTime() - Math.max(durationMs, 0));
+
+    for (const occurrenceStart of this.getOccurrenceStartsInRange(event.startsAt, event.recurrenceFrequency, generationFrom, to)) {
+      const occurrenceEnd = event.endsAt ? new Date(occurrenceStart.getTime() + durationMs) : null;
+      const occurrenceDate = formatDate(occurrenceStart);
+      const occurrence = {
+        ...event,
+        id: `${event.id}::${occurrenceDate}`,
+        startsAt: occurrenceStart,
+        endsAt: occurrenceEnd,
+        recurringEventId: event.id,
+        occurrenceDate,
+        isRecurringOccurrence: true
+      };
+
+      if (this.eventOverlapsRange(occurrence, from, to)) {
+        occurrences.push(occurrence);
+      }
+    }
+
+    // Generated occurrences are view DTOs only. Editing or deleting any occurrence must target recurringEventId,
+    // so the persisted recurring series is edited/deleted as one database row.
+    return occurrences;
+  }
+
+  private eventOverlapsRange(event: Pick<CalendarEventRecord, "startsAt" | "endsAt">, from: Date, to: Date): boolean {
+    const eventEnd = event.endsAt ?? event.startsAt;
+    return event.startsAt <= to && eventEnd >= from;
+  }
+
+  private getOccurrenceStartsInRange(
+    seriesStart: Date,
+    frequency: Exclude<CalendarEventRecurrenceFrequency, "never">,
+    from: Date,
+    to: Date
+  ): Date[] {
+    const starts: Date[] = [];
+    let cursor = new Date(seriesStart);
+
+    while (cursor < from) {
+      cursor = this.nextOccurrenceStart(seriesStart, cursor, frequency);
+    }
+
+    while (cursor <= to) {
+      starts.push(new Date(cursor));
+      cursor = this.nextOccurrenceStart(seriesStart, cursor, frequency);
+    }
+
+    return starts;
+  }
+
+  private nextOccurrenceStart(seriesStart: Date, current: Date, frequency: Exclude<CalendarEventRecurrenceFrequency, "never">): Date {
+    const next = new Date(current);
+
+    if (frequency === "daily") {
+      next.setUTCDate(next.getUTCDate() + 1);
+      return next;
+    }
+
+    if (frequency === "weekly") {
+      next.setUTCDate(next.getUTCDate() + 7);
+      return next;
+    }
+
+    if (frequency === "monthly") {
+      return this.nextValidCalendarDate(seriesStart, current, "month");
+    }
+
+    return this.nextValidCalendarDate(seriesStart, current, "year");
+  }
+
+  private nextValidCalendarDate(seriesStart: Date, current: Date, unit: "month" | "year"): Date {
+    const desiredDay = seriesStart.getUTCDate();
+    const desiredMonth = seriesStart.getUTCMonth();
+    let year = current.getUTCFullYear();
+    let month = current.getUTCMonth();
+
+    do {
+      if (unit === "month") {
+        month += 1;
+        if (month > 11) {
+          month = 0;
+          year += 1;
+        }
+      } else {
+        year += 1;
+        month = desiredMonth;
+      }
+    } while (!this.isValidCalendarDate(year, month, desiredDay));
+
+    return new Date(Date.UTC(
+      year,
+      month,
+      desiredDay,
+      seriesStart.getUTCHours(),
+      seriesStart.getUTCMinutes(),
+      seriesStart.getUTCSeconds(),
+      seriesStart.getUTCMilliseconds()
+    ));
+  }
+
+  private isValidCalendarDate(year: number, month: number, day: number): boolean {
+    const date = new Date(Date.UTC(year, month, day));
+    return date.getUTCFullYear() === year && date.getUTCMonth() === month && date.getUTCDate() === day;
   }
 
   private validateDateRange(fromValue: unknown, toValue: unknown): { from: Date; to: Date } {
@@ -438,7 +566,7 @@ export class CalendarService {
     return ids as string[];
   }
 
-  private toCalendarEventDto(event: CalendarEventRecord): CalendarEventDto {
+  private toCalendarEventDto(event: CalendarEventOccurrence): CalendarEventDto {
     return {
       id: event.id,
       familyId: event.familyId,
@@ -460,6 +588,9 @@ export class CalendarService {
       allDay: event.allDay,
       recurrenceFrequency: event.recurrenceFrequency,
       recurrence: event.recurrenceFrequency === "never" ? null : { frequency: event.recurrenceFrequency },
+      recurringEventId: event.recurringEventId,
+      occurrenceDate: event.occurrenceDate,
+      isRecurringOccurrence: event.isRecurringOccurrence,
       source: event.source,
       icsSourceId: event.icsSourceId,
       externalUid: event.externalUid,
