@@ -20,9 +20,11 @@ import type {
 import {
   addCalendarEvent,
   deleteCalendarEvent as deleteBackendCalendarEvent,
+  deleteCalendarEventOccurrence,
   getCalendarEvents,
   getSchoolWeekReminders,
   updateCalendarEvent as updateBackendCalendarEvent,
+  updateCalendarEventOccurrence,
   type CalendarEvent as BackendCalendarEvent,
   type SchoolWeekReminder as BackendSchoolWeekReminder,
 } from "../../../lib/api";
@@ -72,8 +74,9 @@ export type CalendarContract = {
   updateEvent: (
     id: string,
     update: Partial<CalendarEvent>,
+    scope?: "occurrence" | "series",
   ) => Promise<CalendarEvent>;
-  deleteEvent: (id: string) => Promise<void>;
+  deleteEvent: (id: string, scope?: "occurrence" | "series") => Promise<void>;
 };
 
 const CalendarContext = createContext<CalendarContract | null>(null);
@@ -173,6 +176,7 @@ function toBackendInput(input: CalendarEventInput) {
     endsAt: toBackendDateTime(endDate, allDay ? null : input.endTime, allDay),
     allDay,
     recurrenceFrequency: toRecurrenceFrequency(input.recurrence) ?? "never",
+    recurrenceUntil: input.recurrence?.until ?? input.recurrenceUntil ?? null,
     participantFamilyMemberIds: input.participantIds ?? [],
   };
 }
@@ -211,7 +215,7 @@ function toBackendUpdate(update: Partial<CalendarEvent>) {
       : {}),
     ...(update.allDay !== undefined ? { allDay: update.allDay } : {}),
     ...(update.recurrence !== undefined
-      ? { recurrenceFrequency: toRecurrenceFrequency(update.recurrence) }
+      ? { recurrenceFrequency: toRecurrenceFrequency(update.recurrence), recurrenceUntil: update.recurrence?.until ?? update.recurrenceUntil ?? null }
       : {}),
     ...(update.participantIds !== undefined
       ? { participantFamilyMemberIds: update.participantIds }
@@ -268,6 +272,7 @@ function toCalendarEvent(event: BackendCalendarEvent): CalendarEvent {
     isImported: event.source === "ics",
     reminder: event.reminder,
     recurrence: event.recurrence,
+    recurrenceUntil: event.recurrenceUntil ?? event.recurrence?.until ?? null,
     recurringEventId: event.recurringEventId,
     occurrenceDate: event.occurrenceDate,
     isRecurringOccurrence: event.isRecurringOccurrence,
@@ -612,7 +617,7 @@ function useCalendarContractValue(): CalendarContract {
   );
 
   const updateEvent = useCallback(
-    async (id: string, update: Partial<CalendarEvent>) => {
+    async (id: string, update: Partial<CalendarEvent>, scope: "occurrence" | "series" = "series") => {
       if (!activeFamilyId) {
         throw new Error("Choose a family before continuing.");
       }
@@ -633,11 +638,10 @@ function useCalendarContractValue(): CalendarContract {
       );
 
       try {
-        const backendEvent = await updateBackendCalendarEvent(
-          activeFamilyId,
-          seriesEventId,
-          toBackendUpdate({ ...previousEvent, ...update }),
-        );
+        const payload = toBackendUpdate({ ...previousEvent, ...update });
+        const backendEvent = scope === "occurrence" && previousEvent.occurrenceDate
+          ? await updateCalendarEventOccurrence(activeFamilyId, seriesEventId, previousEvent.occurrenceDate, payload)
+          : await updateBackendCalendarEvent(activeFamilyId, seriesEventId, payload);
         const savedEvent = toCalendarEvent(backendEvent);
         setEvents((currentEvents) =>
           currentEvents.map((event) => (event.id === id || event.recurringEventId === seriesEventId || event.id === seriesEventId ? savedEvent : event)),
@@ -658,7 +662,7 @@ function useCalendarContractValue(): CalendarContract {
   );
 
   const deleteEvent = useCallback(
-    async (id: string) => {
+    async (id: string, scope: "occurrence" | "series" = "series") => {
       if (!activeFamilyId) {
         throw new Error("Choose a family before continuing.");
       }
@@ -667,11 +671,17 @@ function useCalendarContractValue(): CalendarContract {
       const previousEvent = previousEvents.find((event) => event.id === id);
       const seriesEventId = previousEvent?.recurringEventId ?? id;
       setEvents((currentEvents) =>
-        currentEvents.filter((event) => event.id !== id && event.recurringEventId !== seriesEventId && event.id !== seriesEventId),
+        scope === "occurrence"
+          ? currentEvents.filter((event) => event.id !== id)
+          : currentEvents.filter((event) => event.id !== id && event.recurringEventId !== seriesEventId && event.id !== seriesEventId),
       );
 
       try {
-        await deleteBackendCalendarEvent(activeFamilyId, seriesEventId);
+        if (scope === "occurrence" && previousEvent?.occurrenceDate) {
+          await deleteCalendarEventOccurrence(activeFamilyId, seriesEventId, previousEvent.occurrenceDate);
+        } else {
+          await deleteBackendCalendarEvent(activeFamilyId, seriesEventId);
+        }
       } catch (deleteError) {
         setEvents(previousEvents);
         setError(

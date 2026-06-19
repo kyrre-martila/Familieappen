@@ -876,6 +876,7 @@ export async function addCalendarEvent(
     endsAt?: string | null;
     allDay?: boolean;
     recurrenceFrequency?: "never" | "daily" | "weekly" | "monthly" | "yearly";
+    recurrenceUntil?: string | null;
     participantFamilyMemberIds?: string[];
   }
 ): Promise<CalendarEvent> {
@@ -899,12 +900,33 @@ export async function updateCalendarEvent(
     endsAt?: string | null;
     allDay?: boolean;
     recurrenceFrequency?: "never" | "daily" | "weekly" | "monthly" | "yearly";
+    recurrenceUntil?: string | null;
     participantFamilyMemberIds?: string[];
   }
 ): Promise<CalendarEvent> {
   return apiRequest<CalendarEvent>(`/calendar/events/${encodeURIComponent(eventId)}`, {
     method: "PATCH",
     body: input,
+    familyId
+  });
+}
+
+export async function updateCalendarEventOccurrence(
+  familyId: string,
+  eventId: string,
+  occurrenceDate: string,
+  input: Parameters<typeof updateCalendarEvent>[2]
+): Promise<CalendarEvent> {
+  return apiRequest<CalendarEvent>(`/calendar/events/${encodeURIComponent(eventId)}/occurrences/${encodeURIComponent(occurrenceDate)}`, {
+    method: "PATCH",
+    body: input,
+    familyId
+  });
+}
+
+export async function deleteCalendarEventOccurrence(familyId: string, eventId: string, occurrenceDate: string): Promise<void> {
+  await apiRequest<null>(`/calendar/events/${encodeURIComponent(eventId)}/occurrences/${encodeURIComponent(occurrenceDate)}`, {
+    method: "DELETE",
     familyId
   });
 }

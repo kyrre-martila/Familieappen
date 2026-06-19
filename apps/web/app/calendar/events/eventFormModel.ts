@@ -69,6 +69,7 @@ export interface CalendarEventFormDraft {
   endTime: string;
   allDay: boolean;
   repeat: string;
+  recurrenceUntil: string;
   reminder: string;
   location: string;
   description: string;
@@ -124,6 +125,7 @@ export function getDefaultEventFormDraft(event?: CalendarMvpEvent | null): Calen
     endTime: event?.endTime ?? "",
     allDay: event?.allDay ?? false,
     repeat: mapRecurrenceToRepeatLabel(event?.recurrence ?? null),
+    recurrenceUntil: event?.recurrenceUntil?.slice(0, 10) ?? event?.recurrence?.until?.slice(0, 10) ?? "",
     reminder: event?.reminder?.label ?? "Ingen",
     location: event?.location ?? "",
     description: event?.description ?? ""

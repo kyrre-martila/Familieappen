@@ -42,6 +42,7 @@ type CalendarEventRecord = {
   endsAt: Date | null;
   allDay: boolean;
   recurrenceFrequency: CalendarEventRecurrenceFrequency;
+  recurrenceUntil: Date | null;
   source: string;
   icsSourceId: string | null;
   externalUid: string | null;
@@ -56,6 +57,16 @@ type CalendarEventOccurrence = CalendarEventRecord & {
   occurrenceDate?: string;
   isRecurringOccurrence?: boolean;
 };
+
+type CalendarEventExceptionRecord = {
+  id: string; recurringEventId: string; occurrenceDate: Date; isDeleted: boolean;
+  overrideStartsAt: Date | null; overrideEndsAt: Date | null; overrideTitle: string | null;
+  overrideDescription: string | null; overrideLocation: string | null; overrideIcon: string | null;
+  overrideReminderMinutesBefore: number | null; overrideAllDay: boolean | null;
+  overrideParticipantFamilyMemberIds: string[]; createdAt: Date; updatedAt: Date;
+};
+
+const MAX_RECURRENCE_OCCURRENCES = 300;
 
 @Injectable()
 export class CalendarService {
@@ -79,7 +90,7 @@ export class CalendarService {
         ],
         AND: [{ OR: [{ icsSourceId: null }, { icsSource: { active: true } }] }]
       },
-      include: this.eventInclude,
+      include: this.eventIncludeWithExceptions,
       orderBy: [{ startsAt: "asc" }, { createdAt: "asc" }]
     });
 
@@ -106,6 +117,8 @@ export class CalendarService {
     const startsAt = this.validateDateTime(input.startsAt, "Start time");
     const endsAt = this.normalizeEndsAt(startsAt, this.validateOptionalDateTime(input.endsAt, "End time"), allDay);
     const recurrenceFrequency = this.validateOptionalRecurrenceFrequency(input.recurrenceFrequency);
+    const recurrenceUntil = this.validateRecurrenceUntil(input.recurrenceUntil, startsAt, recurrenceFrequency);
+    this.validateRecurrenceOccurrenceLimit(startsAt, recurrenceFrequency, recurrenceUntil);
     const participantFamilyMemberIds = await this.validateParticipantFamilyMemberIds(
       familyId,
       input.participantFamilyMemberIds
@@ -125,12 +138,13 @@ export class CalendarService {
         endsAt,
         allDay,
         recurrenceFrequency,
+        recurrenceUntil,
         createdByUserId: userId,
         participants: {
           create: participantFamilyMemberIds.map((familyMemberId) => ({ familyMemberId }))
         }
       },
-      include: this.eventInclude
+      include: this.eventIncludeWithExceptions
     });
 
     return this.toCalendarEventDto(event);
@@ -170,6 +184,10 @@ export class CalendarService {
       updateData.recurrenceFrequency = this.validateOptionalRecurrenceFrequency(input.recurrenceFrequency);
     }
 
+    if (input.recurrenceUntil !== undefined) {
+      updateData.recurrenceUntil = this.validateOptionalDateTime(input.recurrenceUntil, "Recurrence end date");
+    }
+
     if (input.startsAt !== undefined) {
       updateData.startsAt = this.validateDateTime(input.startsAt, "Start time");
     }
@@ -200,11 +218,15 @@ export class CalendarService {
     );
     updateData.endsAt = nextEndsAt;
     this.validateEventWindow(nextStartsAt, nextEndsAt);
+    const nextFrequency = (updateData.recurrenceFrequency as CalendarEventRecurrenceFrequency | undefined) ?? existingEvent.recurrenceFrequency;
+    const nextUntil = updateData.recurrenceUntil === undefined ? existingEvent.recurrenceUntil : (updateData.recurrenceUntil as Date | null);
+    updateData.recurrenceUntil = this.validateRecurrenceUntil(nextUntil?.toISOString() ?? null, nextStartsAt, nextFrequency);
+    this.validateRecurrenceOccurrenceLimit(nextStartsAt, nextFrequency, updateData.recurrenceUntil as Date | null);
 
     const updatedEvent = await this.prisma.client.calendarEvent.update({
       where: { id: existingEvent.id },
       data: updateData,
-      include: this.eventInclude
+      include: this.eventIncludeWithExceptions
     });
 
     if (shouldUpdateParticipants) {
@@ -218,7 +240,7 @@ export class CalendarService {
 
       const eventWithParticipants = await this.prisma.client.calendarEvent.findUnique({
         where: { id: existingEvent.id },
-        include: this.eventInclude
+        include: this.eventIncludeWithExceptions
       });
 
       if (!eventWithParticipants) {
@@ -252,13 +274,18 @@ export class CalendarService {
     }
   };
 
+  private readonly eventIncludeWithExceptions = {
+    ...this.eventInclude,
+    recurrenceExceptions: true
+  };
+
   private async getFamilyEventOrThrow(familyId: string, eventId: string): Promise<CalendarEventRecord> {
     const event = await this.prisma.client.calendarEvent.findFirst({
       where: {
         id: eventId,
         familyId
       },
-      include: this.eventInclude
+      include: this.eventIncludeWithExceptions
     });
 
     if (!event) {
@@ -268,35 +295,79 @@ export class CalendarService {
     return event;
   }
 
-  private expandEventForRange(event: CalendarEventRecord, from: Date, to: Date): CalendarEventOccurrence[] {
+  async updateOccurrence(userId: string, familyId: string, eventId: string, occurrenceDateValue: string, input: UpdateCalendarEventRequestDto = {}): Promise<CalendarEventDto> {
+    await this.familyAuthorization.requireFamilyMember(userId, familyId);
+    const event = await this.getFamilyEventOrThrow(familyId, eventId);
+    const occurrenceDate = this.validateOccurrenceDate(event, occurrenceDateValue);
+    const data: Record<string, unknown> = { isDeleted: false };
+    if (input.title !== undefined) data.overrideTitle = this.validateTitle(input.title);
+    if (input.description !== undefined) data.overrideDescription = this.validateOptionalText(input.description, "Description", 500);
+    if (input.location !== undefined) data.overrideLocation = this.validateOptionalText(input.location, "Location", 160);
+    if (input.icon !== undefined) data.overrideIcon = this.validateOptionalIcon(input.icon);
+    if (input.reminderMinutesBefore !== undefined) data.overrideReminderMinutesBefore = this.validateOptionalReminderMinutes(input.reminderMinutesBefore);
+    if (input.allDay !== undefined) data.overrideAllDay = this.validateOptionalBoolean(input.allDay);
+    if (input.startsAt !== undefined) data.overrideStartsAt = this.validateDateTime(input.startsAt, "Start time");
+    if (input.endsAt !== undefined) data.overrideEndsAt = this.validateOptionalDateTime(input.endsAt, "End time");
+    if (input.participantFamilyMemberIds !== undefined) data.overrideParticipantFamilyMemberIds = await this.validateParticipantFamilyMemberIds(familyId, input.participantFamilyMemberIds);
+    await (this.prisma.client as any).calendarEventException.upsert({
+      where: { recurringEventId_occurrenceDate: { recurringEventId: event.id, occurrenceDate } },
+      create: { recurringEventId: event.id, occurrenceDate, ...data },
+      update: data
+    });
+    const refreshed = await this.getFamilyEventOrThrow(familyId, event.id);
+    const occurrence = this.expandEventForRange(refreshed, occurrenceDate, occurrenceDate)[0];
+    if (!occurrence) throw new NotFoundException("Calendar occurrence was not found");
+    return this.toCalendarEventDto(occurrence);
+  }
+
+  async deleteOccurrence(userId: string, familyId: string, eventId: string, occurrenceDateValue: string): Promise<void> {
+    await this.familyAuthorization.requireFamilyMember(userId, familyId);
+    const event = await this.getFamilyEventOrThrow(familyId, eventId);
+    const occurrenceDate = this.validateOccurrenceDate(event, occurrenceDateValue);
+    await (this.prisma.client as any).calendarEventException.upsert({
+      where: { recurringEventId_occurrenceDate: { recurringEventId: event.id, occurrenceDate } },
+      create: { recurringEventId: event.id, occurrenceDate, isDeleted: true },
+      update: { isDeleted: true }
+    });
+  }
+
+  private expandEventForRange(event: CalendarEventRecord & { recurrenceExceptions?: CalendarEventExceptionRecord[] }, from: Date, to: Date): CalendarEventOccurrence[] {
     if (event.recurrenceFrequency === "never" || event.source !== "manual" || event.icsSourceId !== null) {
       return this.eventOverlapsRange(event, from, to) ? [event] : [];
     }
+    if (!event.recurrenceUntil) return [];
 
+    const exceptions = new Map((event.recurrenceExceptions ?? []).map((exception) => [formatDate(exception.occurrenceDate), exception]));
     const occurrences: CalendarEventOccurrence[] = [];
     const durationMs = event.endsAt ? event.endsAt.getTime() - event.startsAt.getTime() : 0;
     const generationFrom = new Date(from.getTime() - Math.max(durationMs, 0));
+    const generationTo = new Date(Math.min(to.getTime(), event.recurrenceUntil.getTime()));
 
-    for (const occurrenceStart of this.getOccurrenceStartsInRange(event.startsAt, event.recurrenceFrequency, generationFrom, to)) {
-      const occurrenceEnd = event.endsAt ? new Date(occurrenceStart.getTime() + durationMs) : null;
+    for (const occurrenceStart of this.getOccurrenceStartsInRange(event.startsAt, event.recurrenceFrequency, generationFrom, generationTo)) {
       const occurrenceDate = formatDate(occurrenceStart);
+      const exception = exceptions.get(occurrenceDate);
+      if (exception?.isDeleted) continue;
+      const startsAt = exception?.overrideStartsAt ?? occurrenceStart;
+      const endsAt = exception?.overrideEndsAt ?? (event.endsAt ? new Date(startsAt.getTime() + durationMs) : null);
+      const participantIds = exception?.overrideParticipantFamilyMemberIds ?? [];
       const occurrence = {
         ...event,
         id: `${event.id}::${occurrenceDate}`,
-        startsAt: occurrenceStart,
-        endsAt: occurrenceEnd,
+        title: exception?.overrideTitle ?? event.title,
+        description: exception?.overrideDescription ?? event.description,
+        location: exception?.overrideLocation ?? event.location,
+        icon: exception?.overrideIcon ?? event.icon,
+        reminderMinutesBefore: exception?.overrideReminderMinutesBefore ?? event.reminderMinutesBefore,
+        allDay: exception?.overrideAllDay ?? event.allDay,
+        startsAt,
+        endsAt,
+        participants: participantIds.length ? event.participants.filter((p) => participantIds.includes(p.familyMemberId)) : event.participants,
         recurringEventId: event.id,
         occurrenceDate,
         isRecurringOccurrence: true
       };
-
-      if (this.eventOverlapsRange(occurrence, from, to)) {
-        occurrences.push(occurrence);
-      }
+      if (this.eventOverlapsRange(occurrence, from, to)) occurrences.push(occurrence);
     }
-
-    // Generated occurrences are view DTOs only. Editing or deleting any occurrence must target recurringEventId,
-    // so the persisted recurring series is edited/deleted as one database row.
     return occurrences;
   }
 
@@ -518,6 +589,35 @@ export class CalendarService {
     return value as CalendarEventRecurrenceFrequency;
   }
 
+
+  private validateRecurrenceUntil(value: unknown, startsAt: Date, frequency: CalendarEventRecurrenceFrequency): Date | null {
+    if (frequency === "never") return null;
+    const until = this.validateOptionalDateTime(value, "Recurrence end date");
+    if (!until) throw new BadRequestException("Recurrence end date is required");
+    if (until < startsAt) throw new BadRequestException("Recurrence end date must be on or after start date");
+    return until;
+  }
+
+  private validateRecurrenceOccurrenceLimit(startsAt: Date, frequency: CalendarEventRecurrenceFrequency, until: Date | null): void {
+    if (frequency === "never") return;
+    if (!until) throw new BadRequestException("Recurrence end date is required");
+    const starts = this.getOccurrenceStartsInRange(startsAt, frequency, startsAt, until);
+    if (starts.length > MAX_RECURRENCE_OCCURRENCES) {
+      throw new BadRequestException(`Recurring series cannot exceed ${MAX_RECURRENCE_OCCURRENCES} occurrences`);
+    }
+  }
+
+  private validateOccurrenceDate(event: CalendarEventRecord, value: string): Date {
+    if (event.recurrenceFrequency === "never" || !event.recurrenceUntil) {
+      throw new BadRequestException("Calendar event is not a recurring series");
+    }
+    const occurrenceDate = this.validateDateTime(value, "Occurrence date");
+    const dateKey = formatDate(occurrenceDate);
+    const matches = this.getOccurrenceStartsInRange(event.startsAt, event.recurrenceFrequency, event.startsAt, event.recurrenceUntil)
+      .some((start) => formatDate(start) === dateKey);
+    if (!matches) throw new BadRequestException("Occurrence date is not part of this recurring series");
+    return new Date(`${dateKey}T00:00:00.000Z`);
+  }
   private normalizeEndsAt(startsAt: Date, endsAt: Date | null, allDay: boolean): Date {
     if (endsAt) {
       return endsAt;
@@ -587,7 +687,8 @@ export class CalendarService {
       endsAt: event.endsAt?.toISOString() ?? null,
       allDay: event.allDay,
       recurrenceFrequency: event.recurrenceFrequency,
-      recurrence: event.recurrenceFrequency === "never" ? null : { frequency: event.recurrenceFrequency },
+      recurrenceUntil: event.recurrenceUntil?.toISOString() ?? null,
+      recurrence: event.recurrenceFrequency === "never" ? null : { frequency: event.recurrenceFrequency, until: event.recurrenceUntil?.toISOString() ?? null },
       recurringEventId: event.recurringEventId,
       occurrenceDate: event.occurrenceDate,
       isRecurringOccurrence: event.isRecurringOccurrence,
