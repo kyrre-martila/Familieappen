@@ -32,6 +32,7 @@ import {
 interface CalendarEventFormClientProps {
   mode: "create" | "edit";
   event?: CalendarMvpEvent | null;
+  scope?: "occurrence" | "series";
 }
 
 function getCalendarEventDetailHref(event: CalendarMvpEvent) {
@@ -72,6 +73,7 @@ function readStoredDraft(storageKey: string, fallback: CalendarEventFormDraft) {
 export function CalendarEventFormClient({
   mode,
   event = null,
+  scope,
 }: CalendarEventFormClientProps) {
   const router = useRouter();
   const pathname = usePathname();
@@ -116,6 +118,7 @@ export function CalendarEventFormClient({
     event?.recurringEventId ||
     event?.recurrence,
   );
+  const lockedRecurringScope = mode === "edit" ? scope : undefined;
   const iconPickerHref = `/calendar/events/icon-picker?returnTo=${encodeURIComponent(pathname)}&draftKey=${encodeURIComponent(storageKey)}`;
 
   useEffect(() => {
@@ -242,6 +245,11 @@ export function CalendarEventFormClient({
     }
 
     if (mode === "edit" && event) {
+      if (lockedRecurringScope) {
+        await saveWithScope(lockedRecurringScope);
+        return;
+      }
+
       if (isRecurringEvent) {
         setPendingRecurringAction("edit");
         return;
@@ -268,6 +276,11 @@ export function CalendarEventFormClient({
 
   async function handleDelete() {
     if (!event || isSaving) {
+      return;
+    }
+
+    if (lockedRecurringScope) {
+      await deleteWithScope(lockedRecurringScope);
       return;
     }
 

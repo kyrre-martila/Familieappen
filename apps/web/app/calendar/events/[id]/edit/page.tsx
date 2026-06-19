@@ -5,7 +5,7 @@ import { CalendarEventEditClient } from "../../CalendarEventEditClient";
 
 interface EditEventPageProps {
   params: Promise<{ id: string }>;
-  searchParams: Promise<{ occurrenceDate?: string }>;
+  searchParams: Promise<{ occurrenceDate?: string; scope?: "occurrence" | "series" }>;
 }
 
 export async function generateMetadata(): Promise<Metadata> {
@@ -16,11 +16,11 @@ export async function generateMetadata(): Promise<Metadata> {
 
 export default async function EditCalendarEventPage({ params, searchParams }: EditEventPageProps) {
   const { id } = await params;
-  const { occurrenceDate } = await searchParams;
+  const { occurrenceDate, scope } = await searchParams;
 
   return (
     <CalendarProvider>
-      <CalendarEventEditClient eventId={id} occurrenceDate={occurrenceDate} />
+      <CalendarEventEditClient eventId={id} occurrenceDate={occurrenceDate} scope={scope} />
     </CalendarProvider>
   );
 }
