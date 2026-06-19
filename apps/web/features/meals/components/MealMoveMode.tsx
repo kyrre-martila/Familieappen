@@ -10,11 +10,9 @@ export function MealMoveModeHelper({ isMoveMode }: { isMoveMode: boolean }) {
 
 export function MealMoveModeButton({
   isMoveMode,
-  plannedMealCount,
   onMoveAction,
 }: {
   isMoveMode: boolean;
-  plannedMealCount: number;
   onMoveAction: () => void;
 }) {
   return (
@@ -33,11 +31,7 @@ export function MealMoveModeButton({
       ) : (
         <ArrowUpDown aria-hidden="true" size={18} />
       )}
-      {isMoveMode
-        ? "Ferdig"
-        : plannedMealCount === 0
-          ? "Ingen middager å flytte"
-          : "Flytt middager"}
+      {isMoveMode ? "Avslutt flyttemodus" : "Flytt middager"}
     </button>
   );
 }
