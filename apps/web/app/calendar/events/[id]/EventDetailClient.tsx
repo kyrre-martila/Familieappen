@@ -22,7 +22,7 @@ import {
 } from "lucide-react";
 import type { CalendarMvpEvent, CalendarMvpEventIcon } from "@familieappen/shared";
 
-import { AppActionFooter } from "../../../../components/app-ui";
+import { AppActionFooter, AppCard, AppListRow, AppSheet } from "../../../../components/app-ui";
 import { UserAvatar } from "../../../../components/avatar/UserAvatar";
 import { LockedFeatureState } from "../../../../components/PendingAccess";
 import { useFamilyAccess } from "../../../../components/ProtectedFamilyRoute";
@@ -235,9 +235,15 @@ function resolveCalendarEvent(events: CalendarMvpEvent[], eventId?: string, occu
   return events.find((calendarEvent) => calendarEvent.id === eventId) ?? null;
 }
 
-function getCalendarEventEditHref(event: CalendarMvpEvent) {
+function getCalendarEventEditHref(event: CalendarMvpEvent, scope?: "occurrence" | "series") {
   if (event.isRecurringOccurrence && event.recurringEventId && event.occurrenceDate) {
-    return `/calendar/events/${encodeURIComponent(event.recurringEventId)}/edit?occurrenceDate=${encodeURIComponent(event.occurrenceDate)}`;
+    const seriesId = encodeURIComponent(event.recurringEventId);
+
+    if (scope === "occurrence") {
+      return `/calendar/events/${seriesId}/edit?occurrenceDate=${encodeURIComponent(event.occurrenceDate)}&scope=occurrence`;
+    }
+
+    return `/calendar/events/${seriesId}/edit?scope=series`;
   }
 
   return `/calendar/events/${encodeURIComponent(event.id)}/edit`;
@@ -254,6 +260,26 @@ export function EventDetailClient({ event: initialEvent = null, eventId, occurre
   const isWholeFamily = event ? event.participantIds.length === 0 : false;
   const description = event?.description ?? "Ingen beskrivelse er lagt til ennå.";
   const sourceLabel = event?.source === "ics" ? "Importert kalender" : event?.source === "school-week" ? "Skoleuka" : "FamilieAppen";
+  const [isEditScopeSheetOpen, setIsEditScopeSheetOpen] = useState(false);
+  const needsEditScopeChoice = Boolean(event?.isRecurringOccurrence && event.recurringEventId && event.occurrenceDate);
+
+  function handleEdit() {
+    if (!event) return;
+
+    if (needsEditScopeChoice) {
+      setIsEditScopeSheetOpen(true);
+      return;
+    }
+
+    router.push(getCalendarEventEditHref(event));
+  }
+
+  function openScopedEdit(scope: "occurrence" | "series") {
+    if (!event) return;
+
+    setIsEditScopeSheetOpen(false);
+    router.push(getCalendarEventEditHref(event, scope));
+  }
 
   const detailRows = useMemo(() => event ? [
     { icon: CalendarCheck, label: "Dato", value: formatEventDate(event.date) },
@@ -283,9 +309,29 @@ export function EventDetailClient({ event: initialEvent = null, eventId, occurre
           </div>
           {participants.length > 0 ? <div className="event-form-avatar-list calendar-event-sheet__people" aria-label={isWholeFamily ? "Deltakere: hele familien" : "Deltakere"}>{participants.map((member) => <span className="event-form-avatar-chip event-form-avatar-chip--selected" key={member.id}><UserAvatar identity={member} avatarUrl={member.avatarUrl} size="sm" className="event-form-avatar-chip__avatar" decorative /><span>{member.name}</span></span>)}</div> : null}
         </div>
-        <AppActionFooter className="calendar-event-sheet__actions"><button className="calendar-filter-sheet__action calendar-filter-sheet__action--primary" type="button" onClick={() => router.push(getCalendarEventEditHref(event))}>Rediger</button></AppActionFooter>
+        <AppActionFooter className="calendar-event-sheet__actions"><button className="calendar-filter-sheet__action calendar-filter-sheet__action--primary" type="button" onClick={handleEdit}>Rediger</button></AppActionFooter>
       </HuskMobileSheet>
 
+      <AppSheet
+        isOpen={isEditScopeSheetOpen}
+        labelledBy="calendar-event-edit-scope-title"
+        onClose={() => setIsEditScopeSheetOpen(false)}
+        className="calendar-event-scope-sheet__panel"
+        contentClassName="calendar-event-scope-sheet__content"
+        actions={
+          <button className="husk-school-sheet__action husk-school-sheet__action--secondary" type="button" onClick={() => setIsEditScopeSheetOpen(false)}>
+            Avbryt
+          </button>
+        }
+      >
+        <AppCard className="calendar-event-scope-sheet__card">
+          <p className="husk-school-sheet__eyebrow">Gjentakende hendelse</p>
+          <h2 className="event-form-card-title" id="calendar-event-edit-scope-title">Hva vil du redigere?</h2>
+          <p>Velg om endringen bare gjelder denne hendelsen eller hele serien.</p>
+          <AppListRow as="button" type="button" onClick={() => openScopedEdit("occurrence")}>Kun denne hendelsen</AppListRow>
+          <AppListRow as="button" type="button" onClick={() => openScopedEdit("series")}>Hele serien</AppListRow>
+        </AppCard>
+      </AppSheet>
     </main>
   );
 }

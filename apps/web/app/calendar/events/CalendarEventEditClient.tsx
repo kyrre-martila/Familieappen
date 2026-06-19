@@ -20,7 +20,7 @@ function resolveCalendarEvent(events: ReturnType<typeof useCalendar>["events"], 
   return events.find((calendarEvent) => calendarEvent.id === eventId) ?? null;
 }
 
-export function CalendarEventEditClient({ eventId, occurrenceDate }: { eventId: string; occurrenceDate?: string }) {
+export function CalendarEventEditClient({ eventId, occurrenceDate, scope }: { eventId: string; occurrenceDate?: string; scope?: "occurrence" | "series" }) {
   const { events, loading, error, refresh } = useCalendar();
   const event = resolveCalendarEvent(events, eventId, occurrenceDate);
 
@@ -52,5 +52,5 @@ export function CalendarEventEditClient({ eventId, occurrenceDate }: { eventId: 
     );
   }
 
-  return <CalendarEventFormClient mode="edit" event={event} />;
+  return <CalendarEventFormClient mode="edit" event={event} scope={scope} />;
 }

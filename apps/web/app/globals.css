@@ -10263,12 +10263,7 @@ button.calendar-chip {
   align-items: start;
   justify-items: start;
   gap: var(--space-xs);
-  padding: calc(var(--space-xs) / 2) 0
-    calc(
-      var(--bottom-nav-height) + var(--bottom-nav-bottom) +
-        var(--bottom-nav-fab-offset) + var(--space-xs) +
-        env(safe-area-inset-bottom)
-    )
+  padding: calc(var(--space-xs) / 2) 0 calc(var(--space-xs) + env(safe-area-inset-bottom))
     calc(var(--space-l) + var(--space-xs));
 }
 
