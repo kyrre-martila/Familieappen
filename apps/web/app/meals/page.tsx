@@ -690,13 +690,14 @@ function MealsPageContent() {
               onSaveMeal={saveMeal}
             />
 
-            <MealMoveModeHelper isMoveMode={isMoveMode} />
+            <div className="meal-planner__move-controls">
+              <MealMoveModeHelper isMoveMode={isMoveMode} />
 
-            <MealMoveModeButton
-              isMoveMode={isMoveMode}
-              plannedMealCount={plannedMealCount}
-              onMoveAction={handleMoveAction}
-            />
+              <MealMoveModeButton
+                isMoveMode={isMoveMode}
+                onMoveAction={handleMoveAction}
+              />
+            </div>
 
             <MealMoveToast
               message={toastMessage}

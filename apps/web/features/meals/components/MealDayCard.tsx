@@ -164,18 +164,7 @@ function PlannedMealCard({
       onDragEnd={onDragEnd}
       onDragStart={(event) => onDragStart(offset, event)}
     >
-      {isMoveMode ? (
-        mealSummary
-      ) : (
-        <button
-          className="meal-card__tap-target"
-          type="button"
-          aria-label={`Rediger ${meal.title}`}
-          onClick={() => onOpenEditor(offset, meal)}
-        >
-          {mealSummary}
-        </button>
-      )}
+      <div className="meal-card__summary">{mealSummary}</div>
       {isMoveMode ? (
         <span
           className="meal-card__drag-handle"
