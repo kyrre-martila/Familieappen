@@ -302,9 +302,9 @@ export function HuskReminderEditSheet({
               />
             </span>
           </div>
-          <label className="event-form-row event-form-row--toggle">
+          <label className="event-form-row event-form-row--toggle event-form-row--helper">
             <FileText aria-hidden="true" size={22} strokeWidth={2.4} />
-            <span>
+            <span className="event-form-row__copy">
               <strong>Privat</strong>
               <small>Bare du kan se denne påminnelsen.</small>
             </span>
