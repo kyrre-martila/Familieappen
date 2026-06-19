@@ -10260,14 +10260,16 @@ button.calendar-chip {
 .meal-planner__move-controls {
   display: grid;
   flex: 0 0 auto;
-  justify-items: center;
+  align-items: start;
+  justify-items: start;
   gap: var(--space-xs);
-  padding: var(--space-xs) 0
+  padding: calc(var(--space-xs) / 2) 0
     calc(
       var(--bottom-nav-height) + var(--bottom-nav-bottom) +
-        var(--bottom-nav-fab-offset) + var(--space-m) +
+        var(--bottom-nav-fab-offset) + var(--space-xs) +
         env(safe-area-inset-bottom)
-    );
+    )
+    calc(var(--space-l) + var(--space-xs));
 }
 
 .meal-planner__move-button {
@@ -10276,7 +10278,7 @@ button.calendar-chip {
   align-items: center;
   justify-content: center;
   gap: var(--space-xs);
-  justify-self: center;
+  justify-self: start;
   border: 1px solid var(--color-border);
   border-radius: var(--radius-pill);
   padding: var(--space-s) var(--space-m);
