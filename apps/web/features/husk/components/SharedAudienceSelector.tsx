@@ -12,21 +12,102 @@ type AudienceMember = {
   avatarUrl?: string | null;
 };
 
+function getMemberLabel(member?: AudienceMember) {
+  return member?.displayName ?? member?.name ?? "Ukjent";
+}
+
+function getSelectedMembers(memberIds: string[], members: AudienceMember[]) {
+  return memberIds
+    .map((memberId) => members.find((candidate) => candidate.id === memberId))
+    .filter((member): member is AudienceMember => Boolean(member));
+}
+
 export function getAudienceSummary(
   memberIds: string[],
   members: AudienceMember[],
 ) {
   if (memberIds.length === 0) return "Hele familien";
-  const names = memberIds
-    .map((memberId) => {
-      const member = members.find((candidate) => candidate.id === memberId);
-      return member?.displayName ?? member?.name;
-    })
-    .filter((name): name is string => Boolean(name));
+  if (memberIds.length === 1) {
+    const [member] = getSelectedMembers(memberIds, members);
+    return member ? getMemberLabel(member) : "1 valgt";
+  }
 
-  return names.length > 0
-    ? names.join(", ")
-    : `${memberIds.length} person${memberIds.length === 1 ? "" : "er"}`;
+  return `${memberIds.length} valgt`;
+}
+
+function AudienceSummaryContent({
+  members,
+  selectedMemberIds,
+}: {
+  members: AudienceMember[];
+  selectedMemberIds: string[];
+}) {
+  if (selectedMemberIds.length === 0) {
+    return (
+      <>
+        <span className="event-form-scope-summary__family" aria-hidden="true">
+          <Users size={17} strokeWidth={2.5} />
+        </span>
+        <span className="event-form-scope-summary__text">Hele familien</span>
+      </>
+    );
+  }
+
+  const selectedMembers = getSelectedMembers(selectedMemberIds, members);
+
+  if (selectedMemberIds.length === 1) {
+    const [member] = selectedMembers;
+    return (
+      <>
+        {member ? (
+          <UserAvatar
+            identity={member}
+            avatarUrl={member.avatarUrl ?? undefined}
+            size="sm"
+            className="event-form-scope-summary__avatar"
+            decorative
+          />
+        ) : (
+          <span
+            className="event-form-scope-summary__empty"
+            aria-hidden="true"
+          />
+        )}
+        <span className="event-form-scope-summary__text">
+          {member ? getMemberLabel(member) : "1 valgt"}
+        </span>
+      </>
+    );
+  }
+
+  const visibleMembers = selectedMembers.slice(0, 3);
+  const hiddenCount = Math.max(
+    0,
+    selectedMemberIds.length - visibleMembers.length,
+  );
+
+  return (
+    <>
+      <span className="event-form-scope-stack" aria-hidden="true">
+        {visibleMembers.map((member) => (
+          <UserAvatar
+            key={member.id}
+            identity={member}
+            avatarUrl={member.avatarUrl ?? undefined}
+            size="sm"
+            className="event-form-scope-stack__avatar event-form-avatar-chip__avatar"
+            decorative
+          />
+        ))}
+        {hiddenCount > 0 ? (
+          <span className="event-form-scope-stack__count">+{hiddenCount}</span>
+        ) : null}
+      </span>
+      <span className="event-form-scope-summary__text">
+        {selectedMemberIds.length} valgt
+      </span>
+    </>
+  );
 }
 
 export function SharedAudienceSelector({
@@ -37,6 +118,7 @@ export function SharedAudienceSelector({
   selectedMemberIds,
   setSelectedMemberIds,
   title = "Gjelder",
+  singleSelect = false,
 }: {
   labelledBy: string;
   isOpen: boolean;
@@ -47,6 +129,7 @@ export function SharedAudienceSelector({
     value: string[] | ((currentIds: string[]) => string[]),
   ) => void;
   title?: string;
+  singleSelect?: boolean;
 }) {
   const summary = getAudienceSummary(selectedMemberIds, members);
 
@@ -60,11 +143,15 @@ export function SharedAudienceSelector({
   }
 
   function toggleMember(memberId: string) {
-    setSelectedMemberIds((currentIds) =>
-      currentIds.includes(memberId)
-        ? currentIds.filter((id) => id !== memberId)
-        : [...currentIds, memberId],
-    );
+    if (singleSelect) {
+      setSelectedMemberIds([memberId]);
+    } else {
+      setSelectedMemberIds((currentIds) =>
+        currentIds.includes(memberId)
+          ? currentIds.filter((id) => id !== memberId)
+          : [...currentIds, memberId],
+      );
+    }
     collapseAfterSelection();
   }
 
@@ -83,9 +170,17 @@ export function SharedAudienceSelector({
         <span
           className="event-form-scope-summary event-form-scope-summary--inline"
           aria-live="polite"
+          aria-label={summary}
         >
-          <span className="event-form-scope-summary__text">{summary}</span>
-          <ChevronDown aria-hidden="true" size={18} />
+          <AudienceSummaryContent
+            members={members}
+            selectedMemberIds={selectedMemberIds}
+          />
+          <ChevronDown
+            aria-hidden="true"
+            size={18}
+            className="event-form-scope-summary__chevron"
+          />
         </span>
       </button>
       {isOpen ? (
@@ -138,7 +233,7 @@ export function SharedAudienceSelector({
                     </span>
                   ) : null}
                 </span>
-                <span>{member.displayName ?? member.name}</span>
+                <span>{getMemberLabel(member)}</span>
               </button>
             );
           })}
