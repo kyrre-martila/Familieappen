@@ -1,9 +1,9 @@
 "use client";
 
+import { useEffect, useRef } from "react";
 import { Check, ChevronDown, Users } from "lucide-react";
 
 import { UserAvatar } from "../../../components/avatar/UserAvatar";
-import { AppCard } from "../../../components/app-ui";
 
 type AudienceMember = {
   id: string;
@@ -132,9 +132,39 @@ export function SharedAudienceSelector({
   singleSelect?: boolean;
 }) {
   const summary = getAudienceSummary(selectedMemberIds, members);
+  const selectorRef = useRef<HTMLElement>(null);
+
+  useEffect(() => {
+    if (!isOpen) return;
+
+    function handlePointerDown(event: PointerEvent) {
+      const target = event.target;
+      if (
+        target instanceof Node &&
+        selectorRef.current &&
+        !selectorRef.current.contains(target)
+      ) {
+        onToggleOpen();
+      }
+    }
+
+    function handleKeyDown(event: KeyboardEvent) {
+      if (event.key === "Escape") {
+        onToggleOpen();
+      }
+    }
+
+    document.addEventListener("pointerdown", handlePointerDown);
+    document.addEventListener("keydown", handleKeyDown);
+
+    return () => {
+      document.removeEventListener("pointerdown", handlePointerDown);
+      document.removeEventListener("keydown", handleKeyDown);
+    };
+  }, [isOpen, onToggleOpen]);
 
   function collapseAfterSelection() {
-    if (isOpen) onToggleOpen();
+    if (singleSelect && isOpen) onToggleOpen();
   }
 
   function selectFamily() {
@@ -156,7 +186,11 @@ export function SharedAudienceSelector({
   }
 
   return (
-    <AppCard className="event-form-card--compact" aria-labelledby={labelledBy}>
+    <article
+      ref={selectorRef}
+      className="app-card event-form-card--compact"
+      aria-labelledby={labelledBy}
+    >
       <button
         className="event-form-picker-row"
         type="button"
@@ -239,6 +273,6 @@ export function SharedAudienceSelector({
           })}
         </div>
       ) : null}
-    </AppCard>
+    </article>
   );
 }

@@ -22,6 +22,7 @@ import {
 } from "lucide-react";
 import type { CalendarMvpEvent, CalendarMvpEventIcon } from "@familieappen/shared";
 
+import { AppActionFooter } from "../../../../components/app-ui";
 import { UserAvatar } from "../../../../components/avatar/UserAvatar";
 import { LockedFeatureState } from "../../../../components/PendingAccess";
 import { useFamilyAccess } from "../../../../components/ProtectedFamilyRoute";
@@ -230,10 +231,9 @@ export function EventDetailClient({ event: initialEvent = null, eventId }: { eve
     { icon: CalendarCheck, label: "Dato", value: formatEventDate(event.date) },
     { icon: Clock, label: "Tid", value: formatEventTime(event) },
     { icon: MapPin, label: "Sted", value: event.location ?? "Ingen lokasjon" },
-    { icon: Users, label: "Deltakere", value: isWholeFamily ? "Hele familien" : participants.map((member) => member.name).join(", ") || "Ingen valgt" },
     { icon: Bell, label: "Påminnelse", value: event.reminder?.label ?? "Ingen påminnelse" },
     { icon: StickyNote, label: "Notat", value: description },
-  ] : [], [description, event, isWholeFamily, participants]);
+  ] : [], [description, event]);
 
   if (familyAccess.status === "pending") return <LockedFeatureState />;
   if (familyAccess.status !== "approved" || loading) return <EventDetailLoading />;
@@ -253,9 +253,9 @@ export function EventDetailClient({ event: initialEvent = null, eventId }: { eve
           <div className="event-form-card event-form-card--rows husk-reminder-edit-sheet__rows calendar-event-sheet__rows">
             {detailRows.map((row) => <div className="event-form-row calendar-event-sheet__row" key={row.label}><row.icon aria-hidden="true" size={22} strokeWidth={2.4} /><span>{row.label}</span><strong>{row.value}</strong></div>)}
           </div>
-          {!isWholeFamily && participants.length > 0 ? <div className="event-form-avatar-list calendar-event-sheet__people" aria-label="Deltakere">{participants.map((member) => <span className="event-form-avatar-chip event-form-avatar-chip--selected" key={member.id}><UserAvatar identity={member} avatarUrl={member.avatarUrl} size="sm" className="event-form-avatar-chip__avatar" decorative /><span>{member.name}</span></span>)}</div> : null}
+          {participants.length > 0 ? <div className="event-form-avatar-list calendar-event-sheet__people" aria-label={isWholeFamily ? "Deltakere: hele familien" : "Deltakere"}>{participants.map((member) => <span className="event-form-avatar-chip event-form-avatar-chip--selected" key={member.id}><UserAvatar identity={member} avatarUrl={member.avatarUrl} size="sm" className="event-form-avatar-chip__avatar" decorative /><span>{member.name}</span></span>)}</div> : null}
         </div>
-        <div className="calendar-filter-sheet__actions"><button className="calendar-filter-sheet__action calendar-filter-sheet__action--primary" type="button" onClick={() => router.push(`/calendar/events/${event.id}/edit`)}>Rediger</button></div>
+        <AppActionFooter className="calendar-event-sheet__actions"><button className="calendar-filter-sheet__action calendar-filter-sheet__action--primary" type="button" onClick={() => router.push(`/calendar/events/${event.id}/edit`)}>Rediger</button></AppActionFooter>
       </HuskMobileSheet>
 
     </main>
