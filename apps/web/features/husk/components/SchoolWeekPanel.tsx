@@ -11,6 +11,7 @@ import {
 } from "lucide-react";
 
 import { UserAvatar } from "../../../components/avatar/UserAvatar";
+import { AppCard } from "../../../components/app-ui";
 import {
   FamilyMembersErrorState,
   FamilyMembersLoadingState,
@@ -45,8 +46,12 @@ function readStoredValue(storageKey: string, fallback = "") {
 }
 
 export function SchoolWeekPanel({
+  detailDate,
+  detailItemId,
   shouldOpenPlanner,
 }: {
+  detailDate?: string | null;
+  detailItemId?: string | null;
   shouldOpenPlanner: boolean;
 }) {
   void shouldOpenPlanner;
@@ -135,6 +140,34 @@ export function SchoolWeekPanel({
   const hasSchoolItems = schoolWeekdays.some(
     (weekday) => (selectedPlan?.days[weekday.value] ?? []).length > 0,
   );
+  useEffect(() => {
+    if (!detailDate) return;
+    const targetWeekStart = getIsoWeekStart(
+      new Date(`${detailDate}T00:00:00.000Z`),
+    );
+    setSelectedWeekStartTime(targetWeekStart.getTime());
+  }, [detailDate]);
+
+  useEffect(() => {
+    if (!detailDate && !detailItemId) return;
+    for (const plan of weekItems) {
+      for (const items of Object.values(plan.days)) {
+        const match = items.find((item) => {
+          const itemDate = item.occurrenceDate ?? item.date;
+          return (
+            (detailItemId ? item.id === detailItemId : true) &&
+            (detailDate ? itemDate === detailDate : true)
+          );
+        });
+        if (match) {
+          setSelectedChildId(plan.childId);
+          setDetailItem(match);
+          return;
+        }
+      }
+    }
+  }, [detailDate, detailItemId, weekItems]);
+
   const selectedWeek = weekOptions.find(
     (week) => week.startTime === selectedWeekStartTime,
   );
@@ -258,7 +291,9 @@ export function SchoolWeekPanel({
 
   async function deleteSingleReminder(item: HuskSchoolWeekItem) {
     try {
-      await deleteSchoolReminder(item.id, { occurrenceDate: item.occurrenceDate });
+      await deleteSchoolReminder(item.id, {
+        occurrenceDate: item.occurrenceDate,
+      });
       setOpenItemMenuId(null);
       setSchoolFeedback(null);
       showSaved();
@@ -440,7 +475,9 @@ export function SchoolWeekPanel({
             <button
               className={`husk-week-strip__option${isSelected ? " husk-week-strip__option--selected" : ""}`}
               key={week.key}
-              onClick={(event) => handleWeekSelect(week.startTime, event.currentTarget)}
+              onClick={(event) =>
+                handleWeekSelect(week.startTime, event.currentTarget)
+              }
               type="button"
               aria-current={isCurrent ? "date" : undefined}
               aria-pressed={isSelected}
@@ -538,7 +575,8 @@ export function SchoolWeekPanel({
                     const isMenuOpen = openItemMenuId === item.id;
 
                     return (
-                      <div
+                      <AppCard
+                        as="div"
                         className={`husk-school-item husk-school-item--${item.tone}`}
                         key={item.id}
                       >
@@ -557,7 +595,8 @@ export function SchoolWeekPanel({
                             <span>{item.title}</span>
                             {item.isRecurring ? (
                               <small>
-                                <RotateCcw size={12} strokeWidth={2.4} /> Hver uke
+                                <RotateCcw size={12} strokeWidth={2.4} /> Hver
+                                uke
                                 {item.recurrenceEndDate
                                   ? ` til ${formatSchoolDate(new Date(`${item.recurrenceEndDate}T00:00:00.000Z`))}`
                                   : ""}
@@ -571,7 +610,9 @@ export function SchoolWeekPanel({
                             if (
                               !(
                                 event.relatedTarget instanceof Node &&
-                                event.currentTarget.contains(event.relatedTarget)
+                                event.currentTarget.contains(
+                                  event.relatedTarget,
+                                )
                               )
                             ) {
                               setOpenItemMenuId(null);
@@ -614,7 +655,7 @@ export function SchoolWeekPanel({
                             </span>
                           ) : null}
                         </span>
-                      </div>
+                      </AppCard>
                     );
                   })
                 ) : (
@@ -656,6 +697,7 @@ export function SchoolWeekPanel({
           child={selectedChild ?? null}
           reminder={detailItem}
           onClose={() => setDetailItem(null)}
+          onEdit={openEditFlow}
         />
       ) : null}
 

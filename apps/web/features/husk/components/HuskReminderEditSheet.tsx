@@ -1,9 +1,8 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
-import { Bell, CalendarDays, Check, FileText, Users, X } from "lucide-react";
+import { Bell, CalendarDays, FileText, X } from "lucide-react";
 
-import { UserAvatar } from "../../../components/avatar/UserAvatar";
 import {
   AppActionFooter,
   AppField,
@@ -18,6 +17,10 @@ import type {
   HuskReminderIcon,
 } from "../types";
 import { reminderIcons } from "./huskConfig";
+import {
+  SharedAudienceSelector,
+  getAudienceSummary,
+} from "./SharedAudienceSelector";
 
 const reminderIconOptions = [
   { value: "backpack", label: "Sekk" },
@@ -104,11 +107,16 @@ export function HuskReminderEditSheet({
   const [draft, setDraft] = useState<ReminderEditDraft>(() =>
     toDraft(reminder),
   );
+  const [isAudienceOpen, setIsAudienceOpen] = useState(false);
   const isOpen = Boolean(reminder);
   const Icon = reminderIcons[draft.icon];
   const scopeSummary = useMemo(
-    () => getScopeSummary(draft, familyMembers),
-    [draft, familyMembers],
+    () =>
+      getAudienceSummary(
+        draft.audience === "family" ? [] : draft.memberIds,
+        familyMembers,
+      ),
+    [draft.audience, draft.memberIds, familyMembers],
   );
   const isValid =
     draft.title.trim().length > 0 &&
@@ -119,14 +127,18 @@ export function HuskReminderEditSheet({
     setDraft(toDraft(reminder));
   }, [reminder]);
 
-  function toggleMember(memberId: string) {
-    setDraft((current) => ({
-      ...current,
-      audience: "people",
-      memberIds: current.memberIds.includes(memberId)
-        ? current.memberIds.filter((id) => id !== memberId)
-        : [...current.memberIds, memberId],
-    }));
+  function setSelectedMemberIds(
+    value: string[] | ((currentIds: string[]) => string[]),
+  ) {
+    setDraft((current) => {
+      const nextIds =
+        typeof value === "function" ? value(current.memberIds) : value;
+      return {
+        ...current,
+        audience: nextIds.length === 0 ? "family" : "people",
+        memberIds: nextIds,
+      };
+    });
   }
 
   async function handleSave() {
@@ -230,63 +242,14 @@ export function HuskReminderEditSheet({
           </div>
         </div>
 
-        <div className="husk-school-field">
-          <span>Gjelder</span>
-          <div
-            className="event-form-avatar-list husk-reminder-edit-sheet__people"
-            aria-label="Velg personer"
-          >
-            <button
-              className={`event-form-avatar-chip event-form-avatar-chip--family${draft.audience === "family" ? " event-form-avatar-chip--selected" : ""}`}
-              type="button"
-              onClick={() =>
-                setDraft({ ...draft, audience: "family", memberIds: [] })
-              }
-              aria-pressed={draft.audience === "family"}
-            >
-              <span
-                className="event-form-avatar-chip__avatar event-form-avatar-chip__avatar--family"
-                aria-hidden="true"
-              >
-                <Users size={19} strokeWidth={2.5} />
-                {draft.audience === "family" ? (
-                  <span className="event-form-avatar-chip__check">
-                    <Check size={13} strokeWidth={3.2} />
-                  </span>
-                ) : null}
-              </span>
-              <span>Hele familien</span>
-            </button>
-            {familyMembers.map((member) => {
-              const isSelected = draft.memberIds.includes(member.id);
-              return (
-                <button
-                  className={`event-form-avatar-chip${isSelected ? " event-form-avatar-chip--selected" : ""}`}
-                  type="button"
-                  key={member.id}
-                  onClick={() => toggleMember(member.id)}
-                  aria-pressed={isSelected}
-                >
-                  <span className="event-form-avatar-chip__avatar-wrap">
-                    <UserAvatar
-                      identity={member}
-                      avatarUrl={member.avatarUrl}
-                      size="sm"
-                      className="event-form-avatar-chip__avatar"
-                      decorative
-                    />
-                    {isSelected ? (
-                      <span className="event-form-avatar-chip__check">
-                        <Check size={13} strokeWidth={3.2} />
-                      </span>
-                    ) : null}
-                  </span>
-                  <span>{member.name}</span>
-                </button>
-              );
-            })}
-          </div>
-        </div>
+        <SharedAudienceSelector
+          labelledBy="husk-reminder-edit-audience-title"
+          isOpen={isAudienceOpen}
+          members={familyMembers}
+          onToggleOpen={() => setIsAudienceOpen((open) => !open)}
+          selectedMemberIds={draft.audience === "family" ? [] : draft.memberIds}
+          setSelectedMemberIds={setSelectedMemberIds}
+        />
 
         <div
           className="event-form-card event-form-card--rows husk-reminder-edit-sheet__rows"

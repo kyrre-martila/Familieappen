@@ -1,5 +1,6 @@
 import { CalendarDays, ClipboardList, Users, X } from "lucide-react";
 
+import { AppActionFooter } from "../../../components/app-ui";
 import type { HuskReminder } from "../types";
 import { reminderIcons } from "./huskConfig";
 import { HuskMobileSheet } from "./HuskMobileSheet";
@@ -65,15 +66,15 @@ export function HuskReminderDetailSheet({
               <p className="husk-reminder-detail__note">{reminder.note}</p>
             ) : null}
           </div>
-          <div className="calendar-filter-sheet__actions">
+          <AppActionFooter>
             <button
-              className="calendar-filter-sheet__action calendar-filter-sheet__action--primary"
+              className="husk-school-sheet__action husk-school-sheet__action--primary"
               type="button"
               onClick={() => onEdit(reminder)}
             >
               Rediger
             </button>
-          </div>
+          </AppActionFooter>
         </>
       ) : null}
     </HuskMobileSheet>
