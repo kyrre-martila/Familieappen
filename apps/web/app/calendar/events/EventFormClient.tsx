@@ -34,6 +34,14 @@ interface CalendarEventFormClientProps {
   event?: CalendarMvpEvent | null;
 }
 
+function getCalendarEventDetailHref(event: CalendarMvpEvent) {
+  if (event.isRecurringOccurrence && event.recurringEventId && event.occurrenceDate) {
+    return `/calendar/events/${encodeURIComponent(event.recurringEventId)}?occurrenceDate=${encodeURIComponent(event.occurrenceDate)}`;
+  }
+
+  return `/calendar/events/${encodeURIComponent(event.id)}`;
+}
+
 function readStoredDraft(storageKey: string, fallback: CalendarEventFormDraft) {
   if (typeof window === "undefined") {
     return fallback;
@@ -198,7 +206,7 @@ export function CalendarEventFormClient({
       );
       window.sessionStorage.removeItem(storageKey);
       window.sessionStorage.removeItem(`${storageKey}:icon`);
-      router.push(`/calendar/events/${savedEvent.id}`);
+      router.push(scope === "occurrence" ? getCalendarEventDetailHref(event) : getCalendarEventDetailHref(savedEvent));
     } catch (error) {
       setSaveError(getSaveErrorMessage(error));
     } finally {

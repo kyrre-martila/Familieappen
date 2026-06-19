@@ -4,9 +4,25 @@ import { Button, Card, EmptyState, PageContainer } from "../../../components/ui"
 import { useCalendar } from "../../../features/calendar/hooks/useCalendar";
 import { CalendarEventFormClient } from "./EventFormClient";
 
-export function CalendarEventEditClient({ eventId }: { eventId: string }) {
+function resolveCalendarEvent(events: ReturnType<typeof useCalendar>["events"], eventId: string, occurrenceDate?: string) {
+  if (occurrenceDate) {
+    const occurrence = events.find(
+      (calendarEvent) =>
+        calendarEvent.recurringEventId === eventId &&
+        calendarEvent.occurrenceDate === occurrenceDate,
+    );
+
+    if (occurrence) {
+      return occurrence;
+    }
+  }
+
+  return events.find((calendarEvent) => calendarEvent.id === eventId) ?? null;
+}
+
+export function CalendarEventEditClient({ eventId, occurrenceDate }: { eventId: string; occurrenceDate?: string }) {
   const { events, loading, error, refresh } = useCalendar();
-  const event = events.find((calendarEvent) => calendarEvent.id === eventId) ?? null;
+  const event = resolveCalendarEvent(events, eventId, occurrenceDate);
 
   if (loading) {
     return (

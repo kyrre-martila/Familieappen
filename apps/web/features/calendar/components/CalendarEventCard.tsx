@@ -45,6 +45,18 @@ function ParticipantStack({ participantIds }: { participantIds: string[] }) {
   );
 }
 
+function getCalendarEventHref(event: CalendarMvpEvent) {
+  if (event.source === "school-week") {
+    return `/husk?tab=skoleuka&date=${event.date}`;
+  }
+
+  if (event.isRecurringOccurrence && event.recurringEventId && event.occurrenceDate) {
+    return `/calendar/events/${encodeURIComponent(event.recurringEventId)}?occurrenceDate=${encodeURIComponent(event.occurrenceDate)}`;
+  }
+
+  return `/calendar/events/${encodeURIComponent(event.id)}`;
+}
+
 function EventTime({ event }: { event: CalendarMvpEvent }) {
   if (event.allDay) {
     return <span className="calendar-event-card__time">Hele dagen</span>;
@@ -65,10 +77,7 @@ function EventTime({ event }: { event: CalendarMvpEvent }) {
 export function CalendarEventCard({ event }: { event: CalendarMvpEvent }) {
   const Icon = eventIcons[event.icon];
   const tone = eventToneByIcon[event.icon];
-  const href =
-    event.source === "school-week"
-      ? `/husk?tab=skoleuka&date=${event.date}`
-      : `/calendar/events/${event.id}`;
+  const href = getCalendarEventHref(event);
 
   return (
     <Link
