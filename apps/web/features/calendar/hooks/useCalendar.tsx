@@ -11,6 +11,7 @@ import {
 } from "react";
 import type {
   CalendarMvpEventIcon,
+  CalendarEventRecurrenceFrequency,
   CalendarViewMode,
   MealSummary,
   ReminderSummary,
@@ -153,8 +154,14 @@ function toReminderMinutes(
   return reminder?.minutesBefore ?? null;
 }
 
+function toRecurrenceFrequency(recurrence: CalendarEvent["recurrence"] | undefined): CalendarEventRecurrenceFrequency | undefined {
+  if (recurrence === undefined) return undefined;
+  return recurrence?.frequency ?? "never";
+}
+
 function toBackendInput(input: CalendarEventInput) {
   const allDay = input.allDay ?? true;
+  const endDate = input.endDate || input.date;
 
   return {
     title: input.title,
@@ -163,11 +170,9 @@ function toBackendInput(input: CalendarEventInput) {
     icon: input.icon ?? "family",
     reminderMinutesBefore: toReminderMinutes(input.reminder),
     startsAt: toBackendDateTime(input.date, input.startTime, allDay),
-    endsAt:
-      allDay || !input.endTime
-        ? null
-        : toBackendDateTime(input.date, input.endTime, allDay),
+    endsAt: toBackendDateTime(endDate, allDay ? null : input.endTime, allDay),
     allDay,
+    recurrenceFrequency: toRecurrenceFrequency(input.recurrence) ?? "never",
     participantFamilyMemberIds: input.participantIds ?? [],
   };
 }
@@ -176,8 +181,10 @@ function toBackendUpdate(update: Partial<CalendarEvent>) {
   const hasDateOrTimeChange =
     update.date !== undefined ||
     update.startTime !== undefined ||
+    update.endDate !== undefined ||
     update.allDay !== undefined;
   const allDay = update.allDay ?? false;
+  const endDate = update.endDate || update.date;
 
   return {
     ...(update.title !== undefined ? { title: update.title } : {}),
@@ -194,15 +201,18 @@ function toBackendUpdate(update: Partial<CalendarEvent>) {
     ...(hasDateOrTimeChange && update.date
       ? { startsAt: toBackendDateTime(update.date, update.startTime, allDay) }
       : {}),
-    ...(update.endTime !== undefined || update.allDay !== undefined
+    ...(update.endTime !== undefined || update.endDate !== undefined || update.allDay !== undefined
       ? {
           endsAt:
-            update.allDay || !update.endTime || !update.date
-              ? null
-              : toBackendDateTime(update.date, update.endTime, allDay),
+            update.date && endDate
+              ? toBackendDateTime(endDate, allDay ? null : update.endTime, allDay)
+              : undefined,
         }
       : {}),
     ...(update.allDay !== undefined ? { allDay: update.allDay } : {}),
+    ...(update.recurrence !== undefined
+      ? { recurrenceFrequency: toRecurrenceFrequency(update.recurrence) }
+      : {}),
     ...(update.participantIds !== undefined
       ? { participantFamilyMemberIds: update.participantIds }
       : {}),
@@ -219,6 +229,7 @@ function createOptimisticCalendarEvent(
     familyId: input.familyId,
     title: input.title,
     date: input.date,
+    endDate: input.endDate ?? input.date,
     startTime: input.startTime ?? null,
     endTime: input.endTime ?? null,
     allDay: input.allDay ?? true,
@@ -243,6 +254,7 @@ function toCalendarEvent(event: BackendCalendarEvent): CalendarEvent {
     familyId: event.familyId,
     title: event.title,
     date: event.date,
+    endDate: event.endDate ?? event.date,
     startTime: event.startTime,
     endTime: event.endTime,
     allDay: event.allDay,
@@ -255,7 +267,7 @@ function toCalendarEvent(event: BackendCalendarEvent): CalendarEvent {
     source: event.source === "ics" ? "ics" : "manual",
     isImported: event.source === "ics",
     reminder: event.reminder,
-    recurrence: null,
+    recurrence: event.recurrence,
     createdByMemberId: null,
     createdAt: event.createdAt,
     updatedAt: event.updatedAt,
@@ -288,6 +300,7 @@ function schoolWeekReminderToCalendarEvent(
     familyId: item.familyId,
     title: item.title,
     date,
+    endDate: date,
     startTime: null,
     endTime: null,
     allDay: true,
@@ -298,7 +311,7 @@ function schoolWeekReminderToCalendarEvent(
     source: "school-week",
     isImported: false,
     reminder: null,
-    recurrence: item.isRecurring ? { rule: "FREQ=WEEKLY" } : null,
+    recurrence: item.isRecurring ? { frequency: "weekly" } : null,
   };
 }
 

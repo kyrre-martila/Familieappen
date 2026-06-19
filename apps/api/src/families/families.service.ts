@@ -634,6 +634,7 @@ export class FamiliesService {
       icon: event.icon,
       reminderMinutesBefore: event.reminderMinutesBefore,
       date: formatDate(event.startsAt),
+      endDate: event.endsAt ? formatDate(event.endsAt) : null,
       startTime: event.allDay ? null : formatTime(event.startsAt),
       endTime: event.allDay || !event.endsAt ? null : formatTime(event.endsAt),
       reminder: event.reminderMinutesBefore === null ? null : {
@@ -643,6 +644,8 @@ export class FamiliesService {
       startsAt: event.startsAt.toISOString(),
       endsAt: event.endsAt?.toISOString() ?? null,
       allDay: event.allDay,
+      recurrenceFrequency: "never",
+      recurrence: null,
       source: event.source,
       icsSourceId: event.icsSourceId,
       externalUid: event.externalUid,

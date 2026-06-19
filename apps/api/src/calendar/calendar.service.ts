@@ -6,7 +6,8 @@ import {
   CalendarEventDto,
   CreateCalendarEventRequestDto,
   ListCalendarEventsQueryDto,
-  UpdateCalendarEventRequestDto
+  UpdateCalendarEventRequestDto,
+  CalendarEventRecurrenceFrequencyDto
 } from "./dto/calendar.dto";
 
 type FamilyMemberRecord = {
@@ -27,6 +28,8 @@ type CalendarEventParticipantRecord = {
   familyMember: FamilyMemberRecord;
 };
 
+type CalendarEventRecurrenceFrequency = CalendarEventRecurrenceFrequencyDto;
+
 type CalendarEventRecord = {
   id: string;
   familyId: string;
@@ -38,6 +41,7 @@ type CalendarEventRecord = {
   startsAt: Date;
   endsAt: Date | null;
   allDay: boolean;
+  recurrenceFrequency: CalendarEventRecurrenceFrequency;
   source: string;
   icsSourceId: string | null;
   externalUid: string | null;
@@ -83,9 +87,10 @@ export class CalendarService {
     const location = this.validateOptionalText(input.location, "Location", 160);
     const icon = this.validateOptionalIcon(input.icon);
     const reminderMinutesBefore = this.validateOptionalReminderMinutes(input.reminderMinutesBefore);
-    const startsAt = this.validateDateTime(input.startsAt, "Start time");
-    const endsAt = this.validateOptionalDateTime(input.endsAt, "End time");
     const allDay = this.validateOptionalBoolean(input.allDay);
+    const startsAt = this.validateDateTime(input.startsAt, "Start time");
+    const endsAt = this.normalizeEndsAt(startsAt, this.validateOptionalDateTime(input.endsAt, "End time"), allDay);
+    const recurrenceFrequency = this.validateOptionalRecurrenceFrequency(input.recurrenceFrequency);
     const participantFamilyMemberIds = await this.validateParticipantFamilyMemberIds(
       familyId,
       input.participantFamilyMemberIds
@@ -104,6 +109,7 @@ export class CalendarService {
         startsAt,
         endsAt,
         allDay,
+        recurrenceFrequency,
         createdByUserId: userId,
         participants: {
           create: participantFamilyMemberIds.map((familyMemberId) => ({ familyMemberId }))
@@ -145,6 +151,10 @@ export class CalendarService {
       updateData.reminderMinutesBefore = this.validateOptionalReminderMinutes(input.reminderMinutesBefore);
     }
 
+    if (input.recurrenceFrequency !== undefined) {
+      updateData.recurrenceFrequency = this.validateOptionalRecurrenceFrequency(input.recurrenceFrequency);
+    }
+
     if (input.startsAt !== undefined) {
       updateData.startsAt = this.validateDateTime(input.startsAt, "Start time");
     }
@@ -166,10 +176,15 @@ export class CalendarService {
       throw new BadRequestException("At least one calendar event field is required");
     }
 
-    this.validateEventWindow(
-      (updateData.startsAt as Date | undefined) ?? existingEvent.startsAt,
-      updateData.endsAt === undefined ? existingEvent.endsAt : (updateData.endsAt as Date | null)
+    const nextStartsAt = (updateData.startsAt as Date | undefined) ?? existingEvent.startsAt;
+    const nextAllDay = (updateData.allDay as boolean | undefined) ?? existingEvent.allDay;
+    const nextEndsAt = this.normalizeEndsAt(
+      nextStartsAt,
+      updateData.endsAt === undefined ? existingEvent.endsAt : (updateData.endsAt as Date | null),
+      nextAllDay
     );
+    updateData.endsAt = nextEndsAt;
+    this.validateEventWindow(nextStartsAt, nextEndsAt);
 
     const updatedEvent = await this.prisma.client.calendarEvent.update({
       where: { id: existingEvent.id },
@@ -314,8 +329,10 @@ export class CalendarService {
       throw new BadRequestException("Reminder must be a whole number of minutes");
     }
 
-    if (value < 0 || value > 525600) {
-      throw new BadRequestException("Reminder must be between 0 minutes and 1 year");
+    const allowedReminders = new Set([15, 60, 1440]);
+
+    if (!allowedReminders.has(value)) {
+      throw new BadRequestException("Reminder must be none, 15 minutes, 1 hour, or 1 day before");
     }
 
     return value;
@@ -353,6 +370,36 @@ export class CalendarService {
     }
 
     return value;
+  }
+
+  private validateOptionalRecurrenceFrequency(value: unknown): CalendarEventRecurrenceFrequency {
+    if (value === undefined || value === null || value === "") {
+      return "never";
+    }
+
+    if (typeof value !== "string") {
+      throw new BadRequestException("Recurrence must be a valid frequency");
+    }
+
+    const allowedFrequencies = new Set(["never", "daily", "weekly", "monthly", "yearly"]);
+
+    if (!allowedFrequencies.has(value)) {
+      throw new BadRequestException("Recurrence must be never, daily, weekly, monthly, or yearly");
+    }
+
+    return value as CalendarEventRecurrenceFrequency;
+  }
+
+  private normalizeEndsAt(startsAt: Date, endsAt: Date | null, allDay: boolean): Date {
+    if (endsAt) {
+      return endsAt;
+    }
+
+    if (allDay) {
+      return startsAt;
+    }
+
+    return new Date(startsAt.getTime() + 60 * 60 * 1000);
   }
 
   private validateEventWindow(startsAt: Date, endsAt: Date | null): void {
@@ -401,6 +448,7 @@ export class CalendarService {
       icon: event.icon,
       reminderMinutesBefore: event.reminderMinutesBefore,
       date: formatDate(event.startsAt),
+      endDate: event.endsAt ? formatDate(event.endsAt) : null,
       startTime: event.allDay ? null : formatTime(event.startsAt),
       endTime: event.allDay || !event.endsAt ? null : formatTime(event.endsAt),
       reminder: event.reminderMinutesBefore === null ? null : {
@@ -410,6 +458,8 @@ export class CalendarService {
       startsAt: event.startsAt.toISOString(),
       endsAt: event.endsAt?.toISOString() ?? null,
       allDay: event.allDay,
+      recurrenceFrequency: event.recurrenceFrequency,
+      recurrence: event.recurrenceFrequency === "never" ? null : { frequency: event.recurrenceFrequency },
       source: event.source,
       icsSourceId: event.icsSourceId,
       externalUid: event.externalUid,

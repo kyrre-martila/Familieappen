@@ -29,6 +29,7 @@ import {
   getIconOption,
   mapEventFormIconToCalendarIcon,
   mapReminderLabelToReminder,
+  mapRepeatLabelToRecurrence,
   reminderOptions,
   repeatOptions,
 } from "./eventFormModel";
@@ -122,7 +123,11 @@ export function CalendarEventFormClient({
   const [isSaving, setIsSaving] = useState(false);
   const selectedIcon = getIconOption(draft.iconId);
   const title = mode === "create" ? "Ny hendelse" : "Rediger hendelse";
-  const isValid = draft.title.trim().length > 0 && draft.date.trim().length > 0;
+  const endDate = draft.endDate || draft.date;
+  const hasValidWindow = draft.allDay
+    ? !endDate || !draft.date || endDate >= draft.date
+    : Boolean(draft.startTime && draft.endTime && endDate >= draft.date && `${endDate}T${draft.endTime}` > `${draft.date}T${draft.startTime}`);
+  const isValid = draft.title.trim().length > 0 && draft.date.trim().length > 0 && hasValidWindow;
   const participantSummary = getParticipantSummary(
     draft.participantIds,
     familyMembers,
@@ -186,6 +191,7 @@ export function CalendarEventFormClient({
     const eventInput = {
       title: draft.title.trim(),
       date: draft.date,
+      endDate: draft.endDate || draft.date,
       startTime: draft.allDay ? null : draft.startTime || null,
       endTime: draft.allDay ? null : draft.endTime || null,
       allDay: draft.allDay,
@@ -194,7 +200,7 @@ export function CalendarEventFormClient({
       icon: mapEventFormIconToCalendarIcon(draft.iconId),
       participantIds: draft.participantIds,
       reminder: mapReminderLabelToReminder(draft.reminder),
-      recurrence: draft.repeat === "Aldri" ? null : { rule: "FREQ=WEEKLY" },
+      recurrence: mapRepeatLabelToRecurrence(draft.repeat),
     };
 
     try {
@@ -350,7 +356,7 @@ export function CalendarEventFormClient({
             </AppField>
             <div className="event-form-field-grid">
               <AppField htmlFor="event-date">
-                <span>Dato</span>
+                <span>Startdato</span>
                 <input
                   id="event-date"
                   type="date"
@@ -359,6 +365,17 @@ export function CalendarEventFormClient({
                     updateDraft("date", changeEvent.target.value)
                   }
                   required
+                />
+              </AppField>
+              <AppField htmlFor="event-end-date">
+                <span>Sluttdato</span>
+                <input
+                  id="event-end-date"
+                  type="date"
+                  value={draft.endDate}
+                  onChange={(changeEvent) =>
+                    updateDraft("endDate", changeEvent.target.value)
+                  }
                 />
               </AppField>
               {!draft.allDay ? (
@@ -549,6 +566,9 @@ export function CalendarEventFormClient({
               <Trash2 aria-hidden="true" size={20} />
               Slett hendelse
             </button>
+          ) : null}
+          {!hasValidWindow && draft.date ? (
+            <p className="event-form-error" role="status">Slutt må være etter start.</p>
           ) : null}
           {saveError ? (
             <p className="event-form-error" role="status">

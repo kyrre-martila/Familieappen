@@ -424,6 +424,7 @@ model CalendarEvent {
   startsAt        DateTime
   endsAt          DateTime?
   allDay          Boolean                    @default(false)
+  recurrenceFrequency String                 @default("never")
   source          String                     @default("manual")
   icsSourceId     String?
   externalUid     String?

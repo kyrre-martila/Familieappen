@@ -8,6 +8,8 @@ export interface CalendarEventParticipantDto {
   familyMember: FamilyMemberDto;
 }
 
+export type CalendarEventRecurrenceFrequencyDto = "never" | "daily" | "weekly" | "monthly" | "yearly";
+
 export interface CalendarEventDto {
   id: string;
   familyId: string;
@@ -17,12 +19,15 @@ export interface CalendarEventDto {
   icon: string;
   reminderMinutesBefore: number | null;
   date: string;
+  endDate: string | null;
   startTime: string | null;
   endTime: string | null;
   reminder: { minutesBefore: number; label: string } | null;
   startsAt: string;
   endsAt: string | null;
   allDay: boolean;
+  recurrenceFrequency: CalendarEventRecurrenceFrequencyDto;
+  recurrence: { frequency: CalendarEventRecurrenceFrequencyDto } | null;
   source: string;
   icsSourceId: string | null;
   externalUid: string | null;
@@ -46,6 +51,7 @@ export interface CreateCalendarEventRequestDto {
   startsAt?: unknown;
   endsAt?: unknown;
   allDay?: unknown;
+  recurrenceFrequency?: unknown;
   participantFamilyMemberIds?: unknown;
 }
 
@@ -58,5 +64,6 @@ export interface UpdateCalendarEventRequestDto {
   startsAt?: unknown;
   endsAt?: unknown;
   allDay?: unknown;
+  recurrenceFrequency?: unknown;
   participantFamilyMemberIds?: unknown;
 }

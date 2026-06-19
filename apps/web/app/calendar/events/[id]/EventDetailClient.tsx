@@ -35,6 +35,7 @@ import {
   getIconOption,
   mapEventFormIconToCalendarIcon,
   mapReminderLabelToReminder,
+  mapRepeatLabelToRecurrence,
   reminderOptions,
   repeatOptions,
 } from "../eventFormModel";
@@ -62,9 +63,10 @@ function formatEventDate(date: string) {
 }
 
 function formatEventTime(event: CalendarMvpEvent) {
-  if (event.allDay) return "Hele dagen";
+  const dateSuffix = event.endDate && event.endDate !== event.date ? ` (${formatEventDate(event.date)}–${formatEventDate(event.endDate)})` : "";
+  if (event.allDay) return `Hele dagen${dateSuffix}`;
   if (!event.startTime) return "Tid ikke satt";
-  return event.endTime ? `${event.startTime}–${event.endTime}` : event.startTime;
+  return event.endTime ? `${event.startTime}–${event.endTime}${dateSuffix}` : `${event.startTime}${dateSuffix}`;
 }
 
 function getParticipants(participantIds: string[], familyMembers: ReturnType<typeof useCalendar>["familyMembers"]) {
@@ -93,7 +95,11 @@ function EventEditSheet({ event, onClose, onSaved }: { event: CalendarMvpEvent |
   const isOpen = Boolean(event);
   const selectedIcon = getIconOption(draft.iconId);
   const Icon = selectedIcon?.Icon ?? Users;
-  const isValid = draft.title.trim().length > 0 && draft.date.trim().length > 0;
+  const endDate = draft.endDate || draft.date;
+  const hasValidWindow = draft.allDay
+    ? !endDate || !draft.date || endDate >= draft.date
+    : Boolean(draft.startTime && draft.endTime && endDate >= draft.date && `${endDate}T${draft.endTime}` > `${draft.date}T${draft.startTime}`);
+  const isValid = draft.title.trim().length > 0 && draft.date.trim().length > 0 && hasValidWindow;
 
   useEffect(() => {
     setDraft(getDefaultEventFormDraft(event));
@@ -141,7 +147,7 @@ function EventEditSheet({ event, onClose, onSaved }: { event: CalendarMvpEvent |
         icon: mapEventFormIconToCalendarIcon(draft.iconId),
         participantIds: draft.participantIds,
         reminder: mapReminderLabelToReminder(draft.reminder),
-        recurrence: draft.repeat === "Aldri" ? null : { rule: "FREQ=WEEKLY" },
+        recurrence: mapRepeatLabelToRecurrence(draft.repeat),
       });
       onSaved(savedEvent);
     } catch {
@@ -192,12 +198,13 @@ function EventEditSheet({ event, onClose, onSaved }: { event: CalendarMvpEvent |
             })}
           </div>
           <div className="event-form-card event-form-card--rows husk-reminder-edit-sheet__rows" aria-label="Dato, tid og påminnelse">
-            <label className="event-form-row"><CalendarCheck aria-hidden="true" size={22} strokeWidth={2.4} /><span>Dato</span><input type="date" value={draft.date} onChange={(e) => updateDraft("date", e.target.value)} /></label>
+            <label className="event-form-row"><CalendarCheck aria-hidden="true" size={22} strokeWidth={2.4} /><span>Startdato</span><input type="date" value={draft.date} onChange={(e) => updateDraft("date", e.target.value)} /></label><label className="event-form-row"><CalendarCheck aria-hidden="true" size={22} strokeWidth={2.4} /><span>Sluttdato</span><input type="date" value={draft.endDate} onChange={(e) => updateDraft("endDate", e.target.value)} /></label>
             {!draft.allDay ? <><label className="event-form-row"><Clock aria-hidden="true" size={22} strokeWidth={2.4} /><span>Start</span><input type="time" value={draft.startTime} onChange={(e) => updateDraft("startTime", e.target.value)} /></label><label className="event-form-row"><Clock aria-hidden="true" size={22} strokeWidth={2.4} /><span>Slutt</span><input type="time" value={draft.endTime} onChange={(e) => updateDraft("endTime", e.target.value)} /></label></> : null}
             <label className="event-form-row event-form-row--toggle"><Clock aria-hidden="true" size={22} strokeWidth={2.4} /><span>Heldag</span><input className="event-form-toggle" type="checkbox" checked={draft.allDay} onChange={(e) => updateDraft("allDay", e.target.checked)} /></label>
             <label className="event-form-row"><Bell aria-hidden="true" size={22} strokeWidth={2.4} /><span>Påminnelse</span><select value={draft.reminder} onChange={(e) => updateDraft("reminder", e.target.value)}>{reminderOptions.map((option) => <option key={option}>{option}</option>)}</select></label>
             <label className="event-form-row"><StickyNote aria-hidden="true" size={22} strokeWidth={2.4} /><span>Gjentakelse</span><select value={draft.repeat} onChange={(e) => updateDraft("repeat", e.target.value)}>{repeatOptions.map((option) => <option key={option}>{option}</option>)}</select></label>
           </div>
+          {!hasValidWindow && draft.date ? <p className="event-form-error" role="status">Slutt må være etter start.</p> : null}
           {saveError ? <p className="event-form-error" role="status">{saveError}</p> : null}
           <button className="calendar-event-sheet__delete" type="button" onClick={() => void handleDelete()} disabled={isSaving}><Trash2 aria-hidden="true" size={18} />Slett hendelse</button>
         </div>

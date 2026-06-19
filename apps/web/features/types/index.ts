@@ -24,9 +24,10 @@ export type FamilyMember = {
   updatedAt?: string;
 };
 
+export type CalendarRecurrenceFrequency = "never" | "daily" | "weekly" | "monthly" | "yearly";
+
 export type CalendarRecurrence = {
-  rule?: string;
-  endsAt?: string | null;
+  frequency: Exclude<CalendarRecurrenceFrequency, "never">;
 };
 
 export type CalendarEvent = {
@@ -34,6 +35,7 @@ export type CalendarEvent = {
   familyId?: string;
   title: string;
   date: string;
+  endDate: string | null;
   startTime: string | null;
   endTime: string | null;
   allDay: boolean;

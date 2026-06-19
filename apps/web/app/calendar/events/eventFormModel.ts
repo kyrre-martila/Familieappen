@@ -64,6 +64,7 @@ export interface CalendarEventFormDraft {
   iconId: EventFormIconId | "";
   participantIds: string[];
   date: string;
+  endDate: string;
   startTime: string;
   endTime: string;
   allDay: boolean;
@@ -101,8 +102,8 @@ export const eventIconOptions: EventIconOption[] = [
   { id: "hjemme", label: "Hjemme", Icon: Home }
 ];
 
-export const repeatOptions = ["Aldri", "Daglig", "Ukentlig", "Månedlig", "Tilpasset"];
-export const reminderOptions = ["Ingen", "15 minutter før", "1 time før", "1 dag før", "Tilpasset"];
+export const repeatOptions = ["Aldri", "Daglig", "Ukentlig", "Månedlig", "Årlig"];
+export const reminderOptions = ["Ingen", "15 minutter før", "1 time før", "1 dag før"];
 
 export function getIconOption(iconId: EventFormIconId | "") {
   return eventIconOptions.find((option) => option.id === iconId) ?? null;
@@ -118,10 +119,11 @@ export function getDefaultEventFormDraft(event?: CalendarMvpEvent | null): Calen
     iconId: event ? mapMockEventIcon(event.icon) : "",
     participantIds: event?.participantIds ?? [],
     date: event?.date ?? "",
+    endDate: event?.endDate ?? event?.date ?? "",
     startTime: event?.startTime ?? "",
     endTime: event?.endTime ?? "",
     allDay: event?.allDay ?? false,
-    repeat: event?.recurrence ? "Ukentlig" : "Aldri",
+    repeat: mapRecurrenceToRepeatLabel(event?.recurrence ?? null),
     reminder: event?.reminder?.label ?? "Ingen",
     location: event?.location ?? "",
     description: event?.description ?? ""
@@ -158,6 +160,36 @@ export function mapEventFormIconToCalendarIcon(iconId: EventFormIconId | ""): Ca
   } satisfies Record<EventFormIconId, CalendarMvpEvent["icon"]>;
 
   return iconId ? iconMap[iconId] : "family";
+}
+
+export function mapRepeatLabelToRecurrence(repeat: string): CalendarMvpEvent["recurrence"] {
+  switch (repeat) {
+    case "Daglig":
+      return { frequency: "daily" };
+    case "Ukentlig":
+      return { frequency: "weekly" };
+    case "Månedlig":
+      return { frequency: "monthly" };
+    case "Årlig":
+      return { frequency: "yearly" };
+    default:
+      return null;
+  }
+}
+
+function mapRecurrenceToRepeatLabel(recurrence: CalendarMvpEvent["recurrence"]): string {
+  switch (recurrence?.frequency) {
+    case "daily":
+      return "Daglig";
+    case "weekly":
+      return "Ukentlig";
+    case "monthly":
+      return "Månedlig";
+    case "yearly":
+      return "Årlig";
+    default:
+      return "Aldri";
+  }
 }
 
 export function mapReminderLabelToReminder(reminder: string): CalendarMvpEvent["reminder"] {
