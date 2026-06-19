@@ -36,6 +36,9 @@ export interface CalendarEvent {
   isImported: boolean;
   reminder: CalendarEventReminder | null;
   recurrence: CalendarEventRecurrence | null;
+  recurringEventId?: string;
+  occurrenceDate?: string;
+  isRecurringOccurrence?: boolean;
 }
 
 export interface MealSummary {

@@ -123,6 +123,9 @@ export interface CalendarEvent {
   allDay: boolean;
   recurrenceFrequency: CalendarEventRecurrenceFrequency;
   recurrence: { frequency: Exclude<CalendarEventRecurrenceFrequency, "never"> } | null;
+  recurringEventId?: string;
+  occurrenceDate?: string;
+  isRecurringOccurrence?: boolean;
   source: string;
   icsSourceId: string | null;
   externalUid: string | null;

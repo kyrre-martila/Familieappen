@@ -268,6 +268,9 @@ function toCalendarEvent(event: BackendCalendarEvent): CalendarEvent {
     isImported: event.source === "ics",
     reminder: event.reminder,
     recurrence: event.recurrence,
+    recurringEventId: event.recurringEventId,
+    occurrenceDate: event.occurrenceDate,
+    isRecurringOccurrence: event.isRecurringOccurrence,
     createdByMemberId: null,
     createdAt: event.createdAt,
     updatedAt: event.updatedAt,
@@ -621,22 +624,23 @@ function useCalendarContractValue(): CalendarContract {
         throw new Error("Calendar event was not found");
       }
 
+      const seriesEventId = previousEvent.recurringEventId ?? id;
       const optimisticEvent = { ...previousEvent, ...update, pending: true };
       setEvents((currentEvents) =>
         currentEvents.map((event) =>
-          event.id === id ? optimisticEvent : event,
+          event.id === id || event.recurringEventId === seriesEventId || event.id === seriesEventId ? optimisticEvent : event,
         ),
       );
 
       try {
         const backendEvent = await updateBackendCalendarEvent(
           activeFamilyId,
-          id,
+          seriesEventId,
           toBackendUpdate({ ...previousEvent, ...update }),
         );
         const savedEvent = toCalendarEvent(backendEvent);
         setEvents((currentEvents) =>
-          currentEvents.map((event) => (event.id === id ? savedEvent : event)),
+          currentEvents.map((event) => (event.id === id || event.recurringEventId === seriesEventId || event.id === seriesEventId ? savedEvent : event)),
         );
         return savedEvent;
       } catch (updateError) {
@@ -660,12 +664,14 @@ function useCalendarContractValue(): CalendarContract {
       }
 
       const previousEvents = events;
+      const previousEvent = previousEvents.find((event) => event.id === id);
+      const seriesEventId = previousEvent?.recurringEventId ?? id;
       setEvents((currentEvents) =>
-        currentEvents.filter((event) => event.id !== id),
+        currentEvents.filter((event) => event.id !== id && event.recurringEventId !== seriesEventId && event.id !== seriesEventId),
       );
 
       try {
-        await deleteBackendCalendarEvent(activeFamilyId, id);
+        await deleteBackendCalendarEvent(activeFamilyId, seriesEventId);
       } catch (deleteError) {
         setEvents(previousEvents);
         setError(

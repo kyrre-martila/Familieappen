@@ -28,6 +28,12 @@ export interface CalendarEventDto {
   allDay: boolean;
   recurrenceFrequency: CalendarEventRecurrenceFrequencyDto;
   recurrence: { frequency: CalendarEventRecurrenceFrequencyDto } | null;
+  /** Present for generated recurring occurrences; points back to the persisted series event. */
+  recurringEventId?: string;
+  /** YYYY-MM-DD date this generated occurrence starts on. */
+  occurrenceDate?: string;
+  /** True when this DTO is generated from a recurring series instead of a DB row. */
+  isRecurringOccurrence?: boolean;
   source: string;
   icsSourceId: string | null;
   externalUid: string | null;
