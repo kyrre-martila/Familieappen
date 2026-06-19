@@ -13908,9 +13908,17 @@ button.family-settings-row:focus-visible:not(:disabled) {
 .event-form-scope-summary--inline {
   margin: 0;
   min-height: 2.3rem;
+  max-width: min(100%, 22rem);
   justify-content: flex-end;
   background: color-mix(in srgb, var(--color-background-soft) 62%, transparent);
   font-size: var(--text-small);
+}
+
+.event-form-scope-summary__text {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .event-form-reminder-control {
@@ -13936,6 +13944,22 @@ button.family-settings-row:focus-visible:not(:disabled) {
   font-size: var(--text-small);
   font-weight: 650;
   line-height: 1.25;
+}
+
+.event-form-row--helper .event-form-row__copy {
+  display: grid;
+  min-width: 0;
+  gap: 0.1rem;
+}
+
+.event-form-row--helper .event-form-row__copy strong {
+  color: var(--color-text);
+  font-size: var(--text-body);
+  font-weight: 800;
+}
+
+.event-form-row--helper .event-form-toggle {
+  justify-self: end;
 }
 
 .app-shell--focus .event-form {

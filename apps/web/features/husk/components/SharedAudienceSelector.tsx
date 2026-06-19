@@ -3,7 +3,7 @@
 import { Check, ChevronDown, Users } from "lucide-react";
 
 import { UserAvatar } from "../../../components/avatar/UserAvatar";
-import { AppCard, AppListRow } from "../../../components/app-ui";
+import { AppCard } from "../../../components/app-ui";
 
 type AudienceMember = {
   id: string;
@@ -50,39 +50,55 @@ export function SharedAudienceSelector({
 }) {
   const summary = getAudienceSummary(selectedMemberIds, members);
 
+  function collapseAfterSelection() {
+    if (isOpen) onToggleOpen();
+  }
+
+  function selectFamily() {
+    setSelectedMemberIds([]);
+    collapseAfterSelection();
+  }
+
   function toggleMember(memberId: string) {
     setSelectedMemberIds((currentIds) =>
       currentIds.includes(memberId)
         ? currentIds.filter((id) => id !== memberId)
         : [...currentIds, memberId],
     );
+    collapseAfterSelection();
   }
 
   return (
     <AppCard className="event-form-card--compact" aria-labelledby={labelledBy}>
-      <h2 className="event-form-card-title" id={labelledBy}>
-        {title}
-      </h2>
-      <AppListRow
-        as="button"
+      <button
+        className="event-form-picker-row"
         type="button"
-        className="event-form-compact-selector"
         onClick={onToggleOpen}
         aria-expanded={isOpen}
+        aria-controls={`${labelledBy}-picker`}
       >
-        <span>{summary}</span>
-        <ChevronDown aria-hidden="true" size={18} />
-      </AppListRow>
+        <span className="event-form-picker-row__label" id={labelledBy}>
+          {title}
+        </span>
+        <span
+          className="event-form-scope-summary event-form-scope-summary--inline"
+          aria-live="polite"
+        >
+          <span className="event-form-scope-summary__text">{summary}</span>
+          <ChevronDown aria-hidden="true" size={18} />
+        </span>
+      </button>
       {isOpen ? (
         <div
-          className="event-form-participant-list"
+          className="event-form-avatar-list"
+          id={`${labelledBy}-picker`}
           role="group"
           aria-label="Velg personer"
         >
-          <AppListRow
-            as="button"
+          <button
+            className={`event-form-avatar-chip event-form-avatar-chip--family${selectedMemberIds.length === 0 ? " event-form-avatar-chip--selected" : ""}`}
             type="button"
-            onClick={() => setSelectedMemberIds([])}
+            onClick={selectFamily}
             aria-pressed={selectedMemberIds.length === 0}
           >
             <span
@@ -90,32 +106,40 @@ export function SharedAudienceSelector({
               aria-hidden="true"
             >
               <Users size={19} strokeWidth={2.5} />
+              {selectedMemberIds.length === 0 ? (
+                <span className="event-form-avatar-chip__check">
+                  <Check size={13} strokeWidth={3.2} />
+                </span>
+              ) : null}
             </span>
             <span>Hele familien</span>
-            {selectedMemberIds.length === 0 ? (
-              <Check aria-hidden="true" size={18} />
-            ) : null}
-          </AppListRow>
+          </button>
           {members.map((member) => {
             const isSelected = selectedMemberIds.includes(member.id);
             return (
-              <AppListRow
-                as="button"
+              <button
+                className={`event-form-avatar-chip${isSelected ? " event-form-avatar-chip--selected" : ""}`}
                 type="button"
                 key={member.id}
                 onClick={() => toggleMember(member.id)}
                 aria-pressed={isSelected}
               >
-                <UserAvatar
-                  identity={member}
-                  avatarUrl={member.avatarUrl ?? undefined}
-                  size="xs"
-                  className="event-form-avatar-chip__avatar"
-                  decorative
-                />
+                <span className="event-form-avatar-chip__avatar-wrap">
+                  <UserAvatar
+                    identity={member}
+                    avatarUrl={member.avatarUrl ?? undefined}
+                    size="sm"
+                    className="event-form-avatar-chip__avatar"
+                    decorative
+                  />
+                  {isSelected ? (
+                    <span className="event-form-avatar-chip__check">
+                      <Check size={13} strokeWidth={3.2} />
+                    </span>
+                  ) : null}
+                </span>
                 <span>{member.displayName ?? member.name}</span>
-                {isSelected ? <Check aria-hidden="true" size={18} /> : null}
-              </AppListRow>
+              </button>
             );
           })}
         </div>
