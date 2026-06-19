@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { useEffect, useMemo, useState } from "react";
-import { CalendarCheck, Check, ChevronDown, Trash2, X } from "lucide-react";
+import { CalendarCheck, Trash2, X } from "lucide-react";
 import type { CalendarMvpEvent } from "@familieappen/shared";
 
 import { useCalendar } from "../../../features/calendar/hooks/useCalendar";
@@ -15,11 +15,7 @@ import {
   AppSelect,
   AppTextarea,
 } from "../../../components/app-ui";
-import {
-  FamilyMembersEmptyState,
-  FamilyMembersErrorState,
-  FamilyMembersLoadingState,
-} from "../../../features/family/FamilyMembersEmptyState";
+import { SharedAudienceSelector } from "../../../features/husk/components/SharedAudienceSelector";
 import { remapLegacyMemberIds } from "../../../features/family/familyMemberAdapters";
 import {
   type CalendarEventFormDraft,
@@ -36,36 +32,6 @@ import {
 interface CalendarEventFormClientProps {
   mode: "create" | "edit";
   event?: CalendarMvpEvent | null;
-}
-
-function getOrderedFamilyMembers(
-  familyMembers: ReturnType<typeof useCalendar>["familyMembers"],
-) {
-  return familyMembers;
-}
-
-function getParticipantSummary(
-  participantIds: string[],
-  familyMembers: ReturnType<typeof useCalendar>["familyMembers"],
-) {
-  if (participantIds.length === 0) {
-    return "Gjelder hele familien";
-  }
-
-  const selectedMembers = getOrderedFamilyMembers(familyMembers).filter(
-    (member) => participantIds.includes(member.id),
-  );
-  const [firstMember] = selectedMembers;
-
-  if (!firstMember) {
-    return "Ingen deltakere valgt";
-  }
-
-  if (selectedMembers.length === 1) {
-    return `Gjelder ${firstMember.name}`;
-  }
-
-  return `Gjelder ${firstMember.name} +${selectedMembers.length - 1}`;
 }
 
 function readStoredDraft(storageKey: string, fallback: CalendarEventFormDraft) {
@@ -101,15 +67,8 @@ export function CalendarEventFormClient({
 }: CalendarEventFormClientProps) {
   const router = useRouter();
   const pathname = usePathname();
-  const {
-    familyMembers,
-    familyMembersLoading,
-    familyMembersError,
-    refreshFamilyMembers,
-    createEvent,
-    updateEvent,
-    deleteEvent,
-  } = useCalendar();
+  const { familyMembers, createEvent, updateEvent, deleteEvent } =
+    useCalendar();
   const storageKey = useMemo(
     () => getDraftStorageKey(mode, event?.id),
     [event?.id, mode],
@@ -120,7 +79,9 @@ export function CalendarEventFormClient({
   );
   const [saveError, setSaveError] = useState<string | null>(null);
   const [isSaving, setIsSaving] = useState(false);
-  const [pendingRecurringAction, setPendingRecurringAction] = useState<"edit" | "delete" | null>(null);
+  const [pendingRecurringAction, setPendingRecurringAction] = useState<
+    "edit" | "delete" | null
+  >(null);
   const [participantsOpen, setParticipantsOpen] = useState(false);
   const selectedIcon = getIconOption(draft.iconId);
   const SelectedIcon = selectedIcon?.Icon ?? CalendarCheck;
@@ -128,14 +89,24 @@ export function CalendarEventFormClient({
   const endDate = draft.endDate || draft.date;
   const hasValidWindow = draft.allDay
     ? !endDate || !draft.date || endDate >= draft.date
-    : Boolean(draft.startTime && draft.endTime && endDate >= draft.date && `${endDate}T${draft.endTime}` > `${draft.date}T${draft.startTime}`);
+    : Boolean(
+        draft.startTime &&
+        draft.endTime &&
+        endDate >= draft.date &&
+        `${endDate}T${draft.endTime}` > `${draft.date}T${draft.startTime}`,
+      );
   const needsRecurrenceUntil = draft.repeat !== "Aldri";
-  const hasRecurrenceUntil = !needsRecurrenceUntil || draft.recurrenceUntil.trim().length > 0;
-  const isValid = draft.title.trim().length > 0 && draft.date.trim().length > 0 && hasValidWindow && hasRecurrenceUntil;
-  const isRecurringEvent = Boolean(event?.isRecurringOccurrence || event?.recurringEventId || event?.recurrence);
-  const participantSummary = getParticipantSummary(
-    draft.participantIds,
-    familyMembers,
+  const hasRecurrenceUntil =
+    !needsRecurrenceUntil || draft.recurrenceUntil.trim().length > 0;
+  const isValid =
+    draft.title.trim().length > 0 &&
+    draft.date.trim().length > 0 &&
+    hasValidWindow &&
+    hasRecurrenceUntil;
+  const isRecurringEvent = Boolean(
+    event?.isRecurringOccurrence ||
+    event?.recurringEventId ||
+    event?.recurrence,
   );
   const iconPickerHref = `/calendar/events/icon-picker?returnTo=${encodeURIComponent(pathname)}&draftKey=${encodeURIComponent(storageKey)}`;
 
@@ -165,17 +136,6 @@ export function CalendarEventFormClient({
     setDraft((currentDraft) => ({ ...currentDraft, [key]: value }));
   }
 
-  function toggleParticipant(memberId: string) {
-    setDraft((currentDraft) => ({
-      ...currentDraft,
-      participantIds: currentDraft.participantIds.includes(memberId)
-        ? currentDraft.participantIds.filter(
-            (participantId) => participantId !== memberId,
-          )
-        : [...currentDraft.participantIds, memberId],
-    }));
-  }
-
   function handleCancel() {
     if (mode === "create") {
       router.push("/calendar");
@@ -185,16 +145,30 @@ export function CalendarEventFormClient({
     router.back();
   }
 
-
   function eventInputFromDraft(currentDraft: CalendarEventFormDraft) {
     return {
-      title: currentDraft.title.trim(), date: currentDraft.date, endDate: currentDraft.endDate || currentDraft.date,
-      startTime: currentDraft.allDay ? null : currentDraft.startTime || null, endTime: currentDraft.allDay ? null : currentDraft.endTime || null,
-      allDay: currentDraft.allDay, location: currentDraft.location.trim() || null, description: currentDraft.description.trim() || null,
-      icon: mapEventFormIconToCalendarIcon(currentDraft.iconId), participantIds: currentDraft.participantIds,
+      title: currentDraft.title.trim(),
+      date: currentDraft.date,
+      endDate: currentDraft.endDate || currentDraft.date,
+      startTime: currentDraft.allDay ? null : currentDraft.startTime || null,
+      endTime: currentDraft.allDay ? null : currentDraft.endTime || null,
+      allDay: currentDraft.allDay,
+      location: currentDraft.location.trim() || null,
+      description: currentDraft.description.trim() || null,
+      icon: mapEventFormIconToCalendarIcon(currentDraft.iconId),
+      participantIds: currentDraft.participantIds,
       reminder: mapReminderLabelToReminder(currentDraft.reminder),
-      recurrence: currentDraft.repeat === "Aldri" ? null : { ...mapRepeatLabelToRecurrence(currentDraft.repeat)!, until: `${currentDraft.recurrenceUntil}T23:59:59.999Z` },
-      recurrenceUntil: currentDraft.repeat === "Aldri" ? null : `${currentDraft.recurrenceUntil}T23:59:59.999Z`,
+      recurrence:
+        currentDraft.repeat === "Aldri"
+          ? null
+          : {
+              ...mapRepeatLabelToRecurrence(currentDraft.repeat)!,
+              until: `${currentDraft.recurrenceUntil}T23:59:59.999Z`,
+            },
+      recurrenceUntil:
+        currentDraft.repeat === "Aldri"
+          ? null
+          : `${currentDraft.recurrenceUntil}T23:59:59.999Z`,
     };
   }
 
@@ -217,7 +191,11 @@ export function CalendarEventFormClient({
     setSaveError(null);
 
     try {
-      const savedEvent = await updateEvent(event.id, eventInputFromDraft(draft), scope);
+      const savedEvent = await updateEvent(
+        event.id,
+        eventInputFromDraft(draft),
+        scope,
+      );
       window.sessionStorage.removeItem(storageKey);
       window.sessionStorage.removeItem(`${storageKey}:icon`);
       router.push(`/calendar/events/${savedEvent.id}`);
@@ -357,7 +335,10 @@ export function CalendarEventFormClient({
               Grunnleggende informasjon
             </h2>
             <div className="event-form-title-row">
-              <AppField htmlFor="event-title" className="event-form-title-field">
+              <AppField
+                htmlFor="event-title"
+                className="event-form-title-field"
+              >
                 <span>Tittel</span>
                 <input
                   id="event-title"
@@ -489,59 +470,21 @@ export function CalendarEventFormClient({
             </AppField>
           </AppCard>
 
-          <AppCard aria-labelledby="event-participants-title">
-            <h2 className="event-form-card-title" id="event-participants-title">
-              Gjelder
-            </h2>
-            <AppListRow
-              as="button"
-              type="button"
-              className="event-form-compact-selector"
-              onClick={() => setParticipantsOpen((isOpen) => !isOpen)}
-              aria-expanded={participantsOpen}
-            >
-              <span>{participantSummary}</span>
-              <ChevronDown aria-hidden="true" size={18} />
-            </AppListRow>
-            {participantsOpen ? (
-              familyMembersLoading ? (
-                <FamilyMembersLoadingState />
-              ) : familyMembersError ? (
-                <FamilyMembersErrorState
-                  onRetry={() => void refreshFamilyMembers()}
-                />
-              ) : familyMembers.length === 0 ? (
-                <FamilyMembersEmptyState />
-              ) : (
-                <div className="event-form-participant-list" role="group" aria-label="Velg deltakere">
-                  <AppListRow
-                    as="button"
-                    type="button"
-                    onClick={() => updateDraft("participantIds", [])}
-                    aria-pressed={draft.participantIds.length === 0}
-                  >
-                    <span>Hele familien</span>
-                    {draft.participantIds.length === 0 ? <Check aria-hidden="true" size={18} /> : null}
-                  </AppListRow>
-                  {getOrderedFamilyMembers(familyMembers).map((member) => {
-                    const isSelected = draft.participantIds.includes(member.id);
-                    return (
-                      <AppListRow
-                        as="button"
-                        type="button"
-                        key={member.id}
-                        onClick={() => toggleParticipant(member.id)}
-                        aria-pressed={isSelected}
-                      >
-                        <span>{member.name}</span>
-                        {isSelected ? <Check aria-hidden="true" size={18} /> : null}
-                      </AppListRow>
-                    );
-                  })}
-                </div>
-              )
-            ) : null}
-          </AppCard>
+          <SharedAudienceSelector
+            labelledBy="event-participants-title"
+            isOpen={participantsOpen}
+            members={familyMembers}
+            onToggleOpen={() => setParticipantsOpen((isOpen) => !isOpen)}
+            selectedMemberIds={draft.participantIds}
+            setSelectedMemberIds={(value) => {
+              if (typeof value === "function") {
+                updateDraft("participantIds", value(draft.participantIds));
+              } else {
+                updateDraft("participantIds", value);
+              }
+            }}
+            title="Gjelder"
+          />
 
           <AppCard aria-labelledby="event-repeat-title">
             <h2 className="event-form-card-title" id="event-repeat-title">
@@ -611,10 +554,14 @@ export function CalendarEventFormClient({
             </button>
           ) : null}
           {!hasValidWindow && draft.date ? (
-            <p className="event-form-error" role="status">Slutt må være etter start.</p>
+            <p className="event-form-error" role="status">
+              Slutt må være etter start.
+            </p>
           ) : null}
           {!hasRecurrenceUntil ? (
-            <p className="event-form-error" role="status">Velg når gjentakelsen skal stoppe.</p>
+            <p className="event-form-error" role="status">
+              Velg når gjentakelsen skal stoppe.
+            </p>
           ) : null}
           {saveError ? (
             <p className="event-form-error" role="status">
@@ -624,14 +571,48 @@ export function CalendarEventFormClient({
         </div>
 
         {pendingRecurringAction ? (
-          <AppCard role="dialog" aria-label="Velg gjentakelse" className="event-form-recurrence-choice">
+          <AppCard
+            role="dialog"
+            aria-label="Velg gjentakelse"
+            className="event-form-recurrence-choice"
+          >
             <h2 className="event-form-card-title">
-              {pendingRecurringAction === "edit" ? "Hva vil du redigere?" : "Hva vil du slette?"}
+              {pendingRecurringAction === "edit"
+                ? "Hva vil du redigere?"
+                : "Hva vil du slette?"}
             </h2>
-            <p>Velg om endringen bare gjelder denne hendelsen eller hele serien.</p>
-            <AppListRow as="button" type="button" onClick={() => pendingRecurringAction === "edit" ? void saveWithScope("occurrence") : void deleteWithScope("occurrence")}>Kun denne hendelsen</AppListRow>
-            <AppListRow as="button" type="button" onClick={() => pendingRecurringAction === "edit" ? void saveWithScope("series") : void deleteWithScope("series")}>Hele serien</AppListRow>
-            <AppListRow as="button" type="button" onClick={() => setPendingRecurringAction(null)}>Avbryt</AppListRow>
+            <p>
+              Velg om endringen bare gjelder denne hendelsen eller hele serien.
+            </p>
+            <AppListRow
+              as="button"
+              type="button"
+              onClick={() =>
+                pendingRecurringAction === "edit"
+                  ? void saveWithScope("occurrence")
+                  : void deleteWithScope("occurrence")
+              }
+            >
+              Kun denne hendelsen
+            </AppListRow>
+            <AppListRow
+              as="button"
+              type="button"
+              onClick={() =>
+                pendingRecurringAction === "edit"
+                  ? void saveWithScope("series")
+                  : void deleteWithScope("series")
+              }
+            >
+              Hele serien
+            </AppListRow>
+            <AppListRow
+              as="button"
+              type="button"
+              onClick={() => setPendingRecurringAction(null)}
+            >
+              Avbryt
+            </AppListRow>
           </AppCard>
         ) : null}
 
