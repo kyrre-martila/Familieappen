@@ -13,9 +13,10 @@ CREATE TABLE "calendar_event_exceptions" (
     "overrideIcon" TEXT,
     "overrideReminderMinutesBefore" INTEGER,
     "overrideAllDay" BOOLEAN,
+    "overrideParticipantsSet" BOOLEAN NOT NULL DEFAULT false,
     "overrideParticipantFamilyMemberIds" TEXT[] DEFAULT ARRAY[]::TEXT[],
     "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    "updatedAt" TIMESTAMP(3) NOT NULL,
+    "updatedAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
     CONSTRAINT "calendar_event_exceptions_pkey" PRIMARY KEY ("id")
 );
 

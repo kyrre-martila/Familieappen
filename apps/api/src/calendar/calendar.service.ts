@@ -63,7 +63,7 @@ type CalendarEventExceptionRecord = {
   overrideStartsAt: Date | null; overrideEndsAt: Date | null; overrideTitle: string | null;
   overrideDescription: string | null; overrideLocation: string | null; overrideIcon: string | null;
   overrideReminderMinutesBefore: number | null; overrideAllDay: boolean | null;
-  overrideParticipantFamilyMemberIds: string[]; createdAt: Date; updatedAt: Date;
+  overrideParticipantsSet: boolean; overrideParticipantFamilyMemberIds: string[]; createdAt: Date; updatedAt: Date;
 };
 
 const MAX_RECURRENCE_OCCURRENCES = 300;
@@ -308,7 +308,20 @@ export class CalendarService {
     if (input.allDay !== undefined) data.overrideAllDay = this.validateOptionalBoolean(input.allDay);
     if (input.startsAt !== undefined) data.overrideStartsAt = this.validateDateTime(input.startsAt, "Start time");
     if (input.endsAt !== undefined) data.overrideEndsAt = this.validateOptionalDateTime(input.endsAt, "End time");
-    if (input.participantFamilyMemberIds !== undefined) data.overrideParticipantFamilyMemberIds = await this.validateParticipantFamilyMemberIds(familyId, input.participantFamilyMemberIds);
+    if (input.participantFamilyMemberIds !== undefined) {
+      data.overrideParticipantsSet = true;
+      data.overrideParticipantFamilyMemberIds = await this.validateParticipantFamilyMemberIds(familyId, input.participantFamilyMemberIds);
+    }
+    const nextStartsAt = (data.overrideStartsAt as Date | undefined) ?? event.startsAt;
+    const nextAllDay = (data.overrideAllDay as boolean | undefined) ?? event.allDay;
+    const nextEndsAt = this.normalizeEndsAt(
+      nextStartsAt,
+      data.overrideEndsAt === undefined ? event.endsAt : (data.overrideEndsAt as Date | null),
+      nextAllDay
+    );
+    data.overrideEndsAt = nextEndsAt;
+    this.validateEventWindow(nextStartsAt, nextEndsAt);
+
     await (this.prisma.client as any).calendarEventException.upsert({
       where: { recurringEventId_occurrenceDate: { recurringEventId: event.id, occurrenceDate } },
       create: { recurringEventId: event.id, occurrenceDate, ...data },
@@ -350,6 +363,9 @@ export class CalendarService {
       const startsAt = exception?.overrideStartsAt ?? occurrenceStart;
       const endsAt = exception?.overrideEndsAt ?? (event.endsAt ? new Date(startsAt.getTime() + durationMs) : null);
       const participantIds = exception?.overrideParticipantFamilyMemberIds ?? [];
+      const participants = exception?.overrideParticipantsSet
+        ? event.participants.filter((p) => participantIds.includes(p.familyMemberId))
+        : event.participants;
       const occurrence = {
         ...event,
         id: `${event.id}::${occurrenceDate}`,
@@ -361,7 +377,7 @@ export class CalendarService {
         allDay: exception?.overrideAllDay ?? event.allDay,
         startsAt,
         endsAt,
-        participants: participantIds.length ? event.participants.filter((p) => participantIds.includes(p.familyMemberId)) : event.participants,
+        participants,
         recurringEventId: event.id,
         occurrenceDate,
         isRecurringOccurrence: true
@@ -385,13 +401,17 @@ export class CalendarService {
     const starts: Date[] = [];
     let cursor = new Date(seriesStart);
 
-    while (cursor < from) {
+    let generated = 0;
+
+    while (cursor < from && generated < MAX_RECURRENCE_OCCURRENCES) {
       cursor = this.nextOccurrenceStart(seriesStart, cursor, frequency);
+      generated += 1;
     }
 
-    while (cursor <= to) {
+    while (cursor <= to && generated < MAX_RECURRENCE_OCCURRENCES) {
       starts.push(new Date(cursor));
       cursor = this.nextOccurrenceStart(seriesStart, cursor, frequency);
+      generated += 1;
     }
 
     return starts;
