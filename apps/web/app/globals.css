@@ -15567,3 +15567,66 @@ button.family-settings-row:focus-visible:not(:disabled) {
     padding-right: var(--space-s);
   }
 }
+
+/* Meals owns its scroll inside the timeline so the app header stays visible. */
+.root-app-frame:not(.root-app-frame--immersive):not(.root-app-frame--focus):has(
+    .meal-planner
+  ) {
+  height: 100vh;
+  height: 100svh;
+  overflow: hidden;
+}
+
+.root-app-frame:not(.root-app-frame--immersive):not(.root-app-frame--focus):has(
+    .meal-planner
+  )
+  .root-app-frame__main {
+  height: 100%;
+  min-height: 0;
+  padding-bottom: 0;
+}
+
+.app-shell:has(.meal-planner) {
+  grid-template-rows: auto auto minmax(0, 1fr);
+  height: 100%;
+  min-height: 0;
+  align-content: stretch;
+}
+
+.app-shell:has(.meal-planner) .app-shell__content,
+.app-shell:has(.meal-planner) .page-container,
+.app-shell:has(.meal-planner) .meal-planner {
+  min-height: 0;
+}
+
+.app-shell:has(.meal-planner) .app-shell__content {
+  overflow: hidden;
+  padding-bottom: 0;
+}
+
+.app-shell:has(.meal-planner) .page-container {
+  display: grid;
+  height: 100%;
+}
+
+.app-shell:has(.meal-planner) .meal-planner {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+}
+
+.app-shell:has(.meal-planner) .meal-timeline {
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  scroll-padding-block: var(--space-m)
+    calc(
+      var(--bottom-nav-height) + var(--bottom-nav-bottom) + var(--space-xl) +
+        env(safe-area-inset-bottom)
+    );
+  padding-bottom: calc(
+    var(--bottom-nav-height) + var(--bottom-nav-bottom) + var(--space-xl) +
+      env(safe-area-inset-bottom)
+  );
+}

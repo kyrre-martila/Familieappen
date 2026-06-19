@@ -26,7 +26,7 @@ import { normalizeMealTitle } from "../../features/meals/components/mealFormatte
 import { useMeals } from "../../features/meals/hooks/useMeals";
 import type { Meal } from "../../features/types";
 
-const initialPastDays = 0;
+const initialPastDays = 14;
 const initialFutureDays = 21;
 const loadChunkSize = 14;
 const previousLoadCooldownMs = 350;
@@ -104,9 +104,10 @@ function MealsPageContent() {
     () => getInitialFocusOffset(today, searchParams.get("date")),
     [searchParams, today],
   );
+  const initialScrollOffset = initialFocusOffset ?? 0;
   const initialOffsetRange = useMemo(
-    () => getInitialOffsetRange(initialFocusOffset),
-    [initialFocusOffset],
+    () => getInitialOffsetRange(initialScrollOffset),
+    [initialScrollOffset],
   );
   const [startOffset, setStartOffset] = useState(initialOffsetRange.start);
   const [endOffset, setEndOffset] = useState(initialOffsetRange.end);
@@ -135,6 +136,7 @@ function MealsPageContent() {
   } = useMeals();
   const topSentinelRef = useRef<HTMLDivElement | null>(null);
   const bottomSentinelRef = useRef<HTMLDivElement | null>(null);
+  const timelineRef = useRef<HTMLDivElement | null>(null);
   const todayRef = useRef<HTMLElement | null>(null);
   const hasUserScrolledFromTopRef = useRef(false);
   const handledRouteActionRef = useRef<string | null>(null);
@@ -142,6 +144,28 @@ function MealsPageContent() {
   const isLoadingPreviousRef = useRef(false);
   const previousLoadCooldownRef = useRef<number | null>(null);
   const previousScrollHeightRef = useRef<number | null>(null);
+
+  function scrollMealOffsetIntoView(offset: number, block: ScrollLogicalPosition = "start", behavior: ScrollBehavior = "auto") {
+    const timeline = timelineRef.current;
+    const mealDay = timeline?.querySelector<HTMLElement>(`[data-meal-day="${offset}"]`);
+
+    if (!timeline || !mealDay) {
+      return;
+    }
+
+    const timelineRect = timeline.getBoundingClientRect();
+    const mealDayRect = mealDay.getBoundingClientRect();
+    const relativeTop = mealDayRect.top - timelineRect.top + timeline.scrollTop;
+    const targetTop =
+      block === "center"
+        ? relativeTop - (timeline.clientHeight - mealDayRect.height) / 2
+        : relativeTop;
+
+    timeline.scrollTo({
+      top: Math.max(0, targetTop),
+      behavior,
+    });
+  }
 
   useEffect(() => {
     const previousScrollRestoration = window.history.scrollRestoration;
@@ -235,23 +259,18 @@ function MealsPageContent() {
   }, [inputValue]);
 
   useEffect(() => {
-    if (initialFocusOffset === null) {
-      return;
-    }
-
     setStartOffset((currentOffset) =>
-      Math.min(currentOffset, initialFocusOffset),
+      Math.min(currentOffset, initialScrollOffset),
     );
     setEndOffset((currentOffset) =>
-      Math.max(currentOffset, initialFocusOffset),
+      Math.max(currentOffset, initialScrollOffset),
     );
 
     window.requestAnimationFrame(() => {
-      document
-        .querySelector(`[data-meal-day="${initialFocusOffset}"]`)
-        ?.scrollIntoView({ block: "start" });
+      scrollMealOffsetIntoView(initialScrollOffset);
+      hasUserScrolledFromTopRef.current = true;
     });
-  }, [initialFocusOffset]);
+  }, [initialScrollOffset]);
 
   useEffect(() => {
     if (!toastMessage) {
@@ -326,9 +345,21 @@ function MealsPageContent() {
     setEditingOffset(offset);
     setInputValue(meal?.title ?? "");
     window.requestAnimationFrame(() => {
-      document
-        .querySelector(`[data-meal-editor="${offset}"]`)
-        ?.scrollIntoView({ block: "center", behavior: "smooth" });
+      const timeline = timelineRef.current;
+      const editor = timeline?.querySelector<HTMLElement>(`[data-meal-editor="${offset}"]`);
+
+      if (!timeline || !editor) {
+        return;
+      }
+
+      const timelineRect = timeline.getBoundingClientRect();
+      const editorRect = editor.getBoundingClientRect();
+      const relativeTop = editorRect.top - timelineRect.top + timeline.scrollTop;
+
+      timeline.scrollTo({
+        top: Math.max(0, relativeTop - (timeline.clientHeight - editorRect.height) / 2),
+        behavior: "smooth",
+      });
     });
   }
 
@@ -519,10 +550,10 @@ function MealsPageContent() {
 
     previousScrollHeightRef.current = null;
     const addedHeight =
-      document.documentElement.scrollHeight - previousScrollHeight;
+      (timelineRef.current?.scrollHeight ?? 0) - previousScrollHeight;
 
-    if (addedHeight > 0) {
-      window.scrollBy(0, addedHeight);
+    if (addedHeight > 0 && timelineRef.current) {
+      timelineRef.current.scrollTop += addedHeight;
     }
 
     if (previousLoadCooldownRef.current !== null) {
@@ -544,16 +575,22 @@ function MealsPageContent() {
   }, []);
 
   useEffect(() => {
+    const timeline = timelineRef.current;
+
+    if (!timeline) {
+      return;
+    }
+
     function handleScroll() {
-      if (window.scrollY > 64) {
+      if (timeline && timeline.scrollTop > 64) {
         hasUserScrolledFromTopRef.current = true;
       }
     }
 
     handleScroll();
-    window.addEventListener("scroll", handleScroll, { passive: true });
+    timeline.addEventListener("scroll", handleScroll, { passive: true });
 
-    return () => window.removeEventListener("scroll", handleScroll);
+    return () => timeline.removeEventListener("scroll", handleScroll);
   }, []);
 
   useEffect(() => {
@@ -584,7 +621,7 @@ function MealsPageContent() {
             previousSentinelArmedRef.current = false;
             isLoadingPreviousRef.current = true;
             previousScrollHeightRef.current =
-              document.documentElement.scrollHeight;
+              timelineRef.current?.scrollHeight ?? null;
             setStartOffset((current) => current - loadChunkSize);
             return;
           }
@@ -594,7 +631,7 @@ function MealsPageContent() {
           }
         });
       },
-      { rootMargin: "320px 0px" },
+      { root: timelineRef.current, rootMargin: "320px 0px" },
     );
 
     observer.observe(topSentinel);
@@ -637,6 +674,7 @@ function MealsPageContent() {
               inputValue={inputValue}
               isMoveMode={isMoveMode}
               suggestions={visibleSuggestions}
+              timelineRef={timelineRef}
               todayRef={todayRef}
               topSentinelRef={topSentinelRef}
               onCloseEditor={closeEditor}
