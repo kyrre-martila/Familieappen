@@ -18,6 +18,7 @@ export function MealTimeline({
   inputValue,
   isMoveMode,
   suggestions,
+  timelineRef,
   todayRef,
   topSentinelRef,
   onCloseEditor,
@@ -40,6 +41,7 @@ export function MealTimeline({
   inputValue: string;
   isMoveMode: boolean;
   suggestions: Meal[];
+  timelineRef: RefObject<HTMLDivElement | null>;
   todayRef: RefObject<HTMLElement | null>;
   topSentinelRef: RefObject<HTMLDivElement | null>;
   onCloseEditor: () => void;
@@ -57,6 +59,7 @@ export function MealTimeline({
   return (
     <div
       className="meal-timeline"
+      ref={timelineRef}
       aria-label="Middag fremover og bakover i tid"
     >
       <div
