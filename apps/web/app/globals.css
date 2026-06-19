@@ -14377,6 +14377,11 @@ button.family-settings-row:focus-visible:not(:disabled) {
   gap: calc(var(--space-xs) * 0.75);
 }
 
+.calendar-event-sheet__actions {
+  grid-template-columns: 1fr;
+  padding-bottom: var(--app-footer-safe-area-spacing);
+}
+
 .calendar-event-sheet__note {
   margin: 0;
   border: 1px solid
