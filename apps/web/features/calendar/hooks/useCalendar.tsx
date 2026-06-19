@@ -282,6 +282,18 @@ function toCalendarEvent(event: BackendCalendarEvent): CalendarEvent {
   };
 }
 
+function isSameRecurringOccurrence(
+  event: CalendarEvent,
+  identity: { id: string; recurringEventId: string; occurrenceDate?: string },
+) {
+  return (
+    event.id === identity.id ||
+    (Boolean(identity.occurrenceDate) &&
+      event.recurringEventId === identity.recurringEventId &&
+      event.occurrenceDate === identity.occurrenceDate)
+  );
+}
+
 function isCalendarIcon(icon: string): icon is CalendarEvent["icon"] {
   return [
     "sport",
@@ -630,11 +642,18 @@ function useCalendarContractValue(): CalendarContract {
       }
 
       const seriesEventId = previousEvent.recurringEventId ?? id;
+      const occurrenceIdentity = {
+        id,
+        recurringEventId: seriesEventId,
+        occurrenceDate: previousEvent.occurrenceDate,
+      };
       const optimisticEvent = { ...previousEvent, ...update, pending: true };
       setEvents((currentEvents) =>
         currentEvents.map((event) => {
           if (scope === "occurrence") {
-            return event.id === id ? optimisticEvent : event;
+            return isSameRecurringOccurrence(event, occurrenceIdentity)
+              ? optimisticEvent
+              : event;
           }
 
           return event.id === id ||
@@ -651,10 +670,17 @@ function useCalendarContractValue(): CalendarContract {
           ? await updateCalendarEventOccurrence(activeFamilyId, seriesEventId, previousEvent.occurrenceDate, payload)
           : await updateBackendCalendarEvent(activeFamilyId, seriesEventId, payload);
         const savedEvent = toCalendarEvent(backendEvent);
-        setEvents((currentEvents) =>
-          currentEvents.map((event) => {
+        const canReplaceOccurrence =
+          scope !== "occurrence" ||
+          events.some((event) => isSameRecurringOccurrence(event, occurrenceIdentity));
+        setEvents((currentEvents) => {
+          const nextEvents = currentEvents.map((event) => {
             if (scope === "occurrence") {
-              return event.id === id ? savedEvent : event;
+              if (isSameRecurringOccurrence(event, occurrenceIdentity)) {
+                return savedEvent;
+              }
+
+              return event;
             }
 
             return event.id === id ||
@@ -662,8 +688,13 @@ function useCalendarContractValue(): CalendarContract {
               event.id === seriesEventId
               ? savedEvent
               : event;
-          }),
-        );
+          });
+
+          return nextEvents;
+        });
+        if (scope === "occurrence" && !canReplaceOccurrence) {
+          void refresh();
+        }
         return savedEvent;
       } catch (updateError) {
         setEvents(previousEvents);
@@ -676,7 +707,7 @@ function useCalendarContractValue(): CalendarContract {
         throw updateError;
       }
     },
-    [activeFamilyId, events],
+    [activeFamilyId, events, refresh],
   );
 
   const deleteEvent = useCallback(
