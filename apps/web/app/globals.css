@@ -14809,7 +14809,8 @@ button.family-settings-row:focus-visible:not(:disabled) {
   width: calc(var(--space-xl) + var(--space-xs));
   height: calc(var(--space-xl) + var(--space-xs));
   place-items: center;
-  border: 1px solid color-mix(in srgb, var(--color-primary) 16%, var(--color-border));
+  border: 1px solid
+    color-mix(in srgb, var(--color-primary) 16%, var(--color-border));
   border-radius: var(--radius-pill);
   background: var(--color-surface);
   color: var(--color-muted);
@@ -15049,109 +15050,6 @@ button.family-settings-row:focus-visible:not(:disabled) {
   letter-spacing: -0.045em;
 }
 
-.calendar-event-form-sheet .event-form-icon-link,
-.calendar-event-form-sheet .event-form-text-input,
-.calendar-event-form-sheet .event-form-textarea {
-  background: var(--color-background-soft);
-}
-
-.calendar-event-form-sheet .event-form-icon-link {
-  min-height: 2.45rem;
-  gap: calc(var(--space-xs) * 0.75);
-  padding: calc(var(--space-xs) * 0.8) var(--space-s);
-  font-size: var(--text-small);
-  font-weight: 780;
-}
-
-.calendar-event-form-sheet .event-form-icon-link__icon {
-  width: 1.85rem;
-}
-
-.calendar-event-form-sheet .event-form-section-heading {
-  gap: calc(var(--space-xs) * 0.9);
-}
-
-.calendar-event-form-sheet .event-form-section-heading h2 {
-  font-size: var(--text-body);
-  font-weight: 780;
-  letter-spacing: -0.025em;
-}
-
-.calendar-event-form-sheet .event-form-section-heading p {
-  font-size: var(--text-small);
-  font-weight: 650;
-  line-height: 1.25;
-}
-
-.calendar-event-form-sheet__section-heading {
-  padding: var(--space-s) var(--space-s) calc(var(--space-xs) * 0.75);
-}
-
-.calendar-event-form-sheet .event-form-avatar-list {
-  gap: calc(var(--space-xs) * 0.75);
-}
-
-.calendar-event-form-sheet .event-form-avatar-chip {
-  min-width: 0;
-  gap: calc(var(--space-xs) * 0.55);
-  border-radius: calc(var(--radius-m) - 0.2rem);
-  padding: calc(var(--space-xs) * 0.75);
-  font-size: calc(var(--text-small) * 0.92);
-  font-weight: 700;
-  line-height: 1.15;
-}
-
-.calendar-event-form-sheet .event-form-avatar-chip__avatar {
-  width: clamp(2.35rem, 10vw, 2.9rem);
-}
-
-.calendar-event-form-sheet .event-form-avatar-chip__check {
-  right: -0.1rem;
-  bottom: -0.1rem;
-  width: 1.05rem;
-  border-width: 1.5px;
-}
-
-.calendar-event-form-sheet .event-form-row {
-  min-height: 2.95rem;
-  gap: calc(var(--space-xs) * 0.9);
-  padding: var(--space-xs) var(--space-s);
-}
-
-.calendar-event-form-sheet .event-form-row span {
-  font-size: var(--text-small);
-  font-weight: 740;
-}
-
-.calendar-event-form-sheet .event-form-row input:not(.event-form-toggle),
-.calendar-event-form-sheet .event-form-row select,
-.calendar-event-form-sheet .event-form-option {
-  font-size: var(--text-small);
-  font-weight: 690;
-}
-
-.calendar-event-form-sheet .event-form-options {
-  gap: calc(var(--space-xs) * 0.35);
-  padding: calc(var(--space-xs) * 0.75) var(--space-s) var(--space-xs);
-}
-
-.calendar-event-form-sheet .event-form-option {
-  min-height: 2.15rem;
-  gap: calc(var(--space-xs) * 0.9);
-}
-
-.calendar-event-form-sheet .event-form-text-input,
-.calendar-event-form-sheet .event-form-textarea {
-  padding: var(--space-s);
-  font-size: var(--text-small);
-  font-weight: 650;
-}
-
-.calendar-event-form-sheet .event-form-textarea {
-  min-height: 7.5rem;
-  line-height: 1.45;
-}
-
 .event-form-avatar-chip__avatar-wrap {
   position: relative;
   display: grid;
@@ -15306,7 +15204,11 @@ button.family-settings-row:focus-visible:not(:disabled) {
   gap: var(--space-s);
   border-top: 1px solid var(--app-card-border);
   padding: var(--space-m) var(--space-m) var(--app-footer-safe-area-spacing);
-  background: color-mix(in srgb, var(--color-surface) 94%, var(--color-background-soft));
+  background: color-mix(
+    in srgb,
+    var(--color-surface) 94%,
+    var(--color-background-soft)
+  );
 }
 
 .app-list-row {
@@ -15363,7 +15265,8 @@ button.family-settings-row:focus-visible:not(:disabled) {
   width: var(--app-field-height);
   height: var(--app-field-height);
   place-items: center;
-  border: 1px solid color-mix(in srgb, var(--color-primary) 16%, var(--app-card-border));
+  border: 1px solid
+    color-mix(in srgb, var(--color-primary) 16%, var(--app-card-border));
   border-radius: var(--radius-pill);
   background: var(--app-card-background);
   color: var(--color-muted);
@@ -15377,7 +15280,11 @@ button.family-settings-row:focus-visible:not(:disabled) {
   border: 0;
   border-radius: var(--app-card-radius);
   padding: var(--app-card-padding);
-  background: color-mix(in srgb, var(--color-primary) 5%, var(--app-card-background));
+  background: color-mix(
+    in srgb,
+    var(--color-primary) 5%,
+    var(--app-card-background)
+  );
   text-align: center;
 }
 
@@ -15412,4 +15319,68 @@ button.family-settings-row:focus-visible:not(:disabled) {
   padding-bottom: calc(
     var(--app-bottom-nav-height, 88px) + var(--app-footer-safe-area-spacing)
   );
+}
+
+.calendar-event-form-sheet .app-card {
+  gap: var(--space-m);
+}
+
+.event-form-card-title {
+  margin: 0;
+  color: var(--color-text);
+  font-size: calc(var(--text-body) * 1.12);
+  font-weight: 850;
+  letter-spacing: -0.04em;
+}
+
+.event-form-card-heading {
+  display: grid;
+  gap: calc(var(--space-xs) * 0.5);
+}
+
+.event-form-card-heading p {
+  margin: 0;
+  color: var(--color-muted);
+  font-size: var(--text-small);
+  font-weight: 720;
+}
+
+.event-form-title-row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: end;
+  gap: var(--space-s);
+}
+
+.event-form-icon-button {
+  display: grid;
+  width: var(--app-field-height);
+  min-width: var(--app-field-height);
+  min-height: var(--app-field-height);
+  place-items: center;
+  border: 1px solid var(--app-card-border);
+  border-radius: var(--app-input-radius);
+  background: color-mix(in srgb, var(--color-background-soft) 50%, transparent);
+  color: var(--color-primary);
+  font-weight: 850;
+}
+
+.event-form-field-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: var(--space-s);
+}
+
+.event-form-toggle-row {
+  box-shadow: none;
+}
+
+.event-form-toggle-row input {
+  justify-self: end;
+}
+
+@media (max-width: 520px) {
+  .event-form-field-grid {
+    grid-template-columns: 1fr;
+  }
 }
