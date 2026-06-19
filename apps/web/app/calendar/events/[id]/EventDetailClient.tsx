@@ -215,11 +215,39 @@ function EventEditSheet({ event, onClose, onSaved }: { event: CalendarMvpEvent |
   );
 }
 
-export function EventDetailClient({ event: initialEvent = null, eventId }: { event?: CalendarMvpEvent | null; eventId?: string }) {
+function resolveCalendarEvent(events: CalendarMvpEvent[], eventId?: string, occurrenceDate?: string) {
+  if (!eventId) {
+    return null;
+  }
+
+  if (occurrenceDate) {
+    const occurrence = events.find(
+      (calendarEvent) =>
+        calendarEvent.recurringEventId === eventId &&
+        calendarEvent.occurrenceDate === occurrenceDate,
+    );
+
+    if (occurrence) {
+      return occurrence;
+    }
+  }
+
+  return events.find((calendarEvent) => calendarEvent.id === eventId) ?? null;
+}
+
+function getCalendarEventEditHref(event: CalendarMvpEvent) {
+  if (event.isRecurringOccurrence && event.recurringEventId && event.occurrenceDate) {
+    return `/calendar/events/${encodeURIComponent(event.recurringEventId)}/edit?occurrenceDate=${encodeURIComponent(event.occurrenceDate)}`;
+  }
+
+  return `/calendar/events/${encodeURIComponent(event.id)}/edit`;
+}
+
+export function EventDetailClient({ event: initialEvent = null, eventId, occurrenceDate }: { event?: CalendarMvpEvent | null; eventId?: string; occurrenceDate?: string }) {
   const router = useRouter();
   const familyAccess = useFamilyAccess();
   const { events, loading, error, refresh, familyMembers } = useCalendar();
-  const event = initialEvent ?? events.find((calendarEvent) => calendarEvent.id === eventId) ?? null;
+  const event = initialEvent ?? resolveCalendarEvent(events, eventId, occurrenceDate);
   const participantIds = event ? remapLegacyMemberIds(event.participantIds, familyMembers) : [];
   const participants = event ? getParticipants(participantIds, familyMembers) : [];
   const EventIcon = event ? eventIcons[event.icon] : eventIcons.family;
@@ -255,7 +283,7 @@ export function EventDetailClient({ event: initialEvent = null, eventId }: { eve
           </div>
           {participants.length > 0 ? <div className="event-form-avatar-list calendar-event-sheet__people" aria-label={isWholeFamily ? "Deltakere: hele familien" : "Deltakere"}>{participants.map((member) => <span className="event-form-avatar-chip event-form-avatar-chip--selected" key={member.id}><UserAvatar identity={member} avatarUrl={member.avatarUrl} size="sm" className="event-form-avatar-chip__avatar" decorative /><span>{member.name}</span></span>)}</div> : null}
         </div>
-        <AppActionFooter className="calendar-event-sheet__actions"><button className="calendar-filter-sheet__action calendar-filter-sheet__action--primary" type="button" onClick={() => router.push(`/calendar/events/${event.id}/edit`)}>Rediger</button></AppActionFooter>
+        <AppActionFooter className="calendar-event-sheet__actions"><button className="calendar-filter-sheet__action calendar-filter-sheet__action--primary" type="button" onClick={() => router.push(getCalendarEventEditHref(event))}>Rediger</button></AppActionFooter>
       </HuskMobileSheet>
 
     </main>
