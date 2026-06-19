@@ -28,6 +28,7 @@ export type CalendarRecurrenceFrequency = "never" | "daily" | "weekly" | "monthl
 
 export type CalendarRecurrence = {
   frequency: Exclude<CalendarRecurrenceFrequency, "never">;
+  until?: string | null;
 };
 
 export type CalendarEvent = {
@@ -47,6 +48,7 @@ export type CalendarEvent = {
   isImported: boolean;
   reminder: { minutesBefore: number; label: string } | null;
   recurrence: CalendarRecurrence | null;
+  recurrenceUntil?: string | null;
   recurringEventId?: string;
   occurrenceDate?: string;
   isRecurringOccurrence?: boolean;

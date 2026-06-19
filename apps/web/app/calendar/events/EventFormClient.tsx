@@ -121,13 +121,17 @@ export function CalendarEventFormClient({
   );
   const [saveError, setSaveError] = useState<string | null>(null);
   const [isSaving, setIsSaving] = useState(false);
+  const [pendingRecurringAction, setPendingRecurringAction] = useState<"edit" | "delete" | null>(null);
   const selectedIcon = getIconOption(draft.iconId);
   const title = mode === "create" ? "Ny hendelse" : "Rediger hendelse";
   const endDate = draft.endDate || draft.date;
   const hasValidWindow = draft.allDay
     ? !endDate || !draft.date || endDate >= draft.date
     : Boolean(draft.startTime && draft.endTime && endDate >= draft.date && `${endDate}T${draft.endTime}` > `${draft.date}T${draft.startTime}`);
-  const isValid = draft.title.trim().length > 0 && draft.date.trim().length > 0 && hasValidWindow;
+  const needsRecurrenceUntil = draft.repeat !== "Aldri";
+  const hasRecurrenceUntil = !needsRecurrenceUntil || draft.recurrenceUntil.trim().length > 0;
+  const isValid = draft.title.trim().length > 0 && draft.date.trim().length > 0 && hasValidWindow && hasRecurrenceUntil;
+  const isRecurringEvent = Boolean(event?.isRecurringOccurrence || event?.recurrence);
   const participantSummary = getParticipantSummary(
     draft.participantIds,
     familyMembers,
@@ -180,6 +184,19 @@ export function CalendarEventFormClient({
     router.back();
   }
 
+
+  function eventInputFromDraft(currentDraft: CalendarEventFormDraft) {
+    return {
+      title: currentDraft.title.trim(), date: currentDraft.date, endDate: currentDraft.endDate || currentDraft.date,
+      startTime: currentDraft.allDay ? null : currentDraft.startTime || null, endTime: currentDraft.allDay ? null : currentDraft.endTime || null,
+      allDay: currentDraft.allDay, location: currentDraft.location.trim() || null, description: currentDraft.description.trim() || null,
+      icon: mapEventFormIconToCalendarIcon(currentDraft.iconId), participantIds: currentDraft.participantIds,
+      reminder: mapReminderLabelToReminder(currentDraft.reminder),
+      recurrence: currentDraft.repeat === "Aldri" ? null : { ...mapRepeatLabelToRecurrence(currentDraft.repeat)!, until: `${currentDraft.recurrenceUntil}T23:59:59.999Z` },
+      recurrenceUntil: currentDraft.repeat === "Aldri" ? null : `${currentDraft.recurrenceUntil}T23:59:59.999Z`,
+    };
+  }
+
   async function handleSave() {
     if (!isValid || isSaving) {
       return;
@@ -188,24 +205,16 @@ export function CalendarEventFormClient({
     setIsSaving(true);
     setSaveError(null);
 
-    const eventInput = {
-      title: draft.title.trim(),
-      date: draft.date,
-      endDate: draft.endDate || draft.date,
-      startTime: draft.allDay ? null : draft.startTime || null,
-      endTime: draft.allDay ? null : draft.endTime || null,
-      allDay: draft.allDay,
-      location: draft.location.trim() || null,
-      description: draft.description.trim() || null,
-      icon: mapEventFormIconToCalendarIcon(draft.iconId),
-      participantIds: draft.participantIds,
-      reminder: mapReminderLabelToReminder(draft.reminder),
-      recurrence: mapRepeatLabelToRecurrence(draft.repeat),
-    };
+    const eventInput = eventInputFromDraft(draft);
 
     try {
       if (mode === "edit" && event) {
-        const savedEvent = await updateEvent(event.id, eventInput);
+        if (isRecurringEvent && !pendingRecurringAction) {
+          setPendingRecurringAction("edit");
+          setIsSaving(false);
+          return;
+        }
+        const savedEvent = await updateEvent(event.id, eventInput, pendingRecurringAction === "edit" ? "occurrence" : "series");
         window.sessionStorage.removeItem(storageKey);
         window.sessionStorage.removeItem(`${storageKey}:icon`);
         router.push(`/calendar/events/${savedEvent.id}`);
@@ -232,7 +241,12 @@ export function CalendarEventFormClient({
     setSaveError(null);
 
     try {
-      await deleteEvent(event.id);
+      if (isRecurringEvent && !pendingRecurringAction) {
+        setPendingRecurringAction("delete");
+        setIsSaving(false);
+        return;
+      }
+      await deleteEvent(event.id, pendingRecurringAction === "delete" ? "occurrence" : "series");
       window.sessionStorage.removeItem(storageKey);
       window.sessionStorage.removeItem(`${storageKey}:icon`);
       router.push("/calendar");
@@ -535,6 +549,12 @@ export function CalendarEventFormClient({
                 ))}
               </AppSelect>
             </AppField>
+            {draft.repeat !== "Aldri" ? (
+              <AppField htmlFor="event-recurrence-until">
+                <span>Gjentas til</span>
+                <input id="event-recurrence-until" type="date" value={draft.recurrenceUntil} onChange={(changeEvent) => updateDraft("recurrenceUntil", changeEvent.target.value)} required />
+              </AppField>
+            ) : null}
           </AppCard>
 
           <AppCard aria-labelledby="event-description-title">
@@ -570,12 +590,24 @@ export function CalendarEventFormClient({
           {!hasValidWindow && draft.date ? (
             <p className="event-form-error" role="status">Slutt må være etter start.</p>
           ) : null}
+          {!hasRecurrenceUntil ? (
+            <p className="event-form-error" role="status">Velg når gjentakelsen skal stoppe.</p>
+          ) : null}
           {saveError ? (
             <p className="event-form-error" role="status">
               {saveError}
             </p>
           ) : null}
         </div>
+
+        {pendingRecurringAction ? (
+          <AppCard role="dialog" aria-label="Velg gjentakelse" className="event-form-source-note">
+            <h2 className="event-form-card-title">{pendingRecurringAction === "edit" ? "Rediger gjentakelse" : "Slett gjentakelse"}</h2>
+            <AppListRow as="button" type="button" onClick={() => pendingRecurringAction === "edit" ? void handleSave() : void handleDelete()}>Kun denne hendelsen</AppListRow>
+            <AppListRow as="button" type="button" onClick={() => { const action = pendingRecurringAction; setPendingRecurringAction(null); if (action === "edit") void updateEvent(event!.id, eventInputFromDraft(draft), "series").then((savedEvent) => router.push(`/calendar/events/${savedEvent.id}`)); else void deleteEvent(event!.id, "series").then(() => router.push("/calendar")); }}>Hele serien</AppListRow>
+            <AppListRow as="button" type="button" onClick={() => setPendingRecurringAction(null)}>Avbryt</AppListRow>
+          </AppCard>
+        ) : null}
 
         <AppActionFooter>
           <button

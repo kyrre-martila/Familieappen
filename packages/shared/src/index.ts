@@ -122,7 +122,8 @@ export interface CalendarEvent {
   endsAt: string | null;
   allDay: boolean;
   recurrenceFrequency: CalendarEventRecurrenceFrequency;
-  recurrence: { frequency: Exclude<CalendarEventRecurrenceFrequency, "never"> } | null;
+  recurrence: { frequency: Exclude<CalendarEventRecurrenceFrequency, "never">; until?: string | null } | null;
+  recurrenceUntil?: string | null;
   recurringEventId?: string;
   occurrenceDate?: string;
   isRecurringOccurrence?: boolean;

@@ -49,6 +49,28 @@ export class CalendarController {
     return createApiResponse(await this.calendarService.updateEvent(request.user.id, requireFamilyId(familyId), eventId, body));
   }
 
+  @Patch(":eventId/occurrences/:occurrenceDate")
+  async updateOccurrence(
+    @Req() request: AuthenticatedRequest,
+    @Headers("x-family-id") familyId: string,
+    @Param("eventId") eventId: string,
+    @Param("occurrenceDate") occurrenceDate: string,
+    @Body() body: UpdateCalendarEventRequestDto
+  ): Promise<ApiResponse<CalendarEventDto>> {
+    return createApiResponse(await this.calendarService.updateOccurrence(request.user.id, requireFamilyId(familyId), eventId, occurrenceDate, body));
+  }
+
+  @Delete(":eventId/occurrences/:occurrenceDate")
+  async deleteOccurrence(
+    @Req() request: AuthenticatedRequest,
+    @Headers("x-family-id") familyId: string,
+    @Param("eventId") eventId: string,
+    @Param("occurrenceDate") occurrenceDate: string
+  ): Promise<ApiResponse<null>> {
+    await this.calendarService.deleteOccurrence(request.user.id, requireFamilyId(familyId), eventId, occurrenceDate);
+    return createApiResponse(null);
+  }
+
   @Delete(":eventId")
   async deleteEvent(
     @Req() request: AuthenticatedRequest,

@@ -425,6 +425,7 @@ model CalendarEvent {
   endsAt          DateTime?
   allDay          Boolean                    @default(false)
   recurrenceFrequency String                 @default("never")
+  recurrenceUntil DateTime?
   source          String                     @default("manual")
   icsSourceId     String?
   externalUid     String?
@@ -438,6 +439,7 @@ model CalendarEvent {
   icsSource       CalendarIcsSource?         @relation(fields: [icsSourceId], references: [id], onDelete: Cascade)
   createdByUser   User?                      @relation("CalendarEventCreatedBy", fields: [createdByUserId], references: [id], onDelete: SetNull)
   participants    CalendarEventParticipant[]
+  recurrenceExceptions CalendarEventException[] @relation("CalendarEventRecurrenceExceptions")
 
   @@index([familyId])
   @@index([startsAt])
@@ -447,6 +449,31 @@ model CalendarEvent {
   @@index([icsSourceId])
   @@index([source])
   @@map("calendar_events")
+}
+
+
+model CalendarEventException {
+  id                                String        @id @default(cuid())
+  recurringEventId                  String
+  occurrenceDate                    DateTime
+  isDeleted                         Boolean       @default(false)
+  overrideStartsAt                  DateTime?
+  overrideEndsAt                    DateTime?
+  overrideTitle                     String?
+  overrideDescription               String?
+  overrideLocation                  String?
+  overrideIcon                      String?
+  overrideReminderMinutesBefore     Int?
+  overrideAllDay                    Boolean?
+  overrideParticipantFamilyMemberIds String[]      @default([])
+  createdAt                         DateTime      @default(now())
+  updatedAt                         DateTime      @updatedAt
+  recurringEvent                    CalendarEvent @relation("CalendarEventRecurrenceExceptions", fields: [recurringEventId], references: [id], onDelete: Cascade)
+
+  @@unique([recurringEventId, occurrenceDate])
+  @@index([recurringEventId])
+  @@index([recurringEventId, occurrenceDate])
+  @@map("calendar_event_exceptions")
 }
 
 

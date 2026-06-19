@@ -27,7 +27,8 @@ export interface CalendarEventDto {
   endsAt: string | null;
   allDay: boolean;
   recurrenceFrequency: CalendarEventRecurrenceFrequencyDto;
-  recurrence: { frequency: CalendarEventRecurrenceFrequencyDto } | null;
+  recurrence: { frequency: CalendarEventRecurrenceFrequencyDto; until: string | null } | null;
+  recurrenceUntil?: string | null;
   /** Present for generated recurring occurrences; points back to the persisted series event. */
   recurringEventId?: string;
   /** YYYY-MM-DD date this generated occurrence starts on. */
@@ -58,6 +59,7 @@ export interface CreateCalendarEventRequestDto {
   endsAt?: unknown;
   allDay?: unknown;
   recurrenceFrequency?: unknown;
+  recurrenceUntil?: unknown;
   participantFamilyMemberIds?: unknown;
 }
 
@@ -71,5 +73,8 @@ export interface UpdateCalendarEventRequestDto {
   endsAt?: unknown;
   allDay?: unknown;
   recurrenceFrequency?: unknown;
+  recurrenceUntil?: unknown;
   participantFamilyMemberIds?: unknown;
 }
+
+export type UpdateCalendarEventOccurrenceRequestDto = UpdateCalendarEventRequestDto;
