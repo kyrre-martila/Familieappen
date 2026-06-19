@@ -875,6 +875,7 @@ export async function addCalendarEvent(
     startsAt: string;
     endsAt?: string | null;
     allDay?: boolean;
+    recurrenceFrequency?: "never" | "daily" | "weekly" | "monthly" | "yearly";
     participantFamilyMemberIds?: string[];
   }
 ): Promise<CalendarEvent> {
@@ -897,6 +898,7 @@ export async function updateCalendarEvent(
     startsAt?: string;
     endsAt?: string | null;
     allDay?: boolean;
+    recurrenceFrequency?: "never" | "daily" | "weekly" | "monthly" | "yearly";
     participantFamilyMemberIds?: string[];
   }
 ): Promise<CalendarEvent> {

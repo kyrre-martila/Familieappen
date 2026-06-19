@@ -14,14 +14,17 @@ export interface CalendarEventReminder {
   label: string;
 }
 
+export type CalendarEventRecurrenceFrequency = "never" | "daily" | "weekly" | "monthly" | "yearly";
+
 export interface CalendarEventRecurrence {
-  rule?: string;
+  frequency: Exclude<CalendarEventRecurrenceFrequency, "never">;
 }
 
 export interface CalendarEvent {
   id: string;
   title: string;
   date: string;
+  endDate: string | null;
   startTime: string | null;
   endTime: string | null;
   allDay: boolean;

@@ -95,6 +95,8 @@ export interface MealPlan {
   recentMeals: string[];
 }
 
+export type CalendarEventRecurrenceFrequency = "never" | "daily" | "weekly" | "monthly" | "yearly";
+
 export interface CalendarEventParticipant {
   id: string;
   eventId: string;
@@ -112,12 +114,15 @@ export interface CalendarEvent {
   icon: string;
   reminderMinutesBefore: number | null;
   date: string;
+  endDate: string | null;
   startTime: string | null;
   endTime: string | null;
   reminder: { minutesBefore: number; label: string } | null;
   startsAt: string;
   endsAt: string | null;
   allDay: boolean;
+  recurrenceFrequency: CalendarEventRecurrenceFrequency;
+  recurrence: { frequency: Exclude<CalendarEventRecurrenceFrequency, "never"> } | null;
   source: string;
   icsSourceId: string | null;
   externalUid: string | null;
