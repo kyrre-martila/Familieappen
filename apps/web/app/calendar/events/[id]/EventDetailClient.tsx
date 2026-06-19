@@ -218,7 +218,6 @@ export function EventDetailClient({ event: initialEvent = null, eventId }: { eve
   const router = useRouter();
   const familyAccess = useFamilyAccess();
   const { events, loading, error, refresh, familyMembers } = useCalendar();
-  const [isEditing, setIsEditing] = useState(false);
   const event = initialEvent ?? events.find((calendarEvent) => calendarEvent.id === eventId) ?? null;
   const participantIds = event ? remapLegacyMemberIds(event.participantIds, familyMembers) : [];
   const participants = event ? getParticipants(participantIds, familyMembers) : [];
@@ -245,7 +244,7 @@ export function EventDetailClient({ event: initialEvent = null, eventId }: { eve
 
   return (
     <main className="calendar-event-sheet-host" aria-label="Kalenderhendelse">
-      <HuskMobileSheet isOpen={!isEditing} labelledBy="calendar-event-detail-title" onClose={() => router.back()}>
+      <HuskMobileSheet isOpen={true} labelledBy="calendar-event-detail-title" onClose={() => router.back()}>
         <div className="calendar-filter-sheet__header">
           <div className="husk-reminder-detail__heading"><span className="husk-reminder-detail__icon husk-reminder-card--blue" aria-hidden="true"><EventIcon size={24} strokeWidth={2.35} /></span><div><p className="calendar-filter-sheet__status">{sourceLabel} • {formatEventDate(event.date)}</p><h1 className="calendar-filter-sheet__title" id="calendar-event-detail-title">{event.title}</h1></div></div>
           <div className="calendar-event-sheet__header-actions"><button className="calendar-filter-sheet__close" type="button" aria-label="Flere valg for hendelsen"><MoreHorizontal aria-hidden="true" size={18} strokeWidth={2.5} /></button><button className="calendar-filter-sheet__close" type="button" aria-label="Lukk hendelse" onClick={() => router.back()}><X aria-hidden="true" size={18} strokeWidth={2.5} /></button></div>
@@ -256,9 +255,9 @@ export function EventDetailClient({ event: initialEvent = null, eventId }: { eve
           </div>
           {!isWholeFamily && participants.length > 0 ? <div className="event-form-avatar-list calendar-event-sheet__people" aria-label="Deltakere">{participants.map((member) => <span className="event-form-avatar-chip event-form-avatar-chip--selected" key={member.id}><UserAvatar identity={member} avatarUrl={member.avatarUrl} size="sm" className="event-form-avatar-chip__avatar" decorative /><span>{member.name}</span></span>)}</div> : null}
         </div>
-        <div className="calendar-filter-sheet__actions"><button className="calendar-filter-sheet__action calendar-filter-sheet__action--primary" type="button" onClick={() => setIsEditing(true)}>Rediger</button></div>
+        <div className="calendar-filter-sheet__actions"><button className="calendar-filter-sheet__action calendar-filter-sheet__action--primary" type="button" onClick={() => router.push(`/calendar/events/${event.id}/edit`)}>Rediger</button></div>
       </HuskMobileSheet>
-      <EventEditSheet event={isEditing ? event : null} onClose={() => setIsEditing(false)} onSaved={() => setIsEditing(false)} />
+
     </main>
   );
 }

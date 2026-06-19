@@ -3,11 +3,10 @@
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { useEffect, useMemo, useState } from "react";
-import { Check, Trash2, Users, X } from "lucide-react";
+import { CalendarCheck, Check, ChevronDown, Trash2, X } from "lucide-react";
 import type { CalendarMvpEvent } from "@familieappen/shared";
 
 import { useCalendar } from "../../../features/calendar/hooks/useCalendar";
-import { UserAvatar } from "../../../components/avatar/UserAvatar";
 import {
   AppActionFooter,
   AppCard,
@@ -122,7 +121,9 @@ export function CalendarEventFormClient({
   const [saveError, setSaveError] = useState<string | null>(null);
   const [isSaving, setIsSaving] = useState(false);
   const [pendingRecurringAction, setPendingRecurringAction] = useState<"edit" | "delete" | null>(null);
+  const [participantsOpen, setParticipantsOpen] = useState(false);
   const selectedIcon = getIconOption(draft.iconId);
+  const SelectedIcon = selectedIcon?.Icon ?? CalendarCheck;
   const title = mode === "create" ? "Ny hendelse" : "Rediger hendelse";
   const endDate = draft.endDate || draft.date;
   const hasValidWindow = draft.allDay
@@ -131,7 +132,7 @@ export function CalendarEventFormClient({
   const needsRecurrenceUntil = draft.repeat !== "Aldri";
   const hasRecurrenceUntil = !needsRecurrenceUntil || draft.recurrenceUntil.trim().length > 0;
   const isValid = draft.title.trim().length > 0 && draft.date.trim().length > 0 && hasValidWindow && hasRecurrenceUntil;
-  const isRecurringEvent = Boolean(event?.isRecurringOccurrence || event?.recurrence);
+  const isRecurringEvent = Boolean(event?.isRecurringOccurrence || event?.recurringEventId || event?.recurrence);
   const participantSummary = getParticipantSummary(
     draft.participantIds,
     familyMembers,
@@ -197,36 +198,83 @@ export function CalendarEventFormClient({
     };
   }
 
-  async function handleSave() {
-    if (!isValid || isSaving) {
+  function getSaveErrorMessage(error: unknown) {
+    const message = error instanceof Error ? error.message : String(error);
+
+    if (/300|max/i.test(message)) {
+      return "Serien kan maks ha 300 hendelser. Velg en tidligere sluttdato.";
+    }
+
+    return "Kunne ikke lagre hendelsen akkurat nå";
+  }
+
+  async function saveWithScope(scope: "occurrence" | "series") {
+    if (!event || !isValid || isSaving) {
       return;
     }
 
     setIsSaving(true);
     setSaveError(null);
 
-    const eventInput = eventInputFromDraft(draft);
+    try {
+      const savedEvent = await updateEvent(event.id, eventInputFromDraft(draft), scope);
+      window.sessionStorage.removeItem(storageKey);
+      window.sessionStorage.removeItem(`${storageKey}:icon`);
+      router.push(`/calendar/events/${savedEvent.id}`);
+    } catch (error) {
+      setSaveError(getSaveErrorMessage(error));
+    } finally {
+      setPendingRecurringAction(null);
+      setIsSaving(false);
+    }
+  }
+
+  async function deleteWithScope(scope: "occurrence" | "series") {
+    if (!event || isSaving) {
+      return;
+    }
+
+    setIsSaving(true);
+    setSaveError(null);
 
     try {
-      if (mode === "edit" && event) {
-        if (isRecurringEvent && !pendingRecurringAction) {
-          setPendingRecurringAction("edit");
-          setIsSaving(false);
-          return;
-        }
-        const savedEvent = await updateEvent(event.id, eventInput, pendingRecurringAction === "edit" ? "occurrence" : "series");
-        window.sessionStorage.removeItem(storageKey);
-        window.sessionStorage.removeItem(`${storageKey}:icon`);
-        router.push(`/calendar/events/${savedEvent.id}`);
-        return;
-      }
-
-      await createEvent(eventInput);
+      await deleteEvent(event.id, scope);
       window.sessionStorage.removeItem(storageKey);
       window.sessionStorage.removeItem(`${storageKey}:icon`);
       router.push("/calendar");
     } catch {
-      setSaveError("Kunne ikke lagre hendelsen akkurat nå");
+      setSaveError("Kunne ikke slette hendelsen akkurat nå");
+    } finally {
+      setPendingRecurringAction(null);
+      setIsSaving(false);
+    }
+  }
+
+  async function handleSave() {
+    if (!isValid || isSaving) {
+      return;
+    }
+
+    if (mode === "edit" && event) {
+      if (isRecurringEvent) {
+        setPendingRecurringAction("edit");
+        return;
+      }
+
+      await saveWithScope("series");
+      return;
+    }
+
+    setIsSaving(true);
+    setSaveError(null);
+
+    try {
+      await createEvent(eventInputFromDraft(draft));
+      window.sessionStorage.removeItem(storageKey);
+      window.sessionStorage.removeItem(`${storageKey}:icon`);
+      router.push("/calendar");
+    } catch (error) {
+      setSaveError(getSaveErrorMessage(error));
     } finally {
       setIsSaving(false);
     }
@@ -237,24 +285,12 @@ export function CalendarEventFormClient({
       return;
     }
 
-    setIsSaving(true);
-    setSaveError(null);
-
-    try {
-      if (isRecurringEvent && !pendingRecurringAction) {
-        setPendingRecurringAction("delete");
-        setIsSaving(false);
-        return;
-      }
-      await deleteEvent(event.id, pendingRecurringAction === "delete" ? "occurrence" : "series");
-      window.sessionStorage.removeItem(storageKey);
-      window.sessionStorage.removeItem(`${storageKey}:icon`);
-      router.push("/calendar");
-    } catch {
-      setSaveError("Kunne ikke slette hendelsen akkurat nå");
-    } finally {
-      setIsSaving(false);
+    if (isRecurringEvent) {
+      setPendingRecurringAction("delete");
+      return;
     }
+
+    await deleteWithScope("series");
   }
 
   return (
@@ -321,7 +357,7 @@ export function CalendarEventFormClient({
               Grunnleggende informasjon
             </h2>
             <div className="event-form-title-row">
-              <AppField htmlFor="event-title">
+              <AppField htmlFor="event-title" className="event-form-title-field">
                 <span>Tittel</span>
                 <input
                   id="event-title"
@@ -333,27 +369,21 @@ export function CalendarEventFormClient({
                   }
                   placeholder="Tittel på hendelse"
                   autoComplete="off"
+                  required
                 />
               </AppField>
               <Link
-                className="event-form-icon-button"
+                className="event-form-icon-selector"
                 href={iconPickerHref}
                 aria-label={
                   selectedIcon
                     ? `Endre ikon, valgt ${selectedIcon.label}`
-                    : "Velg ikon"
+                    : "Endre ikon, valgt avtale"
                 }
-                title={selectedIcon ? selectedIcon.label : "Velg ikon"}
+                title={selectedIcon ? selectedIcon.label : "Avtale"}
               >
-                {selectedIcon ? (
-                  <selectedIcon.Icon
-                    aria-hidden="true"
-                    size={20}
-                    strokeWidth={2.5}
-                  />
-                ) : (
-                  <span aria-hidden="true">+</span>
-                )}
+                <SelectedIcon aria-hidden="true" size={22} strokeWidth={2.5} />
+                <span>Endre ikon</span>
               </Link>
             </div>
             <AppField htmlFor="event-location">
@@ -368,6 +398,12 @@ export function CalendarEventFormClient({
                 placeholder="Legg til sted"
               />
             </AppField>
+          </AppCard>
+
+          <AppCard aria-labelledby="event-time-title">
+            <h2 className="event-form-card-title" id="event-time-title">
+              Dato og tid
+            </h2>
             <div className="event-form-field-grid">
               <AppField htmlFor="event-date">
                 <span>Startdato</span>
@@ -454,79 +490,57 @@ export function CalendarEventFormClient({
           </AppCard>
 
           <AppCard aria-labelledby="event-participants-title">
-            <div className="event-form-card-heading">
-              <h2
-                className="event-form-card-title"
-                id="event-participants-title"
-              >
-                Gjelder
-              </h2>
-              <p>{participantSummary}</p>
-            </div>
-            {familyMembersLoading ? (
-              <FamilyMembersLoadingState />
-            ) : familyMembersError ? (
-              <FamilyMembersErrorState
-                onRetry={() => void refreshFamilyMembers()}
-              />
-            ) : familyMembers.length === 0 ? (
-              <FamilyMembersEmptyState />
-            ) : (
-              <div
-                className="event-form-avatar-list"
-                role="group"
-                aria-label="Velg deltakere"
-              >
-                <button
-                  className={`event-form-avatar-chip event-form-avatar-chip--family ${draft.participantIds.length === 0 ? "event-form-avatar-chip--selected" : ""}`}
-                  type="button"
-                  onClick={() => updateDraft("participantIds", [])}
-                  aria-pressed={draft.participantIds.length === 0}
-                  aria-label={`Hele familien. ${draft.participantIds.length === 0 ? "Valgt" : "Ikke valgt"}`}
-                >
-                  <span className="event-form-avatar-chip__avatar event-form-avatar-chip__avatar--family event-form-avatar-chip__avatar-wrap">
-                    <Users aria-hidden="true" size={18} />
-                    {draft.participantIds.length === 0 ? (
-                      <span className="event-form-avatar-chip__check">
-                        <Check size={14} strokeWidth={3.2} />
-                      </span>
-                    ) : null}
-                  </span>
-                  <span>Hele familien</span>
-                </button>
-                {getOrderedFamilyMembers(familyMembers).map((member) => {
-                  const isSelected = draft.participantIds.includes(member.id);
-                  return (
-                    <button
-                      className={`event-form-avatar-chip ${isSelected ? "event-form-avatar-chip--selected" : ""}`}
-                      key={member.id}
-                      type="button"
-                      onClick={() => toggleParticipant(member.id)}
-                      aria-pressed={isSelected}
-                      aria-label={`${member.name}. ${isSelected ? "Valgt" : "Ikke valgt"}`}
-                    >
-                      <span className="event-form-avatar-chip__avatar-wrap">
-                        <UserAvatar
-                          identity={{
-                            displayName: member.displayName ?? member.name,
-                          }}
-                          avatarUrl={member.avatarUrl}
-                          size="sm"
-                          className={`event-form-avatar-chip__avatar event-form-avatar-chip__avatar--${member.avatarColor}`}
-                          decorative
-                        />
-                        {isSelected ? (
-                          <span className="event-form-avatar-chip__check">
-                            <Check size={14} strokeWidth={3.2} />
-                          </span>
-                        ) : null}
-                      </span>
-                      <span>{member.name}</span>
-                    </button>
-                  );
-                })}
-              </div>
-            )}
+            <h2 className="event-form-card-title" id="event-participants-title">
+              Gjelder
+            </h2>
+            <AppListRow
+              as="button"
+              type="button"
+              className="event-form-compact-selector"
+              onClick={() => setParticipantsOpen((isOpen) => !isOpen)}
+              aria-expanded={participantsOpen}
+            >
+              <span>{participantSummary}</span>
+              <ChevronDown aria-hidden="true" size={18} />
+            </AppListRow>
+            {participantsOpen ? (
+              familyMembersLoading ? (
+                <FamilyMembersLoadingState />
+              ) : familyMembersError ? (
+                <FamilyMembersErrorState
+                  onRetry={() => void refreshFamilyMembers()}
+                />
+              ) : familyMembers.length === 0 ? (
+                <FamilyMembersEmptyState />
+              ) : (
+                <div className="event-form-participant-list" role="group" aria-label="Velg deltakere">
+                  <AppListRow
+                    as="button"
+                    type="button"
+                    onClick={() => updateDraft("participantIds", [])}
+                    aria-pressed={draft.participantIds.length === 0}
+                  >
+                    <span>Hele familien</span>
+                    {draft.participantIds.length === 0 ? <Check aria-hidden="true" size={18} /> : null}
+                  </AppListRow>
+                  {getOrderedFamilyMembers(familyMembers).map((member) => {
+                    const isSelected = draft.participantIds.includes(member.id);
+                    return (
+                      <AppListRow
+                        as="button"
+                        type="button"
+                        key={member.id}
+                        onClick={() => toggleParticipant(member.id)}
+                        aria-pressed={isSelected}
+                      >
+                        <span>{member.name}</span>
+                        {isSelected ? <Check aria-hidden="true" size={18} /> : null}
+                      </AppListRow>
+                    );
+                  })}
+                </div>
+              )
+            ) : null}
           </AppCard>
 
           <AppCard aria-labelledby="event-repeat-title">
@@ -538,9 +552,12 @@ export function CalendarEventFormClient({
               <AppSelect
                 id="event-repeat"
                 value={draft.repeat}
-                onChange={(changeEvent) =>
-                  updateDraft("repeat", changeEvent.target.value)
-                }
+                onChange={(changeEvent) => {
+                  updateDraft("repeat", changeEvent.target.value);
+                  if (changeEvent.target.value === "Aldri") {
+                    updateDraft("recurrenceUntil", "");
+                  }
+                }}
               >
                 {repeatOptions.map((option) => (
                   <option key={option} value={option}>
@@ -552,7 +569,15 @@ export function CalendarEventFormClient({
             {draft.repeat !== "Aldri" ? (
               <AppField htmlFor="event-recurrence-until">
                 <span>Gjentas til</span>
-                <input id="event-recurrence-until" type="date" value={draft.recurrenceUntil} onChange={(changeEvent) => updateDraft("recurrenceUntil", changeEvent.target.value)} required />
+                <input
+                  id="event-recurrence-until"
+                  type="date"
+                  value={draft.recurrenceUntil}
+                  onChange={(changeEvent) =>
+                    updateDraft("recurrenceUntil", changeEvent.target.value)
+                  }
+                  required
+                />
               </AppField>
             ) : null}
           </AppCard>
@@ -561,18 +586,16 @@ export function CalendarEventFormClient({
             <h2 className="event-form-card-title" id="event-description-title">
               Beskrivelse
             </h2>
-            <AppField htmlFor="event-description">
-              <span>Beskrivelse</span>
-              <AppTextarea
-                id="event-description"
-                value={draft.description}
-                onChange={(changeEvent) =>
-                  updateDraft("description", changeEvent.target.value)
-                }
-                placeholder="Legg til beskrivelse, noter eller annen informasjon …"
-                rows={4}
-              />
-            </AppField>
+            <AppTextarea
+              id="event-description"
+              aria-label="Beskrivelse"
+              value={draft.description}
+              onChange={(changeEvent) =>
+                updateDraft("description", changeEvent.target.value)
+              }
+              placeholder="Legg til beskrivelse, noter eller annen informasjon …"
+              rows={4}
+            />
           </AppCard>
 
           {mode === "edit" ? (
@@ -601,10 +624,13 @@ export function CalendarEventFormClient({
         </div>
 
         {pendingRecurringAction ? (
-          <AppCard role="dialog" aria-label="Velg gjentakelse" className="event-form-source-note">
-            <h2 className="event-form-card-title">{pendingRecurringAction === "edit" ? "Rediger gjentakelse" : "Slett gjentakelse"}</h2>
-            <AppListRow as="button" type="button" onClick={() => pendingRecurringAction === "edit" ? void handleSave() : void handleDelete()}>Kun denne hendelsen</AppListRow>
-            <AppListRow as="button" type="button" onClick={() => { const action = pendingRecurringAction; setPendingRecurringAction(null); if (action === "edit") void updateEvent(event!.id, eventInputFromDraft(draft), "series").then((savedEvent) => router.push(`/calendar/events/${savedEvent.id}`)); else void deleteEvent(event!.id, "series").then(() => router.push("/calendar")); }}>Hele serien</AppListRow>
+          <AppCard role="dialog" aria-label="Velg gjentakelse" className="event-form-recurrence-choice">
+            <h2 className="event-form-card-title">
+              {pendingRecurringAction === "edit" ? "Hva vil du redigere?" : "Hva vil du slette?"}
+            </h2>
+            <p>Velg om endringen bare gjelder denne hendelsen eller hele serien.</p>
+            <AppListRow as="button" type="button" onClick={() => pendingRecurringAction === "edit" ? void saveWithScope("occurrence") : void deleteWithScope("occurrence")}>Kun denne hendelsen</AppListRow>
+            <AppListRow as="button" type="button" onClick={() => pendingRecurringAction === "edit" ? void saveWithScope("series") : void deleteWithScope("series")}>Hele serien</AppListRow>
             <AppListRow as="button" type="button" onClick={() => setPendingRecurringAction(null)}>Avbryt</AppListRow>
           </AppCard>
         ) : null}

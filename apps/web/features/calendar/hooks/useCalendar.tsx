@@ -632,9 +632,17 @@ function useCalendarContractValue(): CalendarContract {
       const seriesEventId = previousEvent.recurringEventId ?? id;
       const optimisticEvent = { ...previousEvent, ...update, pending: true };
       setEvents((currentEvents) =>
-        currentEvents.map((event) =>
-          event.id === id || event.recurringEventId === seriesEventId || event.id === seriesEventId ? optimisticEvent : event,
-        ),
+        currentEvents.map((event) => {
+          if (scope === "occurrence") {
+            return event.id === id ? optimisticEvent : event;
+          }
+
+          return event.id === id ||
+            event.recurringEventId === seriesEventId ||
+            event.id === seriesEventId
+            ? { ...event, ...update, pending: true }
+            : event;
+        }),
       );
 
       try {
@@ -644,7 +652,17 @@ function useCalendarContractValue(): CalendarContract {
           : await updateBackendCalendarEvent(activeFamilyId, seriesEventId, payload);
         const savedEvent = toCalendarEvent(backendEvent);
         setEvents((currentEvents) =>
-          currentEvents.map((event) => (event.id === id || event.recurringEventId === seriesEventId || event.id === seriesEventId ? savedEvent : event)),
+          currentEvents.map((event) => {
+            if (scope === "occurrence") {
+              return event.id === id ? savedEvent : event;
+            }
+
+            return event.id === id ||
+              event.recurringEventId === seriesEventId ||
+              event.id === seriesEventId
+              ? savedEvent
+              : event;
+          }),
         );
         return savedEvent;
       } catch (updateError) {
