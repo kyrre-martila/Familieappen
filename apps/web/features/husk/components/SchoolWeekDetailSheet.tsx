@@ -1,4 +1,12 @@
-import { CalendarDays, ClipboardList, FileText, RotateCcw, User, X } from "lucide-react";
+import {
+  CalendarDays,
+  ClipboardList,
+  FileText,
+  RotateCcw,
+  User,
+  X,
+} from "lucide-react";
+import { AppActionFooter } from "../../../components/app-ui";
 
 import type { HuskFamilyMember, HuskSchoolWeekItem } from "../types";
 import { reminderIcons } from "./huskConfig";
@@ -18,10 +26,12 @@ function formatSchoolReminderDate(reminder: HuskSchoolWeekItem) {
 export function SchoolWeekDetailSheet({
   child,
   onClose,
+  onEdit,
   reminder,
 }: {
   child: HuskFamilyMember | null;
   onClose: () => void;
+  onEdit: (reminder: HuskSchoolWeekItem) => void;
   reminder: HuskSchoolWeekItem | null;
 }) {
   const Icon = reminder ? reminderIcons[reminder.icon] : ClipboardList;
@@ -43,7 +53,9 @@ export function SchoolWeekDetailSheet({
                 <Icon size={24} strokeWidth={2.35} />
               </span>
               <div>
-                <p className="calendar-filter-sheet__status">Skoleuka • {formatSchoolReminderDate(reminder)}</p>
+                <p className="calendar-filter-sheet__status">
+                  Skoleuka • {formatSchoolReminderDate(reminder)}
+                </p>
                 <h3
                   className="calendar-filter-sheet__title"
                   id="husk-school-detail-title"
@@ -88,6 +100,15 @@ export function SchoolWeekDetailSheet({
               </div>
             ) : null}
           </div>
+          <AppActionFooter>
+            <button
+              className="husk-school-sheet__action husk-school-sheet__action--primary"
+              type="button"
+              onClick={() => onEdit(reminder)}
+            >
+              Rediger
+            </button>
+          </AppActionFooter>
         </>
       ) : null}
     </HuskMobileSheet>

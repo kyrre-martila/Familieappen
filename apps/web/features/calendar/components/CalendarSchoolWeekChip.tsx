@@ -21,7 +21,7 @@ export function CalendarSchoolWeekChip({
   return (
     <Link
       className="calendar-chip calendar-chip--school-week"
-      href={`/husk?tab=skoleuka&date=${item.date}`}
+      href={`/husk?tab=skoleuka&date=${item.date}&schoolItemId=${encodeURIComponent(item.id.replace(/^school-week-/, "").replace(new RegExp(`-${item.date}$`), ""))}`}
       aria-label={`Åpne skoleuka: ${item.title}${audienceLabel ? ` for ${audienceLabel}` : ""}`}
     >
       <Backpack aria-hidden="true" size={22} strokeWidth={2.3} />
