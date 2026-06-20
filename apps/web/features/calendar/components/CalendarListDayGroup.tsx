@@ -5,6 +5,7 @@ import Link from "next/link";
 import { CalendarEventCard } from "./CalendarEventCard";
 import { CalendarMealChip } from "./CalendarMealChip";
 import { CalendarReminderChip } from "./CalendarReminderChip";
+import { CalendarTaskChip } from "./CalendarTaskChip";
 import { formatListDate } from "./calendarFormatters";
 import type { CalendarListDayGroup as CalendarListDayGroupType } from "./calendarTypes";
 
@@ -18,6 +19,7 @@ export function CalendarListDayGroup({
   today: string;
 }) {
   const visibleReminders = group.reminders.slice(0, 10);
+  const visibleTasks = group.tasks.slice(0, 10);
   const hiddenReminderCount = Math.max(
     0,
     group.reminders.length - visibleReminders.length,
@@ -45,7 +47,7 @@ export function CalendarListDayGroup({
         ) : null}
       </div>
 
-      {group.meal || group.reminders.length > 0 ? (
+      {group.meal || group.reminders.length > 0 || group.tasks.length > 0 ? (
         <div
           className="calendar-list-day__chips"
           aria-label={`Middag og husk for ${formatListDate(group.date)}`}
@@ -59,6 +61,9 @@ export function CalendarListDayGroup({
           ) : null}
           {visibleReminders.map((reminder) => (
             <CalendarReminderChip reminder={reminder} key={reminder.id} />
+          ))}
+          {visibleTasks.map((task) => (
+            <CalendarTaskChip task={task} key={task.id} />
           ))}
           {hiddenReminderCount > 0 ? (
             <button

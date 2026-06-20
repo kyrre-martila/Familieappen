@@ -13,6 +13,7 @@ import { CalendarDayView } from "../../features/calendar/components/CalendarDayV
 import { CalendarMealChip } from "../../features/calendar/components/CalendarMealChip";
 import { CalendarReminderSummaryChip } from "../../features/calendar/components/CalendarReminderChip";
 import { CalendarSchoolWeekChip } from "../../features/calendar/components/CalendarSchoolWeekChip";
+import { CalendarTaskChip } from "../../features/calendar/components/CalendarTaskChip";
 import { CalendarProvider, useCalendar } from "../../features/calendar/hooks/useCalendar";
 import { getShoppingList, getTasks, type ShoppingList, type Task } from "../../lib/api";
 import { FeedbackSheet } from "../settings/about/AppInfoSettingsClient";
@@ -230,15 +231,16 @@ function HomeTodayChips({
   missingShoppingCount: number;
   selectedDate: string;
 }) {
-  const { mealSummaries, normalizedItems, reminders } = useCalendar();
+  const { mealSummaries, normalizedItems, reminders, tasks: calendarTasks } = useCalendar();
   const safeMealSummaries = Array.isArray(mealSummaries) ? mealSummaries : [];
   const safeNormalizedItems = Array.isArray(normalizedItems) ? normalizedItems : [];
   const safeReminders = Array.isArray(reminders) ? reminders : [];
   const meal = safeMealSummaries.find((item) => item?.date === selectedDate);
   const visibleReminders = safeReminders.filter((item) => item?.date === selectedDate);
+  const dueTasks = calendarTasks.filter((task) => task.dueDate?.slice(0, 10) === selectedDate);
   const schoolWeekItems = safeNormalizedItems.filter((item) => item?.date === selectedDate && item.type === "school-week");
   const hasShoppingChip = missingShoppingCount > 0;
-  const chipCount = (meal ? 1 : 0) + visibleReminders.length + schoolWeekItems.length + (hasShoppingChip ? 1 : 0);
+  const chipCount = (meal ? 1 : 0) + visibleReminders.length + dueTasks.length + schoolWeekItems.length + (hasShoppingChip ? 1 : 0);
 
   if (chipCount === 0) return null;
 
@@ -248,10 +250,13 @@ function HomeTodayChips({
       {visibleReminders.map((reminder) => (
         <CalendarReminderSummaryChip
           ariaLabel={`Åpne påminnelser i Husk: ${reminder.title}`}
-          href="/husk?tab=paminnelser"
+          href={`/husk?tab=reminders&detailId=${encodeURIComponent(reminder.id)}`}
           reminder={reminder}
           key={reminder.id}
         />
+      ))}
+      {dueTasks.map((task) => (
+        <CalendarTaskChip task={task} key={task.id} />
       ))}
       {schoolWeekItems.map((item) => (
         <CalendarSchoolWeekChip item={item} key={item.id} />

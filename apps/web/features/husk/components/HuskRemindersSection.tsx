@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 
 import {
   FamilyMembersEmptyState,
@@ -17,9 +17,11 @@ import { HuskReminderEmptyState } from "./HuskReminderEmptyState";
 import { HuskReminderGroups } from "./HuskReminderGroups";
 
 export function HuskRemindersSection({
+  detailId,
   filters,
   query,
 }: {
+  detailId?: string | null;
   filters: HuskFilters;
   query: string;
 }) {
@@ -43,6 +45,14 @@ export function HuskRemindersSection({
     deleteReminder,
   } = useReminders();
   const normalizedQuery = normalizeSearch(query);
+
+  useEffect(() => {
+    if (!detailId || loading) {
+      return;
+    }
+
+    setSelectedReminder(reminders.find((reminder) => reminder.id === detailId) ?? null);
+  }, [detailId, loading, reminders]);
   const today = new Date().toISOString().slice(0, 10);
   const activeReminders = reminders.filter(
     (reminder) => !reminder.dueDate || reminder.dueDate >= today,

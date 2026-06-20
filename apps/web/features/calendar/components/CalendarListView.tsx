@@ -29,6 +29,7 @@ export function CalendarListView() {
     events: calendarEvents,
     mealSummaries: mealPlannerMeals,
     reminders,
+    tasks,
     selectedDate,
     setSelectedDate,
     setSelectedView,
@@ -44,8 +45,8 @@ export function CalendarListView() {
 
   const dayGroups = useMemo(
     () =>
-      buildListDayGroups(filters, calendarEvents, reminders, mealPlannerMeals),
-    [calendarEvents, filters, mealPlannerMeals, reminders],
+      buildListDayGroups(filters, calendarEvents, reminders, mealPlannerMeals, tasks),
+    [calendarEvents, filters, mealPlannerMeals, reminders, tasks],
   );
   const initialScrollCompleteRef = useRef(false);
 

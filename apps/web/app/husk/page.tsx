@@ -24,12 +24,15 @@ const huskQueryStorageKey = "familieappen:husk:query";
 const huskFiltersStorageKey = "familieappen:husk:filters";
 const huskScrollStorageKey = "familieappen:husk:scroll-y";
 
-function isHuskTab(value: string | null): value is HuskTab | "husk" {
+function isHuskTab(value: string | null): value is HuskTab | "husk" | "reminders" | "tasks" | "school" {
   return (
     value === "paminnelser" ||
     value === "oppgaver" ||
     value === "skoleuka" ||
-    value === "husk"
+    value === "husk" ||
+    value === "reminders" ||
+    value === "tasks" ||
+    value === "school"
   );
 }
 
@@ -42,8 +45,11 @@ function readStoredHuskTab() {
   return isHuskTab(storedTab) ? normalizeHuskTab(storedTab) : "paminnelser";
 }
 
-function normalizeHuskTab(tab: HuskTab | "husk"): HuskTab {
-  return tab === "husk" ? "paminnelser" : tab;
+function normalizeHuskTab(tab: HuskTab | "husk" | "reminders" | "tasks" | "school"): HuskTab {
+  if (tab === "husk" || tab === "reminders") return "paminnelser";
+  if (tab === "tasks") return "oppgaver";
+  if (tab === "school") return "skoleuka";
+  return tab;
 }
 
 function readStoredValue(storageKey: string, fallback = "") {
@@ -85,7 +91,8 @@ function HuskPageContent() {
   const shouldOpenSchoolPlanner =
     requestedTab === "skoleuka" && searchParams.get("edit") === "1";
   const schoolDetailDate = searchParams.get("date");
-  const schoolDetailItemId = searchParams.get("schoolItemId");
+  const detailId = searchParams.get("detailId");
+  const schoolDetailItemId = searchParams.get("schoolItemId") ?? detailId;
   const [selectedTab, setSelectedTab] = useState<HuskTab>(() =>
     isHuskTab(requestedTab)
       ? normalizeHuskTab(requestedTab)
@@ -180,10 +187,15 @@ function HuskPageContent() {
             />
           ) : null}
           {selectedTab === "paminnelser" ? (
-            <HuskRemindersSection filters={huskFilters} query={huskQuery} />
+            <HuskRemindersSection
+              detailId={detailId}
+              filters={huskFilters}
+              query={huskQuery}
+            />
           ) : null}
           {selectedTab === "oppgaver" ? (
             <OppgaverSection
+              detailId={detailId}
               query={huskQuery}
               createRequest={taskCreateRequest}
             />

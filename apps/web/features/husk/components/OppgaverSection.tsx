@@ -64,9 +64,11 @@ type OppgaverStatus =
   | "error";
 
 export function OppgaverSection({
+  detailId,
   query,
   createRequest = 0,
 }: {
+  detailId?: string | null;
   query: string;
   createRequest?: number;
 }) {
@@ -106,6 +108,14 @@ export function OppgaverSection({
   }, [approvedFamilyContext?.activeFamilyId, approvedFamilyContext]);
 
   const normalizedQuery = query.trim().toLocaleLowerCase("nb-NO");
+  useEffect(() => {
+    if (!detailId || status === "loading") {
+      return;
+    }
+
+    setDetailTask(tasks.find((task) => task.id === detailId) ?? null);
+  }, [detailId, status, tasks]);
+
   const filteredTasks = useMemo(() => {
     if (!normalizedQuery) return tasks;
     return tasks.filter((task) =>

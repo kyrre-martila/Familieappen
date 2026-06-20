@@ -9,14 +9,14 @@ export function CalendarReminderChip({ reminder }: { reminder: ReminderSummary }
   const ReminderIcon = reminderIcons[reminder.icon] ?? reminderIcons.family;
 
   return (
-    <button
+    <Link
+      aria-label={`Åpne påminnelse i Husk: ${reminder.title || "Påminnelse"}`}
       className="calendar-chip calendar-chip--reminder"
-      type="button"
-      aria-label={`Åpne husk: ${reminder.title}`}
+      href={`/husk?tab=reminders&detailId=${encodeURIComponent(reminder.id)}`}
     >
       <ReminderIcon aria-hidden="true" size={22} strokeWidth={2.3} />
       <span>{reminder.title || "Påminnelse"}</span>
-    </button>
+    </Link>
   );
 }
 
@@ -42,7 +42,7 @@ export function CalendarReminderSummaryChip({
       <Link
         aria-label={ariaLabel ?? `Åpne husk: ${reminder.title || "Påminnelse"}`}
         className="calendar-chip calendar-chip--reminder"
-        href={href}
+        href={href ?? `/husk?tab=reminders&detailId=${encodeURIComponent(reminder.id)}`}
       >
         {content}
       </Link>
@@ -50,11 +50,13 @@ export function CalendarReminderSummaryChip({
   }
 
   return (
-    <span
+    <Link
+      aria-label={ariaLabel ?? `Åpne påminnelse i Husk: ${reminder.title || "Påminnelse"}`}
       className="calendar-chip calendar-chip--reminder"
+      href={`/husk?tab=reminders&detailId=${encodeURIComponent(reminder.id)}`}
       key={reminder.id}
     >
       {content}
-    </span>
+    </Link>
   );
 }

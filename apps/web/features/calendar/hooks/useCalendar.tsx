@@ -23,10 +23,12 @@ import {
   deleteCalendarEventOccurrence,
   getCalendarEvents,
   getSchoolWeekReminders,
+  getTasks,
   updateCalendarEvent as updateBackendCalendarEvent,
   updateCalendarEventOccurrence,
   type CalendarEvent as BackendCalendarEvent,
   type SchoolWeekReminder as BackendSchoolWeekReminder,
+  type Task,
 } from "../../../lib/api";
 import { getUserFacingApiMessage } from "../../../lib/auth-family";
 import { mockToday } from "../../../app/calendar/mockCalendarData";
@@ -41,7 +43,7 @@ export type CalendarEventInput = Partial<CalendarEvent> &
 
 export type NormalizedCalendarItem = {
   id: string;
-  type: "event" | "meal" | "reminder" | "school-week";
+  type: "event" | "meal" | "reminder" | "school-week" | "task";
   date: string;
   title: string;
   icon: CalendarMvpEventIcon;
@@ -65,6 +67,7 @@ export type CalendarContract = {
   familyMembersLoading: boolean;
   familyMembersError: string | null;
   refreshFamilyMembers: () => Promise<void>;
+  tasks: Task[];
   today: string;
   selectedDate: string;
   selectedView: CalendarViewMode;
@@ -345,6 +348,7 @@ function buildNormalizedItems(
   calendarEvents: CalendarEvent[],
   reminders: ReminderSummary[],
   mealSummaries: MealSummary[],
+  tasks: Task[],
 ): NormalizedCalendarItem[] {
   return [
     ...calendarEvents.map((event) => ({
@@ -368,6 +372,17 @@ function buildNormalizedItems(
       participantIds: reminder.participantIds,
       sortTime: "23:58",
     })),
+    ...tasks
+      .filter((task) => Boolean(task.dueDate))
+      .map((task) => ({
+        id: task.id,
+        type: "task" as const,
+        date: task.dueDate!.slice(0, 10),
+        title: task.title,
+        icon: "family" as const,
+        participantIds: task.assignedMemberIds ?? (task.assignedFamilyMemberId ? [task.assignedFamilyMemberId] : []),
+        sortTime: "23:57",
+      })),
     ...mealSummaries.map((meal) => ({
       id: `meal-${meal.date}-${meal.title}`,
       type: "meal" as const,
@@ -412,12 +427,14 @@ function useCalendarContractValue(): CalendarContract {
   const [selectedDate, setSelectedDate] = useState(today || mockToday);
   const [selectedView, setSelectedView] = useState<CalendarViewMode>("day");
   const [mealSummaries, setMealSummaries] = useState<MealSummary[]>([]);
+  const [tasks, setTasks] = useState<Task[]>([]);
   const activeFamilyId = family?.id ?? null;
 
   const refresh = useCallback(async () => {
     if (!activeFamilyId) {
       setEvents([]);
       setMealSummaries([]);
+      setTasks([]);
       setLoading(familyMembersLoading);
       setError(null);
       return;
@@ -429,7 +446,8 @@ function useCalendarContractValue(): CalendarContract {
       const range = getCalendarRange(today);
       const backendEvents = await getCalendarEvents(activeFamilyId, range);
       setEvents(backendEvents.map(toCalendarEvent));
-      await Promise.all([refreshMeals(), refreshReminders()]);
+      const [taskItems] = await Promise.all([getTasks(activeFamilyId), refreshMeals(), refreshReminders()]);
+      setTasks(Array.isArray(taskItems) ? taskItems : []);
     } catch (refreshError) {
       setError(getUserFacingApiMessage(refreshError, CALENDAR_ERROR_COPY));
     } finally {
@@ -590,8 +608,8 @@ function useCalendarContractValue(): CalendarContract {
 
   const normalizedItems = useMemo(
     () =>
-      buildNormalizedItems(calendarEvents, calendarReminders, mealSummaries),
-    [calendarEvents, calendarReminders, mealSummaries],
+      buildNormalizedItems(calendarEvents, calendarReminders, mealSummaries, tasks),
+    [calendarEvents, calendarReminders, mealSummaries, tasks],
   );
 
   const createEvent = useCallback(
@@ -810,6 +828,7 @@ function useCalendarContractValue(): CalendarContract {
       familyMembersLoading,
       familyMembersError,
       refreshFamilyMembers,
+      tasks,
       today,
       selectedDate,
       selectedView,
@@ -836,6 +855,7 @@ function useCalendarContractValue(): CalendarContract {
       refreshFamilyMembers,
       selectedDate,
       selectedView,
+      tasks,
       today,
       updateEvent,
     ],
