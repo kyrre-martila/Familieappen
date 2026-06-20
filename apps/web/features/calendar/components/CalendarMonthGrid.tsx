@@ -67,7 +67,7 @@ export function CalendarMonthGrid({
             ).length;
             const hasMeal = itemsForDate.some((item) => item.type === "meal");
             const hasReminder = itemsForDate.some(
-              (item) => item.type === "reminder",
+              (item) => item.type === "reminder" || item.type === "task",
             );
 
             return (
