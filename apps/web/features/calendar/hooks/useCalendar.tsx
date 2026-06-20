@@ -282,6 +282,12 @@ function toCalendarEvent(event: BackendCalendarEvent): CalendarEvent {
   };
 }
 
+function isSavedRecurringOccurrenceNotFoundError(error: unknown) {
+  const message = error instanceof Error ? error.message : String(error);
+
+  return /Calendar occurrence was not found|forekomst.*ikke funnet|hendelsen finnes ikke/i.test(message);
+}
+
 function isSameRecurringOccurrence(
   event: CalendarEvent,
   identity: { id: string; recurringEventId: string; occurrenceDate?: string },
@@ -697,6 +703,21 @@ function useCalendarContractValue(): CalendarContract {
         }
         return savedEvent;
       } catch (updateError) {
+        if (scope === "occurrence" && isSavedRecurringOccurrenceNotFoundError(updateError)) {
+          const savedOccurrence = { ...optimisticEvent, pending: false };
+
+          setEvents((currentEvents) =>
+            currentEvents.map((event) =>
+              isSameRecurringOccurrence(event, occurrenceIdentity)
+                ? savedOccurrence
+                : event,
+            ),
+          );
+          void refresh();
+
+          return savedOccurrence;
+        }
+
         setEvents(previousEvents);
         setError(
           getUserFacingApiMessage(
