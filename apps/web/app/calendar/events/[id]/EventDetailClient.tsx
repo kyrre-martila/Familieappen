@@ -12,7 +12,6 @@ import {
   GraduationCap,
   HeartPulse,
   MapPin,
-  MoreHorizontal,
   Plane,
   StickyNote,
   Trash2,
@@ -307,7 +306,7 @@ export function EventDetailClient({ event: initialEvent = null, eventId, occurre
       <HuskMobileSheet isOpen={true} labelledBy="calendar-event-detail-title" onClose={() => router.back()}>
         <div className="calendar-filter-sheet__header">
           <div className="husk-reminder-detail__heading"><span className="husk-reminder-detail__icon husk-reminder-card--blue" aria-hidden="true"><EventIcon size={24} strokeWidth={2.35} /></span><div><p className="calendar-filter-sheet__status">{sourceLabel} • {formatEventDate(event.date)}</p><h1 className="calendar-filter-sheet__title" id="calendar-event-detail-title">{event.title}</h1></div></div>
-          <div className="calendar-event-sheet__header-actions"><button className="calendar-filter-sheet__close" type="button" aria-label="Flere valg for hendelsen"><MoreHorizontal aria-hidden="true" size={18} strokeWidth={2.5} /></button><button className="calendar-filter-sheet__close" type="button" aria-label="Lukk hendelse" onClick={() => router.back()}><X aria-hidden="true" size={18} strokeWidth={2.5} /></button></div>
+          <div className="calendar-event-sheet__header-actions"><button className="calendar-filter-sheet__close" type="button" aria-label="Lukk hendelse" onClick={() => router.back()}><X aria-hidden="true" size={18} strokeWidth={2.5} /></button></div>
         </div>
         <div className="husk-reminder-detail__content calendar-event-sheet__content">
           <div className="event-form-card event-form-card--rows husk-reminder-edit-sheet__rows calendar-event-sheet__rows">
