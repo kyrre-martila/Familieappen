@@ -4,20 +4,22 @@ import { Button, Card, EmptyState, PageContainer } from "../../../components/ui"
 import { useCalendar } from "../../../features/calendar/hooks/useCalendar";
 import { CalendarEventFormClient } from "./EventFormClient";
 
-function resolveCalendarEvent(events: ReturnType<typeof useCalendar>["events"], eventId: string, occurrenceDate?: string) {
+function resolveCalendarEvent(
+  events: ReturnType<typeof useCalendar>["events"],
+  eventId: string,
+  occurrenceDate?: string,
+) {
   if (occurrenceDate) {
     const occurrence = events.find(
-      (calendarEvent) =>
-        calendarEvent.recurringEventId === eventId &&
-        calendarEvent.occurrenceDate === occurrenceDate,
+      (e) => e.recurringEventId === eventId && e.occurrenceDate === occurrenceDate,
     );
-
-    if (occurrence) {
-      return occurrence;
-    }
+    if (occurrence) return occurrence;
   }
 
-  return events.find((calendarEvent) => calendarEvent.id === eventId) ?? null;
+  const exact = events.find((e) => e.id === eventId);
+  if (exact) return exact;
+
+  return events.find((e) => e.recurringEventId === eventId) ?? null;
 }
 
 export function CalendarEventEditClient({ eventId, occurrenceDate, scope }: { eventId: string; occurrenceDate?: string; scope?: "occurrence" | "series" }) {

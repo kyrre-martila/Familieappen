@@ -75,6 +75,7 @@ export type CalendarContract = {
     id: string,
     update: Partial<CalendarEvent>,
     scope?: "occurrence" | "series",
+    occurrenceDate?: string,
   ) => Promise<CalendarEvent>;
   deleteEvent: (id: string, scope?: "occurrence" | "series") => Promise<void>;
 };
@@ -629,23 +630,36 @@ function useCalendarContractValue(): CalendarContract {
   );
 
   const updateEvent = useCallback(
-    async (id: string, update: Partial<CalendarEvent>, scope: "occurrence" | "series" = "series") => {
+    async (
+      id: string,
+      update: Partial<CalendarEvent>,
+      scope: "occurrence" | "series" = "series",
+      occurrenceDate?: string,
+    ) => {
       if (!activeFamilyId) {
         throw new Error("Choose a family before continuing.");
       }
 
       const previousEvents = events;
-      const previousEvent = previousEvents.find((event) => event.id === id);
+      const previousEvent =
+        scope === "occurrence" && occurrenceDate
+          ? previousEvents.find(
+              (event) =>
+                (event.recurringEventId === id || event.id === id) &&
+                event.occurrenceDate === occurrenceDate,
+            )
+          : previousEvents.find((event) => event.id === id);
 
       if (!previousEvent) {
         throw new Error("Calendar event was not found");
       }
 
       const seriesEventId = previousEvent.recurringEventId ?? id;
+      const targetOccurrenceDate = occurrenceDate ?? previousEvent.occurrenceDate;
       const occurrenceIdentity = {
-        id,
+        id: previousEvent.id,
         recurringEventId: seriesEventId,
-        occurrenceDate: previousEvent.occurrenceDate,
+        occurrenceDate: targetOccurrenceDate,
       };
       const optimisticEvent = { ...previousEvent, ...update, pending: true };
       setEvents((currentEvents) =>
@@ -666,8 +680,13 @@ function useCalendarContractValue(): CalendarContract {
 
       try {
         const payload = toBackendUpdate({ ...previousEvent, ...update });
-        const backendEvent = scope === "occurrence" && previousEvent.occurrenceDate
-          ? await updateCalendarEventOccurrence(activeFamilyId, seriesEventId, previousEvent.occurrenceDate, payload)
+        const backendEvent = scope === "occurrence" && targetOccurrenceDate
+          ? await updateCalendarEventOccurrence(
+              activeFamilyId,
+              seriesEventId,
+              targetOccurrenceDate,
+              payload,
+            )
           : await updateBackendCalendarEvent(activeFamilyId, seriesEventId, payload);
         const savedEvent = toCalendarEvent(backendEvent);
         const canReplaceOccurrence =

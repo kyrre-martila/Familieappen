@@ -202,14 +202,21 @@ export function CalendarEventFormClient({
     setSaveError(null);
 
     try {
+      const seriesId = event.recurringEventId ?? event.id;
+      const occurrenceDate = event.occurrenceDate;
       const savedEvent = await updateEvent(
-        event.id,
+        scope === "occurrence" ? seriesId : event.id,
         eventInputFromDraft(draft),
         scope,
+        scope === "occurrence" ? occurrenceDate : undefined,
       );
       window.sessionStorage.removeItem(storageKey);
       window.sessionStorage.removeItem(`${storageKey}:icon`);
-      router.push(scope === "occurrence" ? getCalendarEventDetailHref(event) : getCalendarEventDetailHref(savedEvent));
+      router.push(
+        scope === "occurrence"
+          ? getCalendarEventDetailHref(event)
+          : getCalendarEventDetailHref(savedEvent),
+      );
     } catch (error) {
       setSaveError(getSaveErrorMessage(error));
     } finally {

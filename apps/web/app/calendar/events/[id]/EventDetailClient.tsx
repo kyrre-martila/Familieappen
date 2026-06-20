@@ -243,7 +243,7 @@ function getCalendarEventEditHref(event: CalendarMvpEvent, scope?: "occurrence" 
       return `/calendar/events/${seriesId}/edit?occurrenceDate=${encodeURIComponent(event.occurrenceDate)}&scope=occurrence`;
     }
 
-    return `/calendar/events/${seriesId}/edit?scope=series`;
+    return `/calendar/events/${seriesId}/edit?occurrenceDate=${encodeURIComponent(event.occurrenceDate)}&scope=series`;
   }
 
   return `/calendar/events/${encodeURIComponent(event.id)}/edit`;
