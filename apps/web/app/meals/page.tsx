@@ -17,7 +17,6 @@ import { PageContainer } from "../../components/ui";
 import { MealPlanEmptyState } from "../../features/meals/components/MealEmptyState";
 import {
   MealMoveModeButton,
-  MealMoveModeHelper,
   MealMoveToast,
 } from "../../features/meals/components/MealMoveMode";
 import { MealReminderCard } from "../../features/meals/components/MealReminderCard";
@@ -691,8 +690,6 @@ function MealsPageContent() {
             />
 
             <div className="meal-planner__move-controls">
-              <MealMoveModeHelper isMoveMode={isMoveMode} />
-
               <MealMoveModeButton
                 isMoveMode={isMoveMode}
                 onMoveAction={handleMoveAction}
