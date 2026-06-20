@@ -95,7 +95,7 @@ export function SchoolWeekCreateSheet({
 
                 return (
                   <button
-                    className={`husk-school-icon-option${isSelected ? " husk-school-icon-option--selected" : ""}`}
+                    className={`husk-school-icon-option husk-school-icon-option--${option.value}${isSelected ? " husk-school-icon-option--selected" : ""}`}
                     key={option.value}
                     onClick={() => onChange({ ...draft, icon: option.value })}
                     type="button"

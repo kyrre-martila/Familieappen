@@ -165,7 +165,7 @@ function HuskPageContent() {
   }
 
   return (
-    <AppShell title={title}>
+    <AppShell title={title} mobileTitle="Husk">
       <PageContainer>
         <div className="husk-page">
           <HuskTabs selectedTab={selectedTab} onSelectTab={setSelectedTab} />

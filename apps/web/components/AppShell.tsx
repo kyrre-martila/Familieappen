@@ -177,11 +177,13 @@ export function AppShell({
   title,
   titleAction,
   hideTitleRow = false,
+  mobileTitle,
 }: Readonly<{
   children: React.ReactNode;
   title: string;
   titleAction?: React.ReactNode;
   hideTitleRow?: boolean;
+  mobileTitle?: string;
 }>) {
   const pathname = usePathname();
   const search = useCurrentSearch(pathname);
@@ -220,7 +222,7 @@ export function AppShell({
             <span className="app-shell__brand-name">FamilieAppen</span>
           </div>
           <span className="app-shell__mobile-title" aria-hidden="true">
-            {title}
+            {mobileTitle ?? title}
           </span>
           <ProfileMenu profile={profile} />
         </header>
