@@ -529,8 +529,6 @@ export function SchoolWeekPanel({
         <SchoolWeekEmptyState
           title="Ingen skolehusk denne uka"
           description="Legg til det som må huskes til skoledagene."
-          actionHref="/husk?tab=skoleuka"
-          actionLabel="Legg til skolehusk"
         />
       ) : null}
 
@@ -577,7 +575,7 @@ export function SchoolWeekPanel({
                     return (
                       <AppCard
                         as="div"
-                        className={`husk-school-item husk-school-item--${item.tone}`}
+                        className={`husk-school-item husk-school-item--${item.tone} husk-school-item--icon-${item.icon}`}
                         key={item.id}
                       >
                         <button

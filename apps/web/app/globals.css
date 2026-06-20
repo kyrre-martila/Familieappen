@@ -1384,6 +1384,14 @@ select,
 .tasks-list__content {
   display: grid;
   gap: var(--space-xs);
+  min-width: 0;
+  border: 0;
+  padding: 0;
+  background: transparent;
+  color: inherit;
+  cursor: pointer;
+  font: inherit;
+  text-align: left;
 }
 
 .tasks-list__title {
@@ -8828,7 +8836,7 @@ button.calendar-chip {
     calc(var(--space-xs) * 0.65) calc(var(--space-xs) * 0.7);
   background: color-mix(
     in srgb,
-    var(--husk-school-item-accent) 10%,
+    var(--husk-school-item-accent) 36%,
     var(--color-surface)
   );
   color: color-mix(
@@ -8858,6 +8866,31 @@ button.calendar-chip {
 }
 .husk-school-item--yellow {
   --husk-school-item-accent: #d99a00;
+}
+
+.husk-school-item--icon-shirt,
+.husk-school-icon-option--shirt {
+  --husk-school-item-accent: #c9b2df;
+}
+
+.husk-school-item--icon-book,
+.husk-school-icon-option--book {
+  --husk-school-item-accent: #9fbfe7;
+}
+
+.husk-school-item--icon-grill,
+.husk-school-icon-option--grill {
+  --husk-school-item-accent: #a8d7b3;
+}
+
+.husk-school-item--icon-backpack,
+.husk-school-icon-option--backpack {
+  --husk-school-item-accent: #f3bf91;
+}
+
+.husk-school-item--icon-gift,
+.husk-school-icon-option--gift {
+  --husk-school-item-accent: #f2abc4;
 }
 
 .husk-school-item__icon {
@@ -9230,17 +9263,40 @@ button.calendar-chip {
   display: inline-flex;
   align-items: center;
   gap: calc(var(--space-xs) * 0.7);
+  border-color: color-mix(
+    in srgb,
+    var(--husk-school-item-accent, var(--color-border)) 52%,
+    var(--color-border)
+  );
   padding: var(--space-s) var(--space-m);
+  background: color-mix(
+    in srgb,
+    var(--husk-school-item-accent, var(--color-background-soft)) 18%,
+    var(--color-background-soft)
+  );
+  color: color-mix(
+    in srgb,
+    var(--husk-school-item-accent, var(--color-text)) 62%,
+    var(--color-text)
+  );
 }
 
 .husk-school-icon-option--selected {
   border-color: color-mix(
     in srgb,
-    var(--color-primary) 48%,
+    var(--husk-school-item-accent, var(--color-primary)) 72%,
     var(--color-border)
   );
-  background: var(--color-primary-soft);
-  color: var(--color-primary-strong);
+  background: color-mix(
+    in srgb,
+    var(--husk-school-item-accent, var(--color-primary)) 34%,
+    var(--color-surface)
+  );
+  color: color-mix(
+    in srgb,
+    var(--husk-school-item-accent, var(--color-primary-strong)) 54%,
+    var(--color-text)
+  );
 }
 
 .husk-school-quick__chip {
