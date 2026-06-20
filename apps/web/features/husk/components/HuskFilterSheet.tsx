@@ -20,18 +20,20 @@ export function HuskFilterSheet({
   onClose: () => void;
   onPersonChange: (person: HuskPersonFilter) => void;
   onReset: () => void;
-  onToggleChange: (checked: boolean) => void;
+  onToggleChange?: (checked: boolean) => void;
   person: HuskPersonFilter;
   status: string;
   title: string;
-  toggleChecked: boolean;
-  toggleLabel: string;
+  toggleChecked?: boolean;
+  toggleLabel?: string;
 }) {
   const { familyMembers } = useFamilyMembers();
   const personFilterOptions = [
-    { value: "all" as HuskPersonFilter, label: "Alle" },
-    ...familyMembers.map((member) => ({ value: member.id as HuskPersonFilter, label: member.name })),
     { value: "family" as HuskPersonFilter, label: "Hele familien" },
+    ...familyMembers.map((member) => ({
+      value: member.id as HuskPersonFilter,
+      label: member.name,
+    })),
   ];
 
   return (
@@ -91,14 +93,16 @@ export function HuskFilterSheet({
             })}
           </div>
         </fieldset>
-        <label className="husk-filter-toggle">
-          <span>{toggleLabel}</span>
-          <input
-            checked={toggleChecked}
-            onChange={(event) => onToggleChange(event.target.checked)}
-            type="checkbox"
-          />
-        </label>
+        {toggleLabel && onToggleChange ? (
+          <label className="husk-filter-toggle">
+            <span>{toggleLabel}</span>
+            <input
+              checked={toggleChecked ?? false}
+              onChange={(event) => onToggleChange(event.target.checked)}
+              type="checkbox"
+            />
+          </label>
+        ) : null}
       </div>
       <div className="calendar-filter-sheet__actions">
         <button
