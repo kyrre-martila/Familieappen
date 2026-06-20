@@ -232,7 +232,13 @@ function resolveCalendarEvent(events: CalendarMvpEvent[], eventId?: string, occu
     }
   }
 
-  return events.find((calendarEvent) => calendarEvent.id === eventId) ?? null;
+  const directEvent = events.find((calendarEvent) => calendarEvent.id === eventId);
+
+  if (directEvent) {
+    return directEvent;
+  }
+
+  return events.find((calendarEvent) => calendarEvent.recurringEventId === eventId) ?? null;
 }
 
 function getCalendarEventEditHref(event: CalendarMvpEvent, scope?: "occurrence" | "series") {
