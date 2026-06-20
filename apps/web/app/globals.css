@@ -8827,6 +8827,16 @@ button.calendar-chip {
 
 .husk-school-item {
   --husk-school-item-accent: var(--color-primary);
+  --husk-school-item-background: color-mix(
+    in srgb,
+    var(--husk-school-item-accent) 18%,
+    var(--color-surface)
+  );
+  --husk-school-item-icon-background: color-mix(
+    in srgb,
+    var(--husk-school-item-accent) 24%,
+    var(--color-surface)
+  );
   display: inline-grid;
   align-items: center;
   justify-items: end;
@@ -8834,11 +8844,7 @@ button.calendar-chip {
   border-radius: var(--radius-pill);
   padding: calc(var(--space-xs) * 0.65) var(--space-s)
     calc(var(--space-xs) * 0.65) calc(var(--space-xs) * 0.7);
-  background: color-mix(
-    in srgb,
-    var(--husk-school-item-accent) 36%,
-    var(--color-surface)
-  );
+  background: var(--husk-school-item-background);
   color: color-mix(
     in srgb,
     var(--husk-school-item-accent) 62%,
@@ -8869,28 +8875,40 @@ button.calendar-chip {
 }
 
 .husk-school-item--icon-shirt,
+.husk-school-item--icon-clothes,
 .husk-school-icon-option--shirt {
-  --husk-school-item-accent: #c9b2df;
+  --husk-school-item-accent: #bda6d8;
+  --husk-school-item-background: #f4eefb;
+  --husk-school-item-icon-background: #eadff6;
 }
 
 .husk-school-item--icon-book,
 .husk-school-icon-option--book {
-  --husk-school-item-accent: #9fbfe7;
+  --husk-school-item-accent: #7fa8dc;
+  --husk-school-item-background: #eef6ff;
+  --husk-school-item-icon-background: #dcecff;
 }
 
 .husk-school-item--icon-grill,
+.husk-school-item--icon-food,
 .husk-school-icon-option--grill {
-  --husk-school-item-accent: #a8d7b3;
+  --husk-school-item-accent: #8bc99a;
+  --husk-school-item-background: #effaf1;
+  --husk-school-item-icon-background: #ddf3e2;
 }
 
 .husk-school-item--icon-backpack,
 .husk-school-icon-option--backpack {
-  --husk-school-item-accent: #f3bf91;
+  --husk-school-item-accent: #e5a76f;
+  --husk-school-item-background: #fff4e9;
+  --husk-school-item-icon-background: #ffe7d1;
 }
 
 .husk-school-item--icon-gift,
 .husk-school-icon-option--gift {
-  --husk-school-item-accent: #f2abc4;
+  --husk-school-item-accent: #e59ab7;
+  --husk-school-item-background: #fff0f6;
+  --husk-school-item-icon-background: #ffe1ec;
 }
 
 .husk-school-item__icon {
@@ -8899,11 +8917,7 @@ button.calendar-chip {
   height: var(--space-xl);
   place-items: center;
   border-radius: var(--radius-m);
-  background: color-mix(
-    in srgb,
-    var(--husk-school-item-accent) 10%,
-    var(--color-surface)
-  );
+  background: var(--husk-school-item-icon-background);
   color: var(--husk-school-item-accent);
 }
 
@@ -8973,6 +8987,10 @@ button.calendar-chip {
 .husk-school .husk-school-day__items {
   display: grid;
   padding-left: 0;
+}
+
+.app-card.husk-school-item {
+  background: var(--husk-school-item-background);
 }
 
 .husk-school-item {
