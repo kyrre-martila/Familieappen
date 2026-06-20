@@ -9857,6 +9857,14 @@ button.calendar-chip {
 }
 
 .meal-planner {
+  --meal-timeline-inset: calc(var(--space-l) + var(--space-xs));
+  --meal-move-controls-bottom: calc(
+    var(--app-bottom-nav-height, 88px) + var(--space-m) +
+      env(safe-area-inset-bottom)
+  );
+  --meal-move-controls-clearance: calc(
+    var(--meal-move-controls-bottom) + var(--space-xxl) + var(--space-l)
+  );
   position: relative;
   display: grid;
   gap: var(--space-m);
@@ -10258,17 +10266,20 @@ button.calendar-chip {
 }
 
 .meal-planner__move-controls {
+  position: absolute;
+  z-index: 3;
+  bottom: var(--meal-move-controls-bottom);
+  left: var(--meal-timeline-inset);
   display: grid;
-  flex: 0 0 auto;
   align-items: start;
   justify-items: start;
   gap: var(--space-xs);
-  padding: calc(var(--space-xs) / 2) 0 calc(var(--space-xs) + env(safe-area-inset-bottom))
-    calc(var(--space-l) + var(--space-xs));
+  pointer-events: none;
 }
 
 .meal-planner__move-button {
   display: inline-flex;
+  pointer-events: auto;
   width: fit-content;
   align-items: center;
   justify-content: center;
@@ -10572,8 +10583,12 @@ button.calendar-chip {
     margin: 0 auto;
   }
 
+  .meal-planner {
+    --meal-timeline-inset: calc(var(--space-xl) + var(--space-m));
+  }
+
   .meal-day {
-    grid-template-columns: calc(var(--space-xl) + var(--space-m)) minmax(0, 1fr);
+    grid-template-columns: var(--meal-timeline-inset) minmax(0, 1fr);
   }
 }
 
@@ -15625,6 +15640,6 @@ button.family-settings-row:focus-visible:not(:disabled) {
   min-height: 0;
   overflow-y: auto;
   overscroll-behavior: contain;
-  scroll-padding-block: var(--space-m) var(--space-m);
-  padding-bottom: var(--space-m);
+  scroll-padding-block: var(--space-m) var(--meal-move-controls-clearance);
+  padding-bottom: var(--meal-move-controls-clearance);
 }
