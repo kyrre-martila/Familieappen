@@ -1,13 +1,5 @@
 import { ArrowUpDown, Check } from "lucide-react";
 
-export function MealMoveModeHelper({ isMoveMode }: { isMoveMode: boolean }) {
-  return isMoveMode ? (
-    <p className="meal-planner__move-helper">
-      Dra middager for å flytte eller bytte plass.
-    </p>
-  ) : null;
-}
-
 export function MealMoveModeButton({
   isMoveMode,
   onMoveAction,
