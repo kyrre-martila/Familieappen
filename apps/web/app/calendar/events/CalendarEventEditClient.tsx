@@ -17,7 +17,13 @@ function resolveCalendarEvent(events: ReturnType<typeof useCalendar>["events"], 
     }
   }
 
-  return events.find((calendarEvent) => calendarEvent.id === eventId) ?? null;
+  const directEvent = events.find((calendarEvent) => calendarEvent.id === eventId);
+
+  if (directEvent) {
+    return directEvent;
+  }
+
+  return events.find((calendarEvent) => calendarEvent.recurringEventId === eventId) ?? null;
 }
 
 export function CalendarEventEditClient({ eventId, occurrenceDate, scope }: { eventId: string; occurrenceDate?: string; scope?: "occurrence" | "series" }) {
