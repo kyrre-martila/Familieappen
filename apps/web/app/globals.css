@@ -9862,6 +9862,7 @@ button.calendar-chip {
     var(--app-bottom-nav-height, 88px) + var(--space-m) +
       env(safe-area-inset-bottom)
   );
+  --meal-move-controls-inline: 0px;
   --meal-move-controls-clearance: calc(
     var(--meal-move-controls-bottom) + var(--space-xxl) + var(--space-l)
   );
@@ -10269,10 +10270,10 @@ button.calendar-chip {
   position: absolute;
   z-index: 3;
   bottom: var(--meal-move-controls-bottom);
-  left: var(--meal-timeline-inset);
+  right: var(--meal-move-controls-inline);
   display: grid;
-  align-items: start;
-  justify-items: start;
+  align-items: end;
+  justify-items: end;
   gap: var(--space-xs);
   pointer-events: none;
 }
@@ -10284,31 +10285,26 @@ button.calendar-chip {
   align-items: center;
   justify-content: center;
   gap: var(--space-xs);
-  justify-self: start;
-  border: 1px solid var(--color-border);
+  justify-self: end;
+  border: 1px solid color-mix(in srgb, var(--color-primary) 72%, transparent);
   border-radius: var(--radius-pill);
   padding: var(--space-s) var(--space-m);
-  background: color-mix(in srgb, var(--color-surface) 74%, transparent);
-  color: var(--color-muted);
+  background: var(--color-primary);
+  color: var(--color-surface);
   cursor: pointer;
   font-size: var(--text-small);
   font-weight: 850;
-  box-shadow: 0 var(--space-xs) var(--space-s)
-    color-mix(in srgb, var(--color-text) 4%, transparent);
+  box-shadow:
+    0 var(--space-s) var(--space-l)
+      color-mix(in srgb, var(--color-primary) 24%, transparent),
+    0 var(--space-xs) var(--space-s)
+      color-mix(in srgb, var(--color-text) 14%, transparent);
 }
 
 .meal-planner__move-button--done {
-  border-color: color-mix(
-    in srgb,
-    var(--color-primary) 20%,
-    var(--color-border)
-  );
-  background: color-mix(
-    in srgb,
-    var(--color-primary-soft) 42%,
-    var(--color-surface)
-  );
-  color: var(--color-primary-strong);
+  border-color: color-mix(in srgb, var(--color-primary) 72%, transparent);
+  background: var(--color-primary);
+  color: var(--color-surface);
 }
 
 .meal-empty-state {
@@ -10517,11 +10513,17 @@ button.calendar-chip {
 }
 
 .meal-planner__move-helper {
-  justify-self: center;
+  max-width: min(100%, 18rem);
+  justify-self: end;
   margin: calc(-1 * var(--space-xs)) 0 0;
+  border-radius: var(--radius-pill);
+  padding: calc(var(--space-xs) / 2) var(--space-s);
+  background: color-mix(in srgb, var(--color-surface) 92%, transparent);
   color: var(--color-muted);
   font-size: var(--text-small);
-  text-align: center;
+  text-align: right;
+  box-shadow: 0 var(--space-xs) var(--space-s)
+    color-mix(in srgb, var(--color-text) 8%, transparent);
 }
 
 .meal-move-toast {
