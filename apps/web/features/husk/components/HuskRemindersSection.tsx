@@ -167,8 +167,8 @@ export function HuskRemindersSection({
         />
       ) : (
         <HuskReminderEmptyState
-          title="Ingen husk ennå"
-          description="Legg inn små ting familien ikke skal glemme."
+          title="Ingen påminnelser ennå"
+          description="Legg inn påminnelser familien ikke skal glemme."
           actionHref="/husk/reminders/new"
           actionLabel="+ Ny husk"
         />
