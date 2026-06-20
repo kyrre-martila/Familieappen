@@ -689,11 +689,25 @@ function useCalendarContractValue(): CalendarContract {
               return event;
             }
 
-            return event.id === id ||
+            if (
+              event.id === id ||
               event.recurringEventId === seriesEventId ||
               event.id === seriesEventId
-              ? savedEvent
-              : event;
+            ) {
+              return {
+                ...event,
+                ...savedEvent,
+                id: event.id,
+                date: event.date,
+                endDate: event.endDate,
+                recurringEventId: event.recurringEventId,
+                occurrenceDate: event.occurrenceDate,
+                isRecurringOccurrence: event.isRecurringOccurrence,
+                pending: false,
+              };
+            }
+
+            return event;
           });
 
           return nextEvents;
@@ -701,7 +715,23 @@ function useCalendarContractValue(): CalendarContract {
         if (scope === "occurrence" && !canReplaceOccurrence) {
           void refresh();
         }
-        return savedEvent;
+        if (scope === "series") {
+          void refresh();
+        }
+
+        return scope === "series" && previousEvent.isRecurringOccurrence
+          ? {
+              ...previousEvent,
+              ...savedEvent,
+              id: previousEvent.id,
+              date: previousEvent.date,
+              endDate: previousEvent.endDate,
+              recurringEventId: seriesEventId,
+              occurrenceDate: previousEvent.occurrenceDate,
+              isRecurringOccurrence: true,
+              pending: false,
+            }
+          : savedEvent;
       } catch (updateError) {
         if (scope === "occurrence" && isSavedRecurringOccurrenceNotFoundError(updateError)) {
           const savedOccurrence = { ...optimisticEvent, pending: false };

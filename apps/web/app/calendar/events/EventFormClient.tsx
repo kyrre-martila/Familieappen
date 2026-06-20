@@ -209,7 +209,11 @@ export function CalendarEventFormClient({
       );
       window.sessionStorage.removeItem(storageKey);
       window.sessionStorage.removeItem(`${storageKey}:icon`);
-      router.push(scope === "occurrence" ? getCalendarEventDetailHref(event) : getCalendarEventDetailHref(savedEvent));
+      router.push(
+        scope === "occurrence" || event.isRecurringOccurrence
+          ? getCalendarEventDetailHref(event)
+          : getCalendarEventDetailHref(savedEvent),
+      );
     } catch (error) {
       setSaveError(getSaveErrorMessage(error));
     } finally {
