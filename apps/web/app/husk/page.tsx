@@ -22,6 +22,7 @@ import type { HuskFilters, HuskTab } from "../../features/husk/types";
 const huskTabStorageKey = "familieappen:husk:selected-tab";
 const huskQueryStorageKey = "familieappen:husk:query";
 const huskFiltersStorageKey = "familieappen:husk:filters";
+const taskFiltersStorageKey = "familieappen:husk:task-filters";
 const huskScrollStorageKey = "familieappen:husk:scroll-y";
 
 function isHuskTab(value: string | null): value is HuskTab | "husk" | "reminders" | "tasks" | "school" {
@@ -77,6 +78,10 @@ function readStoredJson<T>(storageKey: string, fallback: T): T {
   }
 }
 
+function normalizeStoredHuskFilters(filters: HuskFilters): HuskFilters {
+  return filters.person === "all" ? { ...filters, person: "family" } : filters;
+}
+
 function getHuskActiveFilterCount(filters: HuskFilters) {
   return (
     Number(filters.person !== defaultHuskFilters.person) +
@@ -102,12 +107,20 @@ function HuskPageContent() {
     readStoredValue(huskQueryStorageKey),
   );
   const [huskFilters, setHuskFilters] = useState<HuskFilters>(() =>
-    readStoredJson(huskFiltersStorageKey, defaultHuskFilters),
+    normalizeStoredHuskFilters(
+      readStoredJson(huskFiltersStorageKey, defaultHuskFilters),
+    ),
+  );
+  const [taskFilters, setTaskFilters] = useState<HuskFilters>(() =>
+    normalizeStoredHuskFilters(
+      readStoredJson(taskFiltersStorageKey, defaultHuskFilters),
+    ),
   );
   const [isFilterSheetOpen, setIsFilterSheetOpen] = useState(false);
   const [taskCreateRequest, setTaskCreateRequest] = useState(0);
   const title = useMemo(() => titleByTab[selectedTab], [selectedTab]);
-  const activeFilterCount = getHuskActiveFilterCount(huskFilters);
+  const activeFilters = selectedTab === "oppgaver" ? taskFilters : huskFilters;
+  const activeFilterCount = getHuskActiveFilterCount(activeFilters);
 
   useEffect(() => {
     if (isHuskTab(requestedTab)) {
@@ -129,6 +142,13 @@ function HuskPageContent() {
       JSON.stringify(huskFilters),
     );
   }, [huskFilters]);
+
+  useEffect(() => {
+    window.sessionStorage.setItem(
+      taskFiltersStorageKey,
+      JSON.stringify(taskFilters),
+    );
+  }, [taskFilters]);
 
   useEffect(() => {
     const storedScrollY = Number(
@@ -198,6 +218,7 @@ function HuskPageContent() {
               detailId={detailId}
               query={huskQuery}
               createRequest={taskCreateRequest}
+              filters={taskFilters}
             />
           ) : null}
           {selectedTab === "skoleuka" ? (
@@ -225,6 +246,19 @@ function HuskPageContent() {
           title="Filter for Påminnelser"
           toggleChecked={huskFilters.showPrevious}
           toggleLabel="Vis tidligere"
+        />
+      ) : null}
+      {selectedTab === "oppgaver" ? (
+        <HuskFilterSheet
+          isOpen={isFilterSheetOpen}
+          onClose={() => setIsFilterSheetOpen(false)}
+          onPersonChange={(person) =>
+            setTaskFilters((current) => ({ ...current, person }))
+          }
+          onReset={() => setTaskFilters(defaultHuskFilters)}
+          person={taskFilters.person}
+          status="Velg hvem oppgavene er tildelt."
+          title="Filter for Oppgaver"
         />
       ) : null}
     </AppShell>

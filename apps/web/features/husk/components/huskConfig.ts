@@ -98,17 +98,16 @@ export const schoolIconOptions = [
 ] satisfies { value: HuskReminderIcon; label: string }[];
 
 export const personFilterOptions = [
-  { value: "all", label: "Alle" },
+  { value: "family", label: "Hele familien" },
   { value: "kyrre", label: "Kyrre" },
   { value: "elisabeth", label: "Elisabeth" },
   { value: "fiona", label: "Fiona" },
   { value: "alma", label: "Alma" },
   { value: "even-olai", label: "Even-Olai" },
-  { value: "family", label: "Hele familien" },
 ] satisfies { value: HuskPersonFilter; label: string }[];
 
 export const defaultHuskFilters: HuskFilters = {
-  person: "all",
+  person: "family",
   showPrevious: false,
 };
 export const defaultListFilters: ListFilters = {

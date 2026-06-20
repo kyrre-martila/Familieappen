@@ -1,5 +1,7 @@
 "use client";
 
+import type { HuskFilters } from "../types";
+
 import {
   FormEvent,
   useEffect,
@@ -67,10 +69,12 @@ export function OppgaverSection({
   detailId,
   query,
   createRequest = 0,
+  filters,
 }: {
   detailId?: string | null;
   query: string;
   createRequest?: number;
+  filters: HuskFilters;
 }) {
   const router = useRouter();
   const [tasks, setTasks] = useState<Task[]>([]);
@@ -117,17 +121,24 @@ export function OppgaverSection({
   }, [detailId, status, tasks]);
 
   const filteredTasks = useMemo(() => {
-    if (!normalizedQuery) return tasks;
-    return tasks.filter((task) =>
-      [
+    return tasks.filter((task) => {
+      if (!matchesTaskPersonFilter(task, filters.person)) {
+        return false;
+      }
+
+      if (!normalizedQuery) {
+        return true;
+      }
+
+      return [
         task.title,
         task.description ?? "",
         formatOppgaveMeta(task, familyDetails?.members ?? []),
       ].some((value) =>
         value.toLocaleLowerCase("nb-NO").includes(normalizedQuery),
-      ),
-    );
-  }, [familyDetails?.members, normalizedQuery, tasks]);
+      );
+    });
+  }, [familyDetails?.members, filters.person, normalizedQuery, tasks]);
   const incompleteTasks = useMemo(
     () => filteredTasks.filter((task) => !task.completed),
     [filteredTasks],
@@ -523,6 +534,20 @@ function getTaskAssignedMemberIds(task: Task): string[] {
     task.assignedMemberIds ??
     (task.assignedFamilyMemberId ? [task.assignedFamilyMemberId] : [])
   );
+}
+
+function matchesTaskPersonFilter(task: Task, person: HuskFilters["person"]) {
+  if (person === "all") {
+    return true;
+  }
+
+  const assignedMemberIds = getTaskAssignedMemberIds(task);
+
+  if (person === "family") {
+    return assignedMemberIds.length === 0;
+  }
+
+  return assignedMemberIds.includes(person);
 }
 
 function TaskFormSheet({
