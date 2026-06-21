@@ -122,6 +122,7 @@ type FamilyMemberRecord = {
   avatarUrl?: string | null;
   user?: { avatarUrl?: string | null } | null;
   role: FamilyMemberRoleDto;
+  includeInSchoolWeek: boolean;
   createdAt: Date;
   updatedAt: Date;
 };
@@ -280,12 +281,14 @@ export class FamiliesService {
 
     const displayName = this.validateDisplayName(input.displayName);
     const role = this.validateManualMemberRole(input.role);
+    const includeInSchoolWeek = this.resolveIncludeInSchoolWeek(input.includeInSchoolWeek, role, true);
 
     const member = await this.prisma.client.familyMember.create({
       data: {
         familyId,
         displayName,
-        role
+        role,
+        includeInSchoolWeek
       }
     });
 
@@ -297,6 +300,7 @@ export class FamiliesService {
     const member = await this.getFamilyMemberOrThrow(familyId, memberId);
     const displayName = input.displayName === undefined ? member.displayName : this.validateDisplayName(input.displayName);
     const role = input.role === undefined ? member.role : this.validateManualMemberRole(input.role);
+    const includeInSchoolWeek = this.resolveIncludeInSchoolWeek(input.includeInSchoolWeek, role, member.includeInSchoolWeek ?? true);
 
     if (this.isAdminRole(member.role) && !this.isAdminRole(role)) {
       await this.assertAnotherAdministratorExists(familyId, member.id);
@@ -304,7 +308,7 @@ export class FamiliesService {
 
     const updated = await this.prisma.client.familyMember.update({
       where: { id: member.id },
-      data: { displayName, role }
+      data: { displayName, role, includeInSchoolWeek }
     });
 
     return this.toFamilyMemberDto(updated);
@@ -500,7 +504,8 @@ export class FamiliesService {
           familyId,
           userId: invitation.invitedUserId,
           displayName: requester.name,
-          role: invitation.role
+          role: invitation.role,
+          includeInSchoolWeek: invitation.role === "CHILD"
         }
       });
 
@@ -1055,6 +1060,22 @@ export class FamiliesService {
     return displayName;
   }
 
+  private resolveIncludeInSchoolWeek(value: unknown, role: FamilyMemberRoleDto, fallback: boolean): boolean {
+    if (role !== "CHILD") {
+      return typeof value === "boolean" ? value : fallback;
+    }
+
+    if (value === undefined || value === null) {
+      return fallback;
+    }
+
+    if (typeof value !== "boolean") {
+      throw new BadRequestException("Include in school week must be a boolean");
+    }
+
+    return value;
+  }
+
   private validateManualMemberRole(value: unknown): AddFamilyMemberRoleDto {
     if (typeof value !== "string" || !MANUAL_MEMBER_ROLES.includes(value as AddFamilyMemberRoleDto)) {
       throw new BadRequestException("Role must be PARENT, CHILD, or GUEST");
@@ -1125,6 +1146,7 @@ export class FamiliesService {
       displayName: member.displayName,
       avatarUrl: member.user?.avatarUrl ?? member.avatarUrl ?? null,
       role: member.role,
+      includeInSchoolWeek: member.includeInSchoolWeek ?? true,
       createdAt: member.createdAt.toISOString(),
       updatedAt: member.updatedAt.toISOString()
     };

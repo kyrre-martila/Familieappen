@@ -43,7 +43,10 @@ const schoolTones: HuskSchoolWeekItem["tone"][] = ["purple", "blue", "orange", "
 export function useSchoolWeek(selectedWeek: Date) {
   const selectedWeekKey = toDateString(selectedWeek);
   const { family, children: familyChildren, loading: familyLoading, error: familyError, refresh: refreshFamilyMembers } = useFamilyMembers();
-  const children = familyChildren as HuskFamilyMember[];
+  const children = useMemo(
+    () => familyChildren.filter((child) => child.includeInSchoolWeek === true) as HuskFamilyMember[],
+    [familyChildren],
+  );
   const [backendItems, setBackendItems] = useState<BackendSchoolWeekReminder[]>([]);
   const [itemsLoading, setItemsLoading] = useState(false);
   const [itemsError, setItemsError] = useState<string | null>(null);

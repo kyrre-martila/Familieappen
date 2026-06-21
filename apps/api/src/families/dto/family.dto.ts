@@ -12,11 +12,13 @@ export interface UpdateFamilyRequestDto {
 export interface AddFamilyMemberRequestDto {
   displayName?: unknown;
   role?: unknown;
+  includeInSchoolWeek?: unknown;
 }
 
 export interface UpdateFamilyMemberRequestDto {
   displayName?: unknown;
   role?: unknown;
+  includeInSchoolWeek?: unknown;
 }
 
 export type FamilyInvitationStatusDto = "pending" | "accepted" | "declined" | "revoked";
@@ -63,6 +65,7 @@ export interface FamilyMemberDto {
   displayName: string;
   avatarUrl: string | null;
   role: FamilyMemberRoleDto;
+  includeInSchoolWeek: boolean;
   createdAt: string;
   updatedAt: string;
 }

@@ -17,6 +17,7 @@ type FamilyMemberRecord = {
   familyId: string;
   displayName: string;
   role: FamilyMemberRoleDto;
+  includeInSchoolWeek: boolean;
   createdAt: Date;
   updatedAt: Date;
 };
@@ -773,6 +774,7 @@ export class CalendarService {
           displayName: participant.familyMember.displayName,
           avatarUrl: null,
           role: participant.familyMember.role,
+          includeInSchoolWeek: participant.familyMember.includeInSchoolWeek ?? true,
           createdAt: participant.familyMember.createdAt.toISOString(),
           updatedAt: participant.familyMember.updatedAt.toISOString()
         }

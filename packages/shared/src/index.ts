@@ -17,6 +17,7 @@ export interface FamilyMember {
   displayName: string;
   avatarUrl: string | null;
   role: FamilyMemberRole;
+  includeInSchoolWeek: boolean;
   createdAt: string;
   updatedAt: string;
 }
