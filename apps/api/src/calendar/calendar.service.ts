@@ -151,7 +151,7 @@ export class CalendarService {
       include: this.eventIncludeWithExceptions
     });
 
-    this.notifyCalendarEvent(userId, event, "calendar_event_created");
+    await this.notifyCalendarEvent(userId, event, "calendar_event_created");
     return this.toCalendarEventDto(event);
   }
 
@@ -252,11 +252,11 @@ export class CalendarService {
         throw new NotFoundException("Calendar event was not found");
       }
 
-      this.notifyCalendarEvent(userId, eventWithParticipants, "calendar_event_updated");
+      await this.notifyCalendarEvent(userId, eventWithParticipants, "calendar_event_updated");
       return this.toCalendarEventDto(eventWithParticipants);
     }
 
-    this.notifyCalendarEvent(userId, updatedEvent, "calendar_event_updated");
+    await this.notifyCalendarEvent(userId, updatedEvent, "calendar_event_updated");
     return this.toCalendarEventDto(updatedEvent);
   }
 
@@ -337,34 +337,43 @@ export class CalendarService {
     const refreshed = await this.getFamilyEventOrThrow(familyId, event.id);
     const occurrence = this.expandEventForRange(refreshed, occurrenceDate, occurrenceDate)[0];
     if (!occurrence) throw new NotFoundException("Calendar occurrence was not found");
-    this.notifyCalendarEvent(userId, occurrence, "calendar_event_updated");
+    await this.notifyCalendarEvent(userId, occurrence, "calendar_event_updated");
     return this.toCalendarEventDto(occurrence);
   }
 
-  private notifyCalendarEvent(userId: string, event: CalendarEventOccurrence, type: "calendar_event_created" | "calendar_event_updated"): void {
+  private async notifyCalendarEvent(
+    userId: string,
+    event: CalendarEventOccurrence,
+    type: "calendar_event_created" | "calendar_event_updated"
+  ): Promise<void> {
     if (event.source !== "manual" || event.icsSourceId !== null) return;
-    void (async () => {
-      try {
-        const actorName = await this.notificationsService.getUserDisplayName(userId);
-        const participantMemberIds = event.participants.map((participant) => participant.familyMemberId);
-        const recipientUserIds = participantMemberIds.length
-          ? await this.notificationsService.getUserIdsForFamilyMemberIds(event.familyId, participantMemberIds)
-          : undefined;
-        await this.notificationsService.createNotificationForFamilyMembers({
-          familyId: event.familyId,
-          actorUserId: userId,
-          recipientUserIds,
-          type,
-          title: type === "calendar_event_created" ? "Ny kalenderhendelse" : "Kalenderhendelse endret",
-          body: `${actorName} ${type === "calendar_event_created" ? "la til" : "endret"} ${event.title}`,
-          entityType: "calendar_event",
-          entityId: event.recurringEventId ?? event.id,
-          deepLink: `/calendar?view=day&date=${encodeURIComponent(event.occurrenceDate ?? formatDate(event.startsAt))}&eventId=${encodeURIComponent(event.recurringEventId ?? event.id)}${event.isRecurringOccurrence && event.occurrenceDate ? `&occurrenceDate=${encodeURIComponent(event.occurrenceDate)}` : ""}`
-        });
-      } catch (error) {
-        this.logger.warn(`Failed to create calendar notification: ${error instanceof Error ? error.message : String(error)}`);
-      }
-    })();
+
+    try {
+      const actorName = await this.notificationsService.getUserDisplayName(userId);
+      const participantMemberIds = event.participants.map((participant) => participant.familyMemberId);
+      const recipientUserIds = participantMemberIds.length
+        ? await this.notificationsService.getUserIdsForFamilyMemberIds(event.familyId, participantMemberIds)
+        : undefined;
+      const eventId = event.recurringEventId ?? event.id;
+      const eventDate = event.occurrenceDate ?? formatDate(event.startsAt);
+      const occurrenceDateQuery = event.isRecurringOccurrence && event.occurrenceDate
+        ? `&occurrenceDate=${encodeURIComponent(event.occurrenceDate)}`
+        : "";
+
+      await this.notificationsService.createNotificationForFamilyMembers({
+        familyId: event.familyId,
+        actorUserId: userId,
+        recipientUserIds,
+        type,
+        title: type === "calendar_event_created" ? "Ny kalenderhendelse" : "Kalenderhendelse endret",
+        body: `${actorName} ${type === "calendar_event_created" ? "la til" : "endret"} ${event.title}`,
+        entityType: "calendar_event",
+        entityId: eventId,
+        deepLink: `/calendar?view=day&date=${encodeURIComponent(eventDate)}&eventId=${encodeURIComponent(eventId)}${occurrenceDateQuery}`
+      });
+    } catch (error) {
+      this.logger.warn(`Failed to create calendar notification: ${error instanceof Error ? error.message : String(error)}`);
+    }
   }
 
   async deleteOccurrence(userId: string, familyId: string, eventId: string, occurrenceDateValue: string): Promise<void> {
