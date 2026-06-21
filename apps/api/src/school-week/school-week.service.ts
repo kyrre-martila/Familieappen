@@ -1,5 +1,6 @@
-import { BadRequestException, Injectable, NotFoundException } from "@nestjs/common";
+import { BadRequestException, Injectable, Logger, NotFoundException } from "@nestjs/common";
 import { FamilyAuthorizationService } from "../families";
+import { NotificationsService } from "../notifications";
 import { PrismaService } from "../prisma";
 import { CreateSchoolWeekReminderRequestDto, SchoolWeekMutationScopeDto, SchoolWeekReminderDto, SchoolWeekdayDto, UpdateSchoolWeekReminderRequestDto } from "./dto/school-week.dto";
 
@@ -41,9 +42,12 @@ const dayMs = 86400000;
 
 @Injectable()
 export class SchoolWeekService {
+  private readonly logger = new Logger(SchoolWeekService.name);
+
   constructor(
     private readonly prisma: PrismaService,
-    private readonly familyAuthorization: FamilyAuthorizationService
+    private readonly familyAuthorization: FamilyAuthorizationService,
+    private readonly notificationsService: NotificationsService
   ) {}
 
   async listWeek(userId: string, familyId: string, weekStartValue: unknown): Promise<SchoolWeekReminderDto[]> {
@@ -106,6 +110,7 @@ export class SchoolWeekService {
       data: { familyId, childFamilyMemberId, title, icon, weekday, date, isRecurring, recurrenceFrequency, recurrenceEndDate: isRecurring ? recurrenceEndDate : null, note }
     }) as SchoolWeekReminderRecord;
 
+    this.notifySchoolWeekItem(userId, reminder, "school_week_item_created", date);
     return this.toDto(reminder, date);
   }
 
@@ -121,11 +126,14 @@ export class SchoolWeekService {
     if (existing.isRecurring && scope === "occurrence") {
       if (!occurrenceDate) throw new BadRequestException("Occurrence date is required");
       const exception = await this.upsertException(existing, occurrenceDate, updateData);
+      this.notifySchoolWeekItem(userId, exception, "school_week_item_updated", occurrenceDate);
       return this.toDto(exception, occurrenceDate);
     }
 
     const updated = await (this.prisma.client as any).schoolWeekReminder.update({ where: { id: existing.id }, data: updateData }) as SchoolWeekReminderRecord;
-    return this.toDto(updated, updated.date ?? occurrenceDate ?? new Date());
+    const detailDate = updated.date ?? occurrenceDate ?? new Date();
+    this.notifySchoolWeekItem(userId, updated, "school_week_item_updated", detailDate);
+    return this.toDto(updated, detailDate);
   }
 
   async deleteReminder(userId: string, familyId: string, reminderId: string, scopeValue: unknown, occurrenceDateValue: unknown): Promise<SchoolWeekReminderDto> {
@@ -142,6 +150,28 @@ export class SchoolWeekService {
 
     const deleted = await (this.prisma.client as any).schoolWeekReminder.update({ where: { id: existing.id }, data: { deletedAt: new Date() } }) as SchoolWeekReminderRecord;
     return this.toDto(deleted, deleted.date ?? occurrenceDate ?? new Date());
+  }
+
+  private notifySchoolWeekItem(userId: string, reminder: SchoolWeekReminderRecord, type: "school_week_item_created" | "school_week_item_updated", date: Date): void {
+    void (async () => {
+      try {
+        const actorName = await this.notificationsService.getUserDisplayName(userId);
+        const recipientUserIds = await this.notificationsService.getUserIdsForFamilyMemberIds(reminder.familyId, [reminder.childFamilyMemberId]);
+        await this.notificationsService.createNotificationForFamilyMembers({
+          familyId: reminder.familyId,
+          actorUserId: userId,
+          recipientUserIds: recipientUserIds.length ? recipientUserIds : undefined,
+          type,
+          title: type === "school_week_item_created" ? "Nytt i skoleuka" : "Skoleuka endret",
+          body: `${actorName} ${type === "school_week_item_created" ? "la til" : "endret"} ${reminder.title}`,
+          entityType: "school_week_item",
+          entityId: reminder.id,
+          deepLink: `/husk?tab=school&detailId=${encodeURIComponent(reminder.id)}&date=${encodeURIComponent(this.toDateString(date))}`
+        });
+      } catch (error) {
+        this.logger.warn(`Failed to create school week notification: ${error instanceof Error ? error.message : String(error)}`);
+      }
+    })();
   }
 
   private async buildUpdateData(familyId: string, input: UpdateSchoolWeekReminderRequestDto): Promise<SchoolWeekReminderUpdateData> {

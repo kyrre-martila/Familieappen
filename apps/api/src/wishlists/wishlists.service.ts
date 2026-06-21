@@ -477,7 +477,9 @@ export class WishlistsService {
           body: `${actorName} la til et ønske`,
           entityType: "wishlist_item",
           entityId: item.id,
-          deepLink: "/wishlist"
+          deepLink: item.ownerFamilyMemberId
+            ? `/wishlist/shared/${encodeURIComponent(item.ownerFamilyMemberId)}`
+            : "/wishlist?tab=shared"
         });
       } catch (error) {
         this.logger.warn(`Failed to create wishlist item notification: ${error instanceof Error ? error.message : String(error)}`);
@@ -499,7 +501,9 @@ export class WishlistsService {
           body: `${actorName} delte en ønskeliste med deg`,
           entityType: "wishlist_share",
           entityId: invitation.id,
-          deepLink: "/wishlist"
+          deepLink: invitation.id
+            ? `/wishlist/shared/${encodeURIComponent(invitation.id)}`
+            : "/wishlist?tab=shared"
         });
       } catch (error) {
         this.logger.warn(`Failed to create wishlist share notification: ${error instanceof Error ? error.message : String(error)}`);
