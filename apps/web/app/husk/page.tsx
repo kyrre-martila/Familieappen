@@ -61,31 +61,50 @@ function readStoredValue(storageKey: string, fallback = "") {
   return window.sessionStorage.getItem(storageKey) ?? fallback;
 }
 
-function readStoredJson<T>(storageKey: string, fallback: T): T {
+function readStoredJson<T>(storageKey: string): Partial<T> | null {
   if (typeof window === "undefined") {
-    return fallback;
+    return null;
   }
 
   const storedValue = window.sessionStorage.getItem(storageKey);
   if (!storedValue) {
-    return fallback;
+    return null;
   }
 
   try {
-    return { ...fallback, ...(JSON.parse(storedValue) as Partial<T>) };
+    return JSON.parse(storedValue) as Partial<T>;
   } catch {
-    return fallback;
+    return null;
   }
 }
 
-function normalizeStoredHuskFilters(filters: HuskFilters): HuskFilters {
-  return filters.person === "all" ? { ...filters, person: "family" } : filters;
+type StoredHuskFilters = Partial<HuskFilters> & { showPrevious?: boolean };
+
+function normalizeStoredHuskFilters(
+  storedFilters: StoredHuskFilters | null,
+  { migrateLegacyShowPrevious }: { migrateLegacyShowPrevious: boolean },
+): HuskFilters {
+  if (!storedFilters) {
+    return defaultHuskFilters;
+  }
+
+  return {
+    ...defaultHuskFilters,
+    ...storedFilters,
+    person: storedFilters.person ?? defaultHuskFilters.person,
+    hidePrevious:
+      storedFilters.hidePrevious ??
+      (migrateLegacyShowPrevious &&
+      typeof storedFilters.showPrevious === "boolean"
+        ? !storedFilters.showPrevious
+        : defaultHuskFilters.hidePrevious),
+  };
 }
 
 function getHuskActiveFilterCount(filters: HuskFilters) {
   return (
     Number(filters.person !== defaultHuskFilters.person) +
-    Number(filters.showPrevious !== defaultHuskFilters.showPrevious)
+    Number(filters.hidePrevious !== defaultHuskFilters.hidePrevious)
   );
 }
 
@@ -107,14 +126,14 @@ function HuskPageContent() {
     readStoredValue(huskQueryStorageKey),
   );
   const [huskFilters, setHuskFilters] = useState<HuskFilters>(() =>
-    normalizeStoredHuskFilters(
-      readStoredJson(huskFiltersStorageKey, defaultHuskFilters),
-    ),
+    normalizeStoredHuskFilters(readStoredJson(huskFiltersStorageKey), {
+      migrateLegacyShowPrevious: true,
+    }),
   );
   const [taskFilters, setTaskFilters] = useState<HuskFilters>(() =>
-    normalizeStoredHuskFilters(
-      readStoredJson(taskFiltersStorageKey, defaultHuskFilters),
-    ),
+    normalizeStoredHuskFilters(readStoredJson(taskFiltersStorageKey), {
+      migrateLegacyShowPrevious: false,
+    }),
   );
   const [isFilterSheetOpen, setIsFilterSheetOpen] = useState(false);
   const [taskCreateRequest, setTaskCreateRequest] = useState(0);
@@ -238,14 +257,14 @@ function HuskPageContent() {
             setHuskFilters((current) => ({ ...current, person }))
           }
           onReset={() => setHuskFilters(defaultHuskFilters)}
-          onToggleChange={(showPrevious) =>
-            setHuskFilters((current) => ({ ...current, showPrevious }))
+          onToggleChange={(hidePrevious) =>
+            setHuskFilters((current) => ({ ...current, hidePrevious }))
           }
           person={huskFilters.person}
-          status="Velg person og om tidligere påminnelser skal vises."
+          status="Velg person og om tidligere påminnelser skal skjules."
           title="Filter for Påminnelser"
-          toggleChecked={huskFilters.showPrevious}
-          toggleLabel="Vis tidligere"
+          toggleChecked={huskFilters.hidePrevious}
+          toggleLabel="Skjul tidligere"
         />
       ) : null}
       {selectedTab === "oppgaver" ? (
@@ -257,8 +276,13 @@ function HuskPageContent() {
           }
           onReset={() => setTaskFilters(defaultHuskFilters)}
           person={taskFilters.person}
-          status="Velg hvem oppgavene er tildelt."
+          onToggleChange={(hidePrevious) =>
+            setTaskFilters((current) => ({ ...current, hidePrevious }))
+          }
+          status="Velg hvem oppgavene er tildelt og om fullførte oppgaver skal skjules."
           title="Filter for Oppgaver"
+          toggleChecked={taskFilters.hidePrevious}
+          toggleLabel="Skjul fullførte"
         />
       ) : null}
     </AppShell>

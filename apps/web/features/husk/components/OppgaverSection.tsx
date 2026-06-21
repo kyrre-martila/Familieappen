@@ -144,8 +144,11 @@ export function OppgaverSection({
     [filteredTasks],
   );
   const completedTasks = useMemo(
-    () => filteredTasks.filter((task) => task.completed),
-    [filteredTasks],
+    () =>
+      filters.hidePrevious
+        ? []
+        : filteredTasks.filter((task) => task.completed),
+    [filteredTasks, filters.hidePrevious],
   );
   const incompleteCount = useMemo(
     () => tasks.filter((task) => !task.completed).length,
@@ -496,7 +499,18 @@ export function OppgaverSection({
           />
         ) : null}
 
-        {status === "ready" && filteredTasks.length > 0 ? (
+        {status === "ready" &&
+        tasks.length > 0 &&
+        incompleteTasks.length === 0 &&
+        completedTasks.length === 0 ? (
+          <EmptyState
+            title="Ingen oppgaver matcher filteret"
+            description="Endre filteret eller nullstill for å se alle oppgaver."
+          />
+        ) : null}
+
+        {status === "ready" &&
+        (incompleteTasks.length > 0 || completedTasks.length > 0) ? (
           <div className="tasks-sections">
             <TaskGroup
               title="Gjenstående oppgaver"

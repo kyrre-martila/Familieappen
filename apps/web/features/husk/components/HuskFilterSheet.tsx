@@ -74,8 +74,10 @@ export function HuskFilterSheet({
                     checked={isSelected}
                     className="calendar-filter-option__input"
                     name="husk-person-filter"
-                    onChange={() => onPersonChange(option.value)}
-                    type="radio"
+                    onChange={(event) =>
+                      onPersonChange(event.target.checked ? option.value : "all")
+                    }
+                    type="checkbox"
                   />
                   <span className="calendar-filter-option__label">
                     {option.label}

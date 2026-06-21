@@ -107,8 +107,8 @@ export const personFilterOptions = [
 ] satisfies { value: HuskPersonFilter; label: string }[];
 
 export const defaultHuskFilters: HuskFilters = {
-  person: "family",
-  showPrevious: false,
+  person: "all",
+  hidePrevious: false,
 };
 export const defaultListFilters: ListFilters = {
   person: "all",

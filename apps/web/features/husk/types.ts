@@ -12,7 +12,7 @@ export type HuskPersonFilter = "all" | "family" | (string & {});
 
 export type HuskFilters = {
   person: HuskPersonFilter;
-  showPrevious: boolean;
+  hidePrevious: boolean;
 };
 
 export type ListFilters = {
