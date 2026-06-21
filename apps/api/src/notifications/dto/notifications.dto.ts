@@ -18,7 +18,9 @@ export const NOTIFICATION_TYPES = [
   "wishlist_item_added",
   "wishlist_shared",
   "school_week_item_created",
-  "school_week_item_updated"
+  "school_week_item_updated",
+  "system_meal_missing",
+  "system_school_week_missing"
 ] as const;
 
 export type NotificationType = (typeof NOTIFICATION_TYPES)[number];
