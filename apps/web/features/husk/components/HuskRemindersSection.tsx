@@ -82,7 +82,7 @@ export function HuskRemindersSection({
 
   const filteredPreviousReminders = previousReminders.filter((reminder) => {
     if (
-      !filters.showPrevious ||
+      filters.hidePrevious ||
       !matchesPersonFilter(
         reminder.memberIds,
         reminder.scopeText,
@@ -112,7 +112,7 @@ export function HuskRemindersSection({
 
   const hasReminders =
     groupedReminders.length > 0 ||
-    (filters.showPrevious && filteredPreviousReminders.length > 0);
+    (!filters.hidePrevious && filteredPreviousReminders.length > 0);
 
   if (loading) {
     return (
@@ -173,7 +173,7 @@ export function HuskRemindersSection({
           openMenuReminderId={openMenuReminderId}
           previousReminders={filteredPreviousReminders}
           setOpenMenuReminderId={setOpenMenuReminderId}
-          showPrevious={filters.showPrevious}
+          showPrevious={!filters.hidePrevious}
         />
       ) : (
         <HuskReminderEmptyState
