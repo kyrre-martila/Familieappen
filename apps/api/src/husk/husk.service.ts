@@ -1,5 +1,6 @@
-import { BadRequestException, ConflictException, Injectable, NotFoundException } from "@nestjs/common";
+import { BadRequestException, ConflictException, Injectable, Logger, NotFoundException } from "@nestjs/common";
 import { FamilyAuthorizationService } from "../families";
+import { NotificationsService } from "../notifications";
 import { PrismaService } from "../prisma";
 import { CreateListItemRequestDto, CreateListRequestDto, ListDto, ListItemDto, UpdateListItemRequestDto, UpdateListRequestDto } from "./dto/list.dto";
 import { CreateReminderRequestDto, ReminderDto, UpdateReminderRequestDto } from "./dto/reminder.dto";
@@ -105,9 +106,12 @@ const allowedListIcons = new Set(["birthday", "home", "summer", "celebration"]);
 
 @Injectable()
 export class HuskService {
+  private readonly logger = new Logger(HuskService.name);
+
   constructor(
     private readonly prisma: PrismaService,
-    private readonly familyAuthorization: FamilyAuthorizationService
+    private readonly familyAuthorization: FamilyAuthorizationService,
+    private readonly notificationsService: NotificationsService
   ) {}
 
   async listReminders(userId: string, familyId: string): Promise<ReminderDto[]> {
@@ -154,6 +158,7 @@ export class HuskService {
         include: this.reminderInclude
       });
 
+      this.notifyReminder(userId, reminder, "reminder_created");
       return this.toReminderDto(reminder);
     } catch (error) {
       if (this.isUniqueConstraintError(error)) {
@@ -192,7 +197,9 @@ export class HuskService {
       await Promise.all(memberIds.map((familyMemberId) => this.prisma.client.reminderAudienceMember.create({ data: { reminderId: existingReminder.id, familyMemberId } })));
     }
 
-    return this.toReminderDto(await this.getFamilyReminderOrThrow(familyId, existingReminder.id, userId));
+    const reminder = await this.getFamilyReminderOrThrow(familyId, existingReminder.id, userId);
+    this.notifyReminder(userId, reminder, "reminder_updated");
+    return this.toReminderDto(reminder);
   }
 
   async deleteReminder(userId: string, familyId: string, reminderId: string): Promise<ReminderDto> {
@@ -231,6 +238,7 @@ export class HuskService {
       include: this.listInclude
     });
 
+    this.notifyListCreated(userId, list);
     return this.toListDto(list);
   }
 
@@ -276,9 +284,70 @@ export class HuskService {
     const dueDate = input.dueDate === undefined || input.dueDate === null || input.dueDate === "" ? null : this.validateDate(input.dueDate, "Due date");
     const sortOrder = input.sortOrder === undefined ? await this.getNextSortOrder(list.id) : this.validateSortOrder(input.sortOrder);
 
-    return this.toListItemDto(await (this.prisma.client as any).listItem.create({
+    const item = await (this.prisma.client as any).listItem.create({
       data: { listId: list.id, title, description, assignedFamilyMemberId, dueDate, sortOrder }
-    }));
+    });
+    this.notifyListItemAdded(userId, list);
+    return this.toListItemDto(item);
+  }
+
+  private notifyReminder(userId: string, reminder: ReminderRecord, type: "reminder_created" | "reminder_updated"): void {
+    void (async () => {
+      try {
+        const actorName = await this.notificationsService.getUserDisplayName(userId);
+        const memberIds = reminder.audienceMembers.map((member) => member.familyMemberId);
+        const recipientUserIds = memberIds.length ? await this.notificationsService.getUserIdsForFamilyMemberIds(reminder.familyId, memberIds) : undefined;
+        await this.notificationsService.createNotificationForFamilyMembers({
+          familyId: reminder.familyId,
+          actorUserId: userId,
+          recipientUserIds,
+          type,
+          title: type === "reminder_created" ? "Ny påminnelse" : "Påminnelse endret",
+          body: `${actorName} ${type === "reminder_created" ? "la til" : "endret"} ${reminder.title}`,
+          entityType: "reminder",
+          entityId: reminder.id,
+          deepLink: `/husk?tab=reminders&detailId=${encodeURIComponent(reminder.id)}`
+        });
+      } catch (error) {
+        this.logger.warn(`Failed to create reminder notification: ${error instanceof Error ? error.message : String(error)}`);
+      }
+    })();
+  }
+
+  private notifyListCreated(userId: string, list: ListRecord): void {
+    this.notifyList(userId, list, "list_created");
+  }
+
+  private notifyListItemAdded(userId: string, list: ListRecord): void {
+    this.notifyList(userId, list, "list_item_added");
+  }
+
+  private notifyList(userId: string, list: ListRecord, type: "list_created" | "list_item_added"): void {
+    void (async () => {
+      try {
+        const actorName = await this.notificationsService.getUserDisplayName(userId);
+        const memberIds = list.audienceMembers.map((member) => member.familyMemberId);
+        const recipientUserIds = memberIds.length ? await this.notificationsService.getUserIdsForFamilyMemberIds(list.familyId, memberIds) : undefined;
+        const recipients = recipientUserIds ?? (await this.prisma.client.familyMember.findMany({ where: { familyId: list.familyId, userId: { not: null } }, select: { userId: true } })).map((member) => member.userId as string);
+        await Promise.all([...new Set(recipients)].map(async (recipientUserId) => {
+          if (recipientUserId === userId) return;
+          if (type === "list_item_added" && await this.notificationsService.hasRecentNotification({ recipientUserId, type, entityType: "husk_list", entityId: list.id, since: new Date(Date.now() - 30 * 60 * 1000) })) return;
+          await this.notificationsService.createNotification({
+            familyId: list.familyId,
+            recipientUserId,
+            actorUserId: userId,
+            type,
+            title: type === "list_created" ? "Ny liste" : "Nytt i listen",
+            body: type === "list_created" ? `${actorName} opprettet listen ${list.title}` : `${actorName} har lagt til noe i ${list.title}`,
+            entityType: "husk_list",
+            entityId: list.id,
+            deepLink: "/husk"
+          });
+        }));
+      } catch (error) {
+        this.logger.warn(`Failed to create list notification: ${error instanceof Error ? error.message : String(error)}`);
+      }
+    })();
   }
 
   async updateListItem(userId: string, familyId: string, listId: string, itemId: string, input: UpdateListItemRequestDto): Promise<ListItemDto> {

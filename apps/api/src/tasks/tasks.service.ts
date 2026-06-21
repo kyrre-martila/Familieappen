@@ -1,5 +1,6 @@
-import { BadRequestException, Injectable, NotFoundException } from "@nestjs/common";
+import { BadRequestException, Injectable, Logger, NotFoundException } from "@nestjs/common";
 import { FamilyAuthorizationService } from "../families";
+import { NotificationsService } from "../notifications";
 import { PrismaService } from "../prisma";
 import { CreateTaskRequestDto, TaskDto, UpdateTaskRequestDto } from "./dto/task.dto";
 
@@ -21,9 +22,12 @@ type TaskRecord = {
 
 @Injectable()
 export class TasksService {
+  private readonly logger = new Logger(TasksService.name);
+
   constructor(
     private readonly prisma: PrismaService,
-    private readonly familyAuthorization: FamilyAuthorizationService
+    private readonly familyAuthorization: FamilyAuthorizationService,
+    private readonly notificationsService: NotificationsService
   ) {}
 
   async listTasks(userId: string, familyId: string): Promise<TaskDto[]> {
@@ -57,6 +61,7 @@ export class TasksService {
       }
     });
 
+    this.notifyTaskCreated(userId, task);
     return this.toTaskDto(task);
   }
 
@@ -74,6 +79,7 @@ export class TasksService {
       }
     });
 
+    if (nextCompleted) this.notifyTaskCompleted(userId, updatedTask);
     return this.toTaskDto(updatedTask);
   }
 
@@ -101,7 +107,44 @@ export class TasksService {
       }
     });
 
+    if (shouldUpdateAssignees && assignedMemberIds && !this.sameStringSet(task.assignedMemberIds, assignedMemberIds)) {
+      this.notifyTaskCreated(userId, updatedTask);
+    }
     return this.toTaskDto(updatedTask);
+  }
+
+  private notifyTaskCreated(userId: string, task: TaskRecord): void {
+    void this.notifyTask(userId, task, "task_created");
+  }
+
+  private notifyTaskCompleted(userId: string, task: TaskRecord): void {
+    void this.notifyTask(userId, task, "task_completed");
+  }
+
+  private async notifyTask(userId: string, task: TaskRecord, type: "task_created" | "task_completed"): Promise<void> {
+    try {
+      const actorName = await this.notificationsService.getUserDisplayName(userId);
+      let recipientUserIds: string[] | undefined;
+      if (type === "task_created" && task.assignedMemberIds.length > 0) {
+        recipientUserIds = await this.notificationsService.getUserIdsForFamilyMemberIds(task.familyId, task.assignedMemberIds);
+      } else if (type === "task_completed") {
+        const assigneeUsers = await this.notificationsService.getUserIdsForFamilyMemberIds(task.familyId, task.assignedMemberIds);
+        recipientUserIds = [...new Set([...assigneeUsers, ...(task.createdByUserId ? [task.createdByUserId] : [])])];
+      }
+      await this.notificationsService.createNotificationForFamilyMembers({
+        familyId: task.familyId,
+        actorUserId: userId,
+        recipientUserIds,
+        type,
+        title: type === "task_created" ? "Ny oppgave" : "Oppgave fullført",
+        body: `${actorName} ${type === "task_created" ? "la til" : "fullførte"} ${task.title}`,
+        entityType: "task",
+        entityId: task.id,
+        deepLink: `/husk?tab=tasks&detailId=${encodeURIComponent(task.id)}`
+      });
+    } catch (error) {
+      this.logger.warn(`Failed to create task notification: ${error instanceof Error ? error.message : String(error)}`);
+    }
   }
 
   async deleteTask(userId: string, familyId: string, taskId: string): Promise<TaskDto> {
@@ -140,6 +183,12 @@ export class TasksService {
     }
 
     return task;
+  }
+
+  private sameStringSet(first: string[], second: string[]): boolean {
+    if (first.length !== second.length) return false;
+    const secondSet = new Set(second);
+    return first.every((value) => secondSet.has(value));
   }
 
   private validateTitle(value: unknown): string {

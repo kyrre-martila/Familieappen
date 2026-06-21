@@ -458,6 +458,8 @@ export const NOTIFICATION_TYPES = [
   "shopping_item_added",
   "shopping_item_completed",
   "shopping_list_shared",
+  "list_created",
+  "list_item_added",
   "family_invite_received",
   "family_invite_accepted",
   "family_access_requested",
@@ -467,6 +469,8 @@ export const NOTIFICATION_TYPES = [
   "reminder_updated",
   "task_created",
   "task_completed",
+  "meal_planned",
+  "meal_updated",
   "wishlist_item_added",
   "wishlist_shared"
 ] as const;

@@ -2,6 +2,7 @@ import { Module } from "@nestjs/common";
 import { AuthModule } from "../auth/auth.module";
 import { FamiliesModule } from "../families";
 import { PrismaModule } from "../prisma";
+import { NotificationsModule } from "../notifications";
 import { HuskController } from "./husk.controller";
 import { HuskService } from "./husk.service";
 
@@ -9,7 +10,8 @@ import { HuskService } from "./husk.service";
   imports: [
     PrismaModule,
     FamiliesModule,
-    AuthModule
+    AuthModule,
+    NotificationsModule
   ],
   controllers: [HuskController],
   providers: [HuskService],

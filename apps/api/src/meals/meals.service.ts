@@ -1,6 +1,7 @@
-import { BadRequestException, Injectable, NotFoundException } from "@nestjs/common";
+import { BadRequestException, Injectable, Logger, NotFoundException } from "@nestjs/common";
 import { PrismaService } from "../prisma";
 import { FamilyAuthorizationService } from "../families";
+import { NotificationsService } from "../notifications";
 import { MealPlanDayDto, MealPlanDto, MoveMealRequestDto, MoveMealResultDto, UpsertMealPlanDayRequestDto } from "./dto/meal.dto";
 
 const DEFAULT_RECENT_MEAL_LIMIT = 8;
@@ -28,9 +29,12 @@ type MealPlanDayRecord = {
 
 @Injectable()
 export class MealsService {
+  private readonly logger = new Logger(MealsService.name);
+
   constructor(
     private readonly prisma: PrismaService,
-    private readonly familyAuthorization: FamilyAuthorizationService
+    private readonly familyAuthorization: FamilyAuthorizationService,
+    private readonly notificationsService: NotificationsService
   ) {}
 
   async getMealPlan(userId: string, familyId: string): Promise<MealPlanDto> {
@@ -49,6 +53,7 @@ export class MealsService {
     const createdByFamilyMemberId = await this.validateCreatedByFamilyMemberId(familyId, input.createdByFamilyMemberId, membership.id);
     const sortOrder = this.validateSortOrder(input.sortOrder);
 
+    const existingDay = await this.prisma.client.mealPlanDay.findUnique({ where: { familyId_date: { familyId, date } } });
     const day = await this.prisma.client.mealPlanDay.upsert({
       where: {
         familyId_date: {
@@ -74,6 +79,7 @@ export class MealsService {
       }
     });
 
+    this.notifyMeal(userId, day, existingDay && !existingDay.deletedAt ? "meal_updated" : "meal_planned");
     return this.toMealPlanDayDto(day);
   }
 
@@ -126,7 +132,29 @@ export class MealsService {
       data: updateData
     });
 
+    this.notifyMeal(userId, updatedDay, "meal_updated");
     return this.toMealPlanDayDto(updatedDay);
+  }
+
+  private notifyMeal(userId: string, day: MealPlanDayRecord, type: "meal_planned" | "meal_updated"): void {
+    void (async () => {
+      try {
+        const actorName = await this.notificationsService.getUserDisplayName(userId);
+        const date = day.date.toISOString().slice(0, 10);
+        await this.notificationsService.createNotificationForFamilyMembers({
+          familyId: day.familyId,
+          actorUserId: userId,
+          type,
+          title: type === "meal_planned" ? "Middag planlagt" : "Middag endret",
+          body: type === "meal_planned" ? `${actorName} la til middag: ${day.mealName}` : `${actorName} endret middagen til ${day.mealName}`,
+          entityType: "meal_plan_day",
+          entityId: day.id,
+          deepLink: `/meals?date=${encodeURIComponent(date)}`
+        });
+      } catch (error) {
+        this.logger.warn(`Failed to create meal notification: ${error instanceof Error ? error.message : String(error)}`);
+      }
+    })();
   }
 
   async deleteDay(userId: string, familyId: string, dayId: string): Promise<MealPlanDayDto> {
