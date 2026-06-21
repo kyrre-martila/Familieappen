@@ -8,6 +8,9 @@ import { AppSidebar, BottomNavigation } from "./Navigation";
 import { UserAvatar } from "./avatar/UserAvatar";
 import { getCurrentUserProfile, logout, type UserProfile } from "../lib/api";
 import { OnboardingRouteGuard } from "./OnboardingRouteGuard";
+import { NotificationBell } from "../features/notifications/NotificationBell";
+import { NotificationSheet } from "../features/notifications/NotificationSheet";
+import { useNotifications } from "../features/notifications/useNotifications";
 
 const immersiveRoutes = [
   "/",
@@ -189,6 +192,8 @@ export function AppShell({
   const search = useCurrentSearch(pathname);
   const isFocus = isFocusRoute(pathname, search);
   const [profile, setProfile] = useState<UserProfile | null>(null);
+  const [isNotificationSheetOpen, setIsNotificationSheetOpen] = useState(false);
+  const notifications = useNotifications({ enabled: !isFocus });
 
   useEffect(() => {
     if (isFocus) return;
@@ -224,7 +229,16 @@ export function AppShell({
           <span className="app-shell__mobile-title" aria-hidden="true">
             {mobileTitle ?? title}
           </span>
-          <ProfileMenu profile={profile} />
+          <div className="app-shell__header-actions">
+            <NotificationBell
+              unreadCount={notifications.unreadCount}
+              onClick={() => {
+                setIsNotificationSheetOpen(true);
+                void notifications.loadNotifications();
+              }}
+            />
+            <ProfileMenu profile={profile} />
+          </div>
         </header>
       ) : null}
       {!isFocus && !hideTitleRow ? (
@@ -234,6 +248,13 @@ export function AppShell({
             <div className="app-shell__title-action">{titleAction}</div>
           ) : null}
         </div>
+      ) : null}
+      {!isFocus ? (
+        <NotificationSheet
+          isOpen={isNotificationSheetOpen}
+          notificationsState={notifications}
+          onClose={() => setIsNotificationSheetOpen(false)}
+        />
       ) : null}
       <div className="app-shell__content">{children}</div>
     </div>
