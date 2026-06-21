@@ -176,6 +176,33 @@ export interface NotificationPreferences {
 
 export type NotificationPreferenceUpdate = Partial<Pick<NotificationPreferences, "calendar_events" | "calendar_reminders" | "husk_reminders" | "wishlist_shared" | "family_invites">>;
 
+export interface AppNotification {
+  id: string;
+  familyId: string;
+  recipientUserId: string;
+  actorUserId: string | null;
+  type: string;
+  title: string;
+  body: string;
+  entityType: string | null;
+  entityId: string | null;
+  deepLink: string | null;
+  readAt: string | null;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface NotificationUnreadCount {
+  count: number;
+}
+
+export interface NotificationListInput {
+  limit?: number;
+  cursor?: string;
+  unreadOnly?: boolean;
+  before?: string;
+}
+
 export interface AuthResponse {
   user: AuthUser;
   tokens: {
@@ -1079,6 +1106,29 @@ export async function submitFeedback(input: SubmitFeedbackInput): Promise<Feedba
     method: "POST",
     body: input
   });
+}
+
+
+export async function getNotifications(input: NotificationListInput = {}): Promise<AppNotification[]> {
+  const params = new URLSearchParams();
+  if (input.limit !== undefined) params.set("limit", String(input.limit));
+  if (input.cursor) params.set("cursor", input.cursor);
+  if (input.unreadOnly !== undefined) params.set("unreadOnly", String(input.unreadOnly));
+  if (input.before) params.set("before", input.before);
+  const suffix = params.toString() ? `?${params.toString()}` : "";
+  return apiRequest<AppNotification[]>(`/notifications${suffix}`);
+}
+
+export async function getNotificationUnreadCount(): Promise<NotificationUnreadCount> {
+  return apiRequest<NotificationUnreadCount>("/notifications/unread-count");
+}
+
+export async function markNotificationRead(notificationId: string): Promise<AppNotification> {
+  return apiRequest<AppNotification>(`/notifications/${encodeURIComponent(notificationId)}/read`, { method: "PATCH" });
+}
+
+export async function markAllNotificationsRead(): Promise<NotificationUnreadCount> {
+  return apiRequest<NotificationUnreadCount>("/notifications/read-all", { method: "PATCH" });
 }
 
 export async function getNotificationPreferences(): Promise<NotificationPreferences> {
