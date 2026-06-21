@@ -165,16 +165,18 @@ export interface SubmitFeedbackInput {
 export interface NotificationPreferences {
   id: string;
   userId: string;
-  calendar_events: boolean;
-  calendar_reminders: boolean;
-  husk_reminders: boolean;
-  wishlist_shared: boolean;
-  family_invites: boolean;
+  shoppingEnabled: boolean;
+  calendarEnabled: boolean;
+  remindersEnabled: boolean;
+  tasksEnabled: boolean;
+  mealsEnabled: boolean;
+  wishlistEnabled: boolean;
+  systemEnabled: boolean;
   createdAt: string;
   updatedAt: string;
 }
 
-export type NotificationPreferenceUpdate = Partial<Pick<NotificationPreferences, "calendar_events" | "calendar_reminders" | "husk_reminders" | "wishlist_shared" | "family_invites">>;
+export type NotificationPreferenceUpdate = Partial<Pick<NotificationPreferences, "shoppingEnabled" | "calendarEnabled" | "remindersEnabled" | "tasksEnabled" | "mealsEnabled" | "wishlistEnabled" | "systemEnabled">>;
 
 export interface AppNotification {
   id: string;

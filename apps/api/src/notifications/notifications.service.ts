@@ -1,5 +1,6 @@
 import { BadRequestException, Injectable, NotFoundException } from "@nestjs/common";
 import { PrismaService } from "../prisma";
+import { NotificationPreferencesService } from "../notification-preferences/notification-preferences.service";
 import { NotificationDto, RegisterPushDeviceRequestDto, PushDeviceDto } from "./dto/notifications.dto";
 
 type NotificationRecord = NotificationDto & { createdAt: Date; updatedAt: Date; readAt: Date | null };
@@ -18,7 +19,7 @@ type CreateFamilyNotificationsInput = Omit<CreateNotificationInput, "recipientUs
 
 @Injectable()
 export class NotificationsService {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(private readonly prisma: PrismaService, private readonly notificationPreferencesService: NotificationPreferencesService) {}
 
   async listNotifications(userId: string, query: { unreadOnly?: string; limit?: string; cursor?: string; before?: string }): Promise<NotificationDto[]> {
     const take = this.parseLimit(query.limit);
@@ -90,6 +91,7 @@ export class NotificationsService {
     if (input.actorUserId === input.recipientUserId && !input.allowSelfNotification) return null;
     if (!input.allowNonFamilyRecipient) await this.requireFamilyUser(input.familyId, input.recipientUserId);
     if (input.actorUserId) await this.requireFamilyUser(input.familyId, input.actorUserId);
+    if (!(await this.isNotificationTypeEnabled(input.recipientUserId, input.type))) return null;
     const { allowNonFamilyRecipient, allowSelfNotification, ...data } = input;
     void allowNonFamilyRecipient;
     void allowSelfNotification;
@@ -123,6 +125,25 @@ export class NotificationsService {
       .filter((userId) => !excluded.has(userId) && (!allowed || allowed.has(userId)))
       .map((recipientUserId: string) => this.createNotification({ ...notificationInput, recipientUserId })));
     return notifications.filter((notification): notification is NotificationDto => Boolean(notification));
+  }
+
+  private async isNotificationTypeEnabled(userId: string, type: string): Promise<boolean> {
+    const category = this.getPreferenceCategory(type);
+    if (!category) return true;
+
+    const preferences = await this.notificationPreferencesService.getOrCreatePreferences(userId);
+    return preferences[category];
+  }
+
+  private getPreferenceCategory(type: string): "shoppingEnabled" | "calendarEnabled" | "remindersEnabled" | "tasksEnabled" | "mealsEnabled" | "wishlistEnabled" | "systemEnabled" | null {
+    if (type.startsWith("shopping_") || type === "list_created" || type === "list_item_added") return "shoppingEnabled";
+    if (type.startsWith("calendar_")) return "calendarEnabled";
+    if (type.startsWith("reminder_")) return "remindersEnabled";
+    if (type.startsWith("task_")) return "tasksEnabled";
+    if (type.startsWith("meal_")) return "mealsEnabled";
+    if (type.startsWith("wishlist_")) return "wishlistEnabled";
+    if (type.startsWith("system_")) return "systemEnabled";
+    return null;
   }
 
   private async requireFamilyUser(familyId: string, userId: string): Promise<void> {

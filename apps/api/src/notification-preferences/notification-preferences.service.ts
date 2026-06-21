@@ -2,16 +2,17 @@ import { BadRequestException, Injectable } from "@nestjs/common";
 import { PrismaService } from "../prisma";
 import { NotificationPreferencesDto, UpdateNotificationPreferencesRequestDto } from "./dto/notification-preferences.dto";
 
-const preferenceKeys = {
-  calendar_events: "calendarEvents",
-  calendar_reminders: "calendarReminders",
-  husk_reminders: "huskReminders",
-  wishlist_shared: "wishlistShared",
-  family_invites: "familyInvites"
-} as const;
+const preferenceKeys = [
+  "shoppingEnabled",
+  "calendarEnabled",
+  "remindersEnabled",
+  "tasksEnabled",
+  "mealsEnabled",
+  "wishlistEnabled",
+  "systemEnabled"
+] as const;
 
-type PreferenceApiKey = keyof typeof preferenceKeys;
-type PreferenceModelKey = (typeof preferenceKeys)[PreferenceApiKey];
+type PreferenceModelKey = (typeof preferenceKeys)[number];
 
 type NotificationPreferenceDelegate = {
   upsert(input: {
@@ -19,6 +20,7 @@ type NotificationPreferenceDelegate = {
     update: Partial<Record<PreferenceModelKey, boolean>>;
     create: { userId: string } & Partial<Record<PreferenceModelKey, boolean>>;
   }): Promise<NotificationPreferenceRecord>;
+  findUnique(input: { where: { userId: string } }): Promise<NotificationPreferenceRecord | null>;
 };
 
 type NotificationPreferencePrismaClient = {
@@ -28,11 +30,13 @@ type NotificationPreferencePrismaClient = {
 type NotificationPreferenceRecord = {
   id: string;
   userId: string;
-  calendarEvents: boolean;
-  calendarReminders: boolean;
-  huskReminders: boolean;
-  wishlistShared: boolean;
-  familyInvites: boolean;
+  shoppingEnabled: boolean;
+  calendarEnabled: boolean;
+  remindersEnabled: boolean;
+  tasksEnabled: boolean;
+  mealsEnabled: boolean;
+  wishlistEnabled: boolean;
+  systemEnabled: boolean;
   createdAt: Date;
   updatedAt: Date;
 };
@@ -46,13 +50,15 @@ export class NotificationPreferencesService {
   }
 
   async getPreferences(userId: string): Promise<NotificationPreferencesDto> {
-    const preferences = await this.notificationPreference.upsert({
+    return this.toDto(await this.getOrCreatePreferences(userId));
+  }
+
+  async getOrCreatePreferences(userId: string): Promise<NotificationPreferenceRecord> {
+    return this.notificationPreference.upsert({
       where: { userId },
       update: {},
       create: { userId }
     });
-
-    return this.toDto(preferences);
   }
 
   async updatePreferences(userId: string, body: UpdateNotificationPreferencesRequestDto): Promise<NotificationPreferencesDto> {
@@ -74,18 +80,18 @@ export class NotificationPreferencesService {
   private parseUpdate(body: UpdateNotificationPreferencesRequestDto): Partial<Record<PreferenceModelKey, boolean>> {
     const data: Partial<Record<PreferenceModelKey, boolean>> = {};
 
-    for (const [apiKey, modelKey] of Object.entries(preferenceKeys) as Array<[PreferenceApiKey, PreferenceModelKey]>) {
-      const value = body[apiKey];
+    for (const key of preferenceKeys) {
+      const value = body[key];
 
       if (value === undefined) {
         continue;
       }
 
       if (typeof value !== "boolean") {
-        throw new BadRequestException(`${apiKey} must be a boolean`);
+        throw new BadRequestException(`${key} must be a boolean`);
       }
 
-      data[modelKey] = value;
+      data[key] = value;
     }
 
     return data;
@@ -95,11 +101,13 @@ export class NotificationPreferencesService {
     return {
       id: preferences.id,
       userId: preferences.userId,
-      calendar_events: preferences.calendarEvents,
-      calendar_reminders: preferences.calendarReminders,
-      husk_reminders: preferences.huskReminders,
-      wishlist_shared: preferences.wishlistShared,
-      family_invites: preferences.familyInvites,
+      shoppingEnabled: preferences.shoppingEnabled,
+      calendarEnabled: preferences.calendarEnabled,
+      remindersEnabled: preferences.remindersEnabled,
+      tasksEnabled: preferences.tasksEnabled,
+      mealsEnabled: preferences.mealsEnabled,
+      wishlistEnabled: preferences.wishlistEnabled,
+      systemEnabled: preferences.systemEnabled,
       createdAt: preferences.createdAt.toISOString(),
       updatedAt: preferences.updatedAt.toISOString()
     };
