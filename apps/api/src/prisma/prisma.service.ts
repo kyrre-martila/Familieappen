@@ -49,6 +49,8 @@ interface PrismaClientConnection {
   wishlistShareInvitation: PrismaDelegate;
   familyInvitation: PrismaDelegate;
   feedbackSubmission: PrismaDelegate;
+  notification: PrismaDelegate & { upsert(args: Record<string, unknown>): Promise<any>; };
+  pushDevice: PrismaDelegate & { upsert(args: Record<string, unknown>): Promise<any>; };
   $connect(): Promise<void>;
   $disconnect(): Promise<void>;
   $queryRaw<T = unknown>(query: TemplateStringsArray): Promise<T>;
