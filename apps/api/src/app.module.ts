@@ -9,6 +9,7 @@ import { HealthModule } from "./health";
 import { HuskModule } from "./husk";
 import { MealsModule } from "./meals";
 import { NotificationPreferencesModule } from "./notification-preferences";
+import { NotificationsModule } from "./notifications";
 import { PrismaModule } from "./prisma";
 import { SchoolWeekModule } from "./school-week";
 import { ShoppingModule } from "./shopping";
@@ -31,7 +32,8 @@ import { WishlistsModule } from "./wishlists";
     HuskModule,
     SchoolWeekModule,
     WishlistsModule,
-    NotificationPreferencesModule
+    NotificationPreferencesModule,
+    NotificationsModule
   ]
 })
 export class AppModule {}
