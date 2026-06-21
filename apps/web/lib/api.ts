@@ -431,7 +431,7 @@ export async function getFamilyDashboard(familyId: string): Promise<FamilyDashbo
 
 export async function addFamilyMember(
   familyId: string,
-  input: { displayName: string; role: ManualFamilyMemberRole }
+  input: { displayName: string; role: ManualFamilyMemberRole; includeInSchoolWeek?: boolean }
 ): Promise<FamilyMember> {
   return withFamilyCacheInvalidation(apiRequest<FamilyMember>(`/families/${encodeURIComponent(familyId)}/members`, {
     method: "POST",
@@ -442,7 +442,7 @@ export async function addFamilyMember(
 export async function updateFamilyMember(
   familyId: string,
   memberId: string,
-  input: { displayName?: string; role?: ManualFamilyMemberRole }
+  input: { displayName?: string; role?: ManualFamilyMemberRole; includeInSchoolWeek?: boolean }
 ): Promise<FamilyMember> {
   return withFamilyCacheInvalidation(apiRequest<FamilyMember>(`/families/${encodeURIComponent(familyId)}/members/${encodeURIComponent(memberId)}`, {
     method: "PATCH",

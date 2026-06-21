@@ -64,13 +64,16 @@ export class SchoolWeekService {
           { exceptionOfId: { not: null }, date: { gte: weekStart, lte: weekEnd } }
         ]
       },
+      include: { childFamilyMember: { select: { role: true, includeInSchoolWeek: true } } },
       orderBy: [{ weekday: "asc" }, { createdAt: "asc" }]
-    }) as SchoolWeekReminderRecord[];
+    }) as (SchoolWeekReminderRecord & { childFamilyMember?: { role: string; includeInSchoolWeek: boolean } | null })[];
 
     const exceptionKeys = new Set(records.filter((record) => record.exceptionOfId && record.date).map((record) => `${record.exceptionOfId}:${this.toDateString(record.date!)}`));
     const visible: SchoolWeekReminderDto[] = [];
 
     for (const record of records) {
+      if (record.childFamilyMember?.role !== "CHILD" || record.childFamilyMember.includeInSchoolWeek !== true) continue;
+
       if (record.exceptionOfId) {
         if (!record.deletedAt && record.date) visible.push(this.toDto(record, record.date));
         continue;
@@ -219,7 +222,7 @@ export class SchoolWeekService {
 
   private async validateChildFamilyMemberId(familyId: string, value: unknown): Promise<string> {
     if (typeof value !== "string" || !value.trim()) throw new BadRequestException("Child family member id is required");
-    const member = await this.prisma.client.familyMember.findFirst({ where: { id: value.trim(), familyId, role: "CHILD" } });
+    const member = await this.prisma.client.familyMember.findFirst({ where: { id: value.trim(), familyId, role: "CHILD", includeInSchoolWeek: true } });
     if (!member) throw new BadRequestException("Child family member was not found");
     return value.trim();
   }

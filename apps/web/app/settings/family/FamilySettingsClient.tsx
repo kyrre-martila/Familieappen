@@ -141,9 +141,10 @@ function FamilyNameSheet({ name, isPending, onCancel, onSave }: { name: string; 
   );
 }
 
-function MemberEditSheet({ member, isPending, onCancel, onSave }: { member: FamilyMember; isPending: boolean; onCancel: () => void; onSave: (displayName: string, role: RoleChoice) => void }) {
+function MemberEditSheet({ member, isPending, onCancel, onSave }: { member: FamilyMember; isPending: boolean; onCancel: () => void; onSave: (displayName: string, role: RoleChoice, includeInSchoolWeek: boolean) => void }) {
   const [displayName, setDisplayName] = useState(member.displayName);
   const [role, setRole] = useState<RoleChoice>(roleToChoice(member.role));
+  const [includeInSchoolWeek, setIncludeInSchoolWeek] = useState(member.includeInSchoolWeek ?? true);
   const [error, setError] = useState("");
 
   function handleSave() {
@@ -152,7 +153,7 @@ function MemberEditSheet({ member, isPending, onCancel, onSave }: { member: Fami
       return;
     }
     if (!isPending) {
-      onSave(displayName.trim(), role);
+      onSave(displayName.trim(), role, includeInSchoolWeek);
     }
   }
 
@@ -168,12 +169,27 @@ function MemberEditSheet({ member, isPending, onCancel, onSave }: { member: Fami
         </label>
         <label className="profile-edit-sheet__field">
           <span>Rolle</span>
-          <select value={role} onChange={(event) => setRole(event.target.value as RoleChoice)} disabled={isPending}>
+          <select value={role} onChange={(event) => {
+            const nextRole = event.target.value as RoleChoice;
+            setRole(nextRole);
+            if (nextRole === "CHILD" && member.includeInSchoolWeek === undefined) {
+              setIncludeInSchoolWeek(true);
+            }
+          }} disabled={isPending}>
             <option value="ADMIN">Administrator</option>
             <option value="MEMBER">Medlem</option>
             <option value="CHILD">Barn</option>
           </select>
         </label>
+        {role === "CHILD" ? (
+          <label className="profile-edit-sheet__field profile-edit-sheet__field--checkbox">
+            <span>
+              <span>Inkluder i Skoleuka</span>
+              <small>Barn som er inkludert her vises i Skoleuka og brukes for skoleukeplanlegging.</small>
+            </span>
+            <input type="checkbox" checked={includeInSchoolWeek} onChange={(event) => setIncludeInSchoolWeek(event.target.checked)} disabled={isPending} />
+          </label>
+        ) : null}
         {error ? <p className="profile-edit-sheet__error">{error}</p> : null}
         <div className="profile-edit-sheet__actions">
           <button className="profile-edit-sheet__button profile-edit-sheet__button--secondary" type="button" onClick={onCancel} disabled={isPending}>Avbryt</button>
@@ -331,10 +347,10 @@ export function FamilySettingsClient() {
     }
   }
 
-  async function saveMember(member: FamilyMember, displayName: string, role: RoleChoice) {
+  async function saveMember(member: FamilyMember, displayName: string, role: RoleChoice, includeInSchoolWeek: boolean) {
     if (!family || !beginPendingAction("edit-member")) return;
     try {
-      await updateFamilyMember(family.id, member.id, { displayName, role: choiceToApiRole(role) });
+      await updateFamilyMember(family.id, member.id, { displayName, role: choiceToApiRole(role), includeInSchoolWeek });
       await loadData(false);
       setSheet(null);
     } catch {
@@ -551,7 +567,7 @@ export function FamilySettingsClient() {
       ) : null}
 
       {sheet?.type === "family-name" ? <FamilyNameSheet name={family.name} isPending={pendingAction === "save-family-name"} onCancel={() => setSheet(null)} onSave={saveFamilyName} /> : null}
-      {sheet?.type === "edit-member" ? <MemberEditSheet member={sheet.member} isPending={pendingAction === "edit-member"} onCancel={() => setSheet(null)} onSave={(displayName, role) => void saveMember(sheet.member, displayName, role)} /> : null}
+      {sheet?.type === "edit-member" ? <MemberEditSheet member={sheet.member} isPending={pendingAction === "edit-member"} onCancel={() => setSheet(null)} onSave={(displayName, role, includeInSchoolWeek) => void saveMember(sheet.member, displayName, role, includeInSchoolWeek)} /> : null}
       {sheet?.type === "remove-member" ? <RemoveSheet member={sheet.member} isSelf={sheet.member.id === currentMembership?.id} isPending={pendingAction === "remove-member"} onCancel={() => setSheet(null)} onRemove={() => void removeMember(sheet.member)} /> : null}
       {sheet?.type === "invite" ? <InviteSheet isPending={pendingAction === "send-invite"} onCancel={() => setSheet(null)} onSend={(email, role) => void sendInvite(email, role)} /> : null}
       {sheet?.type === "revoke-invite" ? <RevokeInviteSheet invitation={sheet.invitation} isPending={pendingAction === "revoke-invite"} onCancel={() => setSheet(null)} onRevoke={() => void revokeInvite(sheet.invitation)} /> : null}

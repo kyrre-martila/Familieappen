@@ -26,6 +26,7 @@ export function toFeatureFamilyMember(member: BackendFamilyMember, index: number
     tone,
     role: member.role.toLocaleLowerCase("en-US") as FeatureFamilyMember["role"],
     isChild: member.role === "CHILD",
+    includeInSchoolWeek: member.includeInSchoolWeek,
     createdAt: member.createdAt,
     updatedAt: member.updatedAt,
   };

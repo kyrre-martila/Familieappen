@@ -20,6 +20,7 @@ export type FamilyMember = {
   tone?: Exclude<DomainTone, "yellow">;
   role?: "owner" | "parent" | "child" | "guest";
   isChild?: boolean;
+  includeInSchoolWeek?: boolean;
   createdAt?: string;
   updatedAt?: string;
 };

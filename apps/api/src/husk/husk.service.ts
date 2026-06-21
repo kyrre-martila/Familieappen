@@ -11,6 +11,7 @@ type FamilyMemberRecord = {
   familyId: string;
   displayName: string;
   role: "OWNER" | "PARENT" | "CHILD" | "GUEST";
+  includeInSchoolWeek: boolean;
   createdAt: Date;
   updatedAt: Date;
 };
@@ -605,6 +606,7 @@ export class HuskService {
       displayName: familyMember.displayName,
       avatarUrl: null,
       role: familyMember.role,
+      includeInSchoolWeek: familyMember.includeInSchoolWeek ?? true,
       createdAt: familyMember.createdAt.toISOString(),
       updatedAt: familyMember.updatedAt.toISOString()
     };
