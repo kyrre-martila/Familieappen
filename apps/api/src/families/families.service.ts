@@ -1,6 +1,7 @@
-import { BadRequestException, ConflictException, Injectable, NotFoundException } from "@nestjs/common";
+import { BadRequestException, ConflictException, Injectable, Logger, NotFoundException } from "@nestjs/common";
 import { createHash, randomBytes } from "crypto";
 import { EmailService, getAppBaseUrl } from "../email";
+import { NotificationsService } from "../notifications";
 import { PrismaService } from "../prisma";
 import { FamilyDashboardDto } from "./dto/dashboard.dto";
 import {
@@ -152,10 +153,13 @@ type PrismaClientWithFamilyInvitations = typeof PrismaService.prototype.client &
 
 @Injectable()
 export class FamiliesService {
+  private readonly logger = new Logger(FamiliesService.name);
+
   constructor(
     private readonly prisma: PrismaService,
     private readonly familyAuthorization: FamilyAuthorizationService,
-    private readonly emailService: EmailService
+    private readonly emailService: EmailService,
+    private readonly notificationsService: NotificationsService
   ) {}
 
   async createFamily(userId: string, input: CreateFamilyRequestDto = {}): Promise<FamilyDetailsDto> {
@@ -363,6 +367,7 @@ export class FamiliesService {
       }
     });
 
+    void this.notifyFamilyAccessRequested(user.id, family.id, invitation.id, user.name);
     return this.toFamilyInvitationDto(invitation);
   }
 
@@ -415,6 +420,7 @@ export class FamiliesService {
       });
     const email = await this.sendFamilyInviteEmail(invitedEmail, token, inviter.name, family.name);
 
+    if (invitation.invitedUserId) void this.notifyFamilyInviteReceived(userId, familyId, invitation.id, invitation.invitedUserId, inviter.name);
     void membership;
     return { invitation: this.toFamilyInvitationDto(invitation), email: { ok: email.ok, mode: email.mode } };
   }
@@ -504,6 +510,7 @@ export class FamiliesService {
       });
     });
 
+    void this.notifyFamilyInviteAccepted(invitation.invitedUserId, familyId, invitation.id, requester.name);
     return this.toFamilyInvitationDto(updated);
   }
 
@@ -912,6 +919,69 @@ export class FamiliesService {
     if (adminCount < 1) {
       throw new BadRequestException("Det siste administratormedlemmet kan ikke fjernes");
     }
+  }
+
+  private async notifyFamilyInviteReceived(actorUserId: string, familyId: string, invitationId: string, recipientUserId: string, actorName: string): Promise<void> {
+    try {
+      await this.notificationsService.createNotification({
+        familyId,
+        recipientUserId,
+        actorUserId,
+        type: "family_invite_received",
+        title: "Familieinvitasjon",
+        body: `${actorName} inviterte deg til familien`,
+        entityType: "family_invitation",
+        entityId: invitationId,
+        deepLink: "/settings/family",
+        allowNonFamilyRecipient: true
+      });
+    } catch (error) {
+      this.logger.warn(`Failed to create family invite notification: ${error instanceof Error ? error.message : String(error)}`);
+    }
+  }
+
+  private async notifyFamilyInviteAccepted(actorUserId: string, familyId: string, invitationId: string, actorName: string): Promise<void> {
+    try {
+      await this.notificationsService.createNotificationForFamilyMembers({
+        familyId,
+        actorUserId,
+        type: "family_invite_accepted",
+        title: "Invitasjon godtatt",
+        body: `${actorName} ble med i familien`,
+        entityType: "family_invitation",
+        entityId: invitationId,
+        deepLink: "/settings/family",
+        recipientUserIds: await this.getFamilyAdminUserIds(familyId)
+      });
+    } catch (error) {
+      this.logger.warn(`Failed to create family invite accepted notification: ${error instanceof Error ? error.message : String(error)}`);
+    }
+  }
+
+  private async notifyFamilyAccessRequested(actorUserId: string, familyId: string, invitationId: string, actorName: string): Promise<void> {
+    try {
+      await this.notificationsService.createNotificationForFamilyMembers({
+        familyId,
+        actorUserId,
+        type: "family_access_requested",
+        title: "Ny tilgangsforespørsel",
+        body: `${actorName} ønsker tilgang til familien`,
+        entityType: "family_invitation",
+        entityId: invitationId,
+        deepLink: "/settings/family",
+        recipientUserIds: await this.getFamilyAdminUserIds(familyId)
+      });
+    } catch (error) {
+      this.logger.warn(`Failed to create family access request notification: ${error instanceof Error ? error.message : String(error)}`);
+    }
+  }
+
+  private async getFamilyAdminUserIds(familyId: string): Promise<string[]> {
+    const members = await this.prisma.client.familyMember.findMany({
+      where: { familyId, role: { in: FAMILY_MANAGER_ROLES }, userId: { not: null } },
+      select: { userId: true }
+    }) as Array<{ userId: string | null }>;
+    return members.map((member) => member.userId).filter((userId): userId is string => typeof userId === "string");
   }
 
   private async getFamilyInvitationOrThrow(familyId: string, inviteId: string): Promise<FamilyInvitationRecord> {
