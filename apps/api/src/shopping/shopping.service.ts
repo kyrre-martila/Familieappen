@@ -1,7 +1,8 @@
-import { BadRequestException, ConflictException, ForbiddenException, Injectable, NotFoundException } from "@nestjs/common";
+import { BadRequestException, ConflictException, ForbiddenException, Injectable, Logger, NotFoundException } from "@nestjs/common";
 import { createHash, randomBytes } from "node:crypto";
 import { EmailService, getAppBaseUrl } from "../email";
 import { FamilyAuthorizationService } from "../families";
+import { NotificationsService } from "../notifications";
 import { PrismaService } from "../prisma";
 import { AddShoppingItemRequestDto, CreateShoppingListRequestDto, ShoppingCatalogCategoryDto, ShoppingCatalogItemDto, ShoppingListDto, ShoppingListInvitationDto, ShoppingListInviteRequestDto, ShoppingListInviteResponseDto, ShoppingListInvitePreviewDto, ShoppingListItemDto, ShoppingListSummaryDto, UpdateShoppingItemRequestDto, UpdateFamilyCustomShoppingItemRequestDto, AddShoppingItemResponseDto, UpdateShoppingItemResponseDto } from "./dto/shopping.dto";
 
@@ -14,7 +15,9 @@ function normalizeShoppingSearchValue(value: string): string { return value.trim
 
 @Injectable()
 export class ShoppingService {
-  constructor(private readonly prisma: PrismaService, private readonly familyAuthorization: FamilyAuthorizationService, private readonly emailService: EmailService) {}
+  private readonly logger = new Logger(ShoppingService.name);
+
+  constructor(private readonly prisma: PrismaService, private readonly familyAuthorization: FamilyAuthorizationService, private readonly emailService: EmailService, private readonly notificationsService: NotificationsService) {}
   private get db(): AnyClient { return this.prisma.client as AnyClient; }
 
   async getCatalogCategories(familyId?: string): Promise<ShoppingCatalogCategoryDto[]> { const categories = await this.prisma.client.shoppingCatalogCategory.findMany({ orderBy: [{ sortOrder: "asc" }, { name: "asc" }], include: { _count: { select: { items: true } } } }); const mapped = (categories as Rec[]).map((c) => ({ id: c.id, name: c.name, slug: c.slug, sortOrder: c.sortOrder, totalItemCount: c._count?.items ?? 0 })); const customItems = familyId ? await this.db.familyCustomShoppingItem.findMany({ where: { familyId, deletedAt: null }, select: { categorySlug: true } }) : []; const counts = new Map<string, number>(); for (const item of customItems as Rec[]) counts.set(item.categorySlug, (counts.get(item.categorySlug) ?? 0) + 1); return this.withCustomCategory(mapped.map((category) => ({ ...category, totalItemCount: category.totalItemCount + (counts.get(category.slug) ?? 0) })), counts.get("egne-varer") ?? 0); }
@@ -64,11 +67,13 @@ export class ShoppingService {
           where: { id: existingLinkedItem.id },
           data: { label: itemLabel, quantity: itemQuantity, unit: itemUnit, note: itemNote, category: itemCategory }
         });
+        void this.notifyShoppingItemAdded(userId, familyId, list);
         return { item: this.toShoppingListItemDto(updated), catalogItem: this.toFamilyCustomItemDto(catalogItem) };
       }
     }
 
     const item = await this.prisma.client.shoppingListItem.create({ data: { shoppingListId: list.id, familyCustomShoppingItemId: catalogItem?.id ?? null, label: itemLabel, quantity: itemQuantity, unit: itemUnit, note: itemNote, category: itemCategory, createdByUserId: userId } });
+    void this.notifyShoppingItemAdded(userId, familyId, list);
     return { item: this.toShoppingListItemDto(item), catalogItem: catalogItem ? this.toFamilyCustomItemDto(catalogItem) : null };
   }
   async updateItem(userId: string, familyId: string, itemId: string, input: UpdateShoppingItemRequestDto = {}, listId?: string): Promise<UpdateShoppingItemResponseDto> {
@@ -161,6 +166,51 @@ export class ShoppingService {
   async getInvitePreview(token: string): Promise<ShoppingListInvitePreviewDto> { const inv = await this.getInvitationByTokenOrThrow(token); return { id: inv.id, shoppingListId: inv.shoppingListId, listName: this.formatListName(inv.shoppingList), invitedEmail: inv.invitedEmail, inviterName: inv.createdByUser?.name ?? "FamilieAppen", status: inv.status, requiresAuth: true }; }
   async revokeInvite(userId: string, familyId: string, listId: string, invitationId: string): Promise<ShoppingListInvitationDto> { const list = await this.getAccessibleListOrThrow(userId, familyId, listId); if (list.ownerUserId !== userId) throw new ForbiddenException("Bare eieren kan trekke tilbake invitasjoner"); const invitation = await this.db.shoppingListInvitation.findFirst({ where: { id: invitationId, shoppingListId: list.id } }); if (!invitation) throw new NotFoundException("Invitasjonen finnes ikke"); if (invitation.status !== "pending") throw new BadRequestException("Bare ventende invitasjoner kan trekkes tilbake"); const updated = await this.db.shoppingListInvitation.update({ where: { id: invitation.id }, data: { status: "revoked", revokedAt: new Date() } }); return this.toInvitationDto(updated); }
   async removeCollaborator(userId: string, familyId: string, listId: string, collaboratorUserId: string): Promise<void> { const list = await this.getAccessibleListOrThrow(userId, familyId, listId); if (list.isDefault) throw new BadRequestException("Standardlisten kan ikke endres her"); if (list.ownerUserId === collaboratorUserId) throw new BadRequestException("Eieren kan ikke fjernes fra egen liste"); const isSelfRemoval = userId === collaboratorUserId; if (list.ownerUserId !== userId && !isSelfRemoval) throw new ForbiddenException("Bare eieren kan fjerne andre fra handlelisten"); if (!isSelfRemoval && list.ownerUserId !== userId) throw new ForbiddenException("Bare eieren kan fjerne tilgang"); const access = await this.db.shoppingListAccess.findFirst({ where: { shoppingListId: list.id, userId: collaboratorUserId } }); if (!access) throw new NotFoundException("Tilgangen finnes ikke"); await this.db.shoppingListAccess.delete({ where: { id: access.id } }); }
+
+  private async notifyShoppingItemAdded(actorUserId: string, familyId: string, list: Rec): Promise<void> {
+    try {
+      const actor = await this.prisma.client.user.findUnique({ where: { id: actorUserId }, select: { name: true } }) as { name: string } | null;
+      const since = new Date(Date.now() - 30 * 60 * 1000);
+      const recipientUserIds = list.isDefault ? undefined : (list.accesses ?? [])
+        .map((access: Rec) => access.userId)
+        .filter((userId: unknown): userId is string => typeof userId === "string");
+      const recipients = await this.db.familyMember.findMany({
+        where: {
+          familyId,
+          userId: { not: null },
+          ...(recipientUserIds ? { userId: { in: recipientUserIds } } : {})
+        },
+        select: { userId: true }
+      }) as Array<{ userId: string | null }>;
+
+      await Promise.all(recipients
+        .map((recipient) => recipient.userId)
+        .filter((recipientUserId): recipientUserId is string => Boolean(recipientUserId) && recipientUserId !== actorUserId)
+        .map(async (recipientUserId) => {
+          const hasRecent = await this.notificationsService.hasRecentNotification({
+            recipientUserId,
+            type: "shopping_item_added",
+            entityType: "shopping_list",
+            entityId: list.id,
+            since
+          });
+          if (hasRecent) return;
+          await this.notificationsService.createNotification({
+            familyId,
+            recipientUserId,
+            actorUserId,
+            type: "shopping_item_added",
+            title: "Nytt i handlelisten",
+            body: `${actor?.name ?? "Noen"} har lagt til noe i ${this.formatListName(list)}`,
+            entityType: "shopping_list",
+            entityId: list.id,
+            deepLink: `/shopping/${list.id}`
+          });
+        }));
+    } catch (error) {
+      this.logger.warn(`Failed to create shopping item notification: ${error instanceof Error ? error.message : String(error)}`);
+    }
+  }
 
   private async getOrCreateFamilyShoppingList(familyId: string): Promise<Rec> { let list = await this.db.shoppingList.findFirst({ where: { familyId, isDefault: true }, include: this.listInclude() }); if (list) return list; list = await this.db.shoppingList.findFirst({ where: { familyId }, include: this.listInclude() }); if (list) return this.db.shoppingList.update({ where: { id: list.id }, data: { isDefault: true }, include: this.listInclude() }); return this.db.shoppingList.create({ data: { familyId, name: DEFAULT_SHOPPING_LIST_NAME, isDefault: true }, include: this.listInclude() }); }
   private async getAccessibleListOrThrow(userId: string, familyId: string, listId: string): Promise<Rec> { const list = await this.db.shoppingList.findFirst({ where: { id: listId, OR: [{ familyId, isDefault: true }, { ownerUserId: userId }, { accesses: { some: { userId } } }] }, include: this.listInclude() }); if (!list) throw new NotFoundException("Shopping list was not found"); if (list.isDefault) await this.familyAuthorization.requireFamilyMember(userId, list.familyId); return list; }

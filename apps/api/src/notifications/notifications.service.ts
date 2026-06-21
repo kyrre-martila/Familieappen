@@ -9,7 +9,7 @@ type PushDeviceRecord = Omit<PushDeviceDto, "createdAt" | "updatedAt" | "lastSee
 
 type CreateNotificationInput = {
   familyId: string; recipientUserId: string; actorUserId?: string | null; type: string; title: string; body: string;
-  entityType?: string | null; entityId?: string | null; deepLink?: string | null; allowSelfNotification?: boolean;
+  entityType?: string | null; entityId?: string | null; deepLink?: string | null; allowSelfNotification?: boolean; allowNonFamilyRecipient?: boolean;
 };
 
 type CreateFamilyNotificationsInput = Omit<CreateNotificationInput, "recipientUserId"> & {
@@ -70,11 +70,30 @@ export class NotificationsService {
     return this.toPushDeviceDto(await this.pushDevice.update({ where: { id }, data: { disabledAt: new Date() } }));
   }
 
+
+  async hasRecentNotification(input: { recipientUserId: string; type: string; entityType?: string | null; entityId?: string | null; since: Date; unreadOnly?: boolean }): Promise<boolean> {
+    const row = await this.notification.findFirst({
+      where: {
+        recipientUserId: input.recipientUserId,
+        type: input.type,
+        entityType: input.entityType ?? null,
+        entityId: input.entityId ?? null,
+        createdAt: { gte: input.since },
+        ...(input.unreadOnly ? { readAt: null } : {})
+      },
+      select: { id: true }
+    });
+    return Boolean(row);
+  }
+
   async createNotification(input: CreateNotificationInput): Promise<NotificationDto | null> {
     if (input.actorUserId === input.recipientUserId && !input.allowSelfNotification) return null;
-    await this.requireFamilyUser(input.familyId, input.recipientUserId);
+    if (!input.allowNonFamilyRecipient) await this.requireFamilyUser(input.familyId, input.recipientUserId);
     if (input.actorUserId) await this.requireFamilyUser(input.familyId, input.actorUserId);
-    const row = await this.notification.create({ data: { ...input, actorUserId: input.actorUserId ?? null, entityType: input.entityType ?? null, entityId: input.entityId ?? null, deepLink: input.deepLink ?? null } });
+    const { allowNonFamilyRecipient, allowSelfNotification, ...data } = input;
+    void allowNonFamilyRecipient;
+    void allowSelfNotification;
+    const row = await this.notification.create({ data: { ...data, actorUserId: input.actorUserId ?? null, entityType: input.entityType ?? null, entityId: input.entityId ?? null, deepLink: input.deepLink ?? null } });
     return this.toNotificationDto(row);
   }
 
