@@ -15717,12 +15717,13 @@ button.family-settings-row:focus-visible:not(:disabled) {
   display: grid;
   width: calc(var(--space-xl) + var(--space-s));
   height: calc(var(--space-xl) + var(--space-s));
+  flex: 0 0 auto;
   place-items: center;
-  border: 1px solid var(--color-border);
-  border-radius: var(--radius-pill);
+  border: 0;
+  border-radius: var(--radius-m);
   padding: 0;
-  background: var(--color-surface);
-  color: var(--color-primary-strong);
+  background: var(--color-primary);
+  color: var(--color-surface);
   cursor: pointer;
   box-shadow: var(--shadow-soft);
 }
@@ -15738,20 +15739,22 @@ button.family-settings-row:focus-visible:not(:disabled) {
 
 .notification-bell__badge {
   position: absolute;
-  top: -0.25rem;
-  right: -0.25rem;
+  top: 0.12rem;
+  right: 0.12rem;
   display: grid;
-  min-width: 1.25rem;
-  height: 1.25rem;
+  min-width: 1rem;
+  height: 1rem;
+  max-width: 1.25rem;
   place-items: center;
-  border: 2px solid var(--color-surface);
+  border: 2px solid var(--color-primary);
   border-radius: var(--radius-pill);
-  padding: 0 calc(var(--space-xs) * 0.75);
+  padding: 0 calc(var(--space-xs) * 0.45);
   background: var(--color-danger);
   color: var(--color-surface);
-  font-size: 0.68rem;
+  font-size: 0.62rem;
   font-weight: 900;
   line-height: 1;
+  pointer-events: none;
 }
 
 .notification-sheet__content {

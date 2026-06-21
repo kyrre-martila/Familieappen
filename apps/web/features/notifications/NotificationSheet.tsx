@@ -22,6 +22,13 @@ function relativeTime(value: string) {
   return formatter.format(diffSeconds, "second");
 }
 
+function normalizeNotificationDeepLink(deepLink: string) {
+  const legacyShoppingListMatch = deepLink.match(/^\/shopping\/([^/?#]+)\/?$/);
+  if (!legacyShoppingListMatch) return deepLink;
+
+  return `/shopping?${new URLSearchParams({ listId: legacyShoppingListMatch[1] }).toString()}`;
+}
+
 function NotificationIcon({ notification }: { notification: AppNotification }) {
   const props = { "aria-hidden": true, size: 20, strokeWidth: 2.2 } as const;
   if (notification.type.includes("calendar")) return <CalendarDays {...props} />;
@@ -40,7 +47,7 @@ export function NotificationSheet({ isOpen, onClose, notificationsState }: Notif
     await markRead(notification.id);
     if (notification.deepLink) {
       onClose();
-      router.push(notification.deepLink);
+      router.push(normalizeNotificationDeepLink(notification.deepLink));
     }
   }
 

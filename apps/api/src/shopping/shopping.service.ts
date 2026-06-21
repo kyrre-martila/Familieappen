@@ -204,7 +204,7 @@ export class ShoppingService {
             body: `${actor?.name ?? "Noen"} har lagt til noe i ${this.formatListName(list)}`,
             entityType: "shopping_list",
             entityId: list.id,
-            deepLink: `/shopping/${list.id}`
+            deepLink: `/shopping?listId=${encodeURIComponent(list.id)}`
           });
         }));
     } catch (error) {

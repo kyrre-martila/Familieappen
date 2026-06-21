@@ -12,7 +12,7 @@ import {
 } from "react";
 import Link from "next/link";
 import { AppShell } from "../../components/AppShell";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import {
   Check,
   ChevronDown,
@@ -179,6 +179,8 @@ const FALLBACK_SHOPPING_CATEGORIES: ShoppingCatalogCategory[] = [
 
 export default function ShoppingPage() {
   const router = useRouter();
+  const searchParams = useSearchParams();
+  const linkedShoppingListId = searchParams.get("listId");
   const [shoppingList, setShoppingList] = useState<ShoppingList | null>(null);
   const [shoppingLists, setShoppingLists] = useState<ShoppingList[]>([]);
   const [families, setFamilies] = useState<FamilyWithMembership[]>([]);
@@ -234,8 +236,8 @@ export default function ShoppingPage() {
 
     setFamilies(approvedFamilyContext.families);
     setActiveFamilyIdState(approvedFamilyContext.activeFamilyId);
-    void loadShoppingList(approvedFamilyContext.activeFamilyId);
-  }, [approvedFamilyContext?.activeFamilyId, approvedFamilyContext]);
+    void loadShoppingList(approvedFamilyContext.activeFamilyId, linkedShoppingListId ?? undefined);
+  }, [approvedFamilyContext?.activeFamilyId, approvedFamilyContext, linkedShoppingListId]);
 
   const remainingItems = useMemo(
     () => shoppingList?.items.filter((item) => !item.checked) ?? [],

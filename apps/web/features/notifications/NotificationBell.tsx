@@ -18,7 +18,7 @@ export function NotificationBell({ onClick, unreadCount }: NotificationBellProps
       <Bell aria-hidden="true" className="notification-bell__icon" size={20} strokeWidth={2.25} />
       {unreadCount > 0 ? (
         <span className="notification-bell__badge" aria-hidden="true">
-          {unreadCount > 99 ? "99+" : unreadCount}
+          {unreadCount > 9 ? "9+" : unreadCount}
         </span>
       ) : null}
     </button>
