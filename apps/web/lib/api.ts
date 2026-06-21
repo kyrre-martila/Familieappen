@@ -31,10 +31,11 @@ import type {
   Reminder,
   HuskList,
   HuskListItem,
-  SchoolWeekReminder
+  SchoolWeekReminder,
+  NotificationType
 } from "@familieappen/shared";
 
-export type { CalendarEvent, Family, FamilyDashboardResponse, FamilyInvitation, FamilyInviteResponse, FamilyMember, FamilyMemberRole, ManualFamilyMemberRole, MealPlan, MealPlanDay, MoveMealResult, ShoppingList, ShoppingListInvitation, ShoppingListItem, SharedWishlistItem, SharedWishlistItemsResponse, SharedWishlistSummary, Task, WishlistItem, WishlistItemCreateInput, WishlistItemListResponse, WishlistItemUpdateInput, WishlistSummary, WishlistInvitePreview, WishlistShareInvitation, WishlistShareInviteResponse, Reminder, HuskList, HuskListItem, SchoolWeekReminder };
+export type { CalendarEvent, Family, FamilyDashboardResponse, FamilyInvitation, FamilyInviteResponse, FamilyMember, FamilyMemberRole, ManualFamilyMemberRole, MealPlan, MealPlanDay, MoveMealResult, ShoppingList, ShoppingListInvitation, ShoppingListItem, SharedWishlistItem, SharedWishlistItemsResponse, SharedWishlistSummary, Task, WishlistItem, WishlistItemCreateInput, WishlistItemListResponse, WishlistItemUpdateInput, WishlistSummary, WishlistInvitePreview, WishlistShareInvitation, WishlistShareInviteResponse, Reminder, HuskList, HuskListItem, SchoolWeekReminder, NotificationType };
 
 type LegacyWishlistItem = WishlistItem & {
   productUrl?: string | null;
@@ -181,7 +182,7 @@ export interface AppNotification {
   familyId: string;
   recipientUserId: string;
   actorUserId: string | null;
-  type: string;
+  type: NotificationType | string;
   title: string;
   body: string;
   entityType: string | null;

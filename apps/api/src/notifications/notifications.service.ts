@@ -9,7 +9,7 @@ type PushDeviceRecord = Omit<PushDeviceDto, "createdAt" | "updatedAt" | "lastSee
 
 type CreateNotificationInput = {
   familyId: string; recipientUserId: string; actorUserId?: string | null; type: string; title: string; body: string;
-  entityType?: string | null; entityId?: string | null; deepLink?: string | null; allowSelfNotification?: boolean; allowNonFamilyRecipient?: boolean;
+  entityType?: string | null; entityId?: string | null; deepLink?: string | null; allowSelfNotification?: boolean; allowNonFamilyRecipient?: boolean; cooldownMinutes?: number;
 };
 
 type CreateFamilyNotificationsInput = Omit<CreateNotificationInput, "recipientUserId"> & {
@@ -71,14 +71,15 @@ export class NotificationsService {
   }
 
 
-  async hasRecentNotification(input: { recipientUserId: string; type: string; entityType?: string | null; entityId?: string | null; since: Date; unreadOnly?: boolean }): Promise<boolean> {
+  async hasRecentNotification(input: { recipientUserId: string; type: string; entityType?: string | null; entityId?: string | null; cooldownMinutes?: number; since?: Date; unreadOnly?: boolean }): Promise<boolean> {
+    const since = input.since ?? new Date(Date.now() - Math.max(input.cooldownMinutes ?? 0, 0) * 60 * 1000);
     const row = await this.notification.findFirst({
       where: {
         recipientUserId: input.recipientUserId,
         type: input.type,
         entityType: input.entityType ?? null,
         entityId: input.entityId ?? null,
-        createdAt: { gte: input.since },
+        createdAt: { gte: since },
         ...(input.unreadOnly ? { readAt: null } : {})
       },
       select: { id: true }
@@ -90,9 +91,18 @@ export class NotificationsService {
     if (input.actorUserId === input.recipientUserId && !input.allowSelfNotification) return null;
     if (!input.allowNonFamilyRecipient) await this.requireFamilyUser(input.familyId, input.recipientUserId);
     if (input.actorUserId) await this.requireFamilyUser(input.familyId, input.actorUserId);
-    const { allowNonFamilyRecipient, allowSelfNotification, ...data } = input;
+    if (!(await this.isNotificationPreferenceEnabled(input.recipientUserId, input.type))) return null;
+    if (input.cooldownMinutes && await this.hasRecentNotification({
+      recipientUserId: input.recipientUserId,
+      type: input.type,
+      entityType: input.entityType,
+      entityId: input.entityId,
+      cooldownMinutes: input.cooldownMinutes
+    })) return null;
+    const { allowNonFamilyRecipient, allowSelfNotification, cooldownMinutes, ...data } = input;
     void allowNonFamilyRecipient;
     void allowSelfNotification;
+    void cooldownMinutes;
     const row = await this.notification.create({ data: { ...data, actorUserId: input.actorUserId ?? null, entityType: input.entityType ?? null, entityId: input.entityId ?? null, deepLink: input.deepLink ?? null } });
     return this.toNotificationDto(row);
   }
@@ -128,6 +138,24 @@ export class NotificationsService {
   private async requireFamilyUser(familyId: string, userId: string): Promise<void> {
     const membership = await this.familyMember.findFirst({ where: { familyId, userId } });
     if (!membership) throw new BadRequestException("Recipient must belong to the family");
+  }
+
+  private async isNotificationPreferenceEnabled(userId: string, type: string): Promise<boolean> {
+    const key = this.preferenceKeyForType(type);
+    if (!key) return true;
+    const preferences = await (this.prisma.client as any).notificationPreference.findUnique({ where: { userId }, select: { [key]: true } });
+    return preferences?.[key] ?? true;
+  }
+
+  private preferenceKeyForType(type: string): string | null {
+    if (type.startsWith("calendar_event_")) return "calendarEvents";
+    if (type.startsWith("meal_")) return "calendarEvents";
+    if (type.startsWith("reminder_") || type.startsWith("list_") || type.startsWith("school_week_item_")) return "huskReminders";
+    if (type.startsWith("task_")) return "huskReminders";
+    if (type.startsWith("shopping_")) return "huskReminders";
+    if (type.startsWith("wishlist_")) return "wishlistShared";
+    if (type.startsWith("family_invite_") || type === "family_access_requested") return "familyInvites";
+    return null;
   }
 
   private parseLimit(value?: string): number { const n = value ? Number(value) : 50; return Math.min(Math.max(Number.isFinite(n) ? n : 50, 1), 100); }
