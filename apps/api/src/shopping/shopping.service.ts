@@ -170,7 +170,6 @@ export class ShoppingService {
   private async notifyShoppingItemAdded(actorUserId: string, familyId: string, list: Rec): Promise<void> {
     try {
       const actor = await this.prisma.client.user.findUnique({ where: { id: actorUserId }, select: { name: true } }) as { name: string } | null;
-      const since = new Date(Date.now() - 30 * 60 * 1000);
       const recipientUserIds = list.isDefault ? undefined : (list.accesses ?? [])
         .map((access: Rec) => access.userId)
         .filter((userId: unknown): userId is string => typeof userId === "string");
@@ -192,7 +191,7 @@ export class ShoppingService {
             type: "shopping_item_added",
             entityType: "shopping_list",
             entityId: list.id,
-            since
+            cooldownMinutes: 30
           });
           if (hasRecent) return;
           await this.notificationsService.createNotification({

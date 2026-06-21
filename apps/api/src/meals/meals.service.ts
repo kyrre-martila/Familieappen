@@ -136,7 +136,7 @@ export class MealsService {
     return this.toMealPlanDayDto(updatedDay);
   }
 
-  private notifyMeal(userId: string, day: MealPlanDayRecord, type: "meal_planned" | "meal_updated"): void {
+  private notifyMeal(userId: string, day: MealPlanDayRecord, type: "meal_planned" | "meal_updated" | "meal_deleted"): void {
     void (async () => {
       try {
         const actorName = await this.notificationsService.getUserDisplayName(userId);
@@ -145,11 +145,12 @@ export class MealsService {
           familyId: day.familyId,
           actorUserId: userId,
           type,
-          title: type === "meal_planned" ? "Middag planlagt" : "Middag endret",
-          body: type === "meal_planned" ? `${actorName} la til middag: ${day.mealName}` : `${actorName} endret middagen til ${day.mealName}`,
+          title: type === "meal_planned" ? "Middag planlagt" : type === "meal_deleted" ? "Middagsplan slettet" : "Middagsplan oppdatert",
+          body: type === "meal_planned" ? `${actorName} la til middag: ${day.mealName}` : type === "meal_deleted" ? `${actorName} slettet middagsplanen for ${date}` : `${actorName} oppdaterte middagen til ${day.mealName}`,
           entityType: "meal_plan_day",
           entityId: day.id,
-          deepLink: `/meals?date=${encodeURIComponent(date)}`
+          deepLink: `/meals?date=${encodeURIComponent(date)}`,
+          ...(type === "meal_planned" ? {} : { cooldownMinutes: 30 })
         });
       } catch (error) {
         this.logger.warn(`Failed to create meal notification: ${error instanceof Error ? error.message : String(error)}`);
@@ -166,6 +167,7 @@ export class MealsService {
       data: { deletedAt: new Date() }
     });
 
+    this.notifyMeal(userId, deletedDay, "meal_deleted");
     return this.toMealPlanDayDto(deletedDay);
   }
 
