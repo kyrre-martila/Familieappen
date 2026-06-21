@@ -206,7 +206,9 @@ export class HuskService {
   async deleteReminder(userId: string, familyId: string, reminderId: string): Promise<ReminderDto> {
     await this.familyAuthorization.requireFamilyMember(userId, familyId);
     const reminder = await this.getFamilyReminderOrThrow(familyId, reminderId, userId);
-    return this.toReminderDto(await this.prisma.client.reminder.delete({ where: { id: reminder.id }, include: this.reminderInclude }));
+    const deletedReminder = await this.prisma.client.reminder.delete({ where: { id: reminder.id }, include: this.reminderInclude });
+    this.notifyReminder(userId, deletedReminder, "reminder_deleted");
+    return this.toReminderDto(deletedReminder);
   }
 
   async listLists(userId: string, familyId: string): Promise<ListDto[]> {
@@ -292,7 +294,7 @@ export class HuskService {
     return this.toListItemDto(item);
   }
 
-  private notifyReminder(userId: string, reminder: ReminderRecord, type: "reminder_created" | "reminder_updated"): void {
+  private notifyReminder(userId: string, reminder: ReminderRecord, type: "reminder_created" | "reminder_updated" | "reminder_deleted"): void {
     void (async () => {
       try {
         const actorName = await this.notificationsService.getUserDisplayName(userId);
@@ -303,11 +305,12 @@ export class HuskService {
           actorUserId: userId,
           recipientUserIds,
           type,
-          title: type === "reminder_created" ? "Ny påminnelse" : "Påminnelse endret",
-          body: `${actorName} ${type === "reminder_created" ? "la til" : "endret"} ${reminder.title}`,
+          title: type === "reminder_created" ? "Ny påminnelse" : type === "reminder_deleted" ? "Påminnelse slettet" : "Påminnelse oppdatert",
+          body: `${actorName} ${type === "reminder_created" ? "la til" : type === "reminder_deleted" ? "slettet" : "oppdaterte"} ${reminder.title}`,
           entityType: "reminder",
           entityId: reminder.id,
-          deepLink: `/husk?tab=reminders&detailId=${encodeURIComponent(reminder.id)}`
+          deepLink: `/husk?tab=reminders`,
+          ...(type === "reminder_created" ? {} : { cooldownMinutes: 30 })
         });
       } catch (error) {
         this.logger.warn(`Failed to create reminder notification: ${error instanceof Error ? error.message : String(error)}`);
@@ -332,7 +335,7 @@ export class HuskService {
         const recipients = recipientUserIds ?? (await this.prisma.client.familyMember.findMany({ where: { familyId: list.familyId, userId: { not: null } }, select: { userId: true } })).map((member) => member.userId as string);
         await Promise.all([...new Set(recipients)].map(async (recipientUserId) => {
           if (recipientUserId === userId) return;
-          if (type === "list_item_added" && await this.notificationsService.hasRecentNotification({ recipientUserId, type, entityType: "husk_list", entityId: list.id, since: new Date(Date.now() - 30 * 60 * 1000) })) return;
+          if (type === "list_item_added" && await this.notificationsService.hasRecentNotification({ recipientUserId, type, entityType: "husk_list", entityId: list.id, cooldownMinutes: 30 })) return;
           await this.notificationsService.createNotification({
             familyId: list.familyId,
             recipientUserId,

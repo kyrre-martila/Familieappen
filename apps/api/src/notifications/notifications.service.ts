@@ -10,7 +10,7 @@ type PushDeviceRecord = Omit<PushDeviceDto, "createdAt" | "updatedAt" | "lastSee
 
 type CreateNotificationInput = {
   familyId: string; recipientUserId: string; actorUserId?: string | null; type: string; title: string; body: string;
-  entityType?: string | null; entityId?: string | null; deepLink?: string | null; allowSelfNotification?: boolean; allowNonFamilyRecipient?: boolean;
+  entityType?: string | null; entityId?: string | null; deepLink?: string | null; allowSelfNotification?: boolean; allowNonFamilyRecipient?: boolean; cooldownMinutes?: number;
 };
 
 type CreateFamilyNotificationsInput = Omit<CreateNotificationInput, "recipientUserId"> & {
@@ -72,15 +72,15 @@ export class NotificationsService {
   }
 
 
-  async hasRecentNotification(input: { recipientUserId: string; type: string; entityType?: string | null; entityId?: string | null; since: Date; unreadOnly?: boolean }): Promise<boolean> {
+  async hasRecentNotification(input: { recipientUserId: string; type: string; entityType?: string | null; entityId?: string | null; cooldownMinutes: number }): Promise<boolean> {
+    const since = new Date(Date.now() - input.cooldownMinutes * 60 * 1000);
     const row = await this.notification.findFirst({
       where: {
         recipientUserId: input.recipientUserId,
         type: input.type,
         entityType: input.entityType ?? null,
         entityId: input.entityId ?? null,
-        createdAt: { gte: input.since },
-        ...(input.unreadOnly ? { readAt: null } : {})
+        createdAt: { gte: since }
       },
       select: { id: true }
     });
@@ -92,9 +92,17 @@ export class NotificationsService {
     if (!input.allowNonFamilyRecipient) await this.requireFamilyUser(input.familyId, input.recipientUserId);
     if (input.actorUserId) await this.requireFamilyUser(input.familyId, input.actorUserId);
     if (!(await this.isNotificationTypeEnabled(input.recipientUserId, input.type))) return null;
-    const { allowNonFamilyRecipient, allowSelfNotification, ...data } = input;
+    if (input.cooldownMinutes !== undefined && await this.hasRecentNotification({
+      recipientUserId: input.recipientUserId,
+      type: input.type,
+      entityType: input.entityType ?? null,
+      entityId: input.entityId ?? null,
+      cooldownMinutes: input.cooldownMinutes
+    })) return null;
+    const { allowNonFamilyRecipient, allowSelfNotification, cooldownMinutes, ...data } = input;
     void allowNonFamilyRecipient;
     void allowSelfNotification;
+    void cooldownMinutes;
     const row = await this.notification.create({ data: { ...data, actorUserId: input.actorUserId ?? null, entityType: input.entityType ?? null, entityId: input.entityId ?? null, deepLink: input.deepLink ?? null } });
     return this.toNotificationDto(row);
   }

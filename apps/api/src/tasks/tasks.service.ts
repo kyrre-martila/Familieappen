@@ -107,6 +107,7 @@ export class TasksService {
       }
     });
 
+    this.notifyTask(userId, updatedTask, "task_updated");
     if (shouldUpdateAssignees && assignedMemberIds && !this.sameStringSet(task.assignedMemberIds, assignedMemberIds)) {
       this.notifyTaskCreated(userId, updatedTask);
     }
@@ -121,11 +122,11 @@ export class TasksService {
     void this.notifyTask(userId, task, "task_completed");
   }
 
-  private async notifyTask(userId: string, task: TaskRecord, type: "task_created" | "task_completed"): Promise<void> {
+  private async notifyTask(userId: string, task: TaskRecord, type: "task_created" | "task_completed" | "task_updated" | "task_deleted"): Promise<void> {
     try {
       const actorName = await this.notificationsService.getUserDisplayName(userId);
       let recipientUserIds: string[] | undefined;
-      if (type === "task_created" && task.assignedMemberIds.length > 0) {
+      if ((type === "task_created" || type === "task_updated") && task.assignedMemberIds.length > 0) {
         recipientUserIds = await this.notificationsService.getUserIdsForFamilyMemberIds(task.familyId, task.assignedMemberIds);
       } else if (type === "task_completed") {
         const assigneeUsers = await this.notificationsService.getUserIdsForFamilyMemberIds(task.familyId, task.assignedMemberIds);
@@ -136,11 +137,12 @@ export class TasksService {
         actorUserId: userId,
         recipientUserIds,
         type,
-        title: type === "task_created" ? "Ny oppgave" : "Oppgave fullført",
-        body: `${actorName} ${type === "task_created" ? "la til" : "fullførte"} ${task.title}`,
+        title: type === "task_created" ? "Ny oppgave" : type === "task_completed" ? "Oppgave fullført" : type === "task_deleted" ? "Oppgave slettet" : "Oppgave oppdatert",
+        body: `${actorName} ${type === "task_created" ? "la til" : type === "task_completed" ? "fullførte" : type === "task_deleted" ? "slettet" : "oppdaterte"} ${task.title}`,
         entityType: "task",
         entityId: task.id,
-        deepLink: `/husk?tab=tasks&detailId=${encodeURIComponent(task.id)}`
+        deepLink: `/tasks`,
+        ...(type === "task_created" ? {} : { cooldownMinutes: 30 })
       });
     } catch (error) {
       this.logger.warn(`Failed to create task notification: ${error instanceof Error ? error.message : String(error)}`);
@@ -155,6 +157,7 @@ export class TasksService {
       where: { id: task.id }
     });
 
+    this.notifyTask(userId, deletedTask, "task_deleted");
     return this.toTaskDto(deletedTask);
   }
 

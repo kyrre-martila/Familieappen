@@ -411,6 +411,7 @@ export class WishlistsService {
       throw error;
     }
 
+    this.notifyWishlistItem(userId, familyId, item, "wishlist_item_reserved");
     return this.toSharedWishlistItemDto({ ...item, reservations: [{
       id: "",
       wishlistItemId: item.id,
@@ -436,6 +437,7 @@ export class WishlistsService {
       data: { releasedAt: new Date() }
     });
 
+    this.notifyWishlistItem(userId, familyId, item, "wishlist_item_unreserved");
     return this.toSharedWishlistItemDto({ ...item, reservations: [] }, userId, false);
   }
 
@@ -487,6 +489,41 @@ export class WishlistsService {
     })();
   }
 
+
+  private notifyWishlistItem(userId: string, familyId: string, item: WishlistItemRecord, type: "wishlist_item_updated" | "wishlist_item_deleted" | "wishlist_item_reserved" | "wishlist_item_unreserved"): void {
+    void (async () => {
+      try {
+        const actorName = await this.notificationsService.getUserDisplayName(userId);
+        const title = type === "wishlist_item_updated" ? "Ønske oppdatert" : type === "wishlist_item_deleted" ? "Ønske slettet" : type === "wishlist_item_reserved" ? "Ønske reservert" : "Reservasjon fjernet";
+        const action = type === "wishlist_item_updated" ? "oppdaterte" : type === "wishlist_item_deleted" ? "slettet" : type === "wishlist_item_reserved" ? "reserverte" : "fjernet reservasjonen på";
+        const notificationInput = {
+          familyId,
+          actorUserId: userId,
+          type,
+          title,
+          body: `${actorName} ${action} ${item.title}`,
+          entityType: "wishlist_item",
+          entityId: item.id,
+          deepLink: item.ownerFamilyMemberId
+            ? `/wishlist/shared/${encodeURIComponent(item.ownerFamilyMemberId)}`
+            : "/wishlist?tab=shared",
+          cooldownMinutes: 30
+        };
+        if (type === "wishlist_item_reserved" || type === "wishlist_item_unreserved") {
+          await this.notificationsService.createNotification({
+            ...notificationInput,
+            recipientUserId: item.ownerUserId,
+            allowNonFamilyRecipient: true
+          });
+        } else {
+          await this.notificationsService.createNotificationForFamilyMembers(notificationInput);
+        }
+      } catch (error) {
+        this.logger.warn(`Failed to create wishlist item notification: ${error instanceof Error ? error.message : String(error)}`);
+      }
+    })();
+  }
+
   private notifyWishlistShared(userId: string, familyId: string, invitation: WishlistShareInvitationRecord): void {
     if (!invitation.invitedUserId) return;
     void (async () => {
@@ -525,6 +562,7 @@ export class WishlistsService {
       data
     });
 
+    this.notifyWishlistItem(userId, familyId, updatedItem as WishlistItemRecord, "wishlist_item_updated");
     return this.toWishlistItemDto(updatedItem as WishlistItemRecord);
   }
 
@@ -544,6 +582,7 @@ export class WishlistsService {
       });
     });
 
+    this.notifyWishlistItem(userId, familyId, deletedItem as WishlistItemRecord, "wishlist_item_deleted");
     return this.toWishlistItemDto(deletedItem as WishlistItemRecord);
   }
 

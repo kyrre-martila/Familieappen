@@ -270,6 +270,7 @@ export class CalendarService {
       include: this.eventInclude
     });
 
+    await this.notifyCalendarEvent(userId, deletedEvent, "calendar_event_deleted");
     return this.toCalendarEventDto(deletedEvent);
   }
 
@@ -345,7 +346,7 @@ export class CalendarService {
   private async notifyCalendarEvent(
     userId: string,
     event: CalendarEventOccurrence,
-    type: "calendar_event_created" | "calendar_event_updated"
+    type: "calendar_event_created" | "calendar_event_updated" | "calendar_event_deleted"
   ): Promise<void> {
     if (event.source !== "manual" || event.icsSourceId !== null) return;
 
@@ -366,11 +367,12 @@ export class CalendarService {
         actorUserId: userId,
         recipientUserIds,
         type,
-        title: type === "calendar_event_created" ? "Ny kalenderhendelse" : "Kalenderhendelse endret",
-        body: `${actorName} ${type === "calendar_event_created" ? "la til" : "endret"} ${event.title}`,
+        title: type === "calendar_event_created" ? "Ny kalenderhendelse" : type === "calendar_event_deleted" ? "Kalenderhendelse slettet" : "Kalenderhendelse oppdatert",
+        body: `${actorName} ${type === "calendar_event_created" ? "la til" : type === "calendar_event_deleted" ? "slettet" : "oppdaterte"} ${event.title}`,
         entityType: "calendar_event",
         entityId: eventId,
-        deepLink: `/calendar?view=day&date=${encodeURIComponent(eventDate)}&eventId=${encodeURIComponent(eventId)}${occurrenceDateQuery}`
+        deepLink: `/calendar?view=day&date=${encodeURIComponent(eventDate)}&eventId=${encodeURIComponent(eventId)}${occurrenceDateQuery}`,
+        ...(type === "calendar_event_created" ? {} : { cooldownMinutes: 30 })
       });
     } catch (error) {
       this.logger.warn(`Failed to create calendar notification: ${error instanceof Error ? error.message : String(error)}`);
@@ -386,6 +388,8 @@ export class CalendarService {
       create: { recurringEventId: event.id, occurrenceDate, isDeleted: true },
       update: { isDeleted: true }
     });
+    const occurrence = this.expandEventForRange(event, occurrenceDate, occurrenceDate)[0] ?? { ...event, recurringEventId: event.id, occurrenceDate: formatDate(occurrenceDate), isRecurringOccurrence: true };
+    await this.notifyCalendarEvent(userId, occurrence, "calendar_event_deleted");
   }
 
   private expandEventForRange(event: CalendarEventRecord & { recurrenceExceptions?: CalendarEventExceptionRecord[] }, from: Date, to: Date): CalendarEventOccurrence[] {
