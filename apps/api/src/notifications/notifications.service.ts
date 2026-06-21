@@ -113,12 +113,15 @@ export class NotificationsService {
     const excluded = new Set(input.excludeUserIds ?? []);
     if (input.actorUserId && !input.allowSelfNotification) excluded.add(input.actorUserId);
     const allowed = input.recipientUserIds ? new Set(input.recipientUserIds) : null;
+    const { excludeUserIds, recipientUserIds: _recipientUserIds, ...notificationInput } = input;
+    void excludeUserIds;
+    void _recipientUserIds;
     const recipientUserIds = (members as Array<{ userId: string | null }>)
       .map((member) => member.userId)
       .filter((userId): userId is string => typeof userId === "string");
     const notifications = await Promise.all(recipientUserIds
       .filter((userId) => !excluded.has(userId) && (!allowed || allowed.has(userId)))
-      .map((recipientUserId: string) => this.createNotification({ ...input, recipientUserId })));
+      .map((recipientUserId: string) => this.createNotification({ ...notificationInput, recipientUserId })));
     return notifications.filter((notification): notification is NotificationDto => Boolean(notification));
   }
 
