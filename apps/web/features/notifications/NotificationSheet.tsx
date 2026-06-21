@@ -22,11 +22,18 @@ function relativeTime(value: string) {
   return formatter.format(diffSeconds, "second");
 }
 
-function normalizeNotificationDeepLink(deepLink: string) {
+function normalizeNotificationDeepLink(notification: AppNotification) {
+  const deepLink = notification.deepLink ?? "";
   const legacyShoppingListMatch = deepLink.match(/^\/shopping\/([^/?#]+)\/?$/);
-  if (!legacyShoppingListMatch) return deepLink;
+  if (legacyShoppingListMatch) {
+    return `/shopping?${new URLSearchParams({ listId: legacyShoppingListMatch[1] }).toString()}`;
+  }
 
-  return `/shopping?${new URLSearchParams({ listId: legacyShoppingListMatch[1] }).toString()}`;
+  if (notification.type === "wishlist_item_added" && deepLink === "/wishlist") {
+    return "/wishlist?tab=shared";
+  }
+
+  return deepLink;
 }
 
 function NotificationIcon({ notification }: { notification: AppNotification }) {
@@ -47,7 +54,7 @@ export function NotificationSheet({ isOpen, onClose, notificationsState }: Notif
     await markRead(notification.id);
     if (notification.deepLink) {
       onClose();
-      router.push(normalizeNotificationDeepLink(notification.deepLink));
+      router.push(normalizeNotificationDeepLink(notification));
     }
   }
 

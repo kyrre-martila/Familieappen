@@ -254,7 +254,7 @@ function getCalendarEventEditHref(event: CalendarMvpEvent, scope?: "occurrence" 
   return `/calendar/events/${encodeURIComponent(event.id)}/edit`;
 }
 
-export function EventDetailClient({ event: initialEvent = null, eventId, occurrenceDate }: { event?: CalendarMvpEvent | null; eventId?: string; occurrenceDate?: string }) {
+export function EventDetailClient({ event: initialEvent = null, eventId, occurrenceDate, onClose }: { event?: CalendarMvpEvent | null; eventId?: string; occurrenceDate?: string; onClose?: () => void }) {
   const router = useRouter();
   const familyAccess = useFamilyAccess();
   const { events, loading, error, refresh, familyMembers } = useCalendar();
@@ -267,6 +267,7 @@ export function EventDetailClient({ event: initialEvent = null, eventId, occurre
   const sourceLabel = event?.source === "ics" ? "Importert kalender" : event?.source === "school-week" ? "Skoleuka" : "FamilieAppen";
   const [isEditScopeSheetOpen, setIsEditScopeSheetOpen] = useState(false);
   const needsEditScopeChoice = Boolean(event?.isRecurringOccurrence && event.recurringEventId && event.occurrenceDate);
+  const closeDetail = onClose ?? (() => router.back());
 
   function handleEdit() {
     if (!event) return;
@@ -303,10 +304,10 @@ export function EventDetailClient({ event: initialEvent = null, eventId, occurre
 
   return (
     <main className="calendar-event-sheet-host" aria-label="Kalenderhendelse">
-      <HuskMobileSheet isOpen={true} labelledBy="calendar-event-detail-title" onClose={() => router.back()}>
+      <HuskMobileSheet isOpen={true} labelledBy="calendar-event-detail-title" onClose={closeDetail}>
         <div className="calendar-filter-sheet__header">
           <div className="husk-reminder-detail__heading"><span className="husk-reminder-detail__icon husk-reminder-card--blue" aria-hidden="true"><EventIcon size={24} strokeWidth={2.35} /></span><div><p className="calendar-filter-sheet__status">{sourceLabel} • {formatEventDate(event.date)}</p><h1 className="calendar-filter-sheet__title" id="calendar-event-detail-title">{event.title}</h1></div></div>
-          <div className="calendar-event-sheet__header-actions"><button className="calendar-filter-sheet__close" type="button" aria-label="Lukk hendelse" onClick={() => router.back()}><X aria-hidden="true" size={18} strokeWidth={2.5} /></button></div>
+          <div className="calendar-event-sheet__header-actions"><button className="calendar-filter-sheet__close" type="button" aria-label="Lukk hendelse" onClick={closeDetail}><X aria-hidden="true" size={18} strokeWidth={2.5} /></button></div>
         </div>
         <div className="husk-reminder-detail__content calendar-event-sheet__content">
           <div className="event-form-card event-form-card--rows husk-reminder-edit-sheet__rows calendar-event-sheet__rows">

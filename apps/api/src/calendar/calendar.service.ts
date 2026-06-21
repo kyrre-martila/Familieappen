@@ -359,7 +359,7 @@ export class CalendarService {
           body: `${actorName} ${type === "calendar_event_created" ? "la til" : "endret"} ${event.title}`,
           entityType: "calendar_event",
           entityId: event.recurringEventId ?? event.id,
-          deepLink: `/calendar/events/${encodeURIComponent(event.recurringEventId ?? event.id)}`
+          deepLink: `/calendar?view=day&date=${encodeURIComponent(event.occurrenceDate ?? formatDate(event.startsAt))}&eventId=${encodeURIComponent(event.recurringEventId ?? event.id)}${event.isRecurringOccurrence && event.occurrenceDate ? `&occurrenceDate=${encodeURIComponent(event.occurrenceDate)}` : ""}`
         });
       } catch (error) {
         this.logger.warn(`Failed to create calendar notification: ${error instanceof Error ? error.message : String(error)}`);

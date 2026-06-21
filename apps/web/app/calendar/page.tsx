@@ -1,7 +1,7 @@
 "use client";
 
 import { Suspense, useEffect, useRef, useState } from "react";
-import { useSearchParams } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 
 import { AppShell } from "../../components/AppShell";
 import { LockedFeatureState } from "../../components/PendingAccess";
@@ -13,6 +13,7 @@ import { CalendarHeader } from "../../features/calendar/components/CalendarHeade
 import { CalendarListView } from "../../features/calendar/components/CalendarListView";
 import { CalendarMonthView } from "../../features/calendar/components/CalendarMonthView";
 import { parseDateString } from "../../features/calendar/components/calendarFormatters";
+import { EventDetailClient } from "./events/[id]/EventDetailClient";
 import {
   CalendarProvider,
   useCalendar,
@@ -26,6 +27,7 @@ function isValidDateParam(value: string | null): value is string {
 
 function CalendarPageContent() {
   const familyAccess = useFamilyAccess();
+  const router = useRouter();
   const searchParams = useSearchParams();
   const {
     error,
@@ -42,6 +44,8 @@ function CalendarPageContent() {
   );
   const appliedSearchParamsRef = useRef<string | null>(null);
   const searchParamsKey = searchParams.toString();
+  const eventIdParam = searchParams.get("eventId");
+  const occurrenceDateParam = searchParams.get("occurrenceDate") ?? undefined;
 
   useEffect(() => {
     if (appliedSearchParamsRef.current === searchParamsKey) {
@@ -53,6 +57,7 @@ function CalendarPageContent() {
     const currentSearchParams = new URLSearchParams(searchParamsKey);
     const dateParam = currentSearchParams.get("date");
     const viewParam = currentSearchParams.get("view");
+    const eventIdParam = currentSearchParams.get("eventId");
 
     if (isValidDateParam(dateParam)) {
       setSelectedDate(dateParam);
@@ -60,6 +65,8 @@ function CalendarPageContent() {
 
     if (viewParam && validCalendarViews.has(viewParam)) {
       setSelectedView(viewParam as typeof selectedView);
+    } else if (eventIdParam) {
+      setSelectedView("day");
     }
   }, [searchParamsKey, setSelectedDate, setSelectedView]);
 
@@ -78,6 +85,14 @@ function CalendarPageContent() {
           1,
         ),
     );
+  }
+
+  function handleCloseEventDetail() {
+    const currentSearchParams = new URLSearchParams(searchParamsKey);
+    currentSearchParams.delete("eventId");
+    currentSearchParams.delete("occurrenceDate");
+    const nextQuery = currentSearchParams.toString();
+    router.replace(nextQuery ? `/calendar?${nextQuery}` : "/calendar", { scroll: false });
   }
 
   function handleMonthDateSelect(date: string) {
@@ -154,6 +169,13 @@ function CalendarPageContent() {
         ) : null}
         {selectedView === "list" ? <CalendarListView /> : null}
       </PageContainer>
+      {eventIdParam ? (
+        <EventDetailClient
+          eventId={eventIdParam}
+          occurrenceDate={occurrenceDateParam}
+          onClose={handleCloseEventDetail}
+        />
+      ) : null}
     </AppShell>
   );
 }
