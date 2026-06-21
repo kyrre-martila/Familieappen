@@ -12943,12 +12943,36 @@ button.family-settings-row:focus-visible:not(:disabled) {
   background: color-mix(in srgb, var(--color-primary-soft) 14%, transparent);
 }
 
+.notification-settings-row__copy {
+  display: grid;
+  min-width: 0;
+  gap: var(--space-2xs);
+}
+
 .notification-settings-row__label {
   color: #111111;
   font-size: clamp(1.04rem, 3vw, 1.3rem);
   font-weight: 840;
   letter-spacing: -0.045em;
   line-height: 1.2;
+}
+
+.notification-settings-row__description {
+  color: var(--color-text-muted);
+  font-size: var(--text-small);
+  font-weight: 650;
+  letter-spacing: -0.015em;
+  line-height: 1.35;
+}
+
+.notification-settings-row__saved {
+  margin-left: auto;
+  border-radius: 999px;
+  padding: 0.28rem 0.62rem;
+  background: color-mix(in srgb, var(--color-success, #12805c) 11%, var(--color-surface));
+  color: color-mix(in srgb, var(--color-success, #12805c) 82%, #111111);
+  font-size: var(--text-small);
+  font-weight: 820;
 }
 
 .notification-settings-row__toggle:focus-visible {

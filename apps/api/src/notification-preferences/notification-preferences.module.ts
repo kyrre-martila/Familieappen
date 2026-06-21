@@ -7,6 +7,7 @@ import { NotificationPreferencesService } from "./notification-preferences.servi
 @Module({
   imports: [AuthModule, PrismaModule],
   controllers: [NotificationPreferencesController],
-  providers: [NotificationPreferencesService]
+  providers: [NotificationPreferencesService],
+  exports: [NotificationPreferencesService]
 })
 export class NotificationPreferencesModule {}
