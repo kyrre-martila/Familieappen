@@ -1,6 +1,7 @@
-import { BadRequestException, Injectable, NotFoundException } from "@nestjs/common";
+import { BadRequestException, Injectable, Logger, NotFoundException } from "@nestjs/common";
 import { FamilyMemberRoleDto } from "../families/dto/family.dto";
 import { FamilyAuthorizationService } from "../families/family-authorization.service";
+import { NotificationsService } from "../notifications";
 import { PrismaService } from "../prisma";
 import {
   CalendarEventDto,
@@ -70,9 +71,12 @@ const MAX_RECURRENCE_OCCURRENCES = 300;
 
 @Injectable()
 export class CalendarService {
+  private readonly logger = new Logger(CalendarService.name);
+
   constructor(
     private readonly prisma: PrismaService,
-    private readonly familyAuthorization: FamilyAuthorizationService
+    private readonly familyAuthorization: FamilyAuthorizationService,
+    private readonly notificationsService: NotificationsService
   ) {}
 
   async listEvents(userId: string, familyId: string, query: ListCalendarEventsQueryDto = {}): Promise<CalendarEventDto[]> {
@@ -147,6 +151,7 @@ export class CalendarService {
       include: this.eventIncludeWithExceptions
     });
 
+    this.notifyCalendarEvent(userId, event, "calendar_event_created");
     return this.toCalendarEventDto(event);
   }
 
@@ -247,9 +252,11 @@ export class CalendarService {
         throw new NotFoundException("Calendar event was not found");
       }
 
+      this.notifyCalendarEvent(userId, eventWithParticipants, "calendar_event_updated");
       return this.toCalendarEventDto(eventWithParticipants);
     }
 
+    this.notifyCalendarEvent(userId, updatedEvent, "calendar_event_updated");
     return this.toCalendarEventDto(updatedEvent);
   }
 
@@ -330,7 +337,34 @@ export class CalendarService {
     const refreshed = await this.getFamilyEventOrThrow(familyId, event.id);
     const occurrence = this.expandEventForRange(refreshed, occurrenceDate, occurrenceDate)[0];
     if (!occurrence) throw new NotFoundException("Calendar occurrence was not found");
+    this.notifyCalendarEvent(userId, occurrence, "calendar_event_updated");
     return this.toCalendarEventDto(occurrence);
+  }
+
+  private notifyCalendarEvent(userId: string, event: CalendarEventOccurrence, type: "calendar_event_created" | "calendar_event_updated"): void {
+    if (event.source !== "manual" || event.icsSourceId !== null) return;
+    void (async () => {
+      try {
+        const actorName = await this.notificationsService.getUserDisplayName(userId);
+        const participantMemberIds = event.participants.map((participant) => participant.familyMemberId);
+        const recipientUserIds = participantMemberIds.length
+          ? await this.notificationsService.getUserIdsForFamilyMemberIds(event.familyId, participantMemberIds)
+          : undefined;
+        await this.notificationsService.createNotificationForFamilyMembers({
+          familyId: event.familyId,
+          actorUserId: userId,
+          recipientUserIds,
+          type,
+          title: type === "calendar_event_created" ? "Ny kalenderhendelse" : "Kalenderhendelse endret",
+          body: `${actorName} ${type === "calendar_event_created" ? "la til" : "endret"} ${event.title}`,
+          entityType: "calendar_event",
+          entityId: event.recurringEventId ?? event.id,
+          deepLink: `/calendar/events/${encodeURIComponent(event.recurringEventId ?? event.id)}`
+        });
+      } catch (error) {
+        this.logger.warn(`Failed to create calendar notification: ${error instanceof Error ? error.message : String(error)}`);
+      }
+    })();
   }
 
   async deleteOccurrence(userId: string, familyId: string, eventId: string, occurrenceDateValue: string): Promise<void> {

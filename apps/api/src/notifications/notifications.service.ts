@@ -97,6 +97,17 @@ export class NotificationsService {
     return this.toNotificationDto(row);
   }
 
+  async getUserDisplayName(userId: string): Promise<string> {
+    const user = await (this.prisma.client as any).user.findUnique({ where: { id: userId }, select: { displayName: true, firstName: true, name: true, email: true } });
+    return user?.displayName || user?.firstName || user?.name || user?.email || "Noen";
+  }
+
+  async getUserIdsForFamilyMemberIds(familyId: string, familyMemberIds: string[]): Promise<string[]> {
+    if (familyMemberIds.length === 0) return [];
+    const members = await this.familyMember.findMany({ where: { familyId, id: { in: [...new Set(familyMemberIds)] }, userId: { not: null } }, select: { userId: true } });
+    return [...new Set((members as Array<{ userId: string | null }>).map((member) => member.userId).filter((userId): userId is string => Boolean(userId)))];
+  }
+
   async createNotificationForFamilyMembers(input: CreateFamilyNotificationsInput): Promise<NotificationDto[]> {
     const members = await this.familyMember.findMany({ where: { familyId: input.familyId, userId: { not: null } } });
     const excluded = new Set(input.excludeUserIds ?? []);

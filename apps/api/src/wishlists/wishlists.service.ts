@@ -1,7 +1,8 @@
-import { BadRequestException, ConflictException, ForbiddenException, Injectable, NotFoundException } from "@nestjs/common";
+import { BadRequestException, ConflictException, ForbiddenException, Injectable, Logger, NotFoundException } from "@nestjs/common";
 import { createHash, randomBytes } from "node:crypto";
 import { EmailService, getAppBaseUrl } from "../email";
 import { FamilyAuthorizationService } from "../families";
+import { NotificationsService } from "../notifications";
 import { PrismaService } from "../prisma";
 import { SharedWishlistItemDto, SharedWishlistItemsResponseDto, SharedWishlistSummaryDto, WishlistInvitePreviewDto, WishlistItemCreateInput, WishlistItemDto, WishlistItemListResponseDto, WishlistItemUpdateInput, WishlistReorderInput, WishlistShareInvitationDto, WishlistShareInviteInput, WishlistShareInviteResponseDto } from "./dto/wishlist.dto";
 
@@ -90,10 +91,13 @@ type WishlistItemRecord = {
 
 @Injectable()
 export class WishlistsService {
+  private readonly logger = new Logger(WishlistsService.name);
+
   constructor(
     private readonly prisma: PrismaService,
     private readonly familyAuthorization: FamilyAuthorizationService,
-    private readonly emailService: EmailService
+    private readonly emailService: EmailService,
+    private readonly notificationsService: NotificationsService
   ) {}
 
   async listMyItems(userId: string, familyId: string): Promise<WishlistItemListResponseDto> {
@@ -164,6 +168,7 @@ export class WishlistsService {
       }) as WishlistShareInvitationRecord;
       const email = await this.sendWishlistInviteEmail(invitedEmail, token, inviter.name, membership.displayName);
 
+      this.notifyWishlistShared(userId, familyId, updated);
       return { invitation: this.toShareInvitationDto(updated), email: { ok: email.ok, mode: email.mode } };
     }
 
@@ -180,6 +185,7 @@ export class WishlistsService {
     }) as WishlistShareInvitationRecord;
     const email = await this.sendWishlistInviteEmail(invitedEmail, token, inviter.name, membership.displayName);
 
+    this.notifyWishlistShared(userId, familyId, invitation);
     return { invitation: this.toShareInvitationDto(invitation), email: { ok: email.ok, mode: email.mode } };
   }
 
@@ -455,7 +461,50 @@ export class WishlistsService {
       });
     });
 
+    this.notifyWishlistItemAdded(userId, familyId, createdItem as WishlistItemRecord);
     return this.toWishlistItemDto(createdItem as WishlistItemRecord);
+  }
+
+  private notifyWishlistItemAdded(userId: string, familyId: string, item: WishlistItemRecord): void {
+    void (async () => {
+      try {
+        const actorName = await this.notificationsService.getUserDisplayName(userId);
+        await this.notificationsService.createNotificationForFamilyMembers({
+          familyId,
+          actorUserId: userId,
+          type: "wishlist_item_added",
+          title: "Nytt ønske",
+          body: `${actorName} la til et ønske`,
+          entityType: "wishlist_item",
+          entityId: item.id,
+          deepLink: "/wishlist"
+        });
+      } catch (error) {
+        this.logger.warn(`Failed to create wishlist item notification: ${error instanceof Error ? error.message : String(error)}`);
+      }
+    })();
+  }
+
+  private notifyWishlistShared(userId: string, familyId: string, invitation: WishlistShareInvitationRecord): void {
+    if (!invitation.invitedUserId) return;
+    void (async () => {
+      try {
+        const actorName = await this.notificationsService.getUserDisplayName(userId);
+        await this.notificationsService.createNotification({
+          familyId,
+          recipientUserId: invitation.invitedUserId as string,
+          actorUserId: userId,
+          type: "wishlist_shared",
+          title: "Ønskeliste delt",
+          body: `${actorName} delte en ønskeliste med deg`,
+          entityType: "wishlist_share",
+          entityId: invitation.id,
+          deepLink: "/wishlist"
+        });
+      } catch (error) {
+        this.logger.warn(`Failed to create wishlist share notification: ${error instanceof Error ? error.message : String(error)}`);
+      }
+    })();
   }
 
   async updateItem(userId: string, familyId: string, itemId: string, input: WishlistItemUpdateInput = {}): Promise<WishlistItemDto> {
