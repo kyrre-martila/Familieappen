@@ -1,5 +1,6 @@
 import Link from "next/link";
 import type { ReactNode } from "react";
+import { AppListRow } from "../app-ui";
 
 interface SettingsRowProps {
   description: string;
@@ -10,8 +11,10 @@ interface SettingsRowProps {
 
 export function SettingsRow({ description, href, icon, title }: SettingsRowProps) {
   return (
-    <Link className="settings-row" href={href}>
-      <span className="settings-row__icon" aria-hidden="true">{icon}</span>
+    <AppListRow as={Link} className="settings-row" href={href}>
+      <span className="settings-row__icon" aria-hidden="true">
+        {icon}
+      </span>
       <span className="settings-row__copy">
         <span className="settings-row__title">{title}</span>
         <span className="settings-row__description">{description}</span>
@@ -21,6 +24,6 @@ export function SettingsRow({ description, href, icon, title }: SettingsRowProps
           <path d="m9 5 7 7-7 7" />
         </svg>
       </span>
-    </Link>
+    </AppListRow>
   );
 }

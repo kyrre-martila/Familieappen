@@ -1,5 +1,17 @@
-import type { ReactNode } from "react";
+import type { ComponentPropsWithoutRef, ReactNode } from "react";
+import { AppCard } from "../app-ui";
 
-export function SettingsCard({ children }: Readonly<{ children: ReactNode }>) {
-  return <div className="settings-card">{children}</div>;
+interface SettingsCardProps extends ComponentPropsWithoutRef<"article"> {
+  children: ReactNode;
+}
+
+export function SettingsCard({ children, className, ...props }: SettingsCardProps) {
+  return (
+    <AppCard
+      className={["settings-card", className].filter(Boolean).join(" ")}
+      {...props}
+    >
+      {children}
+    </AppCard>
+  );
 }
