@@ -11980,7 +11980,7 @@ button.calendar-chip {
 /* Run 6 settings MVP shell */
 .settings-shell {
   display: grid;
-  gap: var(--space-l);
+  gap: var(--section-gap);
   width: min(100%, 46rem);
   margin: 0 auto;
   padding: calc(var(--space-xl) + env(safe-area-inset-top)) 0
@@ -11996,30 +11996,26 @@ button.calendar-chip {
 .settings-hero {
   display: grid;
   gap: var(--space-s);
-  justify-items: center;
-  text-align: center;
+  justify-items: start;
+  text-align: left;
 }
 
 .settings-hero h1 {
   margin: 0;
-  color: var(--color-primary-strong);
-  font-size: clamp(2.1rem, 1.75rem + 1.75vw, 3rem);
+  color: var(--color-text);
+  font-size: clamp(2rem, 1.72rem + 1.4vw, 2.75rem);
   font-weight: 850;
-  line-height: 1.05;
-  letter-spacing: -0.06em;
+  line-height: 1.08;
+  letter-spacing: -0.055em;
 }
 
 .settings-hero p {
-  max-width: 31rem;
+  max-width: 33rem;
   margin: 0;
-  color: color-mix(
-    in srgb,
-    var(--color-muted) 92%,
-    var(--color-primary-strong)
-  );
-  font-size: clamp(1.02rem, 0.95rem + 0.35vw, 1.28rem);
-  font-weight: 560;
-  line-height: 1.45;
+  color: var(--color-muted);
+  font-size: var(--text-body);
+  font-weight: 620;
+  line-height: 1.5;
 }
 
 .settings-hero--detail {
@@ -12031,6 +12027,10 @@ button.calendar-chip {
   gap: var(--space-s);
 }
 
+.settings-section__header.app-section-header {
+  padding-inline: var(--space-xs);
+}
+
 .settings-section__title {
   margin: 0;
   color: var(--color-muted);
@@ -12039,101 +12039,94 @@ button.calendar-chip {
   letter-spacing: -0.03em;
 }
 
-.settings-card,
+.settings-card.app-card,
 .settings-placeholder-card {
   overflow: hidden;
-  border: 1px solid color-mix(in srgb, var(--color-border) 76%, transparent);
-  border-radius: calc(var(--radius-l) + var(--space-xs));
-  background: linear-gradient(
-    145deg,
-    color-mix(in srgb, var(--color-surface) 98%, transparent),
-    color-mix(in srgb, var(--color-surface-warm) 78%, var(--color-surface))
-  );
-  box-shadow:
-    0 1rem 2.5rem color-mix(in srgb, var(--color-text) 7%, transparent),
-    inset 0 1px 0 color-mix(in srgb, white 86%, transparent);
+  border: 1px solid var(--app-card-border);
+  border-radius: var(--app-card-radius);
+  background: var(--app-card-background);
+  box-shadow: var(--app-card-shadow);
 }
 
-.settings-row {
+.settings-card.app-card {
+  gap: var(--space-xs);
+  padding: var(--space-xs);
+}
+
+.settings-row.app-list-row {
   display: grid;
   grid-template-columns: auto minmax(0, 1fr) auto;
   align-items: center;
+  min-height: 5rem;
   gap: var(--space-m);
-  padding: clamp(1.15rem, 1rem + 0.75vw, 1.75rem);
+  border: 0;
+  border-radius: calc(var(--app-card-radius) - var(--space-xs));
+  padding: var(--space-m);
+  background: transparent;
+  box-shadow: none;
   color: var(--color-text);
+  text-decoration: none;
   transition:
     background 160ms ease,
     transform 160ms ease;
 }
 
-.settings-row:not(:last-child) {
-  border-bottom: 1px solid
-    color-mix(in srgb, var(--color-border) 74%, transparent);
+.settings-row.app-list-row:hover,
+.settings-row.app-list-row:focus-visible {
+  outline: none;
+  background: var(--app-selected-background);
 }
 
-.settings-row:hover,
-.settings-row:focus-visible {
-  background: color-mix(in srgb, var(--color-primary-soft) 18%, transparent);
-}
-
-.settings-row:active {
+.settings-row.app-list-row:active {
   transform: scale(0.992);
 }
 
 .settings-row__icon {
   display: grid;
-  width: clamp(4rem, 3.3rem + 2vw, 5.8rem);
-  height: clamp(4rem, 3.3rem + 2vw, 5.8rem);
+  width: clamp(3.25rem, 2.85rem + 1.4vw, 4.35rem);
+  height: clamp(3.25rem, 2.85rem + 1.4vw, 4.35rem);
   place-items: center;
   border-radius: var(--radius-pill);
-  background: linear-gradient(
-    145deg,
-    color-mix(in srgb, var(--color-success-soft) 92%, white),
-    color-mix(in srgb, var(--color-primary-soft) 58%, white)
-  );
-  color: #0b6b2f;
+  background: color-mix(in srgb, var(--color-primary-soft) 72%, white);
+  color: var(--color-primary-strong);
 }
 
 .settings-row__icon svg {
-  width: clamp(1.8rem, 1.55rem + 0.8vw, 2.45rem);
-  height: clamp(1.8rem, 1.55rem + 0.8vw, 2.45rem);
-  stroke-width: 1.85;
+  width: clamp(1.45rem, 1.25rem + 0.7vw, 1.9rem);
+  height: clamp(1.45rem, 1.25rem + 0.7vw, 1.9rem);
+  stroke-width: 1.9;
 }
 
 .settings-row__copy {
   display: grid;
-  gap: calc(var(--space-xs) * 0.8);
+  gap: calc(var(--space-xs) * 0.65);
   min-width: 0;
 }
 
 .settings-row__title {
-  color: #111111;
-  font-size: clamp(1.35rem, 1.08rem + 1vw, 1.85rem);
-  font-weight: 850;
-  line-height: 1.15;
-  letter-spacing: -0.055em;
+  color: var(--color-text);
+  font-size: clamp(1.12rem, 1rem + 0.5vw, 1.35rem);
+  font-weight: 840;
+  line-height: 1.2;
+  letter-spacing: -0.045em;
 }
 
 .settings-row__description {
-  color: color-mix(
-    in srgb,
-    var(--color-muted) 90%,
-    var(--color-primary-strong)
-  );
-  font-size: clamp(0.96rem, 0.9rem + 0.35vw, 1.22rem);
-  font-weight: 560;
+  color: var(--color-muted);
+  font-size: var(--text-small);
+  font-weight: 620;
   line-height: 1.42;
 }
 
 .settings-row__chevron {
   display: grid;
   place-items: center;
-  color: color-mix(in srgb, var(--color-muted) 88%, var(--color-text));
+  color: var(--color-muted);
 }
 
 .settings-row__chevron svg {
-  width: 1.7rem;
-  height: 1.7rem;
+  width: 1.35rem;
+  height: 1.35rem;
   stroke: currentColor;
   stroke-linecap: round;
   stroke-linejoin: round;
@@ -12144,16 +12137,13 @@ button.calendar-chip {
   display: flex;
   justify-content: center;
   gap: var(--space-m);
-  color: color-mix(
-    in srgb,
-    var(--color-primary-strong) 76%,
-    var(--color-muted)
-  );
+  color: var(--color-muted);
   font-size: var(--text-small);
   font-weight: 720;
 }
 
 .settings-footer a {
+  color: inherit;
   text-decoration: none;
 }
 
@@ -12176,6 +12166,12 @@ button.calendar-chip {
   color: var(--color-primary-strong);
 }
 
+.settings-back-link:hover,
+.settings-back-link:focus-visible {
+  outline: none;
+  background: var(--app-selected-background);
+}
+
 .settings-back-link svg {
   width: calc(var(--space-l) + var(--space-xs));
   height: calc(var(--space-l) + var(--space-xs));
@@ -12186,7 +12182,7 @@ button.calendar-chip {
   display: grid;
   min-height: 12rem;
   place-items: center;
-  padding: var(--space-xl);
+  padding: var(--app-card-padding);
   text-align: center;
 }
 
@@ -12203,18 +12199,14 @@ button.calendar-chip {
     padding-top: calc(var(--space-l) + env(safe-area-inset-top));
   }
 
-  .settings-row {
-    grid-template-columns: auto minmax(0, 1fr) auto;
-    gap: var(--space-m);
+  .settings-row.app-list-row {
+    min-height: 4.75rem;
+    gap: var(--space-s);
   }
 
   .settings-row__icon {
-    width: 4.25rem;
-    height: 4.25rem;
-  }
-
-  .settings-row__description {
-    max-width: 14.5rem;
+    width: 3.4rem;
+    height: 3.4rem;
   }
 }
 
@@ -12920,27 +12912,46 @@ button.family-settings-row:focus-visible:not(:disabled) {
 
 .notification-settings__sections {
   display: grid;
-  gap: var(--space-l);
+  gap: var(--space-xs);
 }
 
-.notification-settings-row {
-  display: flex;
-  min-height: clamp(4.35rem, 3.9rem + 1.5vw, 5.35rem);
+.notification-settings__card.settings-card.app-card {
+  padding: var(--space-xs);
+}
+
+.notification-settings-row.app-list-row {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto auto;
+  min-height: clamp(4.75rem, 4.25rem + 1.6vw, 5.65rem);
   align-items: center;
-  justify-content: space-between;
   gap: var(--space-m);
-  padding: clamp(1.05rem, 0.95rem + 0.65vw, 1.55rem);
+  border: 0;
+  border-radius: calc(var(--app-card-radius) - var(--space-xs));
+  padding: var(--space-m);
+  background: transparent;
+  box-shadow: none;
   cursor: pointer;
 }
 
-.notification-settings-row:not(:last-child) {
-  border-bottom: 1px solid
-    color-mix(in srgb, var(--color-border) 74%, transparent);
+.notification-settings-row.app-list-row:hover,
+.notification-settings-row.app-list-row:focus-within {
+  background: var(--app-selected-background);
 }
 
-.notification-settings-row:hover,
-.notification-settings-row:focus-within {
-  background: color-mix(in srgb, var(--color-primary-soft) 14%, transparent);
+.notification-settings-row__icon {
+  display: grid;
+  width: 3rem;
+  height: 3rem;
+  place-items: center;
+  border-radius: var(--radius-pill);
+  background: color-mix(in srgb, var(--color-primary-soft) 72%, white);
+  color: var(--color-primary-strong);
+}
+
+.notification-settings-row__icon svg {
+  width: 1.35rem;
+  height: 1.35rem;
+  stroke-width: 1.9;
 }
 
 .notification-settings-row__copy {
@@ -12950,27 +12961,27 @@ button.family-settings-row:focus-visible:not(:disabled) {
 }
 
 .notification-settings-row__label {
-  color: #111111;
-  font-size: clamp(1.04rem, 3vw, 1.3rem);
+  color: var(--color-text);
+  font-size: clamp(1.04rem, 3vw, 1.22rem);
   font-weight: 840;
   letter-spacing: -0.045em;
   line-height: 1.2;
 }
 
 .notification-settings-row__description {
-  color: var(--color-text-muted);
+  color: var(--color-muted);
   font-size: var(--text-small);
-  font-weight: 650;
+  font-weight: 620;
   letter-spacing: -0.015em;
   line-height: 1.35;
 }
 
 .notification-settings-row__saved {
-  margin-left: auto;
-  border-radius: 999px;
+  justify-self: end;
+  border-radius: var(--radius-pill);
   padding: 0.28rem 0.62rem;
-  background: color-mix(in srgb, var(--color-success, #12805c) 11%, var(--color-surface));
-  color: color-mix(in srgb, var(--color-success, #12805c) 82%, #111111);
+  background: color-mix(in srgb, var(--color-primary-soft) 72%, white);
+  color: var(--color-primary-strong);
   font-size: var(--text-small);
   font-weight: 820;
 }
@@ -12985,25 +12996,25 @@ button.family-settings-row:focus-visible:not(:disabled) {
   opacity: 0.72;
 }
 
-.notification-settings__error {
+.notification-settings__error.form-message {
   margin: 0;
-  border: 1px solid
-    color-mix(in srgb, var(--color-danger, #b42318) 24%, var(--color-border));
-  border-radius: var(--radius-m);
-  padding: var(--space-s) var(--space-m);
-  background: color-mix(
-    in srgb,
-    var(--color-danger, #b42318) 8%,
-    var(--color-surface)
-  );
-  color: color-mix(in srgb, var(--color-danger, #b42318) 82%, #111111);
-  font-size: var(--text-small);
-  font-weight: 760;
 }
 
 @media (max-width: 38rem) {
-  .notification-settings-row {
-    min-height: 4.25rem;
+  .notification-settings-row.app-list-row {
+    grid-template-columns: auto minmax(0, 1fr) auto;
+    min-height: 4.5rem;
+    gap: var(--space-s);
+  }
+
+  .notification-settings-row__saved {
+    grid-column: 2 / 3;
+    justify-self: start;
+  }
+
+  .notification-settings-row__toggle {
+    grid-column: 3 / 4;
+    grid-row: 1 / span 2;
   }
 }
 

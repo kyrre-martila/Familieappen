@@ -1,9 +1,15 @@
 import type { ReactNode } from "react";
+import { AppSectionHeader } from "../app-ui";
 
-export function SettingsSection({ children, title }: Readonly<{ children: ReactNode; title?: string }>) {
+interface SettingsSectionProps {
+  children: ReactNode;
+  title?: string;
+}
+
+export function SettingsSection({ children, title }: Readonly<SettingsSectionProps>) {
   return (
     <section className="settings-section" aria-label={title}>
-      {title ? <h2 className="settings-section__title">{title}</h2> : null}
+      {title ? <AppSectionHeader className="settings-section__header" title={title} /> : null}
       {children}
     </section>
   );
