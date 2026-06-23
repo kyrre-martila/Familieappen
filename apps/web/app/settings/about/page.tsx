@@ -1,4 +1,5 @@
 import packageJson from "../../../package.json";
+import { AppShell } from "../../../components/AppShell";
 import { ProtectedFamilyRoute } from "../../../components/ProtectedFamilyRoute";
 import { AppInfoSettingsClient } from "./AppInfoSettingsClient";
 
@@ -10,7 +11,9 @@ export default function SettingsAboutPage() {
 
   return (
     <ProtectedFamilyRoute>
-      <AppInfoSettingsClient supportEmail={supportEmail} version={version} />
+      <AppShell title="App-info">
+        <AppInfoSettingsClient supportEmail={supportEmail} version={version} />
+      </AppShell>
     </ProtectedFamilyRoute>
   );
 }

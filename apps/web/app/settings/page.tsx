@@ -7,6 +7,7 @@ import {
   Info,
   UsersRound,
 } from "lucide-react";
+import { AppShell } from "../../components/AppShell";
 import { ProtectedFamilyRoute } from "../../components/ProtectedFamilyRoute";
 import {
   SettingsCard,
@@ -50,28 +51,29 @@ const settingsItems = [
 export default function SettingsPage() {
   return (
     <ProtectedFamilyRoute>
-      <main className="settings-shell" aria-labelledby="settings-title">
-        <header className="settings-hero">
-          <h1 id="settings-title">Innstillinger</h1>
-          <p>
-            Administrer din profil, familie og innstillinger for FamilieAppen.
-          </p>
-        </header>
+      <AppShell title="Innstillinger">
+        <main className="settings-shell" aria-label="Innstillinger">
+          <header className="settings-hero">
+            <p>
+              Administrer din profil, familie og innstillinger for FamilieAppen.
+            </p>
+          </header>
 
-        <SettingsSection>
-          <SettingsCard>
-            {settingsItems.map((item) => (
-              <SettingsRow key={item.href} {...item} />
-            ))}
-          </SettingsCard>
-        </SettingsSection>
+          <SettingsSection>
+            <SettingsCard>
+              {settingsItems.map((item) => (
+                <SettingsRow key={item.href} {...item} />
+              ))}
+            </SettingsCard>
+          </SettingsSection>
 
-        <footer className="settings-footer" aria-label="Juridiske lenker">
-          <a href="/privacy">Personvern</a>
-          <span aria-hidden="true">|</span>
-          <a href="/terms">Vilkår</a>
-        </footer>
-      </main>
+          <footer className="settings-footer" aria-label="Juridiske lenker">
+            <a href="/privacy">Personvern</a>
+            <span aria-hidden="true">|</span>
+            <a href="/terms">Vilkår</a>
+          </footer>
+        </main>
+      </AppShell>
     </ProtectedFamilyRoute>
   );
 }

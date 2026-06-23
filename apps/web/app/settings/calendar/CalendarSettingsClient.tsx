@@ -32,7 +32,6 @@ import {
   PageContainer,
   SectionHeader,
 } from "../../../components/ui";
-import { PageHeader } from "../../../components/PageHeader";
 import { SharedAudienceSelector } from "../../../features/husk/components/SharedAudienceSelector";
 import {
   ApiError,
@@ -403,11 +402,7 @@ export function CalendarSettingsClient() {
 
   return (
     <PageContainer>
-      <PageHeader
-        eyebrow="Innstillinger"
-        title="Kalender"
-        description="Velg hvordan kalenderen skal vises, importer ekte ICS-kalendere og del en privat abonnement-lenke."
-      />
+      <p className="settings-page-intro">Velg hvordan kalenderen skal vises, importer ekte ICS-kalendere og del en privat abonnement-lenke.</p>
 
       {statusMessage ? (
         <Card tone="soft" className="calendar-status">
