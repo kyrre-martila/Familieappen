@@ -11,7 +11,7 @@ export default function SettingsAboutPage() {
 
   return (
     <ProtectedFamilyRoute>
-      <AppShell title="App-info">
+      <AppShell title="Innstillinger">
         <AppInfoSettingsClient supportEmail={supportEmail} version={version} />
       </AppShell>
     </ProtectedFamilyRoute>

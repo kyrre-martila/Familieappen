@@ -539,6 +539,7 @@ export function ProfileSettingsClient() {
       </Link>
 
       <header className="settings-hero settings-hero--detail profile-settings__hero">
+        <h1>Profil</h1>
         {isLoading ? <ProfileSkeleton /> : null}
         {!isLoading && loadError ? (
           <div className="profile-settings__identity" role="alert">
@@ -552,8 +553,10 @@ export function ProfileSettingsClient() {
         {!isLoading && profile ? (
           <div className="profile-settings__identity">
             <ProfileAvatarToggle expanded={isAvatarSectionOpen} profile={profile} onClick={() => setIsAvatarSectionOpen((isOpen) => !isOpen)} />
-            <p className="profile-settings__name">{profile.displayName || profile.name}</p>
-            <p className="profile-settings__email">{profile.email}</p>
+            <div className="profile-settings__identity-copy">
+              <p className="profile-settings__name">{profile.displayName || profile.name}</p>
+              <p className="profile-settings__email">{profile.email}</p>
+            </div>
           </div>
         ) : null}
       </header>

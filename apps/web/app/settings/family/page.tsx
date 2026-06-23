@@ -5,7 +5,7 @@ import { FamilySettingsClient } from "./FamilySettingsClient";
 export default function SettingsFamilyPage() {
   return (
     <ProtectedFamilyRoute>
-      <AppShell title="Familie">
+      <AppShell title="Innstillinger">
         <FamilySettingsClient />
       </AppShell>
     </ProtectedFamilyRoute>

@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useState, type ReactNode } from "react";
-import { Bug, ChevronLeft, ChevronRight, FileText, Info, Mail, MessageSquare } from "lucide-react";
+import { Bug, ChevronLeft, ChevronRight, FileText, Info, Mail, MessageSquare, ShieldCheck, ScrollText } from "lucide-react";
 import { SettingsCard, SettingsSection } from "../../../components/settings";
 import { ApiError, submitFeedback } from "../../../lib/api";
 
@@ -18,11 +18,12 @@ interface AppInfoRowProps {
   description?: string;
   icon: ReactNode;
   label: string;
+  href?: string;
   onClick?: () => void;
   value?: string;
 }
 
-function AppInfoRow({ description, icon, label, onClick, value }: AppInfoRowProps) {
+function AppInfoRow({ description, href, icon, label, onClick, value }: AppInfoRowProps) {
   const content = (
     <>
       <span className="settings-row__icon" aria-hidden="true">{icon}</span>
@@ -31,7 +32,7 @@ function AppInfoRow({ description, icon, label, onClick, value }: AppInfoRowProp
         {description ? <span className="settings-row__description">{description}</span> : null}
         {value ? <span className="app-info-row__value">{value}</span> : null}
       </span>
-      {onClick ? (
+      {onClick || href ? (
         <span className="settings-row__chevron" aria-hidden="true">
           <ChevronRight />
         </span>
@@ -39,12 +40,16 @@ function AppInfoRow({ description, icon, label, onClick, value }: AppInfoRowProp
     </>
   );
 
-  if (!onClick) {
-    return <div className="settings-row app-info-row app-info-row--static">{content}</div>;
+  if (!onClick && !href) {
+    return <div className="settings-row app-list-row app-info-row app-info-row--static">{content}</div>;
+  }
+
+  if (href) {
+    return <Link className="settings-row app-list-row app-info-row" href={href}>{content}</Link>;
   }
 
   return (
-    <button className="settings-row app-info-row" type="button" onClick={onClick}>
+    <button className="settings-row app-list-row app-info-row" type="button" onClick={onClick}>
       {content}
     </button>
   );
@@ -166,6 +171,7 @@ export function AppInfoSettingsClient({ supportEmail, version }: AppInfoSettings
         <ChevronLeft aria-hidden="true" />
       </Link>
       <header className="settings-hero settings-hero--detail">
+        <h1>App-info</h1>
         <p>Informasjon om appen, hjelp og kontakt.</p>
       </header>
 
@@ -181,16 +187,12 @@ export function AppInfoSettingsClient({ supportEmail, version }: AppInfoSettings
         <SettingsCard>
           <AppInfoRow icon={<Info />} label="Versjon" value={version} />
           <AppInfoRow icon={<FileText />} label="Lisensinformasjon" onClick={() => setSheet("license")} />
+          <AppInfoRow icon={<ShieldCheck />} label="Personvern" href="/privacy" />
+          <AppInfoRow icon={<ScrollText />} label="Vilkår" href="/terms" />
         </SettingsCard>
       </SettingsSection>
 
       {successMessage ? <p className="app-info-settings__success" role="status">{successMessage}</p> : null}
-
-      <footer className="settings-footer" aria-label="Juridiske lenker">
-        <Link href="/privacy">Personvern</Link>
-        <span aria-hidden="true">|</span>
-        <Link href="/terms">Vilkår</Link>
-      </footer>
 
       {sheet === "feedback" ? <FeedbackSheet type="feedback" version={version} onCancel={() => setSheet(null)} onSent={(message) => { setSheet(null); setSuccessMessage(message); }} /> : null}
       {sheet === "bug" ? <FeedbackSheet type="bug" version={version} onCancel={() => setSheet(null)} onSent={(message) => { setSheet(null); setSuccessMessage(message); }} /> : null}
