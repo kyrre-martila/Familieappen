@@ -30,8 +30,8 @@ function AppInfoRow({ description, href, icon, label, onClick, value }: AppInfoR
       <span className="settings-row__copy">
         <span className="settings-row__title">{label}</span>
         {description ? <span className="settings-row__description">{description}</span> : null}
-        {value ? <span className="app-info-row__value">{value}</span> : null}
       </span>
+      {value ? <span className="app-info-row__value">{value}</span> : null}
       {onClick || href ? (
         <span className="settings-row__chevron" aria-hidden="true">
           <ChevronRight />
@@ -172,23 +172,22 @@ export function AppInfoSettingsClient({ supportEmail, version }: AppInfoSettings
       </Link>
       <header className="settings-hero settings-hero--detail">
         <h1>App-info</h1>
-        <p>Informasjon om appen, hjelp og kontakt.</p>
       </header>
 
       <SettingsSection title="Hjelp">
         <SettingsCard>
-          <AppInfoRow icon={<MessageSquare />} label="Send tilbakemelding" onClick={() => { setSuccessMessage(""); setSheet("feedback"); }} />
-          <AppInfoRow icon={<Bug />} label="Rapporter feil" onClick={() => { setSuccessMessage(""); setSheet("bug"); }} />
-          <AppInfoRow icon={<Mail />} label="Kontakt oss" onClick={() => setSheet("contact")} />
+          <AppInfoRow icon={<MessageSquare />} label="Send tilbakemelding" description="Del forslag eller andre innspill" onClick={() => { setSuccessMessage(""); setSheet("feedback"); }} />
+          <AppInfoRow icon={<Bug />} label="Rapporter feil" description="Si fra hvis noe ikke virker" onClick={() => { setSuccessMessage(""); setSheet("bug"); }} />
+          <AppInfoRow icon={<Mail />} label="Kontakt oss" description="Finn kontaktinformasjon for hjelp" onClick={() => setSheet("contact")} />
         </SettingsCard>
       </SettingsSection>
 
       <SettingsSection title="Om appen">
         <SettingsCard>
-          <AppInfoRow icon={<Info />} label="Versjon" value={version} />
-          <AppInfoRow icon={<FileText />} label="Lisensinformasjon" onClick={() => setSheet("license")} />
-          <AppInfoRow icon={<ShieldCheck />} label="Personvern" href="/privacy" />
-          <AppInfoRow icon={<ScrollText />} label="Vilkår" href="/terms" />
+          <AppInfoRow icon={<Info />} label="Versjon" description="Installert appversjon" value={version} />
+          <AppInfoRow icon={<FileText />} label="Lisensinformasjon" description="Se informasjon om tredjepartslisenser" onClick={() => setSheet("license")} />
+          <AppInfoRow icon={<ShieldCheck />} label="Personvern" description="Les hvordan data behandles" href="/privacy" />
+          <AppInfoRow icon={<ScrollText />} label="Vilkår" description="Les vilkårene for bruk" href="/terms" />
         </SettingsCard>
       </SettingsSection>
 
