@@ -5,7 +5,7 @@ import { NotificationsSettingsClient } from "./NotificationsSettingsClient";
 export default function SettingsNotificationsPage() {
   return (
     <ProtectedFamilyRoute>
-      <AppShell title="Varsler">
+      <AppShell title="Innstillinger">
         <NotificationsSettingsClient />
       </AppShell>
     </ProtectedFamilyRoute>

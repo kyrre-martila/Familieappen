@@ -12230,15 +12230,23 @@ button.calendar-chip {
 }
 
 .profile-settings__identity {
+  display: flex;
+  align-items: center;
+  gap: clamp(var(--space-m), 4vw, var(--space-xl));
+  width: 100%;
+}
+
+.profile-settings__identity-copy {
   display: grid;
-  justify-items: center;
-  gap: var(--space-s);
+  min-width: 0;
+  gap: var(--space-xs);
+  text-align: left;
 }
 
 .profile-settings__avatar-wrap {
   position: relative;
   display: grid;
-  margin-bottom: var(--space-xs);
+  flex: 0 0 auto;
 }
 
 .profile-settings__avatar {
@@ -12320,6 +12328,23 @@ button.calendar-chip {
   font-size: clamp(1.05rem, 3.8vw, 1.55rem);
   font-weight: 700;
   letter-spacing: -0.035em;
+}
+
+@media (max-width: 38rem) {
+  .profile-settings__identity {
+    align-items: flex-start;
+    gap: var(--space-m);
+  }
+
+  .profile-settings__avatar {
+    width: clamp(5.75rem, 24vw, 8rem);
+    height: clamp(5.75rem, 24vw, 8rem);
+  }
+
+  .profile-settings__avatar-edit {
+    width: clamp(2.8rem, 11vw, 3.6rem);
+    height: clamp(2.8rem, 11vw, 3.6rem);
+  }
 }
 
 .profile-settings__skeleton {
@@ -12609,6 +12634,10 @@ button.calendar-chip {
   gap: clamp(var(--space-l), 4vw, var(--section-gap));
 }
 
+.family-settings__hero {
+  padding-block: var(--space-xs);
+}
+
 .family-settings-row {
   display: grid;
   grid-template-columns: minmax(7rem, 0.75fr) minmax(0, 1fr) auto;
@@ -12676,6 +12705,10 @@ button.family-settings-row:focus-visible:not(:disabled) {
   color: #0b6b2f;
   font-weight: 850;
   cursor: pointer;
+}
+
+.family-settings__section-head--actions-only:empty {
+  display: none;
 }
 
 .family-settings__small-button svg {
@@ -15896,4 +15929,9 @@ button.family-settings-row:focus-visible:not(:disabled) {
   border: 0;
   padding: 0;
   background: transparent;
+}
+
+.family-settings__section-head.family-settings__section-head--actions-only {
+  justify-content: flex-end;
+  padding: var(--space-m);
 }

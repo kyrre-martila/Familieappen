@@ -194,6 +194,7 @@ export function NotificationsSettingsClient() {
         <ChevronLeft aria-hidden="true" />
       </Link>
       <header className="settings-hero settings-hero--detail notification-settings__hero">
+        <h1>Varsler</h1>
         <p>Velg hvilke varsler du vil motta fra familien.</p>
       </header>
 

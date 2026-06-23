@@ -493,8 +493,7 @@ export function FamilySettingsClient() {
 
       <SettingsSection title="Familiemedlemmer">
         <SettingsCard>
-          <div className="family-settings__section-head">
-            <h2>Familiemedlemmer</h2>
+          <div className="family-settings__section-head family-settings__section-head--actions-only">
             {isAdmin ? <button className="family-settings__small-button" type="button" onClick={() => setSheet({ type: "invite" })} disabled={Boolean(pendingAction)}><Plus aria-hidden="true" /> Inviter medlem</button> : null}
           </div>
           {members.length ? members.map((member) => {
@@ -529,8 +528,7 @@ export function FamilySettingsClient() {
       {isAdmin ? (
         <SettingsSection title="Invitasjoner og forespørsler">
           <SettingsCard>
-            <div className="family-settings__section-head">
-              <h2>Invitasjoner og forespørsler</h2>
+            <div className="family-settings__section-head family-settings__section-head--actions-only">
               <button className="family-settings__small-button" type="button" onClick={() => setSheet({ type: "invite" })} disabled={Boolean(pendingAction)}>Inviter familiemedlem</button>
             </div>
             {invitations.length ? invitations.map((invitation) => (
@@ -581,6 +579,9 @@ function FamilySettingsShell({ children }: { children: React.ReactNode }) {
       <Link className="settings-back-link" href="/settings" aria-label="Tilbake til innstillinger">
         <ChevronLeft aria-hidden="true" />
       </Link>
+      <header className="settings-hero settings-hero--detail family-settings__hero">
+        <h1>Familie</h1>
+      </header>
       {children}
     </main>
   );
