@@ -533,13 +533,12 @@ export function ProfileSettingsClient() {
   }
 
   return (
-    <main className="settings-shell settings-shell--detail profile-settings" aria-labelledby="profile-settings-title">
+    <main className="settings-shell settings-shell--detail profile-settings" aria-label="Profil">
       <Link className="settings-back-link" href="/settings" aria-label="Tilbake til innstillinger">
         <ChevronLeft aria-hidden="true" />
       </Link>
 
       <header className="settings-hero settings-hero--detail profile-settings__hero">
-        <h1 id="profile-settings-title">Profil</h1>
         {isLoading ? <ProfileSkeleton /> : null}
         {!isLoading && loadError ? (
           <div className="profile-settings__identity" role="alert">

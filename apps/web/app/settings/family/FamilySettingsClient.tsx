@@ -577,13 +577,10 @@ export function FamilySettingsClient() {
 
 function FamilySettingsShell({ children }: { children: React.ReactNode }) {
   return (
-    <main className="settings-shell settings-shell--detail family-settings" aria-labelledby="family-settings-title">
+    <main className="settings-shell settings-shell--detail family-settings" aria-label="Familie">
       <Link className="settings-back-link" href="/settings" aria-label="Tilbake til innstillinger">
         <ChevronLeft aria-hidden="true" />
       </Link>
-      <header className="settings-hero settings-hero--detail">
-        <h1 id="family-settings-title">Familie</h1>
-      </header>
       {children}
     </main>
   );

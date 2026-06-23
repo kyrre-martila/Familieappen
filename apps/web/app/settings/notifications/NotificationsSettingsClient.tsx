@@ -184,7 +184,7 @@ export function NotificationsSettingsClient() {
   return (
     <main
       className="settings-shell settings-shell--detail notification-settings"
-      aria-labelledby="notification-settings-title"
+      aria-label="Varsler"
     >
       <Link
         className="settings-back-link"
@@ -194,7 +194,6 @@ export function NotificationsSettingsClient() {
         <ChevronLeft aria-hidden="true" />
       </Link>
       <header className="settings-hero settings-hero--detail notification-settings__hero">
-        <h1 id="notification-settings-title">Varsler</h1>
         <p>Velg hvilke varsler du vil motta fra familien.</p>
       </header>
 

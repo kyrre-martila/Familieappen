@@ -11983,8 +11983,7 @@ button.calendar-chip {
   gap: var(--section-gap);
   width: min(100%, 46rem);
   margin: 0 auto;
-  padding: calc(var(--space-xl) + env(safe-area-inset-top)) 0
-    calc(var(--space-xl) * 3 + env(safe-area-inset-bottom));
+  padding: 0 0 calc(var(--space-xl) * 3 + env(safe-area-inset-bottom));
 }
 
 .settings-shell--detail {
@@ -12011,6 +12010,15 @@ button.calendar-chip {
 
 .settings-hero p {
   max-width: 33rem;
+  margin: 0;
+  color: var(--color-muted);
+  font-size: var(--text-body);
+  font-weight: 620;
+  line-height: 1.5;
+}
+
+.settings-page-intro {
+  max-width: 42rem;
   margin: 0;
   color: var(--color-muted);
   font-size: var(--text-body);
@@ -12057,11 +12065,12 @@ button.calendar-chip {
   display: grid;
   grid-template-columns: auto minmax(0, 1fr) auto;
   align-items: center;
-  min-height: 5rem;
-  gap: var(--space-m);
+  min-height: 3.75rem;
+  gap: clamp(0.55rem, 2vw, 0.85rem);
   border: 0;
   border-radius: calc(var(--app-card-radius) - var(--space-xs));
-  padding: var(--space-m);
+  padding: clamp(0.68rem, 0.58rem + 0.45vw, 0.95rem)
+    clamp(0.85rem, 0.7rem + 0.6vw, 1.15rem);
   background: transparent;
   box-shadow: none;
   color: var(--color-text);
@@ -12083,8 +12092,8 @@ button.calendar-chip {
 
 .settings-row__icon {
   display: grid;
-  width: clamp(3.25rem, 2.85rem + 1.4vw, 4.35rem);
-  height: clamp(3.25rem, 2.85rem + 1.4vw, 4.35rem);
+  width: clamp(2rem, 5vw, 2.45rem);
+  height: clamp(2rem, 5vw, 2.45rem);
   place-items: center;
   border-radius: var(--radius-pill);
   background: color-mix(in srgb, var(--color-primary-soft) 72%, white);
@@ -12092,8 +12101,8 @@ button.calendar-chip {
 }
 
 .settings-row__icon svg {
-  width: clamp(1.45rem, 1.25rem + 0.7vw, 1.9rem);
-  height: clamp(1.45rem, 1.25rem + 0.7vw, 1.9rem);
+  width: clamp(1.2rem, 3.2vw, 1.55rem);
+  height: clamp(1.2rem, 3.2vw, 1.55rem);
   stroke-width: 1.9;
 }
 
@@ -12105,7 +12114,7 @@ button.calendar-chip {
 
 .settings-row__title {
   color: var(--color-text);
-  font-size: clamp(1.12rem, 1rem + 0.5vw, 1.35rem);
+  font-size: clamp(0.92rem, 2.5vw, 1.08rem);
   font-weight: 840;
   line-height: 1.2;
   letter-spacing: -0.045em;
@@ -12113,9 +12122,10 @@ button.calendar-chip {
 
 .settings-row__description {
   color: var(--color-muted);
-  font-size: var(--text-small);
-  font-weight: 620;
+  font-size: clamp(0.84rem, 2.3vw, 1rem);
+  font-weight: 650;
   line-height: 1.42;
+  letter-spacing: -0.035em;
 }
 
 .settings-row__chevron {

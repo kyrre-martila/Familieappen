@@ -161,12 +161,11 @@ export function AppInfoSettingsClient({ supportEmail, version }: AppInfoSettings
   const [successMessage, setSuccessMessage] = useState("");
 
   return (
-    <main className="settings-shell settings-shell--detail app-info-settings" aria-labelledby="settings-detail-title">
+    <main className="settings-shell settings-shell--detail app-info-settings" aria-label="App-info">
       <Link className="settings-back-link" href="/settings" aria-label="Tilbake til innstillinger">
         <ChevronLeft aria-hidden="true" />
       </Link>
       <header className="settings-hero settings-hero--detail">
-        <h1 id="settings-detail-title">App-info</h1>
         <p>Informasjon om appen, hjelp og kontakt.</p>
       </header>
 
