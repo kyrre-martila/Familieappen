@@ -6,7 +6,7 @@ import { CalendarSettingsClient } from "./CalendarSettingsClient";
 export default function CalendarSettingsPage() {
   return (
     <ProtectedFamilyRoute>
-      <AppShell title="Kalender">
+      <AppShell title="Innstillinger">
         <CalendarProvider>
           <CalendarSettingsClient />
         </CalendarProvider>
