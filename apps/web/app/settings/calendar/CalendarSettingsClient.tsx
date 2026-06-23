@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import {
   useCallback,
   useEffect,
@@ -9,6 +10,7 @@ import {
 } from "react";
 import {
   CalendarClock,
+  ChevronRight,
   CircleHelp,
   Copy,
   Link as LinkIcon,
@@ -525,6 +527,31 @@ export function CalendarSettingsClient() {
               ))}
             </select>
           </label>
+        </Card>
+      </section>
+
+      <section
+        className="calendar-settings-section"
+        aria-labelledby="calendar-export-link-title"
+      >
+        <SectionHeader eyebrow="ICS" title="Kalenderabonnement" />
+        <Card className="calendar-settings-card">
+          <Link className="settings-row calendar-settings-link-row" href="/settings/calendar/export">
+            <span className="calendar-import-intro__icon" aria-hidden="true">
+              <LinkIcon size={22} />
+            </span>
+            <span className="settings-row__copy">
+              <span className="settings-row__title" id="calendar-export-link-title">
+                Kalenderabonnement
+              </span>
+              <span className="settings-row__description">
+                Del FamilieAppen-kalenderen med Apple Kalender, Google Kalender eller Outlook.
+              </span>
+            </span>
+            <span className="settings-row__chevron" aria-hidden="true">
+              <ChevronRight size={20} />
+            </span>
+          </Link>
         </Card>
       </section>
 
