@@ -52,8 +52,11 @@ export default function SettingsPage() {
   return (
     <ProtectedFamilyRoute>
       <AppShell title="Innstillinger">
-        <main className="settings-shell" aria-label="Innstillinger">
-          <header className="settings-hero">
+        <main
+          className="settings-shell settings-shell--landing"
+          aria-label="Innstillinger"
+        >
+          <header className="settings-hero settings-hero--landing">
             <p>
               Administrer din profil, familie og innstillinger for FamilieAppen.
             </p>

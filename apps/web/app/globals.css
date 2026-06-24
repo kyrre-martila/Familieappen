@@ -11992,11 +11992,19 @@ button.calendar-chip {
   align-content: start;
 }
 
+.settings-shell--landing {
+  gap: var(--space-l);
+}
+
 .settings-hero {
   display: grid;
   gap: var(--space-s);
   justify-items: start;
   text-align: left;
+}
+
+.settings-hero--landing {
+  gap: 0;
 }
 
 .settings-hero h1 {
@@ -12207,6 +12215,10 @@ button.calendar-chip {
   .settings-shell {
     gap: var(--space-l);
     padding-top: calc(var(--space-l) + env(safe-area-inset-top));
+  }
+
+  .settings-shell--landing {
+    padding-top: var(--space-s);
   }
 
   .settings-row.app-list-row {
