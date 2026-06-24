@@ -12242,8 +12242,10 @@ button.calendar-chip {
 }
 
 .profile-settings__identity {
+  --profile-settings-avatar-size: clamp(8rem, 24vw, 12.5rem);
+
   display: flex;
-  align-items: center;
+  align-items: flex-start;
   gap: clamp(var(--space-m), 4vw, var(--space-xl));
   width: 100%;
 }
@@ -12252,6 +12254,10 @@ button.calendar-chip {
   display: grid;
   min-width: 0;
   gap: var(--space-xs);
+  padding-block-start: max(
+    0rem,
+    calc((var(--profile-settings-avatar-size) - clamp(4.3rem, 10vw, 5.35rem)) / 2)
+  );
   text-align: left;
 }
 
@@ -12263,8 +12269,8 @@ button.calendar-chip {
 
 .profile-settings__avatar {
   display: grid;
-  width: clamp(8rem, 24vw, 12.5rem);
-  height: clamp(8rem, 24vw, 12.5rem);
+  width: var(--profile-settings-avatar-size);
+  height: var(--profile-settings-avatar-size);
   place-items: center;
   overflow: hidden;
   border: 1px solid color-mix(in srgb, var(--color-border) 72%, transparent);
@@ -12344,13 +12350,9 @@ button.calendar-chip {
 
 @media (max-width: 38rem) {
   .profile-settings__identity {
-    align-items: flex-start;
-    gap: var(--space-m);
-  }
+    --profile-settings-avatar-size: clamp(5.75rem, 24vw, 8rem);
 
-  .profile-settings__avatar {
-    width: clamp(5.75rem, 24vw, 8rem);
-    height: clamp(5.75rem, 24vw, 8rem);
+    gap: var(--space-m);
   }
 
   .profile-settings__avatar-edit {
@@ -12382,8 +12384,8 @@ button.calendar-chip {
 }
 
 .profile-settings__skeleton-avatar {
-  width: clamp(8rem, 24vw, 12.5rem);
-  height: clamp(8rem, 24vw, 12.5rem);
+  width: var(--profile-settings-avatar-size, clamp(8rem, 24vw, 12.5rem));
+  height: var(--profile-settings-avatar-size, clamp(8rem, 24vw, 12.5rem));
 }
 
 .profile-settings__skeleton-line {

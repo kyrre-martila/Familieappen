@@ -5,7 +5,7 @@ import { ProfileSettingsClient } from "./ProfileSettingsClient";
 export default function SettingsProfilePage() {
   return (
     <ProtectedFamilyRoute>
-      <AppShell title="Innstillinger">
+      <AppShell title="Innstillinger" hideTitleRow>
         <ProfileSettingsClient />
       </AppShell>
     </ProtectedFamilyRoute>
