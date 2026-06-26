@@ -303,7 +303,7 @@ export class CalendarIcsSyncService {
   }
 }
 
-function parseIcsEvents(icsText: string): ParsedIcsEvent[] {
+export function parseIcsEvents(icsText: string): ParsedIcsEvent[] {
   const lines = unfoldIcsLines(icsText);
   const events: ParsedIcsEvent[] = [];
   let current: string[] | null = null;
