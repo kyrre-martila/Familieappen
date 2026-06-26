@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import { CalendarService } from "../src/calendar/calendar.service";
 
-const service = new CalendarService({} as never, {} as never) as unknown as {
+const service = new CalendarService({} as never, {} as never, {} as never) as unknown as {
   expandEventForRange(event: CalendarEventRecord, from: Date, to: Date): CalendarEventRecord[];
 };
 

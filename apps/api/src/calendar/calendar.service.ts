@@ -69,6 +69,7 @@ type CalendarEventExceptionRecord = {
 };
 
 const MAX_RECURRENCE_OCCURRENCES = 300;
+const IMPORTED_CALENDAR_DISPLAY_TIME_ZONE = "Europe/Oslo";
 
 @Injectable()
 export class CalendarService {
@@ -743,10 +744,10 @@ export class CalendarService {
       location: event.location,
       icon: event.icon,
       reminderMinutesBefore: event.reminderMinutesBefore,
-      date: formatDate(event.startsAt),
-      endDate: event.endsAt ? formatDate(event.endsAt) : null,
-      startTime: event.allDay ? null : formatTime(event.startsAt),
-      endTime: event.allDay || !event.endsAt ? null : formatTime(event.endsAt),
+      date: formatEventDate(event, event.startsAt),
+      endDate: event.endsAt ? formatEventDate(event, event.endsAt) : null,
+      startTime: event.allDay ? null : formatEventTime(event, event.startsAt),
+      endTime: event.allDay || !event.endsAt ? null : formatEventTime(event, event.endsAt),
       reminder: event.reminderMinutesBefore === null ? null : {
         minutesBefore: event.reminderMinutesBefore,
         label: formatReminderLabel(event.reminderMinutesBefore)
@@ -785,6 +786,41 @@ export class CalendarService {
       }))
     };
   }
+}
+
+function formatEventDate(event: Pick<CalendarEventOccurrence, "source" | "icsSourceId">, date: Date): string {
+  if (isImportedIcsEvent(event)) {
+    return formatZonedParts(date, IMPORTED_CALENDAR_DISPLAY_TIME_ZONE).date;
+  }
+
+  return formatDate(date);
+}
+
+function formatEventTime(event: Pick<CalendarEventOccurrence, "source" | "icsSourceId">, date: Date): string {
+  if (isImportedIcsEvent(event)) {
+    return formatZonedParts(date, IMPORTED_CALENDAR_DISPLAY_TIME_ZONE).time;
+  }
+
+  return formatTime(date);
+}
+
+function isImportedIcsEvent(event: Pick<CalendarEventOccurrence, "source" | "icsSourceId">): boolean {
+  return event.source === "ics" || event.icsSourceId !== null;
+}
+
+function formatZonedParts(date: Date, timeZone: string): { date: string; time: string } {
+  const parts = new Intl.DateTimeFormat("en-CA", {
+    timeZone,
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+    hour: "2-digit",
+    minute: "2-digit",
+    hourCycle: "h23"
+  }).formatToParts(date);
+  const value = (type: string) => parts.find((part) => part.type === type)?.value ?? "00";
+
+  return { date: `${value("year")}-${value("month")}-${value("day")}`, time: `${value("hour")}:${value("minute")}` };
 }
 
 function formatDate(date: Date): string {
