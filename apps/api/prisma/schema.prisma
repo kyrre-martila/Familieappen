@@ -45,6 +45,118 @@ enum FeedbackSubmissionType {
   bug
 }
 
+enum AdminRole {
+  SUPER_ADMIN
+  SUPPORT
+  ANALYST
+  AD_MANAGER
+}
+
+enum AdvertisementStatus {
+  DRAFT
+  SCHEDULED
+  ACTIVE
+  PAUSED
+  ENDED
+}
+
+enum AdvertisementPlacement {
+  HOME
+  CALENDAR
+  MENU
+}
+
+enum AdvertisementEventType {
+  IMPRESSION
+  CLICK
+}
+
+model AdminUser {
+  id             String          @id @default(cuid())
+  email          String          @unique
+  passwordHash   String
+  name           String
+  role           AdminRole
+  active         Boolean         @default(true)
+  lastLoginAt    DateTime?
+  createdAt      DateTime        @default(now())
+  updatedAt      DateTime        @updatedAt
+  sessions       AdminSession[]
+  auditLogs      AdminAuditLog[]
+  advertisements Advertisement[] @relation("AdvertisementCreatedByAdmin")
+
+  @@index([active])
+  @@map("admin_users")
+}
+
+model AdminSession {
+  id               String    @id @default(cuid())
+  adminUserId      String
+  refreshTokenHash String    @unique
+  userAgent        String?
+  ipAddress        String?
+  revokedAt        DateTime?
+  expiresAt        DateTime
+  createdAt        DateTime  @default(now())
+  updatedAt        DateTime  @updatedAt
+  adminUser        AdminUser @relation(fields: [adminUserId], references: [id], onDelete: Cascade)
+
+  @@index([adminUserId])
+  @@index([adminUserId, revokedAt, expiresAt])
+  @@map("admin_sessions")
+}
+
+model AdminAuditLog {
+  id          String    @id @default(cuid())
+  adminUserId String
+  action      String
+  targetType  String
+  targetId    String?
+  metadata    Json?
+  ipAddress   String?
+  createdAt   DateTime  @default(now())
+  adminUser   AdminUser @relation(fields: [adminUserId], references: [id], onDelete: Cascade)
+
+  @@index([adminUserId])
+  @@index([createdAt])
+  @@map("admin_audit_logs")
+}
+
+model Advertisement {
+  id          String                 @id @default(cuid())
+  title       String
+  body        String
+  imageUrl    String?
+  targetUrl   String?
+  placement   AdvertisementPlacement
+  status      AdvertisementStatus    @default(DRAFT)
+  startsAt    DateTime?
+  endsAt      DateTime?
+  createdById String
+  createdAt   DateTime               @default(now())
+  updatedAt   DateTime               @updatedAt
+  createdBy   AdminUser              @relation("AdvertisementCreatedByAdmin", fields: [createdById], references: [id], onDelete: Restrict)
+  events      AdvertisementEvent[]
+
+  @@index([status])
+  @@index([startsAt, endsAt])
+  @@index([createdById])
+  @@map("advertisements")
+}
+
+model AdvertisementEvent {
+  id              String                 @id @default(cuid())
+  advertisementId String
+  type            AdvertisementEventType
+  occurredAt      DateTime               @default(now())
+  metadata        Json?
+  advertisement   Advertisement          @relation(fields: [advertisementId], references: [id], onDelete: Cascade)
+
+  @@index([advertisementId, type, occurredAt])
+  @@index([type, occurredAt])
+  @@map("advertisement_events")
+}
+
 model User {
   id           String         @id @default(cuid())
   email        String         @unique

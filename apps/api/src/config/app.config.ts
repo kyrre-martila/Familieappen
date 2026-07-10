@@ -9,6 +9,8 @@ export interface AppConfig {
   corsOrigins: string[];
   databaseUrl: string;
   authJwtSecret: string;
+  adminSessionSecret: string;
+  adminSessionTtlSeconds: number;
 }
 
 type EnvironmentVariables = NodeJS.ProcessEnv;
@@ -19,6 +21,8 @@ const DEFAULT_PORT = 4000;
 const DEFAULT_API_PREFIX = "api";
 const DEFAULT_DATABASE_URL = "postgresql://postgres:postgres@localhost:5432/familieappen?schema=public";
 const DEFAULT_AUTH_JWT_SECRET = "familieappen-development-auth-secret-change-me";
+const DEFAULT_ADMIN_SESSION_SECRET = "familieappen-development-admin-session-secret-change-me";
+const DEFAULT_ADMIN_SESSION_TTL_SECONDS = 60 * 60 * 24 * 7;
 const DEFAULT_CORS_ORIGINS = ["http://localhost:3000", "http://127.0.0.1:3000"];
 const MIN_STRONG_SECRET_LENGTH = 32;
 const UNSAFE_AUTH_JWT_SECRETS = new Set([
@@ -28,7 +32,8 @@ const UNSAFE_AUTH_JWT_SECRETS = new Set([
   "change-me",
   "password",
   "replace-with-a-long-random-secret",
-  DEFAULT_AUTH_JWT_SECRET
+  DEFAULT_AUTH_JWT_SECRET,
+  DEFAULT_ADMIN_SESSION_SECRET
 ]);
 
 function isLocalEnvironment(nodeEnv: string): boolean {
@@ -53,6 +58,19 @@ function parsePort(value: string | undefined): number {
   }
 
   return parsedPort;
+}
+
+function parsePositiveInteger(name: string, value: string | undefined, defaultValue: number): number {
+  if (!value) {
+    return defaultValue;
+  }
+
+  const parsed = Number(value);
+  if (!Number.isInteger(parsed) || parsed < 1) {
+    throw new Error(`${name} must be a positive integer`);
+  }
+
+  return parsed;
 }
 
 function normalizeApiPrefix(value: string | undefined): string {
@@ -137,29 +155,37 @@ function validateDatabaseUrl(databaseUrl: string): void {
   }
 }
 
-function resolveAuthJwtSecret(value: string | undefined, nodeEnv: string): string {
+function resolveStrongSecret(name: string, value: string | undefined, nodeEnv: string, localDefault: string): string {
   if (!value) {
     if (isLocalEnvironment(nodeEnv)) {
-      return DEFAULT_AUTH_JWT_SECRET;
+      return localDefault;
     }
 
-    throw new Error("AUTH_JWT_SECRET is required outside local development and test environments");
+    throw new Error(`${name} is required outside local development and test environments`);
   }
 
   if (!isLocalEnvironment(nodeEnv)) {
-    validateStrongAuthJwtSecret(value);
+    validateStrongSecret(name, value);
   }
 
   return value;
 }
 
-function validateStrongAuthJwtSecret(secret: string): void {
+function resolveAuthJwtSecret(value: string | undefined, nodeEnv: string): string {
+  return resolveStrongSecret("AUTH_JWT_SECRET", value, nodeEnv, DEFAULT_AUTH_JWT_SECRET);
+}
+
+function resolveAdminSessionSecret(value: string | undefined, nodeEnv: string): string {
+  return resolveStrongSecret("ADMIN_SESSION_SECRET", value, nodeEnv, DEFAULT_ADMIN_SESSION_SECRET);
+}
+
+function validateStrongSecret(name: string, secret: string): void {
   if (secret.length < MIN_STRONG_SECRET_LENGTH) {
-    throw new Error(`AUTH_JWT_SECRET must be at least ${MIN_STRONG_SECRET_LENGTH} characters outside local environments`);
+    throw new Error(`${name} must be at least ${MIN_STRONG_SECRET_LENGTH} characters outside local environments`);
   }
 
   if (UNSAFE_AUTH_JWT_SECRETS.has(secret.toLowerCase())) {
-    throw new Error("AUTH_JWT_SECRET must not use the documented local default or placeholder values outside local environments");
+    throw new Error(`${name} must not use documented local defaults or placeholder values outside local environments`);
   }
 }
 
@@ -172,6 +198,8 @@ export function getAppConfig(env: EnvironmentVariables = process.env): AppConfig
     apiPrefix: normalizeApiPrefix(readString("API_PREFIX", env)),
     corsOrigins: parseCorsOrigins(readString("CORS_ORIGINS", env)),
     databaseUrl: resolveDatabaseUrl(readString("DATABASE_URL", env), nodeEnv),
-    authJwtSecret: resolveAuthJwtSecret(readString("AUTH_JWT_SECRET", env), nodeEnv)
+    authJwtSecret: resolveAuthJwtSecret(readString("AUTH_JWT_SECRET", env), nodeEnv),
+    adminSessionSecret: resolveAdminSessionSecret(readString("ADMIN_SESSION_SECRET", env), nodeEnv),
+    adminSessionTtlSeconds: parsePositiveInteger("ADMIN_SESSION_TTL", readString("ADMIN_SESSION_TTL", env), DEFAULT_ADMIN_SESSION_TTL_SECONDS)
   };
 }
