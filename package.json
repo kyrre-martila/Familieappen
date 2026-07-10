@@ -16,7 +16,8 @@
     "prisma:migrate": "pnpm --filter @familieappen/api prisma:migrate",
     "prisma:migrate:dev": "pnpm --filter @familieappen/api prisma:migrate:dev",
     "prisma:migrate:deploy": "pnpm --filter @familieappen/api prisma:migrate:deploy",
-    "prisma:studio": "pnpm --filter @familieappen/api prisma:studio"
+    "prisma:studio": "pnpm --filter @familieappen/api prisma:studio",
+    "admin:create": "pnpm --filter @familieappen/api admin:create"
   },
   "engines": {
     "node": ">=20.0.0",

@@ -28,4 +28,12 @@ export class ConfigService {
   get authJwtSecret(): string {
     return this.config.authJwtSecret;
   }
+
+  get adminSessionSecret(): string {
+    return this.config.adminSessionSecret;
+  }
+
+  get adminSessionTtlSeconds(): number {
+    return this.config.adminSessionTtlSeconds;
+  }
 }
