@@ -10,6 +10,7 @@ import { CalendarController } from "../src/calendar/calendar.controller";
 import { CalendarService } from "../src/calendar/calendar.service";
 import { API_ERROR_CODES, ApiException, HttpExceptionFilter } from "../src/common";
 import { ConfigService } from "../src/config";
+import { EmailService } from "../src/email";
 import { FamiliesController } from "../src/families/families.controller";
 import { FamiliesService } from "../src/families/families.service";
 import { ShoppingController } from "../src/shopping/shopping.controller";
@@ -301,6 +302,7 @@ async function createSecurityHarness() {
       AuthGuard,
       { provide: ConfigService, useClass: TestConfigService },
       { provide: PrismaService, useValue: prisma },
+      { provide: EmailService, useValue: { sendEmail: async () => undefined } },
       { provide: FamiliesService, useValue: services.familiesService },
       { provide: ShoppingService, useValue: services.shoppingService },
       { provide: TasksService, useValue: services.tasksService },

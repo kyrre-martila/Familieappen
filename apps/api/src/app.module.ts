@@ -1,5 +1,6 @@
 import { Module } from "@nestjs/common";
 import { ScheduleModule } from "@nestjs/schedule";
+import { AdminModule } from "./admin";
 import { AuthModule } from "./auth";
 import { CalendarModule } from "./calendar";
 import { ConfigModule } from "./config";
@@ -23,6 +24,7 @@ import { WishlistsModule } from "./wishlists";
     PrismaModule,
     HealthModule,
     AuthModule,
+    AdminModule,
     FamiliesModule,
     FeedbackModule,
     ShoppingModule,

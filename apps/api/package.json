@@ -19,7 +19,8 @@
     "prisma:seed": "pnpm --filter @familieappen/shared build && prisma db seed",
     "test": "ts-node --project tsconfig.test.json test/calendar-recurrence.test.ts && ts-node --project tsconfig.test.json test/calendar-ics-timezones.test.ts",
     "admin:create": "ts-node --project tsconfig.test.json src/admin/admin-create.ts",
-    "test:admin-create": "ts-node --project tsconfig.test.json test/admin-create.test.ts"
+    "test:admin-create": "ts-node --project tsconfig.test.json test/admin-create.test.ts",
+    "test:admin-auth": "ts-node --project tsconfig.test.json test/admin-auth.test.ts"
   },
   "dependencies": {
     "@nestjs/common": "^11.1.6",
