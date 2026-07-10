@@ -12,6 +12,7 @@ import { FeedbackController } from "../src/feedback/feedback.controller";
 import { FeedbackService } from "../src/feedback/feedback.service";
 import { API_ERROR_CODES, ApiException, HttpExceptionFilter } from "../src/common";
 import { ConfigService } from "../src/config";
+import { EmailService } from "../src/email";
 import { HealthController } from "../src/health/health.controller";
 import { PrismaService } from "../src/prisma";
 import { ShoppingController } from "../src/shopping/shopping.controller";
@@ -367,6 +368,7 @@ async function createContractHarness() {
       FeedbackService,
       { provide: ConfigService, useClass: TestConfigService },
       { provide: PrismaService, useValue: prisma },
+      { provide: EmailService, useValue: { sendEmail: async () => undefined } },
       { provide: ShoppingService, useValue: services.shoppingService },
       { provide: WishlistsService, useValue: services.wishlistsService }
     ]
