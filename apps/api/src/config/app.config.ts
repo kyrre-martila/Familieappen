@@ -11,6 +11,7 @@ export interface AppConfig {
   authJwtSecret: string;
   adminSessionSecret: string;
   adminSessionTtlSeconds: number;
+  adminCookieDomain?: string;
 }
 
 type EnvironmentVariables = NodeJS.ProcessEnv;
@@ -44,6 +45,11 @@ function readString(name: string, env: EnvironmentVariables): string | undefined
   const value = env[name]?.trim();
 
   return value ? value : undefined;
+}
+
+function readOptionalRawString(name: string, env: EnvironmentVariables): string | undefined {
+  const value = env[name];
+  return value === undefined || value === "" ? undefined : value;
 }
 
 function parsePort(value: string | undefined): number {
@@ -179,6 +185,34 @@ function resolveAdminSessionSecret(value: string | undefined, nodeEnv: string): 
   return resolveStrongSecret("ADMIN_SESSION_SECRET", value, nodeEnv, DEFAULT_ADMIN_SESSION_SECRET);
 }
 
+function parseAdminCookieDomain(value: string | undefined): string | undefined {
+  if (!value) {
+    return undefined;
+  }
+
+  if (/\s/.test(value) || /[;=,]/.test(value)) {
+    throw new Error("ADMIN_COOKIE_DOMAIN must be a bare domain without whitespace or cookie separators");
+  }
+
+  if (value.includes(":") || value.includes("/") || value.includes("?") || value.includes("#")) {
+    throw new Error("ADMIN_COOKIE_DOMAIN must not include a protocol, port, path, query, or fragment");
+  }
+
+  const domain = value.startsWith(".") ? value.slice(1) : value;
+  if (!domain || domain.startsWith(".") || domain.endsWith(".") || !domain.includes(".")) {
+    throw new Error("ADMIN_COOKIE_DOMAIN must be a parent domain such as .familieappen.martila.no");
+  }
+
+  const labels = domain.split(".");
+  for (const label of labels) {
+    if (!/^[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?$/.test(label)) {
+      throw new Error("ADMIN_COOKIE_DOMAIN contains an invalid domain label");
+    }
+  }
+
+  return value;
+}
+
 function validateStrongSecret(name: string, secret: string): void {
   if (secret.length < MIN_STRONG_SECRET_LENGTH) {
     throw new Error(`${name} must be at least ${MIN_STRONG_SECRET_LENGTH} characters outside local environments`);
@@ -200,6 +234,7 @@ export function getAppConfig(env: EnvironmentVariables = process.env): AppConfig
     databaseUrl: resolveDatabaseUrl(readString("DATABASE_URL", env), nodeEnv),
     authJwtSecret: resolveAuthJwtSecret(readString("AUTH_JWT_SECRET", env), nodeEnv),
     adminSessionSecret: resolveAdminSessionSecret(readString("ADMIN_SESSION_SECRET", env), nodeEnv),
-    adminSessionTtlSeconds: parsePositiveInteger("ADMIN_SESSION_TTL", readString("ADMIN_SESSION_TTL", env), DEFAULT_ADMIN_SESSION_TTL_SECONDS)
+    adminSessionTtlSeconds: parsePositiveInteger("ADMIN_SESSION_TTL", readString("ADMIN_SESSION_TTL", env), DEFAULT_ADMIN_SESSION_TTL_SECONDS),
+    adminCookieDomain: parseAdminCookieDomain(readOptionalRawString("ADMIN_COOKIE_DOMAIN", env))
   };
 }

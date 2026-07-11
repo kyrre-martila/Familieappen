@@ -36,4 +36,8 @@ export class ConfigService {
   get adminSessionTtlSeconds(): number {
     return this.config.adminSessionTtlSeconds;
   }
+
+  get adminCookieDomain(): string | undefined {
+    return this.config.adminCookieDomain;
+  }
 }
