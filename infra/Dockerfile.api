@@ -19,7 +19,7 @@ RUN pnpm --filter @familieappen/shared build && pnpm --filter @familieappen/ui b
 
 FROM base AS runner
 ENV NODE_ENV=production
-COPY --from=build /app/package.json /app/pnpm-lock.yaml /app/pnpm-workspace.yaml ./
+COPY --from=build /app/package.json /app/pnpm-lock.yaml /app/pnpm-workspace.yaml /app/tsconfig.base.json ./
 COPY --from=build /app/node_modules ./node_modules
 COPY --from=build /app/apps/api ./apps/api
 COPY --from=build /app/packages ./packages
