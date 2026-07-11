@@ -1,4 +1,4 @@
-import { AdminApiError, safeAdminErrorMessage, type AdminDashboard, type AdminUser } from "./admin-shared";
+import { AdminApiError, safeAdminErrorMessage, type AdminDashboard, type AdminManagedUserDetail, type AdminStatistics, type AdminUser, type AdminUserListResponse, type AdminUserStatusUpdate } from "./admin-shared";
 
 const API_BASE_URL = (process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:4000/api").replace(/\/$/, "");
 const API_REQUEST_TIMEOUT_MS = 15_000;
@@ -15,6 +15,28 @@ export async function adminLogout(): Promise<{ message: string }> {
 
 export async function fetchAdminDashboard(): Promise<AdminDashboard> {
   return adminClientRequest("/admin/dashboard");
+}
+
+export async function fetchAdminUsers(query: { search?: string; status?: "active" | "inactive"; sort?: "asc" | "desc"; page?: number; pageSize?: number } = {}): Promise<AdminUserListResponse> {
+  const params = new URLSearchParams();
+  if (query.search) params.set("search", query.search);
+  if (query.status) params.set("status", query.status);
+  if (query.sort) params.set("sort", query.sort);
+  if (query.page) params.set("page", String(query.page));
+  if (query.pageSize) params.set("pageSize", String(query.pageSize));
+  return adminClientRequest(`/admin/users${params.toString() ? `?${params}` : ""}`);
+}
+
+export async function fetchAdminUser(id: string): Promise<AdminManagedUserDetail> {
+  return adminClientRequest(`/admin/users/${encodeURIComponent(id)}`);
+}
+
+export async function updateAdminUserStatus(id: string, body: { active: boolean }): Promise<AdminUserStatusUpdate> {
+  return adminClientRequest(`/admin/users/${encodeURIComponent(id)}/status`, { method: "PATCH", body });
+}
+
+export async function fetchAdminStatistics(): Promise<AdminStatistics> {
+  return adminClientRequest("/admin/statistics");
 }
 
 async function adminClientRequest<T>(path: string, options: { method?: string; body?: unknown } = {}): Promise<T> {
