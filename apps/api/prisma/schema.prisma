@@ -170,6 +170,7 @@ model User {
   passwordHash String
   createdAt    DateTime       @default(now())
   updatedAt    DateTime       @updatedAt
+  deactivatedAt DateTime?
   memberships  FamilyMember[]
   createdShoppingItems ShoppingListItem[] @relation("ShoppingItemCreatedBy")
   customShoppingItems FamilyCustomShoppingItem[] @relation("FamilyCustomShoppingItemCreatedBy")
@@ -197,6 +198,7 @@ model User {
   sessions UserSession[]
   passwordResetTokens PasswordResetToken[]
 
+  @@index([deactivatedAt])
   @@map("users")
 }
 
