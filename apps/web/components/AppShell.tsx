@@ -58,7 +58,8 @@ export function RootAppFrame({
 }: Readonly<{ children: React.ReactNode }>) {
   const pathname = usePathname();
   const search = useCurrentSearch(pathname);
-  const isImmersive = isImmersiveRoute(pathname);
+  const isAdminRoute = pathname === "/admin" || pathname.startsWith("/admin/");
+  const isImmersive = isAdminRoute || isImmersiveRoute(pathname);
   const isFocus = isFocusRoute(pathname, search);
   const shellClassName = [
     "root-app-frame",
