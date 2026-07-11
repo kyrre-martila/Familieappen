@@ -49,3 +49,60 @@ export function safeAdminErrorMessage(status: number, code?: string): string {
   if (code === "validation.invalid_input") return "Please check the form and try again.";
   return "Something went wrong. Please try again.";
 }
+
+
+export type UserStatusFilter = "active" | "inactive";
+export type UserSortOrder = "asc" | "desc";
+
+export interface AdminManagedUserListItem {
+  id: string;
+  name: string | null;
+  email: string | null;
+  createdAt: string;
+  active: boolean;
+  familyName: string | null;
+  familyMemberCount: number;
+  lastRelevantActivity: string | null;
+}
+
+export interface AdminUserListResponse {
+  page: number;
+  pageSize: number;
+  total: number;
+  items: AdminManagedUserListItem[];
+}
+
+export interface AdminManagedUserDetail {
+  id: string;
+  name: string | null;
+  email: string | null;
+  createdAt: string;
+  updatedAt: string;
+  active: boolean;
+  memberships: Array<{
+    familyId: string;
+    familyName: string | null;
+    role: string;
+    displayName: string | null;
+    familyMemberCount: number;
+  }>;
+}
+
+export interface AdminUserStatusUpdate {
+  id: string;
+  name: string | null;
+  email: string | null;
+  active: boolean;
+  updatedAt: string;
+}
+
+export interface AdminStatistics {
+  totalUsers: number;
+  totalFamilies: number;
+  registrationsPerDay: Array<{ date: string; count: number }>;
+  calendarEventsCreatedLast30Days: number;
+  tasksCreatedLast30Days: number;
+  remindersCreatedLast30Days: number;
+  activeCalendarImports: number;
+  advertisementsByStatus: Array<{ status: "DRAFT" | "SCHEDULED" | "ACTIVE" | "PAUSED" | "ENDED" | string; count: number }>;
+}

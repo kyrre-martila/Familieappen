@@ -1,6 +1,6 @@
 import "server-only";
 import { cookies } from "next/headers";
-import { AdminApiError, safeAdminErrorMessage, type AdminDashboard, type AdminUser } from "./admin-shared";
+import { AdminApiError, safeAdminErrorMessage, type AdminDashboard, type AdminManagedUserDetail, type AdminStatistics, type AdminUser, type AdminUserListResponse } from "./admin-shared";
 
 const API_BASE_URL = (process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:4000/api").replace(/\/$/, "");
 
@@ -13,6 +13,24 @@ export async function getCurrentAdmin(): Promise<AdminUser> {
 
 export async function getAdminDashboard(): Promise<AdminDashboard> {
   return adminApiRequest<AdminDashboard>("/admin/dashboard", { cache: "no-store" });
+}
+
+export async function getAdminUsers(query: { search?: string; status?: "active" | "inactive"; sort?: "asc" | "desc"; page?: number; pageSize?: number } = {}): Promise<AdminUserListResponse> {
+  const params = new URLSearchParams();
+  if (query.search) params.set("search", query.search);
+  if (query.status) params.set("status", query.status);
+  if (query.sort) params.set("sort", query.sort);
+  if (query.page) params.set("page", String(query.page));
+  if (query.pageSize) params.set("pageSize", String(query.pageSize));
+  return adminApiRequest<AdminUserListResponse>(`/admin/users${params.toString() ? `?${params}` : ""}`, { cache: "no-store" });
+}
+
+export async function getAdminUser(id: string): Promise<AdminManagedUserDetail> {
+  return adminApiRequest<AdminManagedUserDetail>(`/admin/users/${encodeURIComponent(id)}`, { cache: "no-store" });
+}
+
+export async function getAdminStatistics(): Promise<AdminStatistics> {
+  return adminApiRequest<AdminStatistics>("/admin/statistics", { cache: "no-store" });
 }
 
 async function adminApiRequest<T>(path: string, init: RequestInit = {}): Promise<T> {
