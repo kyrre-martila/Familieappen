@@ -30,6 +30,7 @@ services:
       AUTH_JWT_SECRET: ${AUTH_JWT_SECRET}
       ADMIN_SESSION_SECRET: ${ADMIN_SESSION_SECRET}
       ADMIN_SESSION_TTL: ${ADMIN_SESSION_TTL:-604800}
+      ADMIN_COOKIE_DOMAIN: ${ADMIN_COOKIE_DOMAIN:-.familieappen.martila.no}
       CORS_ORIGINS: https://familieappen.martila.no, https://api-familieappen.martila.no, http://192.168.1.231:3000, http://localhost:3000
     ports:
       - "4000:4000"

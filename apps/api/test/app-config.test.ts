@@ -15,6 +15,7 @@ assert.equal(localConfig.databaseUrl, "postgresql://postgres:postgres@localhost:
 assert.equal(localConfig.authJwtSecret, "familieappen-development-auth-secret-change-me");
 assert.equal(localConfig.adminSessionSecret, "familieappen-development-admin-session-secret-change-me");
 assert.equal(localConfig.adminSessionTtlSeconds, 604800);
+assert.equal(localConfig.adminCookieDomain, undefined);
 
 const productionConfig = getAppConfig({
   NODE_ENV: "production",
@@ -24,7 +25,8 @@ const productionConfig = getAppConfig({
   DATABASE_URL: "postgresql://postgres:postgres@example.com:5432/familieappen?schema=public",
   AUTH_JWT_SECRET: "a-production-secret-that-is-long-enough",
   ADMIN_SESSION_SECRET: "a-production-admin-secret-that-is-long-enough",
-  ADMIN_SESSION_TTL: "3600"
+  ADMIN_SESSION_TTL: "3600",
+  ADMIN_COOKIE_DOMAIN: ".familieappen.martila.no"
 });
 
 assert.equal(productionConfig.port, 8080);
@@ -33,6 +35,26 @@ assert.deepEqual(productionConfig.corsOrigins, ["https://app.example.com", "http
 assert.equal(productionConfig.authJwtSecret, "a-production-secret-that-is-long-enough");
 assert.equal(productionConfig.adminSessionSecret, "a-production-admin-secret-that-is-long-enough");
 assert.equal(productionConfig.adminSessionTtlSeconds, 3600);
+assert.equal(productionConfig.adminCookieDomain, ".familieappen.martila.no");
+
+
+const localConfigWithEmptyAdminCookieDomain = getAppConfig({ ADMIN_COOKIE_DOMAIN: "" });
+assert.equal(localConfigWithEmptyAdminCookieDomain.adminCookieDomain, undefined);
+
+for (const invalidAdminCookieDomain of [
+  "https://familieappen.martila.no",
+  ".familieappen.martila.no:443",
+  ".familieappen.martila.no/admin",
+  ".familieappen.martila.no?x=1",
+  ".familieappen.martila.no#admin",
+  ".familieappen martila.no",
+  ".familieappen.martila.no; Secure",
+  ".familieappen.martila.no, api-familieappen.martila.no",
+  "localhost",
+  ".bad-.example.com"
+]) {
+  assertThrowsWithMessage(() => getAppConfig({ ADMIN_COOKIE_DOMAIN: invalidAdminCookieDomain }), "ADMIN_COOKIE_DOMAIN");
+}
 
 assertThrowsWithMessage(
   () =>

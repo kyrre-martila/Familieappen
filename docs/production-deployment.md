@@ -11,9 +11,10 @@ POSTGRES_PASSWORD=
 AUTH_JWT_SECRET=
 ADMIN_SESSION_SECRET=
 ADMIN_SESSION_TTL=604800
+ADMIN_COOKIE_DOMAIN=.familieappen.martila.no
 ```
 
-`ADMIN_SESSION_SECRET` must be a long random value, must not be committed, and changing it invalidates existing admin sessions. `ADMIN_SESSION_TTL` is measured in seconds.
+`ADMIN_SESSION_SECRET` must be a long random value, must not be committed, and changing it invalidates existing admin sessions. `ADMIN_SESSION_TTL` is measured in seconds. `ADMIN_COOKIE_DOMAIN=.familieappen.martila.no` is required for production because the web app (`familieappen.martila.no`) and API (`api-familieappen.martila.no`) are sibling subdomains; it is passed only to the API container so the HttpOnly admin session cookie is scoped to the shared parent domain while remaining unavailable to the web JavaScript bundle.
 
 ## Backup before admin migrations
 
@@ -52,7 +53,7 @@ Inside the production API container, use the same pnpm filter commands because t
    ```bash
    git pull
    ```
-2. Inspect or set required environment variables in the server `.env` file; do not print secret values.
+2. Inspect or set required environment variables in the server `.env` file; do not print secret values. Confirm `ADMIN_COOKIE_DOMAIN=.familieappen.martila.no` is present before updating the API container.
 3. Validate Compose configuration:
    ```bash
    docker compose -f docker-compose.prod.yml config
@@ -114,7 +115,7 @@ Inside the production API container, use the same pnpm filter commands because t
       --role SUPER_ADMIN
     ```
     Safer option: avoid shell history by passing `ADMIN_PASSWORD` from a protected shell mechanism and omit `--password`; the CLI prompts only when stdin is interactive.
-17. Verify admin login manually:
+17. Verify admin login manually and confirm the API login response sets `familieappen_admin_session` with `Domain=.familieappen.martila.no`, `Path=/`, `HttpOnly`, `SameSite=Lax`, and `Secure`:
     ```bash
     curl -I https://familieappen.martila.no/admin/login
     ```

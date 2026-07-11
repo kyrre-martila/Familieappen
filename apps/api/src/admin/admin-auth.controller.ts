@@ -47,7 +47,9 @@ export class AdminAuthController {
   }
 
   private serializeAdminSessionCookie(value: string, expiresAt: Date, maxAge = Math.max(0, Math.ceil((expiresAt.getTime() - Date.now()) / 1000))): string {
-    const attributes = [`${ADMIN_SESSION_COOKIE_NAME}=${encodeURIComponent(value)}`, "Path=/", "HttpOnly", "SameSite=Lax", `Max-Age=${maxAge}`, `Expires=${expiresAt.toUTCString()}`];
+    const attributes = [`${ADMIN_SESSION_COOKIE_NAME}=${encodeURIComponent(value)}`, "Path=/"];
+    if (this.config.adminCookieDomain) attributes.push(`Domain=${this.config.adminCookieDomain}`);
+    attributes.push("HttpOnly", "SameSite=Lax", `Max-Age=${maxAge}`, `Expires=${expiresAt.toUTCString()}`);
     if (this.config.nodeEnv === "production") attributes.push("Secure");
     return attributes.join("; ");
   }
