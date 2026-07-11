@@ -44,7 +44,7 @@ pnpm --filter @familieappen/api exec prisma migrate status
 pnpm --filter @familieappen/api prisma:migrate:deploy
 ```
 
-Inside the production API container, use the same pnpm filter commands because the API image includes the workspace manifests, Prisma schema, migrations, Prisma CLI, and API package.
+Inside the production API container, use the same pnpm filter commands because the API image includes the workspace manifests, required TypeScript configs, Prisma schema, migrations, Prisma CLI, and API package.
 
 ## Deployment sequence
 
