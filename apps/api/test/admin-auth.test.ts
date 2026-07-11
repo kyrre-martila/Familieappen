@@ -17,7 +17,7 @@ type AdminRecord = { id: string; email: string; passwordHash: string; name: stri
 type AdminSessionRecord = { id: string; adminUserId: string; refreshTokenHash: string; userAgent?: string | null; ipAddress?: string | null; revokedAt?: Date | null; expiresAt: Date; createdAt: Date; updatedAt: Date };
 type UserRecord = { id: string; email: string; passwordHash: string; name: string; createdAt: Date; updatedAt: Date };
 
-class TestConfigService { readonly authJwtSecret = "normal-user-secret-that-admin-must-not-accept"; readonly adminSessionTtlSeconds = 60 * 60; readonly nodeEnv = "test"; }
+class TestConfigService { readonly authJwtSecret = "normal-user-secret-that-admin-must-not-accept"; readonly adminSessionTtlSeconds = 60 * 60; readonly adminSessionSecret = "admin-session-secret-for-tests"; readonly nodeEnv = "test"; }
 
 class InMemoryPrismaService {
   readonly admins = new Map<string, AdminRecord>(); readonly adminSessions = new Map<string, AdminSessionRecord>(); readonly users = new Map<string, UserRecord>(); readonly auditLogs: any[] = [];
@@ -51,7 +51,7 @@ function context(req: any): ExecutionContext { return { switchToHttp: () => ({ g
 async function run() {
   {
     const { prisma, auth, controller } = services(); await prisma.addAdmin(auth, "admin@example.com"); const res = response(); const out = await controller.login({ email: "ADMIN@example.com", password: PASSWORD }, { headers: { "user-agent": "test" } }, res as any);
-    assert.equal(out.data.admin.email, "admin@example.com"); assert.equal("passwordHash" in out.data.admin, false); assert.ok(cookieToken(res)); assert.equal(prisma.auditLogs[0].action, "ADMIN_LOGIN"); assert.ok([...prisma.admins.values()][0].lastLoginAt);
+    assert.equal(out.data.admin.email, "admin@example.com"); assert.equal("passwordHash" in out.data.admin, false); assert.ok(cookieToken(res)); assert.equal("sessionToken" in out.data.session, false); assert.equal(prisma.auditLogs[0].action, "ADMIN_LOGIN"); assert.ok([...prisma.admins.values()][0].lastLoginAt);
   }
   {
     const { prisma, auth, controller } = services(); await prisma.addAdmin(auth, "admin@example.com"); await rejectsUnauthorized(() => controller.login({ email: "admin@example.com", password: "wrong-password" }, { headers: {} }, response() as any) as any); assert.equal(prisma.adminSessions.size, 0);
@@ -70,6 +70,9 @@ async function run() {
   }
   {
     const { prisma, auth, adminAuth, controller } = services(); await prisma.addAdmin(auth, "admin@example.com"); const res = response(); await controller.login({ email: "admin@example.com", password: PASSWORD }, { headers: {} }, res as any); const token = cookieToken(res); [...prisma.adminSessions.values()][0].expiresAt = new Date(Date.now() - 1000); await rejectsUnauthorized(() => adminAuth.getCurrentAdmin(token));
+  }
+  {
+    const { prisma, auth, adminAuth, controller } = services(); await prisma.addAdmin(auth, "admin@example.com"); const res = response(); await controller.login({ email: "admin@example.com", password: PASSWORD }, { headers: {} }, res as any); const token = cookieToken(res); (adminAuth as any).config.adminSessionSecret = "rotated-admin-session-secret"; await rejectsUnauthorized(() => adminAuth.getCurrentAdmin(token));
   }
   {
     const { prisma, auth, adminAuth, controller } = services(); const admin = await prisma.addAdmin(auth, "admin@example.com"); const res = response(); await controller.login({ email: "admin@example.com", password: PASSWORD }, { headers: {} }, res as any); const token = cookieToken(res); admin.active = false; await rejectsUnauthorized(() => adminAuth.getCurrentAdmin(token));

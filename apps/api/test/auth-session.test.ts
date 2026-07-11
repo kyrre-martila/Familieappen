@@ -17,6 +17,7 @@ type UserRecord = {
   passwordHash: string;
   createdAt: Date;
   updatedAt: Date;
+  deactivatedAt?: Date | null;
 };
 
 type SessionRecord = {
@@ -169,7 +170,7 @@ class InMemoryPrismaService {
 
 function createServices() {
   const prisma = new InMemoryPrismaService();
-  const authService = new AuthService(prisma as never, new TestConfigService() as never);
+  const authService = new AuthService(prisma as never, new TestConfigService() as never, { sendEmail: async () => undefined } as never);
   const authController = new AuthController(authService, new TestConfigService() as never);
   const authGuard = new AuthGuard(authService, prisma as never);
   const profileService = new ProfileService(prisma as never, authService);
@@ -350,6 +351,25 @@ async function main() {
 
     await profileService.deleteCurrentUserAccount(auth.user.id, { password: PASSWORD, confirmationText: "SLETT" });
     assert.equal([...prisma.sessions.values()].filter((session) => !session.revokedAt).length, 0, "delete account revokes all sessions");
+  }
+
+
+  {
+    const { prisma, authService } = createServices();
+    const auth = await registerUser(authService, "deactivated-login@example.com");
+    prisma.users.get(auth.user.id)!.deactivatedAt = new Date();
+    await assertRejectsUnauthorized(() => authService.login({ email: "deactivated-login@example.com", password: PASSWORD }));
+  }
+
+  {
+    const { prisma, authGuard, authService } = createServices();
+    const auth = await registerUser(authService, "deactivated-session@example.com");
+    prisma.users.get(auth.user.id)!.deactivatedAt = new Date();
+    await assertRejectsUnauthorized(() => authService.refresh(auth.refreshToken));
+    await assertRejectsUnauthorized(() => authGuard.canActivate(createExecutionContext(`Bearer ${auth.tokens.accessToken}`).context));
+    prisma.users.get(auth.user.id)!.deactivatedAt = null;
+    const fresh = await authService.login({ email: "deactivated-session@example.com", password: PASSWORD });
+    assert.ok(fresh.tokens.accessToken, "reactivated user can log in again");
   }
 
   {

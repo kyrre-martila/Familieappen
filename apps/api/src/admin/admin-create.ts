@@ -23,6 +23,7 @@ export interface AdminCreateArgs {
   email?: string;
   name?: string;
   password?: string;
+  role?: "SUPER_ADMIN" | "SUPPORT" | "ANALYST" | "AD_MANAGER";
 }
 
 export function parseAdminCreateArgs(argv: string[]): AdminCreateArgs {
@@ -32,7 +33,7 @@ export function parseAdminCreateArgs(argv: string[]): AdminCreateArgs {
     const arg = argv[index];
     const [key, inlineValue] = arg.startsWith("--") ? arg.split("=", 2) : [arg, undefined];
 
-    if (!["--email", "--name", "--password"].includes(key)) {
+    if (!["--email", "--name", "--password", "--role"].includes(key)) {
       throw new Error(`Unknown option: ${key}`);
     }
 
@@ -48,6 +49,7 @@ export function parseAdminCreateArgs(argv: string[]): AdminCreateArgs {
     if (key === "--email") parsed.email = value;
     if (key === "--name") parsed.name = value;
     if (key === "--password") parsed.password = value;
+    if (key === "--role") parsed.role = validateAdminRole(value);
   }
 
   return parsed;
@@ -77,6 +79,18 @@ export function validateAdminName(value: unknown): string {
   }
 
   return name;
+}
+
+export function validateAdminRole(value: unknown): "SUPER_ADMIN" | "SUPPORT" | "ANALYST" | "AD_MANAGER" {
+  if (typeof value !== "string") {
+    throw new Error("--role must be one of SUPER_ADMIN, SUPPORT, ANALYST, AD_MANAGER");
+  }
+
+  if (!["SUPER_ADMIN", "SUPPORT", "ANALYST", "AD_MANAGER"].includes(value)) {
+    throw new Error("--role must be one of SUPER_ADMIN, SUPPORT, ANALYST, AD_MANAGER");
+  }
+
+  return value as "SUPER_ADMIN" | "SUPPORT" | "ANALYST" | "AD_MANAGER";
 }
 
 export function validateAdminPassword(value: unknown): string {
@@ -117,6 +131,7 @@ async function main(): Promise<void> {
   const email = validateAdminEmail(args.email);
   const name = validateAdminName(args.name);
   const password = validateAdminPassword(args.password ?? process.env.ADMIN_PASSWORD ?? await readPasswordFromPrompt());
+  const role = args.role ?? "SUPER_ADMIN";
   const databaseUrl = process.env.DATABASE_URL;
 
   if (!databaseUrl) {
@@ -137,7 +152,7 @@ async function main(): Promise<void> {
         email,
         name,
         passwordHash: await hashAdminPassword(password),
-        role: "SUPER_ADMIN",
+        role,
         active: true
       },
       select: { id: true, email: true, role: true }

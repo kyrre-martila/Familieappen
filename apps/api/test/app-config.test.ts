@@ -68,6 +68,7 @@ assertThrowsWithMessage(() => getAppConfig({ PORT: "70000" }), "PORT must be an 
 assertThrowsWithMessage(() => getAppConfig({ API_PREFIX: "!!!" }), "API_PREFIX may only contain");
 assertThrowsWithMessage(() => getAppConfig({ CORS_ORIGINS: "https://example.com/app" }), "bare origins");
 assertThrowsWithMessage(() => getAppConfig({ ADMIN_SESSION_TTL: "0" }), "ADMIN_SESSION_TTL must be a positive integer");
+assertThrowsWithMessage(() => getAppConfig({ ADMIN_SESSION_TTL: "abc" }), "ADMIN_SESSION_TTL must be a positive integer");
 assertThrowsWithMessage(
   () =>
     getAppConfig({
@@ -77,5 +78,33 @@ assertThrowsWithMessage(
     }),
   "ADMIN_SESSION_SECRET is required"
 );
+
+assertThrowsWithMessage(
+  () =>
+    getAppConfig({
+      NODE_ENV: "production",
+      DATABASE_URL: "postgresql://postgres:postgres@example.com:5432/familieappen?schema=public",
+      AUTH_JWT_SECRET: "a-production-secret-that-is-long-enough",
+      ADMIN_SESSION_SECRET: "replace-with-a-long-random-secret"
+    }),
+  "ADMIN_SESSION_SECRET must not use documented local defaults or placeholder values"
+);
+assertThrowsWithMessage(
+  () =>
+    getAppConfig({
+      NODE_ENV: "production",
+      DATABASE_URL: "postgresql://postgres:postgres@example.com:5432/familieappen?schema=public",
+      AUTH_JWT_SECRET: "a-production-secret-that-is-long-enough",
+      ADMIN_SESSION_SECRET: "short-admin-secret"
+    }),
+  "ADMIN_SESSION_SECRET must be at least"
+);
+const productionDefaultTtl = getAppConfig({
+  NODE_ENV: "production",
+  DATABASE_URL: "postgresql://postgres:postgres@example.com:5432/familieappen?schema=public",
+  AUTH_JWT_SECRET: "a-production-secret-that-is-long-enough",
+  ADMIN_SESSION_SECRET: "a-production-admin-secret-that-is-long-enough"
+});
+assert.equal(productionDefaultTtl.adminSessionTtlSeconds, 604800);
 
 console.log("app config validation tests passed");

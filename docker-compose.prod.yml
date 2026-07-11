@@ -28,6 +28,8 @@ services:
       API_PREFIX: api
       DATABASE_URL: postgresql://familieappen:${POSTGRES_PASSWORD}@db:5432/familieappen?schema=public
       AUTH_JWT_SECRET: ${AUTH_JWT_SECRET}
+      ADMIN_SESSION_SECRET: ${ADMIN_SESSION_SECRET}
+      ADMIN_SESSION_TTL: ${ADMIN_SESSION_TTL:-604800}
       CORS_ORIGINS: https://familieappen.martila.no, https://api-familieappen.martila.no, http://192.168.1.231:3000, http://localhost:3000
     ports:
       - "4000:4000"

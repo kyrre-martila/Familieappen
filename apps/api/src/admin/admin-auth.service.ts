@@ -1,5 +1,5 @@
 import { BadRequestException, HttpException, HttpStatus, Injectable, UnauthorizedException } from "@nestjs/common";
-import { createHash, randomBytes } from "node:crypto";
+import { createHmac, randomBytes } from "node:crypto";
 import { AuthService, SessionMetadata } from "../auth/auth.service";
 import { ConfigService } from "../config";
 import { PrismaService } from "../prisma";
@@ -148,7 +148,7 @@ export class AdminAuthService {
   }
 
   private hashSessionToken(sessionToken: string): string {
-    return createHash("sha256").update(sessionToken, "utf8").digest("base64url");
+    return createHmac("sha256", this.config.adminSessionSecret).update(sessionToken, "utf8").digest("base64url");
   }
 
   private isSessionActive(session: { revokedAt?: Date | null; expiresAt: Date }): boolean {
