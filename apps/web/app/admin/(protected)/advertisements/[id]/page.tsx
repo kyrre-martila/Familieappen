@@ -1,1 +1,2 @@
-export default function Page() { return <section className="admin-placeholder"><h1>Advertisement details</h1><p>This admin page is not implemented yet.</p></section>; }
+import { AdminAdvertisementFormClient } from "../../../../../components/admin/AdminAdvertisementFormClient"; import { getAdvertisement } from "../../../../../lib/admin-api"; import { AdminApiError } from "../../../../../lib/admin-shared";
+export default async function Page({params}:{params:Promise<{id:string}>}){const {id}=await params; try{return <AdminAdvertisementFormClient ad={await getAdvertisement(id)}/> }catch(e){return <AdminAdvertisementFormClient ad={null} notFound={e instanceof AdminApiError&&e.status===404} forbidden={e instanceof AdminApiError&&e.status===403}/>}}

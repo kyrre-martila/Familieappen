@@ -1,6 +1,6 @@
 import "server-only";
 import { cookies } from "next/headers";
-import { AdminApiError, safeAdminErrorMessage, type AdminDashboard, type AdminManagedUserDetail, type AdminStatistics, type AdminUser, type AdminUserListResponse } from "./admin-shared";
+import { AdminApiError, safeAdminErrorMessage, type AdminDashboard, type AdminManagedUserDetail, type AdminStatistics, type AdminUser, type AdminUserListResponse, type AdvertisementListResponse, type Advertisement, type AuditLogResponse, type AdminRole } from "./admin-shared";
 
 const API_BASE_URL = (process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:4000/api").replace(/\/$/, "");
 
@@ -32,6 +32,15 @@ export async function getAdminUser(id: string): Promise<AdminManagedUserDetail> 
 export async function getAdminStatistics(): Promise<AdminStatistics> {
   return adminApiRequest<AdminStatistics>("/admin/statistics", { cache: "no-store" });
 }
+
+
+export async function getAdvertisements(query: { status?: string; page?: number; pageSize?: number } = {}): Promise<AdvertisementListResponse> { const q = qs(query); return adminApiRequest(`/admin/advertisements${q ? `?${q}` : ""}`, { cache: "no-store" }); }
+export async function getAdvertisement(id: string): Promise<Advertisement> { return adminApiRequest(`/admin/advertisements/${encodeURIComponent(id)}`, { cache: "no-store" }); }
+export async function getManagedAdmins(): Promise<AdminUser[]> { return adminApiRequest('/admin/admin-users', { cache: 'no-store' }); }
+export async function getAuditLog(query: {adminId?:string; action?:string; from?:string; to?:string; page?:number; pageSize?:number} = {}): Promise<AuditLogResponse> { const q=qs(query); return adminApiRequest(`/admin/audit-log${q ? `?${q}` : ''}`, { cache: 'no-store' }); }
+
+
+function qs(query: Record<string, string | number | undefined>) { const p = new URLSearchParams(); Object.entries(query).forEach(([k,v]) => { if (v !== undefined && v !== "") p.set(k, String(v)); }); return p.toString(); }
 
 async function adminApiRequest<T>(path: string, init: RequestInit = {}): Promise<T> {
   const cookieStore = await cookies();

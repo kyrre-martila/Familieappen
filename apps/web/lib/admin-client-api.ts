@@ -1,4 +1,4 @@
-import { AdminApiError, safeAdminErrorMessage, type AdminDashboard, type AdminManagedUserDetail, type AdminStatistics, type AdminUser, type AdminUserListResponse, type AdminUserStatusUpdate } from "./admin-shared";
+import { AdminApiError, safeAdminErrorMessage, type AdminDashboard, type AdminManagedUserDetail, type AdminStatistics, type AdminUser, type AdminUserListResponse, type AdminUserStatusUpdate, type AdvertisementListResponse, type Advertisement, type AdvertisementMutation, type AuditLogResponse } from "./admin-shared";
 
 const API_BASE_URL = (process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:4000/api").replace(/\/$/, "");
 const API_REQUEST_TIMEOUT_MS = 15_000;
@@ -38,6 +38,20 @@ export async function updateAdminUserStatus(id: string, body: { active: boolean 
 export async function fetchAdminStatistics(): Promise<AdminStatistics> {
   return adminClientRequest("/admin/statistics");
 }
+
+
+export async function fetchAdvertisements(query: { status?: string; page?: number; pageSize?: number } = {}): Promise<AdvertisementListResponse> { const q = qs(query); return adminClientRequest(`/admin/advertisements${q ? `?${q}` : ""}`); }
+export async function fetchAdvertisement(id: string): Promise<Advertisement> { return adminClientRequest(`/admin/advertisements/${encodeURIComponent(id)}`); }
+export async function createAdvertisement(body: AdvertisementMutation): Promise<Advertisement> { return adminClientRequest(`/admin/advertisements`, { method: "POST", body }); }
+export async function updateAdvertisement(id: string, body: Partial<AdvertisementMutation>): Promise<Advertisement> { return adminClientRequest(`/admin/advertisements/${encodeURIComponent(id)}`, { method: "PATCH", body }); }
+export async function deleteAdvertisement(id: string): Promise<{id:string;deleted:boolean}> { return adminClientRequest(`/admin/advertisements/${encodeURIComponent(id)}`, { method: "DELETE" }); }
+export async function fetchManagedAdmins(): Promise<AdminUser[]> { return adminClientRequest('/admin/admin-users'); }
+export async function createManagedAdmin(body: {email:string; password:string; name:string; role:AdminUser['role']; active?:boolean}): Promise<AdminUser> { return adminClientRequest('/admin/admin-users', { method: 'POST', body }); }
+export async function updateManagedAdmin(id:string, body: Partial<Pick<AdminUser,'name'|'role'|'active'>>): Promise<AdminUser> { return adminClientRequest(`/admin/admin-users/${encodeURIComponent(id)}`, { method: 'PATCH', body }); }
+export async function fetchAuditLog(query: {adminId?:string; action?:string; from?:string; to?:string; page?:number; pageSize?:number} = {}): Promise<AuditLogResponse> { const q=qs(query); return adminClientRequest(`/admin/audit-log${q ? `?${q}` : ''}`); }
+
+
+function qs(query: Record<string, string | number | undefined>) { const p = new URLSearchParams(); Object.entries(query).forEach(([k,v]) => { if (v !== undefined && v !== "") p.set(k, String(v)); }); return p.toString(); }
 
 async function adminClientRequest<T>(path: string, options: { method?: string; body?: unknown } = {}): Promise<T> {
   const headers = new Headers({ Accept: "application/json" });
