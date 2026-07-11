@@ -1,1 +1,2 @@
-export default function Page() { return <section className="admin-placeholder"><h1>Administrators</h1><p>This admin page is not implemented yet.</p></section>; }
+import { AdminManagedAdminsClient } from "../../../../components/admin/AdminManagedAdminsClient"; import { getCurrentAdmin, getManagedAdmins } from "../../../../lib/admin-api"; import { AdminApiError } from "../../../../lib/admin-shared";
+export default async function Page(){const current=await getCurrentAdmin(); try{return <AdminManagedAdminsClient currentAdmin={current} initialAdmins={await getManagedAdmins()}/> }catch(e){return <AdminManagedAdminsClient currentAdmin={current} initialAdmins={null} initialError={e instanceof AdminApiError&&e.status===403?'forbidden':'error'}/>}}
