@@ -141,27 +141,29 @@ Advertisement management uses `/api/admin/advertisements` and supports `DRAFT`, 
 
 ### Environment and migrations
 
-See `apps/api/.env.example` and `apps/web/.env.example` for required local variables such as database, session, web, and API URLs. Run local Prisma checks and migrations from the monorepo root:
+See `apps/api/.env.example`, `apps/web/.env.example`, and the root `.env.example` for local and production variables. Run local Prisma checks and migrations from the monorepo root with the actual package scripts:
 
 ```bash
-pnpm prisma:generate
-pnpm prisma:migrate:dev
-pnpm --filter @familieappen/api prisma validate
+pnpm --filter @familieappen/api prisma:generate
+pnpm --filter @familieappen/api exec prisma validate
+pnpm --filter @familieappen/api prisma:migrate:dev
 ```
 
-Before production migrations, take a database backup. The production Docker Compose file defines `api` and `web` services. A verified deployment sequence for this repository is:
-
-```bash
-git pull
-docker compose -f docker-compose.prod.yml build
-docker compose -f docker-compose.prod.yml run --rm api pnpm --filter @familieappen/api prisma:migrate:deploy
-docker compose -f docker-compose.prod.yml run --rm api pnpm --filter @familieappen/api prisma migrate status
-docker compose -f docker-compose.prod.yml up -d
-docker compose -f docker-compose.prod.yml ps
-curl -f http://localhost:4000/api/health
-curl -f http://localhost:3000
-```
-
-Then verify admin login manually. Rollback is not automatic; restoring application images does not automatically roll back database migrations.
+Before production migrations, take a database backup and follow the production runbook in `docs/production-deployment.md`. Rollback is not automatic; restoring application images does not automatically roll back database migrations.
 
 Future deployment work may move admin traffic to `admin.familieappen.martila.no`, but the current implementation remains within the existing web application and protected by backend admin guards.
+
+## Production deployment
+
+Use the checked-in production Compose file and the runbook in [docs/production-deployment.md](docs/production-deployment.md) before deploying admin migrations. The production API service requires `POSTGRES_PASSWORD`, `AUTH_JWT_SECRET`, `ADMIN_SESSION_SECRET`, and optionally `ADMIN_SESSION_TTL` (defaults to `604800` seconds in Compose). Do not commit generated secrets.
+
+The first production administrator is created inside the running API container with the actual package script:
+
+```bash
+docker compose -f docker-compose.prod.yml exec api \
+  pnpm --filter @familieappen/api admin:create -- \
+  --email admin@example.com \
+  --name "Admin Name" \
+  --password "replace-with-strong-password" \
+  --role SUPER_ADMIN
+```

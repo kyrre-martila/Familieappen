@@ -28,10 +28,10 @@ export class AuthGuard implements CanActivate {
 
     const user = await this.prisma.client.user.findUnique({
       where: { id: payload.sub },
-      select: { id: true, email: true }
+      select: { id: true, email: true, deactivatedAt: true }
     });
 
-    if (!user) {
+    if (!user || (user as { deactivatedAt?: Date | null }).deactivatedAt) {
       throw new UnauthorizedException("Account is no longer active");
     }
 

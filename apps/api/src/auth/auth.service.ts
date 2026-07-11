@@ -39,6 +39,7 @@ type DatabaseUser = {
   passwordHash: string;
   createdAt: Date;
   updatedAt: Date;
+  deactivatedAt?: Date | null;
 };
 
 type DatabaseSession = {
@@ -127,7 +128,7 @@ export class AuthService {
       where: { email }
     });
 
-    if (!user || !(await this.verifyPassword(password, user.passwordHash))) {
+    if (!user || (user as DatabaseUser).deactivatedAt || !(await this.verifyPassword(password, user.passwordHash))) {
       throw new UnauthorizedException("Invalid email or password");
     }
 
@@ -239,7 +240,7 @@ export class AuthService {
       include: { user: true }
     });
 
-    if (!session || !this.isSessionActive(session)) {
+    if (!session || !this.isSessionActive(session) || session.user?.deactivatedAt) {
       throw new UnauthorizedException("Refresh session is no longer active");
     }
 
