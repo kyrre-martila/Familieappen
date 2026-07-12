@@ -119,3 +119,11 @@ export type AuditLogResponse = PageResponse<AuditLogEntry>;
 export function advertisementStatusLabel(status: string): string { return ({DRAFT:"Draft",SCHEDULED:"Scheduled",ACTIVE:"Active",PAUSED:"Paused",ENDED:"Ended"} as Record<string,string>)[status] ?? status.toLowerCase().replace(/_/g," ").replace(/^./, c=>c.toUpperCase()); }
 export function advertisementPlacementLabel(placement: string): string { return ({HOME:"Home",CALENDAR:"Calendar",MENU:"Menu"} as Record<string,string>)[placement] ?? placement; }
 export function auditActionLabel(action: string): string { return ({ADMIN_LOGIN:"Administrator signed in",ADMIN_LOGOUT:"Administrator signed out",USER_VIEWED:"User viewed",USER_DISABLED:"User deactivated",USER_ENABLED:"User activated",ADVERTISEMENT_CREATED:"Advertisement created",ADVERTISEMENT_UPDATED:"Advertisement updated",ADVERTISEMENT_PUBLISHED:"Advertisement published",ADVERTISEMENT_PAUSED:"Advertisement paused",ADMIN_CREATED:"Administrator created",ADMIN_UPDATED:"Administrator updated",ADMIN_DISABLED:"Administrator disabled"} as Record<string,string>)[action] ?? action.toLowerCase().replace(/_/g," ").replace(/^./, c=>c.toUpperCase()); }
+
+
+export type AdminFamilyRole = "PARENT" | "CHILD" | "GUEST";
+export interface AdminFamilySearchItem { id:string; name:string; memberCount:number; createdAt:string; ownerSummary:string|null; }
+export type AdminFamilySearchResponse = PageResponse<AdminFamilySearchItem>;
+export interface AdminFamilyInviteCode { familyId:string; familyName:string; inviteCode:string; }
+export function familyRoleLabel(role: string): string { return ({OWNER:"Owner",PARENT:"Parent",CHILD:"Child",GUEST:"Guest"} as Record<string,string>)[role] ?? role; }
+export function safeAdminDomainMessage(error: unknown): string { if (!(error instanceof AdminApiError)) return "The request could not be completed. Please try again."; if (error.status===403) return "You do not have permission to perform this support action."; if (error.status===404) return "The requested user or family could not be found. Refresh the page and try again."; return error.message || "The request could not be completed. Please try again."; }

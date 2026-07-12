@@ -4,7 +4,7 @@ import { AdminRequestUser } from "./admin-auth.service";
 import { firstHeaderValue } from "./admin-cookie";
 import { AdminRoles } from "./decorators/admin-roles.decorator";
 import { AdminApiService } from "./admin-api.service";
-import { AdvertisementMutationDto, AdvertisementQueryDto, AuditLogQueryDto, CreateAdminUserDto, PageQueryDto, UpdateAdminUserDto, UpdateUserStatusDto } from "./dto/admin-api.dto";
+import { AdvertisementMutationDto, AdvertisementQueryDto, AuditLogQueryDto, CreateAdminUserDto, CreateUserFamilyDto, MoveUserFamilyDto, PageQueryDto, UpdateAdminUserDto, UpdateUserStatusDto } from "./dto/admin-api.dto";
 import { AdminAuthGuard } from "./guards/admin-auth.guard";
 import { AdminRolesGuard } from "./guards/admin-roles.guard";
 
@@ -15,6 +15,10 @@ export class AdminApiController {
   @Get("dashboard") @AdminRoles("SUPER_ADMIN","SUPPORT","ANALYST","AD_MANAGER") dashboard(){ return this.wrap(this.service.dashboard()); }
   @Get("users") @AdminRoles("SUPER_ADMIN","SUPPORT") users(@Query() q:PageQueryDto){ return this.wrap(this.service.users(q)); }
   @Get("users/:id") @AdminRoles("SUPER_ADMIN","SUPPORT") user(@Param("id") id:string){ return this.wrap(this.service.user(id)); }
+  @Get("families") @AdminRoles("SUPER_ADMIN","SUPPORT") families(@Query() q:PageQueryDto){ return this.wrap(this.service.families(q)); }
+  @Get("users/:userId/families/:familyId/invite-code") @AdminRoles("SUPER_ADMIN","SUPPORT") inviteCode(@Param("userId") userId:string,@Param("familyId") familyId:string,@Req() r:any){ return this.wrap(this.service.familyInviteCode(userId,familyId,r.admin,this.meta(r))); }
+  @Post("users/:userId/move-family") @AdminRoles("SUPER_ADMIN","SUPPORT") moveFamily(@Param("userId") userId:string,@Body() b:MoveUserFamilyDto,@Req() r:any){ return this.wrap(this.service.moveUserFamily(userId,b,r.admin,this.meta(r))); }
+  @Post("users/:userId/create-family") @AdminRoles("SUPER_ADMIN","SUPPORT") createFamily(@Param("userId") userId:string,@Body() b:CreateUserFamilyDto,@Req() r:any){ return this.wrap(this.service.createUserFamily(userId,b,r.admin,this.meta(r))); }
   @Patch("users/:id/status") @AdminRoles("SUPER_ADMIN","SUPPORT") setUserStatus(@Param("id") id:string,@Body() b:UpdateUserStatusDto,@Req() r:any){ return this.wrap(this.service.setUserStatus(id,b,r.admin,this.meta(r))); }
   @Get("statistics") @AdminRoles("SUPER_ADMIN","ANALYST") statistics(){ return this.wrap(this.service.statistics()); }
   @Get("advertisements") @AdminRoles("SUPER_ADMIN","AD_MANAGER") advertisements(@Query() q:AdvertisementQueryDto){ return this.wrap(this.service.advertisements(q)); }
