@@ -1,4 +1,4 @@
-import { AdminApiError, safeAdminErrorMessage, type AdminDashboard, type AdminManagedUserDetail, type AdminStatistics, type AdminUser, type AdminUserListResponse, type AdminUserStatusUpdate, type AdvertisementListResponse, type Advertisement, type AdvertisementMutation, type AuditLogResponse } from "./admin-shared";
+import { AdminApiError, safeAdminErrorMessage, type AdminDashboard, type AdminManagedUserDetail, type AdminStatistics, type AdminUser, type AdminUserListResponse, type AdminUserStatusUpdate, type AdvertisementListResponse, type Advertisement, type AdvertisementMutation, type AuditLogResponse, type AdminFamilySearchResponse, type AdminFamilyInviteCodeResponse, type AdminMoveUserFamilyResponse, type AdminCreateFamilyForUserResponse, type AdminFamilyRole } from "./admin-shared";
 
 const API_BASE_URL = (process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:4000/api").replace(/\/$/, "");
 const API_REQUEST_TIMEOUT_MS = 15_000;
@@ -50,6 +50,10 @@ export async function createManagedAdmin(body: {email:string; password:string; n
 export async function updateManagedAdmin(id:string, body: Partial<Pick<AdminUser,'name'|'role'|'active'>>): Promise<AdminUser> { return adminClientRequest(`/admin/admin-users/${encodeURIComponent(id)}`, { method: 'PATCH', body }); }
 export async function fetchAuditLog(query: {adminId?:string; action?:string; from?:string; to?:string; page?:number; pageSize?:number} = {}): Promise<AuditLogResponse> { const q=qs(query); return adminClientRequest(`/admin/audit-log${q ? `?${q}` : ''}`); }
 
+export async function searchAdminFamilies(query: { search?: string; inviteCode?: string; userId?: string; page?: number; pageSize?: number } = {}): Promise<AdminFamilySearchResponse> { const q = qs(query); return adminClientRequest(`/admin/families${q ? `?${q}` : ""}`); }
+export async function fetchAdminFamilyInviteCode(userId: string, familyId: string): Promise<AdminFamilyInviteCodeResponse> { return adminClientRequest(`/admin/users/${encodeURIComponent(userId)}/families/${encodeURIComponent(familyId)}/invite-code`); }
+export async function moveAdminUserFamily(userId: string, body: { targetFamilyId: string; role: AdminFamilyRole; reason: string }): Promise<AdminMoveUserFamilyResponse> { return adminClientRequest(`/admin/users/${encodeURIComponent(userId)}/move-family`, { method: "POST", body }); }
+export async function createAdminFamilyForUser(userId: string, body: { name: string; reason: string }): Promise<AdminCreateFamilyForUserResponse> { return adminClientRequest(`/admin/users/${encodeURIComponent(userId)}/create-family`, { method: "POST", body }); }
 
 function qs(query: Record<string, string | number | undefined>) { const p = new URLSearchParams(); Object.entries(query).forEach(([k,v]) => { if (v !== undefined && v !== "") p.set(k, String(v)); }); return p.toString(); }
 
@@ -80,7 +84,8 @@ async function adminClientRequest<T>(path: string, options: { method?: string; b
 async function getErrorDetails(response: Response): Promise<[string, number, string?]> {
   try {
     const body = (await response.json()) as ApiErrorBody;
-    return [safeAdminErrorMessage(response.status, body.error?.code), response.status, body.error?.code];
+    const code = body.error?.code ?? (typeof body.message === "string" && body.message.startsWith("admin.") ? body.message : undefined);
+    return [safeAdminErrorMessage(response.status, code), response.status, code];
   } catch {
     return [safeAdminErrorMessage(response.status), response.status];
   }

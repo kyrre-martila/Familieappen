@@ -1,6 +1,6 @@
 import "server-only";
 import { cookies } from "next/headers";
-import { AdminApiError, safeAdminErrorMessage, type AdminDashboard, type AdminManagedUserDetail, type AdminStatistics, type AdminUser, type AdminUserListResponse, type AdvertisementListResponse, type Advertisement, type AuditLogResponse, type AdminRole } from "./admin-shared";
+import { AdminApiError, safeAdminErrorMessage, type AdminDashboard, type AdminManagedUserDetail, type AdminStatistics, type AdminUser, type AdminUserListResponse, type AdvertisementListResponse, type Advertisement, type AuditLogResponse, type AdminRole, type AdminFamilySearchResponse } from "./admin-shared";
 
 const API_BASE_URL = (process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:4000/api").replace(/\/$/, "");
 
@@ -39,6 +39,7 @@ export async function getAdvertisement(id: string): Promise<Advertisement> { ret
 export async function getManagedAdmins(): Promise<AdminUser[]> { return adminApiRequest('/admin/admin-users', { cache: 'no-store' }); }
 export async function getAuditLog(query: {adminId?:string; action?:string; from?:string; to?:string; page?:number; pageSize?:number} = {}): Promise<AuditLogResponse> { const q=qs(query); return adminApiRequest(`/admin/audit-log${q ? `?${q}` : ''}`, { cache: 'no-store' }); }
 
+export async function getAdminFamilies(query: { search?: string; inviteCode?: string; userId?: string; page?: number; pageSize?: number } = {}): Promise<AdminFamilySearchResponse> { const q=qs(query); return adminApiRequest(`/admin/families${q ? `?${q}` : ""}`, { cache: "no-store" }); }
 
 function qs(query: Record<string, string | number | undefined>) { const p = new URLSearchParams(); Object.entries(query).forEach(([k,v]) => { if (v !== undefined && v !== "") p.set(k, String(v)); }); return p.toString(); }
 
@@ -67,7 +68,8 @@ async function adminApiRequest<T>(path: string, init: RequestInit = {}): Promise
 async function getAdminErrorDetails(response: Response): Promise<[string, number, string?]> {
   try {
     const body = (await response.json()) as ApiErrorBody;
-    return [safeAdminErrorMessage(response.status, body.error?.code), response.status, body.error?.code];
+    const code = body.error?.code ?? (typeof body.message === "string" && body.message.startsWith("admin.") ? body.message : undefined);
+    return [safeAdminErrorMessage(response.status, code), response.status, code];
   } catch {
     return [safeAdminErrorMessage(response.status), response.status];
   }
