@@ -16027,3 +16027,12 @@ button.family-settings-row:focus-visible:not(:disabled) {
 @media (max-width: 680px) { .admin-table-wrap { display: none; } .admin-card-list { display: grid; } .admin-filters, .admin-detail-grid, .admin-metrics--compact { grid-template-columns: 1fr; } .admin-user-card dl div, .admin-detail-list div, .admin-bar-row { grid-template-columns: 1fr; } .admin-pagination { justify-content: flex-start; } }
 .admin-field textarea { min-height: 8rem; border: 1px solid var(--color-border-strong); border-radius: var(--radius-m); padding: var(--space-s) var(--space-m); background: var(--color-surface); color: var(--color-text); resize: vertical; }
 .admin-panel h3 { margin: 0; font-size: var(--text-subtitle); }
+
+.admin-button--danger { border-color: color-mix(in srgb, var(--color-danger, #b42318) 45%, var(--color-border)); color: var(--color-danger, #b42318); background: color-mix(in srgb, var(--color-danger, #b42318) 8%, var(--color-surface)); }
+.admin-button--danger:hover:not(:disabled) { background: color-mix(in srgb, var(--color-danger, #b42318) 14%, var(--color-surface)); }
+.admin-danger-zone { border-color: color-mix(in srgb, var(--color-danger, #b42318) 45%, var(--color-border)); background: color-mix(in srgb, var(--color-danger, #b42318) 4%, var(--color-surface)); }
+.admin-impact-list { display: grid; grid-template-columns: repeat(auto-fit, minmax(10rem, 1fr)); gap: var(--space-s); margin: 0; }
+.admin-impact-list div { border: 1px solid var(--color-border); border-radius: var(--radius-m); padding: var(--space-s); background: var(--color-surface-warm); }
+.admin-impact-list dt { color: var(--color-muted); font-size: var(--text-small); }
+.admin-impact-list dd { margin: .15rem 0 0; font-weight: 700; }
+@media (max-width: 640px) { .admin-dialog { width: 100%; max-height: calc(100vh - (2 * var(--gutter))); overflow: auto; } .admin-dialog-actions { position: sticky; bottom: calc(-1 * var(--card-padding)); padding-top: var(--space-s); background: var(--color-surface); flex-direction: column-reverse; } }
