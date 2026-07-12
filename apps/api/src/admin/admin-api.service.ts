@@ -5,7 +5,7 @@ import { PrismaService } from "../prisma";
 import { AdminAuditAction } from "./admin-audit-actions";
 import { AdminRequestUser } from "./admin-auth.service";
 import { AdminRoleDto } from "./dto/admin-auth.dto";
-import { AdvertisementMutationDto, AdvertisementStatusDto, AuditLogQueryDto, CreateAdminUserDto, CreateFamilyForUserDto, FamilySearchQueryDto, MoveUserFamilyDto, PageQueryDto, UpdateAdminUserDto, UpdateUserStatusDto } from "./dto/admin-api.dto";
+import { AdminDeletionDto, AdvertisementMutationDto, AdvertisementStatusDto, AuditLogQueryDto, CreateAdminUserDto, CreateFamilyForUserDto, FamilySearchQueryDto, MoveUserFamilyDto, PageQueryDto, UpdateAdminUserDto, UpdateUserStatusDto } from "./dto/admin-api.dto";
 
 type Meta = { ipAddress?: string | null; userAgent?: string | null };
 const AD_STATUSES = ["DRAFT", "SCHEDULED", "ACTIVE", "PAUSED", "ENDED"];
@@ -24,6 +24,50 @@ export class AdminApiService {
   async users(q: PageQueryDto) { const {page,pageSize,skip,take}=this.page(q,25,100); const where:any={}; const s=this.str(q.search); if(s) where.OR=[{name:{contains:s,mode:"insensitive"}},{email:{contains:s,mode:"insensitive"}}]; if(q.status!==undefined){ const st=this.enumVal(q.status,["active","inactive"],"status"); where.deactivatedAt=st==="active"?null:{not:null}; } const orderBy={createdAt:this.enumVal(q.sort,["asc","desc"],"sort",true)??"desc"}; const [total,items]=await Promise.all([this.db.user.count({where}),this.db.user.findMany({where,orderBy,skip,take,select:{id:true,name:true,email:true,createdAt:true,updatedAt:true,deactivatedAt:true,memberships:{select:{family:{select:{id:true,name:true,_count:{select:{members:true}}}},updatedAt:true},take:1,orderBy:{updatedAt:"desc"}}}})]); return {page,pageSize,total,items:items.map((u:any)=>({id:u.id,name:u.name,email:u.email,createdAt:u.createdAt.toISOString(),active:!u.deactivatedAt,familyName:u.memberships[0]?.family?.name??null,familyMemberCount:u.memberships[0]?.family?._count?.members??0,lastRelevantActivity:u.updatedAt?.toISOString?.()??null}))}; }
 
   async user(id:string){ const u=await this.db.user.findUnique({where:{id},select:{id:true,name:true,email:true,createdAt:true,updatedAt:true,deactivatedAt:true,memberships:{select:{family:{select:{id:true,name:true,_count:{select:{members:true}}}},role:true,displayName:true}}}}); if(!u) throw new NotFoundException("User not found"); return {id:u.id,name:u.name,email:u.email,createdAt:u.createdAt.toISOString(),updatedAt:u.updatedAt.toISOString(),active:!u.deactivatedAt,memberships:u.memberships.map((m:any)=>({familyId:m.family.id,familyName:m.family.name,role:m.role,displayName:m.displayName,familyMemberCount:m.family._count.members}))}; }
+
+  async userDeletionImpact(userId:string){
+    const user=await this.db.user.findUnique({where:{id:userId},select:{id:true,memberships:{select:{id:true,familyId:true,role:true}}}}); if(!user) throw new NotFoundException("admin.user_not_found");
+    const familyIds=(user.memberships??[]).map((m:any)=>m.familyId);
+    const [sessions,passwordResetTokens,pushDevices,notifications,actedNotifications,familyInvitations,shoppingListInvitations,wishlistShareInvitations,wishlistItems,wishlistReservations,shoppingListAccesses,ownedShoppingLists,createdShoppingItems,checkedShoppingItems,calendarEvents,reminders,tasksCreated,tasksCompleted,feedbackSubmissions]=await Promise.all([
+      this.db.userSession.count({where:{userId}}),this.db.passwordResetToken.count({where:{userId}}),this.db.pushDevice.count({where:{userId}}),this.db.notification.count({where:{recipientUserId:userId}}),this.db.notification.count({where:{actorUserId:userId}}),this.db.familyInvitation.count({where:{OR:[{createdByUserId:userId},{invitedUserId:userId}]}}),this.db.shoppingListInvitation.count({where:{OR:[{createdByUserId:userId},{invitedUserId:userId}]}}),this.db.wishlistShareInvitation.count({where:{OR:[{wishlistOwnerUserId:userId},{createdByUserId:userId},{invitedUserId:userId}]}}),this.db.wishlistItem.count({where:{ownerUserId:userId}}),this.db.wishlistItemReservation.count({where:{reservedByUserId:userId}}),this.db.shoppingListAccess.count({where:{userId}}),this.db.shoppingList.count({where:{ownerUserId:userId}}),this.db.shoppingListItem.count({where:{createdByUserId:userId}}),this.db.shoppingListItem.count({where:{checkedByUserId:userId}}),this.db.calendarEvent.count({where:{createdByUserId:userId}}),this.db.reminder.count({where:{createdByUserId:userId}}),this.db.task.count({where:{createdByUserId:userId}}),this.db.task.count({where:{completedByUserId:userId}}),this.db.feedbackSubmission.count({where:{userId}})
+    ]);
+    return {userId,familyCount:familyIds.length,membershipCount:user.memberships?.length??0,soleOwnerFamilyCount:await this.soleOwnerFamilyCount(this.db,userId,user.memberships??[]),sessions,passwordResetTokens,pushDevices,notifications,actedNotifications,familyInvitations,shoppingListInvitations,wishlistShareInvitations,wishlistItems,wishlistReservations,shoppingListAccesses,ownedShoppingLists,createdShoppingItems,checkedShoppingItems,calendarEvents,reminders,tasksCreated,tasksCompleted,feedbackSubmissions};
+  }
+
+  async familyDeletionImpact(familyId:string){
+    const family=await this.db.family.findUnique({where:{id:familyId},select:{id:true,members:{select:{userId:true}}}}); if(!family) throw new NotFoundException("admin.family_not_found");
+    const userIds=Array.from(new Set((family.members??[]).map((m:any)=>m.userId).filter(Boolean)));
+    const memberCounts=await Promise.all(userIds.map(async(id:any)=>({id,count:await this.db.familyMember.count({where:{userId:id}})})));
+    const exclusiveIds=memberCounts.filter((m)=>m.count===1).map((m)=>m.id);
+    const detachedIds=memberCounts.filter((m)=>m.count>1).map((m)=>m.id);
+    const [calendarEvents,calendarEventParticipants,calendarEventExceptions,calendarIcsSources,calendarExportFeeds,shoppingLists,shoppingItems,shoppingListInvitations,shoppingListAccesses,customShoppingItems,mealPlans,mealPlanDays,tasks,reminders,reminderAudienceMembers,lists,listItems,wishlistItems,wishlistReservations,wishlistShareInvitations,familyInvitations,notifications,schoolWeekReminders,feedbackSubmissions]=await Promise.all([
+      this.db.calendarEvent.count({where:{familyId}}),this.countCalendarParticipantsByFamily(familyId),this.countCalendarExceptionsByFamily(familyId),this.db.calendarIcsSource.count({where:{familyId}}),this.db.calendarExportFeed.count({where:{familyId}}),this.db.shoppingList.count({where:{familyId}}),this.countShoppingItemsByFamily(familyId),this.db.shoppingListInvitation.count({where:{familyId}}),this.countShoppingAccessesByFamily(familyId),this.db.familyCustomShoppingItem.count({where:{familyId}}),this.db.mealPlan.count({where:{familyId}}),this.db.mealPlanDay.count({where:{familyId}}),this.db.task.count({where:{familyId}}),this.db.reminder.count({where:{familyId}}),this.countReminderAudienceByFamily(familyId),this.db.list.count({where:{familyId}}),this.countListItemsByFamily(familyId),this.db.wishlistItem.count({where:{familyId}}),this.countWishlistReservationsByFamily(familyId),this.db.wishlistShareInvitation.count({where:{familyId}}),this.db.familyInvitation.count({where:{familyId}}),this.db.notification.count({where:{familyId}}),this.db.schoolWeekReminder.count({where:{familyId}}),this.db.feedbackSubmission.count({where:{familyId}})
+    ]);
+    return {familyId,membershipCount:family.members?.length??0,usersDeleted:exclusiveIds.length,usersDetached:detachedIds.length,calendarEvents,calendarEventParticipants,calendarEventExceptions,calendarIcsSources,calendarExportFeeds,shoppingLists,shoppingItems,shoppingListInvitations,shoppingListAccesses,customShoppingItems,mealPlans,mealPlanDays,tasks,reminders,reminderAudienceMembers,lists,listItems,wishlistItems,wishlistReservations,wishlistShareInvitations,familyInvitations,notifications,schoolWeekReminders,feedbackSubmissions,uploads:0};
+  }
+
+  async deleteUser(userId:string,b:AdminDeletionDto,admin:AdminRequestUser,meta:Meta){ const reason=this.reason(b.reason);
+    return this.db.$transaction(async(tx:any)=>{
+      const user=await tx.user.findUnique({where:{id:userId},select:{id:true,memberships:{select:{id:true,familyId:true,role:true}}}}); if(!user) throw new NotFoundException("admin.user_not_found");
+      const soleOwnerFamilyCount=await this.soleOwnerFamilyCount(tx,userId,user.memberships??[]); if(soleOwnerFamilyCount>0) throw new ConflictException("admin.family_owner_delete_blocked");
+      await tx.user.delete({where:{id:userId}}).catch(()=>{throw new ConflictException("admin.user_delete_conflict")});
+      await tx.adminAuditLog.create({data:{adminUserId:admin.id,action:AdminAuditAction.USER_DELETED_BY_ADMIN,targetType:"User",targetId:userId,metadata:{userId,familyIds:(user.memberships??[]).map((m:any)=>m.familyId),membershipCount:user.memberships?.length??0,reasonSummary:this.summarize(reason)},ipAddress:meta.ipAddress??null}});
+      return {userId,deleted:true};
+    },{isolationLevel:"Serializable"});
+  }
+
+  async deleteFamily(familyId:string,b:AdminDeletionDto,admin:AdminRequestUser,meta:Meta){ const reason=this.reason(b.reason);
+    return this.db.$transaction(async(tx:any)=>{
+      const family=await tx.family.findUnique({where:{id:familyId},select:{id:true,members:{select:{userId:true}}}}); if(!family) throw new NotFoundException("admin.family_not_found");
+      const userIds=Array.from(new Set((family.members??[]).map((m:any)=>m.userId).filter(Boolean)));
+      const counts=await Promise.all(userIds.map(async(id:any)=>({id,count:await tx.familyMember.count({where:{userId:id}})})));
+      const exclusiveIds=counts.filter((m)=>m.count===1).map((m)=>m.id); const detachedIds=counts.filter((m)=>m.count>1).map((m)=>m.id);
+      await tx.user.deleteMany({where:{id:{in:exclusiveIds}}});
+      await tx.family.delete({where:{id:familyId}}).catch(()=>{throw new ConflictException("admin.family_delete_conflict")});
+      await tx.adminAuditLog.create({data:{adminUserId:admin.id,action:AdminAuditAction.FAMILY_DELETED_BY_ADMIN,targetType:"Family",targetId:familyId,metadata:{familyId,usersDeleted:exclusiveIds.length,usersDetached:detachedIds.length,reasonSummary:this.summarize(reason)},ipAddress:meta.ipAddress??null}});
+      return {familyId,deleted:true,usersDeleted:exclusiveIds.length,usersDetached:detachedIds.length};
+    },{isolationLevel:"Serializable"});
+  }
 
   async setUserStatus(id:string, body:UpdateUserStatusDto, admin:AdminRequestUser, meta:Meta){ const active=this.bool(body.active,"active"); return this.db.$transaction(async(tx:any)=>{ const before=await tx.user.findUnique({where:{id},select:{id:true,deactivatedAt:true}}); if(!before) throw new NotFoundException("User not found"); const user=await tx.user.update({where:{id},data:{deactivatedAt:active?null:new Date()},select:{id:true,name:true,email:true,deactivatedAt:true,updatedAt:true}}); await tx.adminAuditLog.create({data:{adminUserId:admin.id,action:active?AdminAuditAction.USER_ENABLED:AdminAuditAction.USER_DISABLED,targetType:"User",targetId:id,metadata:{previousActive:!before.deactivatedAt,newActive:active},ipAddress:meta.ipAddress??null}}); return {id:user.id,name:user.name,email:user.email,active:!user.deactivatedAt,updatedAt:user.updatedAt.toISOString()}; }); }
 
@@ -91,6 +135,15 @@ export class AdminApiService {
   private generateFamilyCode(){ const bytes=randomBytes(6); return `FA-${Array.from(bytes,(b)=>FAMILY_CODE_ALPHABET[b%FAMILY_CODE_ALPHABET.length]).join("")}`; }
   private async createFamilyWithCode(tx:any,data:any){ for(let i=0;i<12;i++){ const code=this.generateFamilyCode(); const existing=await tx.family.findUnique({where:{code}}).catch(()=>null); if(existing) continue; try{return await tx.family.create({data:{...data,code},select:{id:true,name:true,code:true}})}catch(e){ if(this.isUnique(e)) continue; throw e; } } throw new ConflictException("Could not generate a unique family code"); }
   private isUnique(e:any){ return e&&typeof e==="object"&&e.code==="P2002"; }
+  private async soleOwnerFamilyCount(tx:any,userId:string,memberships:any[]){ let count=0; for(const m of memberships){ if(m.role==="OWNER"&&(await tx.familyMember.count({where:{familyId:m.familyId,role:"OWNER",userId:{not:userId}}}))<1) count++; } return count; }
+  private async countByRelated(model:any,relation:string,familyId:string){ return model.count({where:{[relation]:{familyId}}}); }
+  private countCalendarParticipantsByFamily(familyId:string){ return this.countByRelated(this.db.calendarEventParticipant,"event",familyId); }
+  private countCalendarExceptionsByFamily(familyId:string){ return this.countByRelated(this.db.calendarEventException,"recurringEvent",familyId); }
+  private countShoppingItemsByFamily(familyId:string){ return this.countByRelated(this.db.shoppingListItem,"shoppingList",familyId); }
+  private countShoppingAccessesByFamily(familyId:string){ return this.countByRelated(this.db.shoppingListAccess,"shoppingList",familyId); }
+  private countReminderAudienceByFamily(familyId:string){ return this.countByRelated(this.db.reminderAudienceMember,"reminder",familyId); }
+  private countListItemsByFamily(familyId:string){ return this.countByRelated(this.db.listItem,"list",familyId); }
+  private countWishlistReservationsByFamily(familyId:string){ return this.countByRelated(this.db.wishlistItemReservation,"wishlistItem",familyId); }
 
   private safeMetadata(value:any): any { if (Array.isArray(value)) return value.map((v)=>this.safeMetadata(v)); if (value && typeof value === "object") { const out:any = {}; for (const [key, nested] of Object.entries(value)) { if (/password|passwordHash|token|session|secret|privateUrl|invitationToken/i.test(key)) out[key] = "[redacted]"; else out[key] = this.safeMetadata(nested); } return out; } return value; }
 
