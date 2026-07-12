@@ -1,15 +1,18 @@
-import { BadRequestException, ForbiddenException, Injectable, NotFoundException } from "@nestjs/common";
+import { BadRequestException, ConflictException, ForbiddenException, Injectable, NotFoundException } from "@nestjs/common";
+import { randomBytes } from "node:crypto";
 import { AuthService } from "../auth";
 import { PrismaService } from "../prisma";
 import { AdminAuditAction } from "./admin-audit-actions";
 import { AdminRequestUser } from "./admin-auth.service";
 import { AdminRoleDto } from "./dto/admin-auth.dto";
-import { AdvertisementMutationDto, AdvertisementStatusDto, AuditLogQueryDto, CreateAdminUserDto, PageQueryDto, UpdateAdminUserDto, UpdateUserStatusDto } from "./dto/admin-api.dto";
+import { AdvertisementMutationDto, AdvertisementStatusDto, AuditLogQueryDto, CreateAdminUserDto, CreateFamilyForUserDto, FamilySearchQueryDto, MoveUserFamilyDto, PageQueryDto, UpdateAdminUserDto, UpdateUserStatusDto } from "./dto/admin-api.dto";
 
 type Meta = { ipAddress?: string | null; userAgent?: string | null };
 const AD_STATUSES = ["DRAFT", "SCHEDULED", "ACTIVE", "PAUSED", "ENDED"];
 const AD_PLACEMENTS = ["HOME", "CALENDAR", "MENU"];
 const ADMIN_ROLES = ["SUPER_ADMIN", "SUPPORT", "ANALYST", "AD_MANAGER"];
+const FAMILY_ROLES = ["OWNER", "PARENT", "CHILD", "GUEST"];
+const FAMILY_CODE_ALPHABET = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
 
 @Injectable()
 export class AdminApiService {
@@ -24,6 +27,49 @@ export class AdminApiService {
 
   async setUserStatus(id:string, body:UpdateUserStatusDto, admin:AdminRequestUser, meta:Meta){ const active=this.bool(body.active,"active"); return this.db.$transaction(async(tx:any)=>{ const before=await tx.user.findUnique({where:{id},select:{id:true,deactivatedAt:true}}); if(!before) throw new NotFoundException("User not found"); const user=await tx.user.update({where:{id},data:{deactivatedAt:active?null:new Date()},select:{id:true,name:true,email:true,deactivatedAt:true,updatedAt:true}}); await tx.adminAuditLog.create({data:{adminUserId:admin.id,action:active?AdminAuditAction.USER_ENABLED:AdminAuditAction.USER_DISABLED,targetType:"User",targetId:id,metadata:{previousActive:!before.deactivatedAt,newActive:active},ipAddress:meta.ipAddress??null}}); return {id:user.id,name:user.name,email:user.email,active:!user.deactivatedAt,updatedAt:user.updatedAt.toISOString()}; }); }
 
+
+
+  async familyInviteCode(userId:string,familyId:string,admin:AdminRequestUser,meta:Meta){
+    const membership=await this.db.familyMember.findFirst({where:{userId,familyId},include:{family:{select:{id:true,name:true,code:true}}}});
+    if(!membership?.family?.code) throw new NotFoundException("Family membership was not found");
+    await this.audit(admin.id,AdminAuditAction.FAMILY_INVITE_CODE_VIEWED,"Family",familyId,meta,{userId,familyId,familyName:membership.family.name});
+    return {familyId:membership.family.id,familyName:membership.family.name,inviteCode:membership.family.code};
+  }
+
+  async families(q:FamilySearchQueryDto){
+    const {page,pageSize,skip,take}=this.page(q,25,50); const where:any={}; const s=this.str(q.search); const code=this.optionalFamilyCode(q.inviteCode);
+    if(s) where.name={contains:s,mode:"insensitive"}; if(code) where.code=code;
+    const selectedUserId=this.str(q.userId);
+    const [total,items]=await Promise.all([this.db.family.count({where}),this.db.family.findMany({where,skip,take,orderBy:[{createdAt:"desc"},{id:"asc"}],select:{id:true,name:true,createdAt:true,members:{select:{userId:true,role:true,displayName:true,user:{select:{id:true,name:true,email:true}}}},_count:{select:{members:true}}}})]);
+    return {page,pageSize,total,items:items.map((f:any)=>({familyId:f.id,familyName:f.name,createdAt:f.createdAt.toISOString(),memberCount:f._count?.members??f.members?.length??0,owners:(f.members??[]).filter((m:any)=>m.role==="OWNER").map((m:any)=>({userId:m.userId,name:m.user?.name??m.displayName,email:m.user?.email??null})),isSelectedUserMember:selectedUserId?Boolean((f.members??[]).some((m:any)=>m.userId===selectedUserId)):undefined}))};
+  }
+
+  async moveUserFamily(userId:string,b:MoveUserFamilyDto,admin:AdminRequestUser,meta:Meta){
+    const targetFamilyId=this.reqStr(b.targetFamilyId,"targetFamilyId"); const role=this.enumVal(b.role??"GUEST",FAMILY_ROLES,"role"); const reason=this.reason(b.reason);
+    return this.db.$transaction(async(tx:any)=>{
+      const user=await tx.user.findUnique({where:{id:userId},select:{id:true,name:true,email:true,deactivatedAt:true,memberships:{select:{id:true,familyId:true,role:true}}}}); if(!user) throw new NotFoundException("admin.user_not_found"); if(user.deactivatedAt) throw new BadRequestException("admin.user_requires_family");
+      const target=await tx.family.findUnique({where:{id:targetFamilyId},select:{id:true,name:true}}); if(!target) throw new NotFoundException("admin.family_not_found");
+      const current=user.memberships??[]; if(current.some((m:any)=>m.familyId===targetFamilyId)) throw new ConflictException("admin.same_family"); if(current.length<1) throw new ConflictException("admin.user_requires_family");
+      for(const m of current){ if(m.role==="OWNER"){ const owners=await tx.familyMember.count({where:{familyId:m.familyId,role:"OWNER",userId:{not:userId}}}); if(owners<1) throw new ConflictException("admin.owner_move_blocked"); } }
+      await tx.familyMember.create({data:{userId,familyId:targetFamilyId,displayName:user.name,role,includeInSchoolWeek:role==="CHILD"}}).catch((e:any)=>{throw new ConflictException("admin.family_membership_conflict")});
+      await tx.familyInvitation.updateMany({where:{invitedUserId:userId,status:"pending",OR:[{familyId:targetFamilyId},{familyId:{in:current.map((m:any)=>m.familyId)}}]},data:{status:"revoked",revokedAt:new Date()}});
+      await tx.familyMember.deleteMany({where:{userId,familyId:{in:current.map((m:any)=>m.familyId)}}});
+      await tx.adminAuditLog.create({data:{adminUserId:admin.id,action:AdminAuditAction.USER_MOVED_TO_FAMILY,targetType:"User",targetId:userId,metadata:{userId,fromFamilyIds:current.map((m:any)=>m.familyId),targetFamilyId,targetFamilyName:target.name,role,reasonSummary:this.summarize(reason)},ipAddress:meta.ipAddress??null}});
+      return {userId,targetFamilyId,targetFamilyName:target.name,role};
+    },{isolationLevel:"Serializable"});
+  }
+
+  async createFamilyForUser(userId:string,b:CreateFamilyForUserDto,admin:AdminRequestUser,meta:Meta){
+    const name=this.limitedStr(b.name,"name",80); const reason=this.reason(b.reason);
+    return this.db.$transaction(async(tx:any)=>{
+      const user=await tx.user.findUnique({where:{id:userId},select:{id:true,name:true,email:true,deactivatedAt:true,memberships:{select:{id:true,familyId:true}}}}); if(!user) throw new NotFoundException("admin.user_not_found"); if(user.deactivatedAt) throw new BadRequestException("admin.user_requires_family"); if((user.memberships??[]).length) throw new ConflictException("admin.user_already_in_family");
+      const family=await this.createFamilyWithCode(tx,{name,members:{create:{userId:user.id,displayName:user.name,role:"OWNER"}},shoppingLists:{create:{name:"Family Shopping"}}});
+      await tx.familyInvitation.updateMany({where:{invitedUserId:userId,status:"pending"},data:{status:"revoked",revokedAt:new Date()}});
+      await tx.adminAuditLog.create({data:{adminUserId:admin.id,action:AdminAuditAction.FAMILY_CREATED_BY_ADMIN,targetType:"Family",targetId:family.id,metadata:{userId,familyId:family.id,familyName:family.name,reasonSummary:this.summarize(reason)},ipAddress:meta.ipAddress??null}});
+      return {familyId:family.id,familyName:family.name,userId,role:"OWNER"};
+    },{isolationLevel:"Serializable"});
+  }
+
   async statistics(){ const d30=new Date(Date.now()-30*864e5); const [totalUsers,totalFamilies,regs,events,tasks,reminders,activeImports,ads]=await Promise.all([this.db.user.count(),this.db.family.count(),this.db.user.findMany({where:{createdAt:{gte:d30}},select:{createdAt:true},orderBy:{createdAt:"asc"}}),this.db.calendarEvent.count({where:{createdAt:{gte:d30}}}),this.db.task.count({where:{createdAt:{gte:d30}}}),this.db.reminder.count({where:{createdAt:{gte:d30}}}),this.db.calendarIcsSource.count({where:{active:true}}),this.db.advertisement.groupBy({by:["status"],_count:{_all:true}})]); const byDay:any={}; for(let i=29;i>=0;i--){const d=new Date(Date.now()-i*864e5).toISOString().slice(0,10);byDay[d]=0;} regs.forEach((r:any)=>{const d=r.createdAt.toISOString().slice(0,10); if(d in byDay) byDay[d]++;}); return {totalUsers,totalFamilies,registrationsPerDay:Object.entries(byDay).map(([date,count])=>({date,count})),calendarEventsCreatedLast30Days:events,tasksCreatedLast30Days:tasks,remindersCreatedLast30Days:reminders,activeCalendarImports:activeImports,advertisementsByStatus:ads.map((a:any)=>({status:a.status,count:a._count._all}))}; }
 
   async advertisements(q:PageQueryDto){ const {page,pageSize,skip,take}=this.page(q,25,100); const where:any={}; if(q.status!==undefined) where.status=this.enumVal(q.status,AD_STATUSES,"status"); const [total,items]=await Promise.all([this.db.advertisement.count({where}),this.db.advertisement.findMany({where,skip,take,orderBy:{createdAt:"desc"},include:{createdBy:{select:{id:true,name:true,email:true}}}})]); return {page,pageSize,total,items:items.map(this.ad)}; }
@@ -36,6 +82,15 @@ export class AdminApiService {
   async createAdmin(b:CreateAdminUserDto,admin:AdminRequestUser,meta:Meta){ const email=this.email(b.email); const password=this.password(b.password); const role=this.enumVal(b.role,ADMIN_ROLES,"role") as AdminRoleDto; const u=await this.db.adminUser.create({data:{email,passwordHash:await this.auth.hashPassword(password),name:this.reqStr(b.name,"name"),role,active:b.active===undefined?true:this.bool(b.active,"active")},select:{id:true,email:true,name:true,role:true,active:true,lastLoginAt:true,createdAt:true,updatedAt:true}}); await this.audit(admin.id,AdminAuditAction.ADMIN_CREATED,"AdminUser",u.id,meta,{role}); return this.admin(u); }
   async updateAdmin(id:string,b:UpdateAdminUserDto,admin:AdminRequestUser,meta:Meta){ return this.db.$transaction(async(tx:any)=>{ const current=await tx.adminUser.findUnique({where:{id}}); if(!current) throw new NotFoundException("Admin user not found"); const data:any={}; if(b.name!==undefined)data.name=this.reqStr(b.name,"name"); if(b.role!==undefined)data.role=this.enumVal(b.role,ADMIN_ROLES,"role"); if(b.active!==undefined)data.active=this.bool(b.active,"active"); if(current.role==="SUPER_ADMIN"&&current.active&&((data.role&&data.role!=="SUPER_ADMIN")||data.active===false)) await this.ensureAnotherSuper(tx,id); const u=await tx.adminUser.update({where:{id},data,select:{id:true,email:true,name:true,role:true,active:true,lastLoginAt:true,createdAt:true,updatedAt:true}}); await tx.adminAuditLog.create({data:{adminUserId:admin.id,action:data.active===false?AdminAuditAction.ADMIN_DISABLED:AdminAuditAction.ADMIN_UPDATED,targetType:"AdminUser",targetId:id,metadata:{changes:Object.keys(data)},ipAddress:meta.ipAddress??null}}); return this.admin(u); }); }
   async auditLog(q:AuditLogQueryDto, admin:AdminRequestUser){ if(admin.role!=="SUPER_ADMIN") throw new ForbiddenException("Only SUPER_ADMIN can access audit logs"); const {page,pageSize,skip,take}=this.page(q,50,100); const where:any={}; if(q.adminId) where.adminUserId=this.reqStr(q.adminId,"adminId"); if(q.action) where.action=this.reqStr(q.action,"action"); if(q.from||q.to) where.createdAt={...(q.from?{gte:this.date(q.from,"from")}:{}),...(q.to?{lte:this.date(q.to,"to")}: {})}; const [total,items]=await Promise.all([this.db.adminAuditLog.count({where}),this.db.adminAuditLog.findMany({where,skip,take,orderBy:{createdAt:"desc"},include:{adminUser:{select:{id:true,email:true,name:true,role:true}}}})]); return {page,pageSize,total,items:items.map((l:any)=>({id:l.id,adminUser:l.adminUser,action:l.action,targetType:l.targetType,targetId:l.targetId,metadata:this.safeMetadata(l.metadata),ipAddress:l.ipAddress,createdAt:l.createdAt.toISOString()}))}; }
+
+
+  private reason(v:unknown){ const s=this.limitedStr(v,"reason",500); if(s.length<3) throw new BadRequestException("reason is required"); return s; }
+  private limitedStr(v:unknown,n:string,max:number){ const s=this.reqStr(v,n); if(s.length>max) throw new BadRequestException(`${n} is too long`); return s; }
+  private summarize(s:string){ return s.length<=80?s:`${s.slice(0,77)}...`; }
+  private optionalFamilyCode(v:unknown){ if(v===undefined||v===null||v==="") return null; const compact=this.reqStr(v,"inviteCode").toUpperCase().replace(/[\s-]+/g,""); const normalized=compact.startsWith("FA")?compact:`FA${compact}`; if(!/^FA[A-Z0-9]{6}$/.test(normalized)) throw new BadRequestException("inviteCode is invalid"); return `FA-${normalized.slice(2)}`; }
+  private generateFamilyCode(){ const bytes=randomBytes(6); return `FA-${Array.from(bytes,(b)=>FAMILY_CODE_ALPHABET[b%FAMILY_CODE_ALPHABET.length]).join("")}`; }
+  private async createFamilyWithCode(tx:any,data:any){ for(let i=0;i<12;i++){ const code=this.generateFamilyCode(); const existing=await tx.family.findUnique({where:{code}}).catch(()=>null); if(existing) continue; try{return await tx.family.create({data:{...data,code},select:{id:true,name:true,code:true}})}catch(e){ if(this.isUnique(e)) continue; throw e; } } throw new ConflictException("Could not generate a unique family code"); }
+  private isUnique(e:any){ return e&&typeof e==="object"&&e.code==="P2002"; }
 
   private safeMetadata(value:any): any { if (Array.isArray(value)) return value.map((v)=>this.safeMetadata(v)); if (value && typeof value === "object") { const out:any = {}; for (const [key, nested] of Object.entries(value)) { if (/password|passwordHash|token|session|secret|privateUrl|invitationToken/i.test(key)) out[key] = "[redacted]"; else out[key] = this.safeMetadata(nested); } return out; } return value; }
 
