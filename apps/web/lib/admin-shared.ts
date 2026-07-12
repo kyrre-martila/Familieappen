@@ -132,6 +132,11 @@ export interface AdminFamilyInviteCodeResponse { familyId:string; familyName:str
 export interface AdminMoveUserFamilyResponse { userId:string; targetFamilyId:string; targetFamilyName:string; role:AdminFamilyRole; }
 export interface AdminCreateFamilyForUserResponse { familyId:string; familyName:string; userId:string; role:"OWNER"; }
 
+export type AdminFeedbackType = "bug" | "feedback" | string;
+export interface AdminFeedbackSubmission { id:string; type:AdminFeedbackType; title:string; message:string; createdAt:string; userId:string; userName:string|null; email:string|null; familyId:string|null; familyName:string|null; appVersion:string|null; userAgent:string|null; status:string; }
+export interface AdminFeedbackListResponse { bugReports: AdminFeedbackSubmission[]; generalFeedback: AdminFeedbackSubmission[]; }
+export function adminFeedbackTypeLabel(type: string): string { return type === "bug" ? "Bug report" : type === "feedback" ? "General feedback" : type; }
+
 export type AdminDeletionImpact = Record<string, string | number | boolean | null | undefined>;
 export interface AdminUserDeletionImpact extends AdminDeletionImpact { userId: string; familyCount: number; membershipCount: number; soleOwnerFamilyCount: number; }
 export interface AdminFamilyDeletionImpact extends AdminDeletionImpact { familyId: string; membershipCount: number; usersDeleted: number; usersDetached: number; }

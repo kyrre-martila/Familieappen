@@ -9,6 +9,7 @@ import { adminRoleLabel, type AdminRole, type AdminUser } from "../../lib/admin-
 const NAV_ITEMS: Array<{ href: string; label: string; roles: AdminRole[] }> = [
   { href: "/admin", label: "Overview", roles: ["SUPER_ADMIN", "SUPPORT", "ANALYST", "AD_MANAGER"] },
   { href: "/admin/users", label: "Users", roles: ["SUPER_ADMIN", "SUPPORT"] },
+  { href: "/admin/feedback", label: "Feedback", roles: ["SUPER_ADMIN", "SUPPORT"] },
   { href: "/admin/statistics", label: "Statistics", roles: ["SUPER_ADMIN", "ANALYST"] },
   { href: "/admin/advertisements", label: "Advertisements", roles: ["SUPER_ADMIN", "AD_MANAGER"] },
   { href: "/admin/admin-users", label: "Administrators", roles: ["SUPER_ADMIN"] },

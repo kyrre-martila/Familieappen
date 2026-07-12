@@ -1,6 +1,6 @@
 import "server-only";
 import { cookies } from "next/headers";
-import { AdminApiError, safeAdminErrorMessage, type AdminDashboard, type AdminManagedUserDetail, type AdminStatistics, type AdminUser, type AdminUserListResponse, type AdvertisementListResponse, type Advertisement, type AuditLogResponse, type AdminRole, type AdminFamilySearchResponse } from "./admin-shared";
+import { AdminApiError, safeAdminErrorMessage, type AdminDashboard, type AdminManagedUserDetail, type AdminStatistics, type AdminUser, type AdminUserListResponse, type AdvertisementListResponse, type Advertisement, type AuditLogResponse, type AdminRole, type AdminFamilySearchResponse, type AdminFeedbackListResponse, type AdminFeedbackSubmission } from "./admin-shared";
 
 const API_BASE_URL = (process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:4000/api").replace(/\/$/, "");
 
@@ -32,6 +32,9 @@ export async function getAdminUser(id: string): Promise<AdminManagedUserDetail> 
 export async function getAdminStatistics(): Promise<AdminStatistics> {
   return adminApiRequest<AdminStatistics>("/admin/statistics", { cache: "no-store" });
 }
+
+export async function getAdminFeedback(): Promise<AdminFeedbackListResponse> { return adminApiRequest<AdminFeedbackListResponse>("/admin/feedback", { cache: "no-store" }); }
+export async function getAdminFeedbackSubmission(id: string): Promise<AdminFeedbackSubmission> { return adminApiRequest<AdminFeedbackSubmission>(`/admin/feedback/${encodeURIComponent(id)}`, { cache: "no-store" }); }
 
 
 export async function getAdvertisements(query: { status?: string; page?: number; pageSize?: number } = {}): Promise<AdvertisementListResponse> { const q = qs(query); return adminApiRequest(`/admin/advertisements${q ? `?${q}` : ""}`, { cache: "no-store" }); }
