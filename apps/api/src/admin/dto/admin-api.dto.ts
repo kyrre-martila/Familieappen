@@ -10,6 +10,7 @@ export interface AdvertisementQueryDto extends PageQueryDto { status?: unknown; 
 export interface FamilySearchQueryDto extends PageQueryDto { userId?: unknown; inviteCode?: unknown; }
 
 export interface UpdateUserStatusDto { active?: unknown; }
+export interface AdminDeletionDto { reason?: unknown; }
 export interface MoveUserFamilyDto { targetFamilyId?: unknown; role?: unknown; reason?: unknown; }
 export interface CreateFamilyForUserDto { name?: unknown; reason?: unknown; }
 export interface AdminFamilyInviteCodeResponseDto { familyId: string; familyName: string; inviteCode: string; }
