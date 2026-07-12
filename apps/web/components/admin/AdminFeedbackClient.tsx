@@ -21,11 +21,16 @@ function FeedbackSection({ title, emptyTitle, emptyMessage, items }: { title: st
 }
 
 function FeedbackCard({ item }: { item: AdminFeedbackSubmission }) {
-  return <article className="admin-user-card admin-feedback-card">
-    <div className="admin-feedback-card__header"><h3>{item.title}</h3><span className="admin-status admin-status--active">{item.status || "New"}</span></div>
-    <dl><Meta label="Submitted" value={formatDate(item.createdAt)} /><Meta label="User" value={item.userName} /><Meta label="Email" value={item.email} /><Meta label="Family" value={item.familyName} /><Meta label="App version" value={item.appVersion} /></dl>
-    <Link className="admin-button" href={`/admin/feedback/${encodeURIComponent(item.id)}`}>Open submission</Link>
-  </article>;
+  const submittedDate = formatDate(item.createdAt);
+  const status = item.status || "New";
+
+  return <Link className="admin-feedback-row" href={`/admin/feedback/${encodeURIComponent(item.id)}`} aria-label={`Open feedback submission: ${item.title}`}>
+    <span className="admin-feedback-row__main">
+      <span className="admin-feedback-row__title">{item.title}</span>
+      <span className="admin-feedback-row__meta">{item.userName?.trim() ? <>{item.userName.trim()} <span aria-hidden="true">·</span> </> : null}{submittedDate}</span>
+    </span>
+    <span className="admin-status admin-status--active admin-feedback-row__status">{status}</span>
+  </Link>;
 }
 
 export function AdminFeedbackDetail({ item, error }: { item: AdminFeedbackSubmission | null; error?: "forbidden" | "error" | "not-found" }) {
