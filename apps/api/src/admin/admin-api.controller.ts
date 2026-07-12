@@ -25,6 +25,8 @@ export class AdminApiController {
   @Get("families/:familyId/deletion-impact") @AdminRoles("SUPER_ADMIN") familyDeletionImpact(@Param("familyId") familyId:string){ return this.wrap(this.service.familyDeletionImpact(familyId)); }
   @Delete("families/:familyId") @AdminRoles("SUPER_ADMIN") deleteFamily(@Param("familyId") familyId:string,@Body() b:AdminDeletionDto,@Req() r:any){ return this.wrap(this.service.deleteFamily(familyId,b,r.admin,this.meta(r))); }
   @Get("statistics") @AdminRoles("SUPER_ADMIN","ANALYST") statistics(){ return this.wrap(this.service.statistics()); }
+  @Get("feedback") @AdminRoles("SUPER_ADMIN","SUPPORT") feedback(){ return this.wrap(this.service.feedbackSubmissions()); }
+  @Get("feedback/:id") @AdminRoles("SUPER_ADMIN","SUPPORT") feedbackSubmission(@Param("id") id:string){ return this.wrap(this.service.feedbackSubmission(id)); }
   @Get("advertisements") @AdminRoles("SUPER_ADMIN","AD_MANAGER") advertisements(@Query() q:AdvertisementQueryDto){ return this.wrap(this.service.advertisements(q)); }
   @Post("advertisements") @AdminRoles("SUPER_ADMIN","AD_MANAGER") createAd(@Body() b:AdvertisementMutationDto,@Req() r:any){ return this.wrap(this.service.createAdvertisement(b,r.admin,this.meta(r))); }
   @Get("advertisements/:id") @AdminRoles("SUPER_ADMIN","AD_MANAGER") ad(@Param("id") id:string){ return this.wrap(this.service.advertisement(id)); }
