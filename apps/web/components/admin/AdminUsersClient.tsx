@@ -13,10 +13,16 @@ type Props = { initialData: AdminUserListResponse | null; initialError?: "forbid
 export function AdminUsersClient({ initialData, initialError, initialQuery }: Props) {
   const router = useRouter(); const pathname = usePathname(); const params = useSearchParams();
   const [data, setData] = useState(initialData); const [error, setError] = useState<Props["initialError"]>(initialError); const [loading, setLoading] = useState(false);
-  const [searchDraft, setSearchDraft] = useState(initialQuery.search); const latest = useRef(0); const [, startTransition] = useTransition();
+  const [searchDraft, setSearchDraft] = useState(initialQuery.search); const [noticeMessage, setNoticeMessage] = useState<string | null>(null); const latest = useRef(0); const shownNotice = useRef<string | null>(null); const [, startTransition] = useTransition();
   const query = useMemo(() => parseUserQuery(params), [params]);
 
   useEffect(() => { setSearchDraft(query.search); }, [query.search]);
+  useEffect(() => {
+    const notice = params.get("notice");
+    const message = adminUsersNoticeMessage(notice);
+    if (message && shownNotice.current !== notice) { setNoticeMessage(message); shownNotice.current = notice; }
+    if (notice !== null) { const next = new URLSearchParams(params.toString()); next.delete("notice"); router.replace(`${pathname}${next.toString() ? `?${next}` : ""}`, { scroll: false }); }
+  }, [params, pathname, router]);
   useEffect(() => {
     const requestId = ++latest.current; setLoading(true); setError(undefined);
     fetchAdminUsers(toApiQuery(query)).then((next) => { if (requestId === latest.current) setData(next); }).catch((err) => {
@@ -40,12 +46,14 @@ export function AdminUsersClient({ initialData, initialError, initialQuery }: Pr
       <label className="admin-field"><span>Page size</span><select value={query.pageSize} onChange={(e) => update({ pageSize: Number(e.target.value), page: 1 })}>{PAGE_SIZES.map((s) => <option key={s} value={s}>{s}</option>)}</select></label>
       <div className="admin-filter-actions"><button className="admin-button admin-button--primary" type="submit">Search</button>{hasFilters ? <button className="admin-button" type="button" onClick={() => update({ search: "", status: "all", sort: "desc", page: 1, pageSize: 20 })}>Clear filters</button> : null}</div>
     </form>
+    {noticeMessage ? <p className="admin-success" role="status" aria-live="polite">{noticeMessage}</p> : null}
     {loading ? <div className="admin-state admin-state--inline" role="status">Loading users…</div> : null}
     {error === "forbidden" ? <AdminDenied /> : error ? <AdminRetry message="Users could not be loaded. Please try again." onRetry={() => update({})} /> : null}
     {!error && data ? data.items.length ? <><div className="admin-table-wrap"><table className="admin-table"><thead><tr><th>Name</th><th>Email</th><th>Family</th><th>Members</th><th>Registered</th><th>Status</th><th><span className="sr-only">Actions</span></th></tr></thead><tbody>{data.items.map((u) => <tr key={u.id}><td>{fallback(u.name)}</td><td>{fallback(u.email)}</td><td>{fallback(u.familyName)}</td><td>{u.familyMemberCount}</td><td>{formatDate(u.createdAt)}</td><td><Status active={u.active} /></td><td><Link className="admin-button" href={`/admin/users/${encodeURIComponent(u.id)}?from=${encodeURIComponent(`${pathname}${params.toString() ? `?${params}` : ""}`)}`}>Details</Link></td></tr>)}</tbody></table></div><div className="admin-card-list">{data.items.map((u) => <article className="admin-user-card" key={u.id}><h2>{fallback(u.name)}</h2><p>{fallback(u.email)}</p><dl><div><dt>Family</dt><dd>{fallback(u.familyName)}</dd></div><div><dt>Members</dt><dd>{u.familyMemberCount}</dd></div><div><dt>Registered</dt><dd>{formatDate(u.createdAt)}</dd></div><div><dt>Status</dt><dd><Status active={u.active} /></dd></div></dl><Link className="admin-button" href={`/admin/users/${encodeURIComponent(u.id)}?from=${encodeURIComponent(`${pathname}${params.toString() ? `?${params}` : ""}`)}`}>Details</Link></article>)}</div><Pagination page={data.page} total={data.total} totalPages={totalPages} onPage={(page) => update({ page })} /></> : <div className="admin-state admin-state--inline"><h2>{hasFilters ? "No users match these filters" : "No users yet"}</h2><p>{hasFilters ? "Try clearing the search, status, or sort filters." : "There are no registered user accounts in the system."}</p>{hasFilters ? <button className="admin-button" onClick={() => update({ search: "", status: "all", sort: "desc", page: 1, pageSize: 20 })}>Clear filters</button> : null}</div> : null}
   </section>;
 }
 function parseUserQuery(params: URLSearchParams) { const status = params.get("status"); const sortParam = params.get("sort"); const size = Number(params.get("pageSize")); return { search: (params.get("search") ?? "").trim(), status: status === "active" || status === "inactive" ? status : "all", sort: sortParam === "oldest" || sortParam === "asc" ? "asc" : "desc", page: Math.max(1, Number(params.get("page") ?? 1) || 1), pageSize: PAGE_SIZES.includes(size) ? size : 20 } as const; }
+function adminUsersNoticeMessage(notice: string | null) { if (notice === "user-deleted") return "User deleted successfully."; if (notice === "family-deleted") return "Family deleted successfully."; return null; }
 function toApiQuery(q: ReturnType<typeof parseUserQuery>) { return { search: q.search || undefined, status: q.status === "all" ? undefined : q.status, sort: q.sort, page: q.page, pageSize: q.pageSize }; }
 function fallback(v?: string | null) { return v?.trim() || "Not provided"; }
 function formatDate(v: string) { return new Intl.DateTimeFormat("en", { dateStyle: "medium" }).format(new Date(v)); }
