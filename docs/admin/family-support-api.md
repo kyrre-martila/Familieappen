@@ -57,6 +57,40 @@ Audit metadata uses safe identifiers and summaries only. It must not include inv
 
 ## Known limitations
 
-- No frontend support UI is included.
-- Permanent user/family deletion is not implemented and is reserved for a later prompt.
+- Frontend support UI exists for the audited support and super-admin deletion workflows.
 - Family content migration, automatic owner promotion, impersonation, invite-code regeneration, and GDPR workflows are out of scope.
+
+## Permanent deletion workflows
+
+Permanent deletion is available only to `SUPER_ADMIN` admin sessions. `SUPPORT`, `ANALYST`, `AD_MANAGER`, and normal app users must not see functional destructive controls, and the backend `@AdminRoles("SUPER_ADMIN")` checks remain the authorization source of truth.
+
+### User deletion
+
+- Preview impact with `GET /api/admin/users/:userId/deletion-impact` before submitting deletion.
+- Delete with `DELETE /api/admin/users/:userId` and a JSON body containing a non-empty `reason`.
+- The admin UI requires the fixed typed confirmation phrase `DELETE USER` and a support reason. Reasons are not sent in URLs or stored in browser storage.
+- Deletion is irreversible. It removes the account and records related by database cascade or explicit transaction behavior, including sessions and memberships.
+- Family-owned content is not displayed in the preview and may remain when it belongs to families that are not deleted.
+- If the user is the sole owner of any family, deletion is blocked with `admin.family_owner_delete_blocked`. Resolve family ownership or delete the family first; there is no bypass.
+
+### Family deletion
+
+- Preview impact with `GET /api/admin/families/:familyId/deletion-impact` before submitting deletion.
+- Delete with `DELETE /api/admin/families/:familyId` and a JSON body containing a non-empty `reason`.
+- The admin UI requires a support reason and exact typed confirmation using the displayed family name when it is short enough, otherwise `DELETE FAMILY`.
+- Family deletion is irreversible and deletes the family plus family-owned data governed by Prisma relations and explicit transaction behavior.
+- Users who belong exclusively to the deleted family are deleted in the same transaction.
+- Users who also belong to another family are preserved; their membership in the deleted family is detached by the family deletion cascade.
+
+### Impact preview and privacy
+
+Impact previews render counts only. They must not include private calendar content, shopping content, reminder text, invite tokens, private URLs, passwords, session tokens, or raw Prisma errors. If a backend count is unavailable, the UI omits it rather than fabricating a value.
+
+### Audit actions
+
+Permanent deletion writes readable audit actions:
+
+- `USER_DELETED_BY_ADMIN`
+- `FAMILY_DELETED_BY_ADMIN`
+
+Audit metadata contains safe identifiers, aggregate counts, and a short reason summary only. Administrators should verify the requestor's identity before starting either destructive workflow.

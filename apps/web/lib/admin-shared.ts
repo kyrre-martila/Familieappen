@@ -46,7 +46,10 @@ export function adminRoleLabel(role: AdminRole): string {
 export function safeAdminErrorMessage(status: number, code?: string): string {
   if (status === 401) return "Your admin session has expired. Please sign in again.";
   if (status === 403) return "You do not have permission to view this admin page.";
+  if (status === 404) return "The requested admin resource could not be found.";
   if (code === "validation.invalid_input") return "Please check the form and try again.";
+  if (code === "admin.family_owner_delete_blocked") return "This user is the sole owner of a family and cannot be deleted until that family ownership is resolved or the family is deleted.";
+  if (code === "admin.user_delete_conflict" || code === "admin.family_delete_conflict") return "The deletion could not be completed because the data changed. Refresh and try again.";
   return "Something went wrong. Please try again.";
 }
 
@@ -118,7 +121,7 @@ export interface AuditLogEntry { id:string; adminUser: Pick<AdminUser,"id"|"name
 export type AuditLogResponse = PageResponse<AuditLogEntry>;
 export function advertisementStatusLabel(status: string): string { return ({DRAFT:"Draft",SCHEDULED:"Scheduled",ACTIVE:"Active",PAUSED:"Paused",ENDED:"Ended"} as Record<string,string>)[status] ?? status.toLowerCase().replace(/_/g," ").replace(/^./, c=>c.toUpperCase()); }
 export function advertisementPlacementLabel(placement: string): string { return ({HOME:"Home",CALENDAR:"Calendar",MENU:"Menu"} as Record<string,string>)[placement] ?? placement; }
-export function auditActionLabel(action: string): string { return ({ADMIN_LOGIN:"Administrator signed in",ADMIN_LOGOUT:"Administrator signed out",USER_VIEWED:"User viewed",USER_DISABLED:"User deactivated",USER_ENABLED:"User activated",ADVERTISEMENT_CREATED:"Advertisement created",ADVERTISEMENT_UPDATED:"Advertisement updated",ADVERTISEMENT_PUBLISHED:"Advertisement published",ADVERTISEMENT_PAUSED:"Advertisement paused",ADMIN_CREATED:"Administrator created",ADMIN_UPDATED:"Administrator updated",ADMIN_DISABLED:"Administrator disabled"} as Record<string,string>)[action] ?? action.toLowerCase().replace(/_/g," ").replace(/^./, c=>c.toUpperCase()); }
+export function auditActionLabel(action: string): string { return ({ADMIN_LOGIN:"Administrator signed in",ADMIN_LOGOUT:"Administrator signed out",USER_VIEWED:"User viewed",USER_DISABLED:"User deactivated",USER_ENABLED:"User activated",ADVERTISEMENT_CREATED:"Advertisement created",ADVERTISEMENT_UPDATED:"Advertisement updated",ADVERTISEMENT_PUBLISHED:"Advertisement published",ADVERTISEMENT_PAUSED:"Advertisement paused",ADMIN_CREATED:"Administrator created",ADMIN_UPDATED:"Administrator updated",ADMIN_DISABLED:"Administrator disabled",USER_DELETED_BY_ADMIN:"User permanently deleted",FAMILY_DELETED_BY_ADMIN:"Family permanently deleted"} as Record<string,string>)[action] ?? action.toLowerCase().replace(/_/g," ").replace(/^./, c=>c.toUpperCase()); }
 
 export type AdminFamilyRole = "OWNER" | "PARENT" | "CHILD" | "GUEST";
 export const ADMIN_MOVE_FAMILY_ROLES: AdminFamilyRole[] = ["PARENT", "CHILD", "GUEST"];
@@ -128,6 +131,12 @@ export type AdminFamilySearchResponse = PageResponse<AdminFamilySearchItem>;
 export interface AdminFamilyInviteCodeResponse { familyId:string; familyName:string; inviteCode:string; }
 export interface AdminMoveUserFamilyResponse { userId:string; targetFamilyId:string; targetFamilyName:string; role:AdminFamilyRole; }
 export interface AdminCreateFamilyForUserResponse { familyId:string; familyName:string; userId:string; role:"OWNER"; }
+
+export type AdminDeletionImpact = Record<string, string | number | boolean | null | undefined>;
+export interface AdminUserDeletionImpact extends AdminDeletionImpact { userId: string; familyCount: number; membershipCount: number; soleOwnerFamilyCount: number; }
+export interface AdminFamilyDeletionImpact extends AdminDeletionImpact { familyId: string; membershipCount: number; usersDeleted: number; usersDetached: number; }
+export interface AdminDeleteUserResponse { userId: string; deleted: true; }
+export interface AdminDeleteFamilyResponse { familyId: string; deleted: true; usersDeleted: number; usersDetached: number; }
 export function adminSupportDomainMessage(code?: string, fallback = "The support action could not be completed. Please try again."): string {
   switch (code) {
     case "admin.owner_move_blocked": return "This user is the only owner of the current family and cannot be moved until ownership is resolved.";

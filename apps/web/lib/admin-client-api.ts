@@ -1,4 +1,4 @@
-import { AdminApiError, safeAdminErrorMessage, type AdminDashboard, type AdminManagedUserDetail, type AdminStatistics, type AdminUser, type AdminUserListResponse, type AdminUserStatusUpdate, type AdvertisementListResponse, type Advertisement, type AdvertisementMutation, type AuditLogResponse, type AdminFamilySearchResponse, type AdminFamilyInviteCodeResponse, type AdminMoveUserFamilyResponse, type AdminCreateFamilyForUserResponse, type AdminFamilyRole } from "./admin-shared";
+import { AdminApiError, safeAdminErrorMessage, type AdminDashboard, type AdminManagedUserDetail, type AdminStatistics, type AdminUser, type AdminUserListResponse, type AdminUserStatusUpdate, type AdvertisementListResponse, type Advertisement, type AdvertisementMutation, type AuditLogResponse, type AdminFamilySearchResponse, type AdminFamilyInviteCodeResponse, type AdminMoveUserFamilyResponse, type AdminCreateFamilyForUserResponse, type AdminFamilyRole, type AdminUserDeletionImpact, type AdminFamilyDeletionImpact, type AdminDeleteUserResponse, type AdminDeleteFamilyResponse } from "./admin-shared";
 
 const API_BASE_URL = (process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:4000/api").replace(/\/$/, "");
 const API_REQUEST_TIMEOUT_MS = 15_000;
@@ -54,6 +54,10 @@ export async function searchAdminFamilies(query: { search?: string; inviteCode?:
 export async function fetchAdminFamilyInviteCode(userId: string, familyId: string): Promise<AdminFamilyInviteCodeResponse> { return adminClientRequest(`/admin/users/${encodeURIComponent(userId)}/families/${encodeURIComponent(familyId)}/invite-code`); }
 export async function moveAdminUserFamily(userId: string, body: { targetFamilyId: string; role: AdminFamilyRole; reason: string }): Promise<AdminMoveUserFamilyResponse> { return adminClientRequest(`/admin/users/${encodeURIComponent(userId)}/move-family`, { method: "POST", body }); }
 export async function createAdminFamilyForUser(userId: string, body: { name: string; reason: string }): Promise<AdminCreateFamilyForUserResponse> { return adminClientRequest(`/admin/users/${encodeURIComponent(userId)}/create-family`, { method: "POST", body }); }
+export async function fetchAdminUserDeletionImpact(userId: string): Promise<AdminUserDeletionImpact> { return adminClientRequest(`/admin/users/${encodeURIComponent(userId)}/deletion-impact`); }
+export async function deleteAdminUserPermanently(userId: string, body: { reason: string }): Promise<AdminDeleteUserResponse> { return adminClientRequest(`/admin/users/${encodeURIComponent(userId)}`, { method: "DELETE", body }); }
+export async function fetchAdminFamilyDeletionImpact(familyId: string): Promise<AdminFamilyDeletionImpact> { return adminClientRequest(`/admin/families/${encodeURIComponent(familyId)}/deletion-impact`); }
+export async function deleteAdminFamilyPermanently(familyId: string, body: { reason: string }): Promise<AdminDeleteFamilyResponse> { return adminClientRequest(`/admin/families/${encodeURIComponent(familyId)}`, { method: "DELETE", body }); }
 
 function qs(query: Record<string, string | number | undefined>) { const p = new URLSearchParams(); Object.entries(query).forEach(([k,v]) => { if (v !== undefined && v !== "") p.set(k, String(v)); }); return p.toString(); }
 
