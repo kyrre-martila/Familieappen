@@ -51,6 +51,35 @@ test("known notices render fixed success messages once and are removed from the 
   assert(usersSource.includes('router.replace(`${pathname}${next.toString() ? `?${next}` : ""}`, { scroll: false })'));
 });
 
+test("users deletion notice renders above heading and search controls", () => {
+  const noticeIndex = usersSource.indexOf("<AdminUsersSuccessNotice message={noticeMessage}");
+  const headerIndex = usersSource.indexOf('<div className="admin-page-header"><p>User support</p><h1 id="users-title">Users</h1>');
+  const filtersIndex = usersSource.indexOf('<form className="admin-filters"');
+  assert(noticeIndex > -1);
+  assert(headerIndex > noticeIndex);
+  assert(filtersIndex > headerIndex);
+
+  const searchPanelBlock = usersSource.slice(filtersIndex, usersSource.indexOf("</form>", filtersIndex));
+  assert.equal(searchPanelBlock.includes("noticeMessage"), false);
+  assert.equal(searchPanelBlock.includes("AdminUsersSuccessNotice"), false);
+});
+
+test("users deletion notice uses accessible compact success banner with optional dismissal", () => {
+  assert(usersSource.includes('function AdminUsersSuccessNotice({ message, onDismiss }'));
+  assert(usersSource.includes('className="admin-success admin-success--compact"'));
+  assert(usersSource.includes('role="status"'));
+  assert(usersSource.includes('aria-live="polite"'));
+  assert(usersSource.includes('aria-label="Dismiss success notice"'));
+  assert(usersSource.includes('onDismiss={() => setNoticeMessage(null)}'));
+});
+
+test("notice cleanup preserves remaining URL search parameters", () => {
+  assert(usersSource.includes("const next = new URLSearchParams(params.toString())"));
+  assert(usersSource.includes('next.delete("notice")'));
+  assert(usersSource.includes('`${pathname}${next.toString() ? `?${next}` : ""}`'));
+  assert.equal(usersSource.includes("const next = new URLSearchParams()"), false);
+});
+
 test("unknown notice query values do not render arbitrary text", () => {
   assert(usersSource.includes("function adminUsersNoticeMessage(notice: string | null)"));
   assert(usersSource.includes("return null;"));
