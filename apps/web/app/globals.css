@@ -2013,6 +2013,11 @@ select,
   letter-spacing: -0.055em;
 }
 
+.onboarding-hero-title {
+  font-size: var(--h1);
+  line-height: 1.02;
+}
+
 .login-screen__subtitle {
   margin: 0;
   color: #707070;
@@ -2334,10 +2339,6 @@ select,
   gap: 0;
 }
 
-.onboarding-profile-screen .login-screen__title {
-  font-size: var(--h1);
-}
-
 .onboarding-profile-form {
   width: 100%;
 }
@@ -2507,10 +2508,6 @@ select,
 
 .onboarding-family-start-screen__header {
   max-width: 35rem;
-}
-
-.onboarding-family-start-screen .login-screen__title {
-  font-size: clamp(2.35rem, 1.48rem + 6.8vw, 3.45rem);
 }
 
 .onboarding-family-start-screen__choices {
@@ -2720,10 +2717,6 @@ select,
   gap: var(--space-s);
 }
 
-.onboarding-create-family-screen .login-screen__title {
-  font-size: clamp(2.7rem, 1.5rem + 6.5vw, 4.1rem);
-}
-
 .onboarding-create-family-screen .login-screen__subtitle {
   max-width: 31rem;
   justify-self: center;
@@ -2748,10 +2741,6 @@ select,
   .onboarding-create-family-screen__content {
     padding-top: clamp(4.8rem, 10svh, 6rem);
   }
-
-  .onboarding-create-family-screen .login-screen__title {
-    font-size: clamp(2.5rem, 1.58rem + 7.6vw, 3.3rem);
-  }
 }
 
 .family-members-screen {
@@ -2773,10 +2762,6 @@ select,
 
 .family-members-screen__header {
   gap: 0.75rem;
-}
-
-.family-members-screen .login-screen__title {
-  font-size: clamp(2.45rem, 1.65rem + 5.3vw, 4.05rem);
 }
 
 .family-members-screen .login-screen__subtitle {
@@ -3203,7 +3188,6 @@ select,
 
 .app-recommendation-screen .login-screen__title {
   max-width: 36rem;
-  font-size: clamp(2.55rem, 1.55rem + 6.7vw, 4.1rem);
 }
 
 .app-recommendation-screen .login-screen__subtitle {
@@ -3396,7 +3380,6 @@ select,
 
 .join-family-found .login-screen__title {
   color: var(--color-primary);
-  font-size: clamp(2.3rem, 1.55rem + 6.3vw, 3.85rem);
 }
 
 .join-family-found .login-screen__subtitle {
