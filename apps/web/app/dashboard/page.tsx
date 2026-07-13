@@ -6,6 +6,7 @@ import { Bug, MessageSquare } from "lucide-react";
 
 import packageJson from "../../package.json";
 import { AppShell } from "../../components/AppShell";
+import { AdvertisementPlacementCard } from "../../components/AdvertisementCard";
 import { LockedFeatureState } from "../../components/PendingAccess";
 import { useFamilyAccess } from "../../components/ProtectedFamilyRoute";
 import { Badge, Card, EmptyState, PageContainer, SectionHeader } from "../../components/ui";
@@ -129,6 +130,8 @@ function HomeContent() {
               Gå til kalender →
             </Link>
           </Card>
+
+          <AdvertisementPlacementCard placement="HOME" />
 
           <Card className="home-card" tone="default">
             <div className="home-card__header-row">
