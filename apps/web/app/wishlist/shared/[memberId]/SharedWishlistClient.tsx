@@ -11,6 +11,7 @@ import { PageContainer } from "../../../../components/ui";
 import { useSharedWishlists } from "../../../../features/wishlist/hooks/useSharedWishlists";
 import { ApiError, addHuskReminder, removeSharedWishlist, type SharedWishlistItem, type SharedWishlistItemsResponse } from "../../../../lib/api";
 
+import { resolveApiAssetUrl } from "../../../../lib/assets";
 const priceFormatter = new Intl.NumberFormat("nb-NO", {
   maximumFractionDigits: 0,
   style: "currency",
@@ -72,7 +73,7 @@ function SharedWishlistMedia({ item }: { item: SharedWishlistItem }) {
   if (item.imageUrl) {
     return (
       <span className="wishlist-card__media">
-        <img alt="" src={item.imageUrl} loading="lazy" />
+        <img alt="" src={resolveApiAssetUrl(item.imageUrl) ?? item.imageUrl} loading="lazy" />
       </span>
     );
   }
