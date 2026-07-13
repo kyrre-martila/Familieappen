@@ -123,20 +123,35 @@ model AdminAuditLog {
 }
 
 model Advertisement {
-  id          String                 @id @default(cuid())
-  title       String
-  body        String
-  imageUrl    String?
-  targetUrl   String?
-  placement   AdvertisementPlacement
-  status      AdvertisementStatus    @default(DRAFT)
-  startsAt    DateTime?
-  endsAt      DateTime?
-  createdById String
-  createdAt   DateTime               @default(now())
-  updatedAt   DateTime               @updatedAt
-  createdBy   AdminUser              @relation("AdvertisementCreatedByAdmin", fields: [createdById], references: [id], onDelete: Restrict)
-  events      AdvertisementEvent[]
+  id                   String                 @id @default(cuid())
+  title                String
+  /// Deprecated legacy rendered body. New admin flows do not write it.
+  body                 String?
+  /// Deprecated legacy external image URL. New admin flows use uploaded variant paths.
+  imageUrl             String?
+  altText              String?
+  targetUrl            String?
+  placement            AdvertisementPlacement
+  status               AdvertisementStatus    @default(DRAFT)
+  startsAt             DateTime?
+  endsAt               DateTime?
+  mobileImagePath      String?
+  mobileImageWidth     Int?
+  mobileImageHeight    Int?
+  mobileImageMimeType  String?
+  tabletImagePath      String?
+  tabletImageWidth     Int?
+  tabletImageHeight    Int?
+  tabletImageMimeType  String?
+  desktopImagePath     String?
+  desktopImageWidth    Int?
+  desktopImageHeight   Int?
+  desktopImageMimeType String?
+  createdById          String
+  createdAt            DateTime               @default(now())
+  updatedAt            DateTime               @updatedAt
+  createdBy            AdminUser              @relation("AdvertisementCreatedByAdmin", fields: [createdById], references: [id], onDelete: Restrict)
+  events               AdvertisementEvent[]
 
   @@index([status])
   @@index([startsAt, endsAt])
