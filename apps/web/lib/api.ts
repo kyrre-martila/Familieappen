@@ -45,6 +45,11 @@ type LegacyWishlistItem = WishlistItem & {
 };
 
 
+
+export type AdvertisementPlacement = "HOME" | "CALENDAR" | "MENU";
+export type AdvertisementImageVariant = { url: string; width: number; height: number; mimeType: string | null };
+export interface PublicAdvertisement { id: string; placement: AdvertisementPlacement; targetUrl: string; altText: string; images: { mobile: AdvertisementImageVariant; tablet: AdvertisementImageVariant | null; desktop: AdvertisementImageVariant | null } }
+
 export interface ShoppingCatalogCategory {
   id: string;
   name: string;
@@ -395,6 +400,20 @@ export async function logout(): Promise<LogoutResponse> {
   } finally {
     clearAuthSession();
   }
+}
+
+
+export async function getAdvertisements(placement?: AdvertisementPlacement): Promise<PublicAdvertisement[]> {
+  const suffix = placement ? `?${new URLSearchParams({ placement }).toString()}` : "";
+  return apiRequest<PublicAdvertisement[]>(`/advertisements${suffix}`);
+}
+
+export async function recordAdvertisementImpression(advertisementId: string, placement: AdvertisementPlacement): Promise<{ recorded: true }> {
+  return apiRequest<{ recorded: true }>(`/advertisements/${encodeURIComponent(advertisementId)}/impression`, { method: "POST", body: { placement } });
+}
+
+export async function recordAdvertisementClick(advertisementId: string, placement: AdvertisementPlacement): Promise<{ recorded: true }> {
+  return apiRequest<{ recorded: true }>(`/advertisements/${encodeURIComponent(advertisementId)}/click`, { method: "POST", body: { placement } });
 }
 
 export async function getCurrentUserProfile(): Promise<UserProfile> {

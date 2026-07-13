@@ -4,6 +4,7 @@ import { Suspense, useEffect, useRef, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 
 import { AppShell } from "../../components/AppShell";
+import { AdvertisementPlacementCard } from "../../components/AdvertisementCard";
 import { LockedFeatureState } from "../../components/PendingAccess";
 import { useFamilyAccess } from "../../components/ProtectedFamilyRoute";
 import { Button, Card, EmptyState, PageContainer } from "../../components/ui";
@@ -168,6 +169,7 @@ function CalendarPageContent() {
           />
         ) : null}
         {selectedView === "list" ? <CalendarListView /> : null}
+        <AdvertisementPlacementCard placement="CALENDAR" />
       </PageContainer>
       {eventIdParam ? (
         <EventDetailClient

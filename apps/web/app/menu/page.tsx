@@ -2,6 +2,7 @@
 
 import { CalendarDays, CheckCircle2, Gift, Home, ListChecks, LogOut, Settings, ShoppingCart, Utensils } from "lucide-react";
 import { useRouter } from "next/navigation";
+import { AdvertisementPlacementCard } from "../../components/AdvertisementCard";
 import { ProtectedFamilyRoute } from "../../components/ProtectedFamilyRoute";
 import { SettingsCard, SettingsRow, SettingsSection } from "../../components/settings";
 import { logout } from "../../lib/api";
@@ -85,6 +86,8 @@ export default function MenuPage() {
             ))}
           </SettingsCard>
         </SettingsSection>
+
+        <AdvertisementPlacementCard placement="MENU" />
 
         <footer className="menu-footer">
           <button className="button button--secondary menu-logout-button" type="button" onClick={handleLogout}>
