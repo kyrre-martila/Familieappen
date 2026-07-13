@@ -113,10 +113,12 @@ export interface AdminStatistics {
 
 export type AdvertisementStatus = "DRAFT" | "SCHEDULED" | "ACTIVE" | "PAUSED" | "ENDED";
 export type AdvertisementPlacement = "HOME" | "CALENDAR" | "MENU";
-export interface Advertisement { id:string; title:string; body:string; imageUrl:string|null; targetUrl:string|null; placement:AdvertisementPlacement; status:AdvertisementStatus; startsAt:string|null; endsAt:string|null; createdBy?: Pick<AdminUser,"id"|"name"|"email"> | null; createdAt:string; updatedAt:string; }
+export type AdvertisementImageVariant = "MOBILE" | "TABLET" | "DESKTOP";
+export interface AdvertisementImage { url:string; width:number; height:number; mimeType:string; }
+export interface Advertisement { id:string; title:string; body:string|null; imageUrl:string|null; altText:string|null; targetUrl:string|null; placement:AdvertisementPlacement; status:AdvertisementStatus; startsAt:string|null; endsAt:string|null; images:{mobile:AdvertisementImage|null; tablet:AdvertisementImage|null; desktop:AdvertisementImage|null}; createdBy?: Pick<AdminUser,"id"|"name"|"email"> | null; createdAt:string; updatedAt:string; }
 export interface PageResponse<T> { page:number; pageSize:number; total:number; items:T[]; }
 export type AdvertisementListResponse = PageResponse<Advertisement>;
-export interface AdvertisementMutation { title:string; body:string; imageUrl:string|null; targetUrl:string|null; placement:AdvertisementPlacement; status:AdvertisementStatus; startsAt:string|null; endsAt:string|null; }
+export interface AdvertisementMutation { title:string; altText:string|null; targetUrl:string|null; placement:AdvertisementPlacement; status:AdvertisementStatus; startsAt:string|null; endsAt:string|null; }
 export interface AuditLogEntry { id:string; adminUser: Pick<AdminUser,"id"|"name"|"email"|"role"> | null; action:string; targetType:string|null; targetId:string|null; metadata: unknown; ipAddress:string|null; createdAt:string; }
 export type AuditLogResponse = PageResponse<AuditLogEntry>;
 export function advertisementStatusLabel(status: string): string { return ({DRAFT:"Draft",SCHEDULED:"Scheduled",ACTIVE:"Active",PAUSED:"Paused",ENDED:"Ended"} as Record<string,string>)[status] ?? status.toLowerCase().replace(/_/g," ").replace(/^./, c=>c.toUpperCase()); }
@@ -160,6 +162,30 @@ export function adminSupportDomainMessage(code?: string, fallback = "The support
     case "admin.user_requires_family": return "The backend rejected this request for the user's current account or family state.";
     case "admin.user_already_in_family": return "This user already belongs to a family. Move the user to another family instead.";
     case "validation.invalid_input": return "Please check the form fields and try again.";
+    default: return fallback;
+  }
+}
+
+export function adminAdvertisementErrorMessage(code?: string, status?: number, fallback = "Advertisement action could not be completed. Please try again."): string {
+  if (status === 401) return "Your admin session has expired. Please sign in again.";
+  if (status === 403) return "You do not have permission to manage advertisement creatives.";
+  if (status === 404) return "This advertisement no longer exists. Refresh the list and try again.";
+  switch (code) {
+    case "validation.invalid_input": return "Please check the advertisement fields and try again.";
+    case "advertisement.not_found": return "This advertisement no longer exists. Refresh the list and try again.";
+    case "advertisement.upload_missing": return "Choose an image file before uploading.";
+    case "advertisement.invalid_image_type": return "Advertisement images must be JPEG, PNG or WebP.";
+    case "advertisement.invalid_image_content": return "The selected file could not be read as a valid image.";
+    case "advertisement.mime_mismatch": return "The image file type does not match its contents.";
+    case "advertisement.image_too_large": return "Advertisement images must be smaller than 5 MB.";
+    case "advertisement.dimensions_too_large": return "Advertisement image dimensions are too large.";
+    case "advertisement.unsupported_variant": return "That advertisement image variant is not supported.";
+    case "advertisement.storage_failure": return "The image could not be stored. Please try again.";
+    case "advertisement.image_required": return "A mobile image is required before scheduling or activation.";
+    case "advertisement.alt_text_required": return "Alt text is required before scheduling or activation.";
+    case "advertisement.target_url_invalid": return "A valid HTTPS target URL is required before scheduling or activation.";
+    case "advertisement.mobile_removal_blocked": return "The mobile creative cannot be removed; replace it instead.";
+    case "advertisement.replacement_conflict": return "The creative changed during replacement. Refresh and try again.";
     default: return fallback;
   }
 }

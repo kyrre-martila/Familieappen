@@ -1,53 +1,50 @@
 # Advertisement creatives
 
-FamilieAppen advertisements are image-led creative assets. The admin `title` is required for management, but it is internal only and must not be rendered to end users. Advertiser copy, branding and calls to action belong inside the uploaded creative image.
+FamilieAppen advertisements are image-led creative assets. The admin title is internal-only and is never intended for end-user rendering. Advertiser copy, branding and calls to action belong inside the uploaded creative image.
 
-## Model and lifecycle
+## Admin create-draft-first flow
 
-The Prisma `Advertisement` model now keeps legacy `body` and `imageUrl` columns nullable and deprecated while adding `altText` plus separate mobile, tablet and desktop image path/metadata fields. Existing rows are preserved; legacy-only rows may remain as drafts/paused/ended records, but they cannot be scheduled or activated until migrated to uploaded creative assets.
+Admins create a `DRAFT` advertisement first with an internal title, placement, optional alt text, optional HTTPS target URL and optional schedule. Upload controls are shown only after the draft has an advertisement ID because the protected upload endpoints are advertisement-scoped.
 
-Draft advertisements may be incomplete. `SCHEDULED` and `ACTIVE` advertisements require:
+After draft creation, the admin detail page manages metadata independently from image upload. Metadata saves do not reset image state, and image uploads update only the changed viewport variant.
 
-- title
-- non-empty `altText` (trimmed, max 180 characters)
-- HTTPS `targetUrl`
-- uploaded mobile image
-- valid date ordering when both dates are present
+## Metadata guidance
 
-Tablet and desktop images are optional. Planned app rendering fallback is: tablet falls back to mobile; desktop falls back to desktop, then tablet, then mobile.
+- **Internal title:** used only in admin and never shown to app users.
+- **Alt text:** describes the advertisement image for users who cannot see it. It applies to the creative as a whole.
+- **Target URL:** must be HTTPS before an advertisement can be scheduled or activated.
+- **Placement:** uses the backend placement enum.
+- **Schedule:** start and end are optional where backend lifecycle rules allow them; end cannot be before start.
 
-## Upload API
+Legacy `body` and `imageUrl` values are preserved by the backend but are deprecated in the primary admin UI. Legacy-only rows show a non-destructive warning and must be updated with a mobile creative and alt text before scheduling or activation.
 
-Admin-only endpoints:
+## Creative upload UI
 
-- `POST /api/admin/advertisements/:id/images/MOBILE`
-- `POST /api/admin/advertisements/:id/images/TABLET`
-- `POST /api/admin/advertisements/:id/images/DESKTOP`
-- `DELETE /api/admin/advertisements/:id/images/TABLET`
-- `DELETE /api/admin/advertisements/:id/images/DESKTOP`
+The detail page has three viewport panels:
 
-Allowed roles are `SUPER_ADMIN` and `AD_MANAGER`. `SUPPORT`, `ANALYST`, and normal user sessions are denied by the existing admin guards. Upload form field name is `image`; max size is 5 MB.
+- **Mobile:** required before scheduling or activation. Recommended 1080 × 1080 or 1080 × 1350.
+- **Tablet:** optional. Recommended 1200 × 675. Falls back to mobile when missing.
+- **Desktop:** optional. Recommended 1600 × 600 or 1600 × 900. Falls back to tablet, then mobile.
 
-## Validation and processing
+Accepted file types are JPEG, PNG and WebP. The admin UI shows the 5 MB limit before selection and performs a fast client-side size check, while the backend remains authoritative for file type, signature, dimensions and storage validation.
 
-Accepted formats are JPEG, PNG and WebP. SVG, GIF, PDF, HTML, executables, corrupt files, unknown formats, MIME/signature mismatches, files over 5 MB, and images over 8000 × 8000 pixels are rejected. Validation reads file signatures and image dimensions server-side and does not trust extensions, MIME headers or original filenames.
+Selected files can show a temporary local preview and selected filename before upload. Saved previews use the backend-provided preview URL and backend metadata for dimensions and MIME type; the UI does not display original filenames as permanent identifiers.
 
-This first implementation validates and stores original bytes; it does not normalize to WebP or strip EXIF/metadata. Prompt 2 should introduce a maintained image-processing library if metadata stripping and WebP re-encoding are required in production.
+## Replacement and removal
 
-Recommended creative dimensions (not hard validation):
+Uploading to a panel with an existing image replaces that saved variant after a lightweight confirmation. Tablet and desktop variants can be removed with confirmation and then fall back to lower-priority variants. Mobile removal is attempted only through the protected backend endpoint and backend lifecycle restrictions remain authoritative; replace mobile instead when removal is blocked.
 
-- mobile: 1080 × 1080 or 1080 × 1350
-- tablet: 1200 × 675
-- desktop: 1600 × 600 or 1600 × 900
+## Readiness requirements
 
-## Storage and serving
+The readiness panel explains whether these items are ready:
 
-Production Docker mounts `familieappen_uploads` at `/app/uploads`. Advertisement images are stored under `/app/uploads/advertisements/<advertisement-id>/<variant>/<random-name>.<ext>` and saved in the database as normalized relative paths. The original filename is never used. Images are served by the existing static `/uploads/` route, producing stable URLs such as `/uploads/advertisements/<advertisement-id>/mobile/<random>.png` without exposing host paths.
+- Mobile image
+- Alt text
+- HTTPS target URL
+- Schedule
 
-Replacement stores the new file first, updates the database, then asynchronously removes the old file when no record references it. If the database update fails, the new file is removed. Optional tablet/desktop removal clears DB metadata first and then removes the unreferenced file. Mobile removal is blocked; replace it instead. Permanent advertisement deletion removes associated files after DB deletion; soft-ended advertisements keep files.
+`DRAFT` saves remain available when incomplete. `SCHEDULED` and `ACTIVE` submissions are client-side blocked when readiness is incomplete, and the backend still performs authoritative lifecycle validation.
 
-## Audit and limitations
+## Known limitations
 
-Image upload, replacement and removal create advertisement audit entries containing advertisement ID, variant, admin ID and safe metadata (dimensions/MIME type). The audit log does not store file bytes, original filename, raw filesystem path or target URL query data.
-
-Known limitations: validation does not fully decode every image pixel, files are not re-encoded, metadata is not stripped, static file serving uses the existing global `/uploads/` route and does not add advertisement-specific cache headers, and lifecycle file existence checks are limited to the mobile image at publish/update time.
+This admin work does not add user-facing advertisement rendering, public advertisement delivery APIs, responsive picture rendering in the normal app, impression tracking, click tracking, advertiser accounts, billing, targeting, video, SVG, animated GIF, crop editing or image editing.

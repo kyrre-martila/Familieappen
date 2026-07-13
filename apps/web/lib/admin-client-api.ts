@@ -1,4 +1,4 @@
-import { AdminApiError, safeAdminErrorMessage, type AdminDashboard, type AdminManagedUserDetail, type AdminStatistics, type AdminUser, type AdminUserListResponse, type AdminUserStatusUpdate, type AdvertisementListResponse, type Advertisement, type AdvertisementMutation, type AuditLogResponse, type AdminFamilySearchResponse, type AdminFamilyInviteCodeResponse, type AdminMoveUserFamilyResponse, type AdminCreateFamilyForUserResponse, type AdminFamilyRole, type AdminUserDeletionImpact, type AdminFamilyDeletionImpact, type AdminDeleteUserResponse, type AdminDeleteFamilyResponse, type AdminMoveFamilyImpact, type AdminSourceFamilyAction } from "./admin-shared";
+import { AdminApiError, safeAdminErrorMessage, type AdminDashboard, type AdminManagedUserDetail, type AdminStatistics, type AdminUser, type AdminUserListResponse, type AdminUserStatusUpdate, type AdvertisementListResponse, type Advertisement, type AdvertisementMutation, type AdvertisementImage, type AdvertisementImageVariant, type AuditLogResponse, type AdminFamilySearchResponse, type AdminFamilyInviteCodeResponse, type AdminMoveUserFamilyResponse, type AdminCreateFamilyForUserResponse, type AdminFamilyRole, type AdminUserDeletionImpact, type AdminFamilyDeletionImpact, type AdminDeleteUserResponse, type AdminDeleteFamilyResponse, type AdminMoveFamilyImpact, type AdminSourceFamilyAction } from "./admin-shared";
 
 const API_BASE_URL = (process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:4000/api").replace(/\/$/, "");
 const API_REQUEST_TIMEOUT_MS = 15_000;
@@ -45,6 +45,8 @@ export async function fetchAdvertisement(id: string): Promise<Advertisement> { r
 export async function createAdvertisement(body: AdvertisementMutation): Promise<Advertisement> { return adminClientRequest(`/admin/advertisements`, { method: "POST", body }); }
 export async function updateAdvertisement(id: string, body: Partial<AdvertisementMutation>): Promise<Advertisement> { return adminClientRequest(`/admin/advertisements/${encodeURIComponent(id)}`, { method: "PATCH", body }); }
 export async function deleteAdvertisement(id: string): Promise<{id:string;deleted:boolean}> { return adminClientRequest(`/admin/advertisements/${encodeURIComponent(id)}`, { method: "DELETE" }); }
+export async function uploadAdvertisementImage(id: string, variant: AdvertisementImageVariant, file: File): Promise<{advertisement: Advertisement; image: AdvertisementImage}> { const body = new FormData(); body.set("image", file); return adminClientRequest(`/admin/advertisements/${encodeURIComponent(id)}/images/${variant}`, { method: "POST", body }); }
+export async function removeAdvertisementImage(id: string, variant: AdvertisementImageVariant): Promise<Advertisement> { return adminClientRequest(`/admin/advertisements/${encodeURIComponent(id)}/images/${variant}`, { method: "DELETE" }); }
 export async function fetchManagedAdmins(): Promise<AdminUser[]> { return adminClientRequest('/admin/admin-users'); }
 export async function createManagedAdmin(body: {email:string; password:string; name:string; role:AdminUser['role']; active?:boolean}): Promise<AdminUser> { return adminClientRequest('/admin/admin-users', { method: 'POST', body }); }
 export async function updateManagedAdmin(id:string, body: Partial<Pick<AdminUser,'name'|'role'|'active'>>): Promise<AdminUser> { return adminClientRequest(`/admin/admin-users/${encodeURIComponent(id)}`, { method: 'PATCH', body }); }
@@ -64,7 +66,8 @@ function qs(query: Record<string, string | number | undefined>) { const p = new 
 
 async function adminClientRequest<T>(path: string, options: { method?: string; body?: unknown } = {}): Promise<T> {
   const headers = new Headers({ Accept: "application/json" });
-  if (options.body !== undefined) headers.set("Content-Type", "application/json");
+  const isFormData = typeof FormData !== "undefined" && options.body instanceof FormData;
+  if (options.body !== undefined && !isFormData) headers.set("Content-Type", "application/json");
   const controller = new AbortController();
   const timeoutId = globalThis.setTimeout(() => controller.abort(), API_REQUEST_TIMEOUT_MS);
   let response: Response;
@@ -72,7 +75,7 @@ async function adminClientRequest<T>(path: string, options: { method?: string; b
     response = await fetch(`${API_BASE_URL}${path}`, {
       method: options.method ?? "GET",
       headers,
-      body: options.body === undefined ? undefined : JSON.stringify(options.body),
+      body: options.body === undefined ? undefined : isFormData ? options.body as BodyInit : JSON.stringify(options.body),
       credentials: "include",
       signal: controller.signal
     });
