@@ -2,6 +2,7 @@
 
 import { useEffect, useMemo, useRef, useState, type MouseEvent } from "react";
 import { getAdvertisements, recordAdvertisementClick, recordAdvertisementImpression, type AdvertisementImageVariant, type AdvertisementPlacement, type PublicAdvertisement } from "../lib/api";
+import { resolveApiAssetUrl } from "../lib/assets";
 
 export function AdvertisementPlacementCard({ placement }: { placement: AdvertisementPlacement }) {
   const [ad, setAd] = useState<PublicAdvertisement | null>(null);
@@ -14,6 +15,7 @@ export function AdvertisementCard({ advertisement }: { advertisement: PublicAdve
   const impressed = useRef(false);
   const [hidden, setHidden] = useState(false);
   const image = useMemo(() => selectImage(advertisement.images), [advertisement.images]);
+  const imageUrl = resolveApiAssetUrl(image?.url) ?? null;
 
   useEffect(() => {
     const node = ref.current;
@@ -29,7 +31,7 @@ export function AdvertisementCard({ advertisement }: { advertisement: PublicAdve
     return () => observer.disconnect();
   }, [advertisement.id, advertisement.placement]);
 
-  if (hidden || !image || !advertisement.altText) return null;
+  if (hidden || !image || !imageUrl || !advertisement.altText) return null;
 
   async function click(event: MouseEvent<HTMLAnchorElement>) {
     event.preventDefault();
@@ -47,7 +49,7 @@ export function AdvertisementCard({ advertisement }: { advertisement: PublicAdve
   return (
     <a ref={ref} className="advertisement-card" href={advertisement.targetUrl} target="_blank" rel="noopener noreferrer sponsored" onClick={click} aria-label={`Advertisement: ${advertisement.altText}`}>
       <span className="advertisement-card__label">Advertisement</span>
-      <img className="advertisement-card__image" src={image.url} width={image.width} height={image.height} alt={advertisement.altText} loading="lazy" decoding="async" onError={() => setHidden(true)} />
+      <img className="advertisement-card__image" src={imageUrl} width={image.width} height={image.height} alt={advertisement.altText} loading="lazy" decoding="async" onError={() => setHidden(true)} />
     </a>
   );
 }

@@ -23,6 +23,7 @@ import { useFamilyMembers } from "../../features/family/hooks/useFamilyMembers";
 import { PageContainer } from "../../components/ui";
 import { useSharedWishlists } from "../../features/wishlist/hooks/useSharedWishlists";
 import { useWishlist } from "../../features/wishlist/hooks/useWishlist";
+import { resolveApiAssetUrl } from "../../lib/assets";
 import { getWishlistShareInvitations, inviteToWishlistByEmail, resendWishlistShareInvitation, revokeWishlistShareInvitation, type SharedWishlistSummary, type WishlistItem, type WishlistShareInvitation } from "../../lib/api";
 
 const priceFormatter = new Intl.NumberFormat("nb-NO", {
@@ -254,7 +255,7 @@ function WishlistMedia({ item }: { item: WishlistItem }) {
   if (item.imageUrl) {
     return (
       <span className="wishlist-card__media">
-        <img alt="" src={item.imageUrl} loading="lazy" />
+        <img alt="" src={resolveApiAssetUrl(item.imageUrl) ?? item.imageUrl} loading="lazy" />
       </span>
     );
   }

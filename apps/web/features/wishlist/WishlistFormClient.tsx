@@ -9,6 +9,7 @@ import { getUserFacingApiMessage } from "../../lib/auth-family";
 import { type WishlistItem } from "../../lib/api";
 import { useWishlist, type WishlistItemInput } from "./hooks/useWishlist";
 
+import { resolveApiAssetUrl } from "../../lib/assets";
 type WishlistFormMode = "create" | "edit";
 
 type WishlistFormClientProps = {
@@ -188,7 +189,7 @@ export function WishlistFormClient({ itemId, mode }: WishlistFormClientProps) {
         <section className="wishlist-form-media-grid" aria-label="Bilde eller ikon">
           <button className="wishlist-form-media-card wishlist-form-media-card--image" type="button" onClick={() => fileInputRef.current?.click()}>
             <span className="wishlist-form-media-card__preview" aria-hidden="true">
-              {draft.imageUrl ? <img alt="" src={draft.imageUrl} /> : <Camera size={28} />}
+              {draft.imageUrl ? <img alt="" src={resolveApiAssetUrl(draft.imageUrl) ?? draft.imageUrl} /> : <Camera size={28} />}
             </span>
             <span>Bilde</span>
             <small>{draft.imageUrl ? "Endre bilde" : "Legg til bilde"}</small>
