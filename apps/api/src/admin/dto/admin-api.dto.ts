@@ -11,7 +11,8 @@ export interface FamilySearchQueryDto extends PageQueryDto { userId?: unknown; i
 
 export interface UpdateUserStatusDto { active?: unknown; }
 export interface AdminDeletionDto { reason?: unknown; }
-export interface MoveUserFamilyDto { targetFamilyId?: unknown; role?: unknown; reason?: unknown; }
+export interface MoveUserFamilyDto { targetFamilyId?: unknown; role?: unknown; reason?: unknown; sourceFamilyAction?: unknown; }
+export interface MoveUserFamilyImpactQueryDto { targetFamilyId?: unknown; }
 export interface CreateFamilyForUserDto { name?: unknown; reason?: unknown; }
 export interface AdminFamilyInviteCodeResponseDto { familyId: string; familyName: string; inviteCode: string; }
 export interface AdvertisementMutationDto { title?: unknown; body?: unknown; imageUrl?: unknown; targetUrl?: unknown; placement?: unknown; status?: unknown; startsAt?: unknown; endsAt?: unknown; }

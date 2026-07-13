@@ -5,13 +5,14 @@ import { PrismaService } from "../prisma";
 import { AdminAuditAction } from "./admin-audit-actions";
 import { AdminRequestUser } from "./admin-auth.service";
 import { AdminRoleDto } from "./dto/admin-auth.dto";
-import { AdminDeletionDto, AdvertisementMutationDto, AdvertisementStatusDto, AuditLogQueryDto, CreateAdminUserDto, CreateFamilyForUserDto, FamilySearchQueryDto, MoveUserFamilyDto, PageQueryDto, UpdateAdminUserDto, UpdateUserStatusDto } from "./dto/admin-api.dto";
+import { AdminDeletionDto, AdvertisementMutationDto, AdvertisementStatusDto, AuditLogQueryDto, CreateAdminUserDto, CreateFamilyForUserDto, FamilySearchQueryDto, MoveUserFamilyDto, MoveUserFamilyImpactQueryDto, PageQueryDto, UpdateAdminUserDto, UpdateUserStatusDto } from "./dto/admin-api.dto";
 
 type Meta = { ipAddress?: string | null; userAgent?: string | null };
 const AD_STATUSES = ["DRAFT", "SCHEDULED", "ACTIVE", "PAUSED", "ENDED"];
 const AD_PLACEMENTS = ["HOME", "CALENDAR", "MENU"];
 const ADMIN_ROLES = ["SUPER_ADMIN", "SUPPORT", "ANALYST", "AD_MANAGER"];
 const FAMILY_ROLES = ["OWNER", "PARENT", "CHILD", "GUEST"];
+const SOURCE_FAMILY_ACTIONS = ["PRESERVE", "DELETE_IF_EMPTY"];
 const FAMILY_CODE_ALPHABET = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
 
 @Injectable()
@@ -88,18 +89,44 @@ export class AdminApiService {
     return {page,pageSize,total,items:items.map((f:any)=>({familyId:f.id,familyName:f.name,createdAt:f.createdAt.toISOString(),memberCount:f._count?.members??f.members?.length??0,owners:(f.members??[]).filter((m:any)=>m.role==="OWNER").map((m:any)=>({userId:m.userId,name:m.user?.name??m.displayName,email:m.user?.email??null})),isSelectedUserMember:selectedUserId?Boolean((f.members??[]).some((m:any)=>m.userId===selectedUserId)):undefined}))};
   }
 
+  async moveUserFamilyImpact(userId:string,q:MoveUserFamilyImpactQueryDto){
+    const targetFamilyId=this.reqStr(q.targetFamilyId,"targetFamilyId");
+    const user=await this.db.user.findUnique({where:{id:userId},select:{id:true,memberships:{select:{id:true,familyId:true,role:true,family:{select:{id:true,name:true,_count:{select:{members:true}}}}}}}});
+    if(!user) throw new NotFoundException("admin.user_not_found");
+    const target=await this.db.family.findUnique({where:{id:targetFamilyId},select:{id:true,name:true}});
+    if(!target) throw new NotFoundException("admin.family_not_found");
+    const source=(user.memberships??[]).find((m:any)=>m.familyId!==targetFamilyId) ?? (user.memberships??[])[0];
+    if(!source) throw new ConflictException("admin.move_source_family_required");
+    const sourceFamily=await this.db.family.findUnique({where:{id:source.familyId},select:{id:true,name:true,members:{select:{userId:true,role:true}}}});
+    if(!sourceFamily) throw new NotFoundException("admin.move_source_family_not_found");
+    const memberCount=sourceFamily.members?.length??source.family?._count?.members??0;
+    const ownerCount=(sourceFamily.members??[]).filter((m:any)=>m.role==="OWNER").length;
+    const movingUserIsOwner=source.role==="OWNER";
+    const movingUserIsSoleOwner=movingUserIsOwner && ownerCount<2;
+    const userAlreadyInTargetFamily=(user.memberships??[]).some((m:any)=>m.familyId===targetFamilyId);
+    const sourceFamilyWillBecomeEmpty=memberCount===1 && !userAlreadyInTargetFamily;
+    const deletionCounts=sourceFamilyWillBecomeEmpty ? await this.familyDeletionImpact(source.familyId) : null;
+    return {sourceFamilyId:source.familyId,sourceFamilyName:sourceFamily.name,sourceMemberCount:memberCount,sourceOwnerCount:ownerCount,movingUserIsOwner,movingUserIsSoleOwner,sourceFamilyWillBecomeEmpty,sourceFamilyMustBeDeleted:sourceFamilyWillBecomeEmpty,targetFamilyId:target.id,targetFamilyName:target.name,userAlreadyInTargetFamily,...(deletionCounts?{deletionCounts}: {})};
+  }
+
   async moveUserFamily(userId:string,b:MoveUserFamilyDto,admin:AdminRequestUser,meta:Meta){
-    const targetFamilyId=this.reqStr(b.targetFamilyId,"targetFamilyId"); const role=this.enumVal(b.role??"GUEST",FAMILY_ROLES,"role"); const reason=this.reason(b.reason);
+    const targetFamilyId=this.reqStr(b.targetFamilyId,"targetFamilyId"); const role=this.enumVal(b.role??"GUEST",FAMILY_ROLES,"role"); const reason=this.reason(b.reason); const sourceFamilyAction=this.enumVal(b.sourceFamilyAction,SOURCE_FAMILY_ACTIONS,"sourceFamilyAction");
     return this.db.$transaction(async(tx:any)=>{
       const user=await tx.user.findUnique({where:{id:userId},select:{id:true,name:true,email:true,deactivatedAt:true,memberships:{select:{id:true,familyId:true,role:true}}}}); if(!user) throw new NotFoundException("admin.user_not_found"); if(user.deactivatedAt) throw new BadRequestException("admin.user_requires_family");
       const target=await tx.family.findUnique({where:{id:targetFamilyId},select:{id:true,name:true}}); if(!target) throw new NotFoundException("admin.family_not_found");
-      const current=user.memberships??[]; if(current.some((m:any)=>m.familyId===targetFamilyId)) throw new ConflictException("admin.same_family"); if(current.length<1) throw new ConflictException("admin.user_requires_family");
-      for(const m of current){ if(m.role==="OWNER"){ const owners=await tx.familyMember.count({where:{familyId:m.familyId,role:"OWNER",userId:{not:userId}}}); if(owners<1) throw new ConflictException("admin.owner_move_blocked"); } }
-      await tx.familyMember.create({data:{userId,familyId:targetFamilyId,displayName:user.name,role,includeInSchoolWeek:role==="CHILD"}}).catch((e:any)=>{throw new ConflictException("admin.family_membership_conflict")});
-      await tx.familyInvitation.updateMany({where:{invitedUserId:userId,status:"pending",OR:[{familyId:targetFamilyId},{familyId:{in:current.map((m:any)=>m.familyId)}}]},data:{status:"revoked",revokedAt:new Date()}});
-      await tx.familyMember.deleteMany({where:{userId,familyId:{in:current.map((m:any)=>m.familyId)}}});
-      await tx.adminAuditLog.create({data:{adminUserId:admin.id,action:AdminAuditAction.USER_MOVED_TO_FAMILY,targetType:"User",targetId:userId,metadata:{userId,fromFamilyIds:current.map((m:any)=>m.familyId),targetFamilyId,targetFamilyName:target.name,role,reasonSummary:this.summarize(reason)},ipAddress:meta.ipAddress??null}});
-      return {userId,targetFamilyId,targetFamilyName:target.name,role};
+      const current=user.memberships??[]; if(current.some((m:any)=>m.familyId===targetFamilyId)) throw new ConflictException("admin.same_family"); if(current.length<1) throw new ConflictException("admin.move_source_family_required");
+      const source=current[0]; const sourceFamily=await tx.family.findUnique({where:{id:source.familyId},select:{id:true,name:true,members:{select:{userId:true,role:true}}}}); if(!sourceFamily) throw new NotFoundException("admin.move_source_family_not_found");
+      const sourceMemberCount=sourceFamily.members?.length??0; const sourceOwnerCount=(sourceFamily.members??[]).filter((m:any)=>m.role==="OWNER").length; const sourceWillBeEmpty=sourceMemberCount===1;
+      if(sourceWillBeEmpty && sourceFamilyAction!=="DELETE_IF_EMPTY") throw new ConflictException("admin.move_source_family_delete_required");
+      if(!sourceWillBeEmpty && sourceFamilyAction==="DELETE_IF_EMPTY") throw new ConflictException("admin.move_source_family_not_empty");
+      if(!sourceWillBeEmpty && source.role==="OWNER" && sourceOwnerCount<2) throw new ConflictException("admin.owner_move_blocked");
+      await tx.familyMember.create({data:{userId,familyId:targetFamilyId,displayName:user.name,role,includeInSchoolWeek:role==="CHILD"}}).catch(()=>{throw new ConflictException("admin.family_membership_conflict")});
+      await tx.familyInvitation.updateMany({where:{invitedUserId:userId,status:"pending",OR:[{familyId:targetFamilyId},{familyId:source.familyId}]},data:{status:"revoked",revokedAt:new Date()}});
+      await tx.familyMember.deleteMany({where:{userId,familyId:{in:[source.familyId]}}});
+      if(sourceWillBeEmpty) await tx.family.delete({where:{id:source.familyId}}).catch(()=>{throw new ConflictException("admin.move_conflict")});
+      await tx.adminAuditLog.create({data:{adminUserId:admin.id,action:AdminAuditAction.USER_MOVED_TO_FAMILY,targetType:"User",targetId:userId,metadata:{userId,sourceFamilyId:source.familyId,targetFamilyId,targetFamilyName:target.name,sourceFamilyDeleted:sourceWillBeEmpty,targetRole:role,reasonSummary:this.summarize(reason)},ipAddress:meta.ipAddress??null}});
+      if(sourceWillBeEmpty) await tx.adminAuditLog.create({data:{adminUserId:admin.id,action:AdminAuditAction.FAMILY_DELETED_BY_ADMIN,targetType:"Family",targetId:source.familyId,metadata:{familyId:source.familyId,deletedByMove:true,userId,targetFamilyId,reasonSummary:this.summarize(reason)},ipAddress:meta.ipAddress??null}});
+      return {userId,targetFamilyId,targetFamilyName:target.name,role,sourceFamilyId:source.familyId,sourceFamilyDeleted:sourceWillBeEmpty};
     },{isolationLevel:"Serializable"});
   }
 

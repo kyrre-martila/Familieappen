@@ -129,7 +129,9 @@ export function adminFamilyRoleLabel(role: string): string { return ({OWNER:"Own
 export interface AdminFamilySearchItem { familyId:string; familyName:string|null; createdAt:string; memberCount:number; owners:Array<{userId:string|null; name:string|null; email:string|null}>; isSelectedUserMember?:boolean; }
 export type AdminFamilySearchResponse = PageResponse<AdminFamilySearchItem>;
 export interface AdminFamilyInviteCodeResponse { familyId:string; familyName:string; inviteCode:string; }
-export interface AdminMoveUserFamilyResponse { userId:string; targetFamilyId:string; targetFamilyName:string; role:AdminFamilyRole; }
+export type AdminSourceFamilyAction = "PRESERVE" | "DELETE_IF_EMPTY";
+export interface AdminMoveUserFamilyResponse { userId:string; targetFamilyId:string; targetFamilyName:string; role:AdminFamilyRole; sourceFamilyId?: string; sourceFamilyDeleted?: boolean; }
+export interface AdminMoveFamilyImpact { sourceFamilyId:string; sourceFamilyName:string|null; sourceMemberCount:number; sourceOwnerCount:number; movingUserIsOwner:boolean; movingUserIsSoleOwner:boolean; sourceFamilyWillBecomeEmpty:boolean; sourceFamilyMustBeDeleted:boolean; targetFamilyId:string; targetFamilyName:string|null; userAlreadyInTargetFamily:boolean; deletionCounts?: AdminFamilyDeletionImpact; }
 export interface AdminCreateFamilyForUserResponse { familyId:string; familyName:string; userId:string; role:"OWNER"; }
 
 export type AdminFeedbackType = "bug" | "feedback" | string;
@@ -144,6 +146,12 @@ export interface AdminDeleteUserResponse { userId: string; deleted: true; }
 export interface AdminDeleteFamilyResponse { familyId: string; deleted: true; usersDeleted: number; usersDetached: number; }
 export function adminSupportDomainMessage(code?: string, fallback = "The support action could not be completed. Please try again."): string {
   switch (code) {
+    case "admin.move_source_family_required": return "This user does not have a current family membership that can be moved.";
+    case "admin.move_source_family_not_found": return "The current family no longer exists. Refresh the user details and try again.";
+    case "admin.move_source_family_action_invalid": return "Choose what should happen to the current family before moving the user.";
+    case "admin.move_source_family_delete_required": return "This user is the last member of the current family. Confirm deletion of the old family before moving the user.";
+    case "admin.move_source_family_not_empty": return "The current family still has other members and cannot be deleted by this move.";
+    case "admin.move_conflict": return "The move could not be completed because the family data changed. Refresh and try again.";
     case "admin.owner_move_blocked": return "This user is the only owner of the current family and cannot be moved until ownership is resolved.";
     case "admin.same_family": return "The user already belongs to the selected family. Choose a different target family.";
     case "admin.family_not_found": return "The selected family no longer exists. Search again and choose another family.";
