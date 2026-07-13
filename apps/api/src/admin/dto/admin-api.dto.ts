@@ -15,7 +15,8 @@ export interface MoveUserFamilyDto { targetFamilyId?: unknown; role?: unknown; r
 export interface MoveUserFamilyImpactQueryDto { targetFamilyId?: unknown; }
 export interface CreateFamilyForUserDto { name?: unknown; reason?: unknown; }
 export interface AdminFamilyInviteCodeResponseDto { familyId: string; familyName: string; inviteCode: string; }
-export interface AdvertisementMutationDto { title?: unknown; body?: unknown; imageUrl?: unknown; targetUrl?: unknown; placement?: unknown; status?: unknown; startsAt?: unknown; endsAt?: unknown; }
+export interface AdvertisementMutationDto { title?: unknown; body?: unknown; imageUrl?: unknown; altText?: unknown; targetUrl?: unknown; placement?: unknown; status?: unknown; startsAt?: unknown; endsAt?: unknown; }
+export type AdvertisementImageVariantDto = "MOBILE" | "TABLET" | "DESKTOP";
 export interface CreateAdminUserDto { email?: unknown; password?: unknown; name?: unknown; role?: unknown; active?: unknown; }
 export interface UpdateAdminUserDto { name?: unknown; role?: unknown; active?: unknown; }
 
