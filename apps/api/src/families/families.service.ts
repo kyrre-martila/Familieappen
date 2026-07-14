@@ -13,6 +13,7 @@ import {
   FamilyInvitationDto,
   FamilyInviteRequestDto,
   FamilyInviteResponseDto,
+  CurrentUserPendingFamilyAccessDto,
   FamilyMemberDto,
   JoinFamilyByCodeRequestDto,
   FamilyMemberRoleDto,
@@ -130,6 +131,7 @@ type FamilyMemberRecord = {
 type FamilyInvitationRecord = {
   id: string;
   familyId: string;
+  family?: Pick<FamilyRecord, "id" | "name"> | null;
   invitedEmail: string;
   role: AddFamilyMemberRoleDto;
   status: "pending" | "accepted" | "declined" | "revoked";
@@ -217,6 +219,35 @@ export class FamiliesService {
         family: this.toFamilyDto(membership.family),
         membership: this.toFamilyMemberDto(membership)
       }));
+  }
+
+
+  async getCurrentUserPendingAccess(userId: string): Promise<CurrentUserPendingFamilyAccessDto> {
+    const user = await this.getUserOrThrow(userId);
+    const email = this.requireUserEmail(user);
+    const pending = await (this.prisma.client as PrismaClientWithFamilyInvitations).familyInvitation.findFirst({
+      where: {
+        status: "pending",
+        source: "join_request",
+        OR: [
+          { invitedUserId: user.id },
+          { invitedEmail: { equals: email, mode: "insensitive" } }
+        ]
+      },
+      include: { family: { select: { id: true, name: true } } },
+      orderBy: [{ createdAt: "desc" }, { id: "desc" }]
+    } as unknown);
+
+    if (!pending) {
+      return { hasPendingAccess: false, status: null, family: null, createdAt: null };
+    }
+
+    return {
+      hasPendingAccess: true,
+      status: pending.status,
+      family: pending.family ? { id: pending.family.id, name: pending.family.name } : { id: pending.familyId, name: "Familien" },
+      createdAt: pending.createdAt.toISOString()
+    };
   }
 
   async getFamilyDetails(userId: string, familyId: string): Promise<FamilyDetailsDto> {

@@ -40,7 +40,7 @@ export default function CreateFamilyScreen() {
       const created = await createFamily(accessToken, { name });
       if (!created.family.code) await getFamily(accessToken, created.family.id);
       await refreshFamilyStatus();
-      router.replace("/(app)/(tabs)");
+      router.replace("/(onboarding)/invite-members");
     } catch (e) {
       setServerError(
         e instanceof ApiError
@@ -52,7 +52,7 @@ export default function CreateFamilyScreen() {
   return (
     <AuthScreenShell
       title="Opprett familien din"
-      lead="Gi familien et navn og inviter medlemmer senere."
+      lead="Gi familien et navn og inviter medlemmer på neste steg."
     >
       <AuthFormStack accessibilityLabel="Opprett familie-skjema">
         <Controller

@@ -14,6 +14,7 @@ import { ApiError } from "../../lib/api/client";
 import { authStorage } from "../../lib/auth/authStorage";
 import {
   getCurrentUser,
+  getMyPendingFamilyAccess,
   listFamilies,
   loginWithEmail,
   logoutSession,
@@ -56,6 +57,7 @@ type AuthContextValue = {
     password: string;
   }) => Promise<void>;
   refreshFamilyStatus: () => Promise<void>;
+  setCurrentUser: (user: AuthUser) => void;
   logout: () => Promise<void>;
   restoreSession: () => Promise<void>;
 };
@@ -115,10 +117,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
         try {
           const restoredUser = await getCurrentUser(session.accessToken);
-          const families = await listFamilies(session.accessToken);
+          const [families, pendingAccess] = await Promise.all([
+            listFamilies(session.accessToken),
+            getMyPendingFamilyAccess(session.accessToken),
+          ]);
           setAccessToken(session.accessToken);
           setUser(restoredUser);
-          setFamilyStatus(resolveFamilyStatus(families));
+          setFamilyStatus(resolveFamilyStatus(families, pendingAccess, restoredUser));
           setStatus("authenticated");
         } catch (error) {
           if (isUnauthorizedApiError(error)) {
@@ -155,13 +160,16 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     async (auth: AuthResponse) => {
       await authStorage.saveSession(auth.tokens);
       const validatedUser = await getCurrentUser(auth.tokens.accessToken);
-      const families = await listFamilies(auth.tokens.accessToken);
+      const [families, pendingAccess] = await Promise.all([
+        listFamilies(auth.tokens.accessToken),
+        getMyPendingFamilyAccess(auth.tokens.accessToken),
+      ]);
       await queryClient.clear();
       queryClient.setQueryData(["auth", "me"], validatedUser);
       queryClient.setQueryData(["auth", "families"], families);
       setAccessToken(auth.tokens.accessToken);
       setUser(validatedUser);
-      setFamilyStatus(resolveFamilyStatus(families));
+      setFamilyStatus(resolveFamilyStatus(families, pendingAccess, validatedUser));
       setStatus("authenticated");
     },
     [queryClient],
@@ -170,10 +178,21 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const refreshFamilyStatus = useCallback(async () => {
     const token = accessToken;
     if (!token) return;
-    const families = await listFamilies(token);
+    const [families, pendingAccess, currentUser] = await Promise.all([
+      listFamilies(token),
+      getMyPendingFamilyAccess(token),
+      getCurrentUser(token),
+    ]);
     queryClient.setQueryData(["auth", "families"], families);
-    setFamilyStatus(resolveFamilyStatus(families));
+    queryClient.setQueryData(["auth", "me"], currentUser);
+    setUser(currentUser);
+    setFamilyStatus(resolveFamilyStatus(families, pendingAccess, currentUser));
   }, [accessToken, queryClient]);
+
+  const setCurrentUser = useCallback((nextUser: AuthUser) => {
+    setUser(nextUser);
+    queryClient.setQueryData(["auth", "me"], nextUser);
+  }, [queryClient]);
 
   const login = useCallback(
     async (input: { email: string; password: string }) => {
@@ -258,6 +277,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       completeAuthentication,
       register,
       refreshFamilyStatus,
+      setCurrentUser,
       logout,
       restoreSession,
     }),
@@ -274,6 +294,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       refreshFamilyStatus,
       register,
       restoreError,
+      setCurrentUser,
       restoreSession,
       status,
       user,

@@ -27,6 +27,9 @@ export const onboardingStorage = {
       JSON.stringify(profile),
     );
   },
+  async clearProfileDraft() {
+    await secureStorage.deleteItem(ONBOARDING_PROFILE_KEY);
+  },
   async getProfileDraft(): Promise<OnboardingProfileDraft | null> {
     const raw = await secureStorage.getItem(ONBOARDING_PROFILE_KEY);
     if (!raw) return null;

@@ -40,3 +40,15 @@ export interface FamilyDetails {
   members: import("@familieappen/shared").FamilyMember[];
 }
 export type FamilyInvitation = import("@familieappen/shared").FamilyInvitation;
+
+
+export interface CurrentUserPendingFamilyAccess {
+  hasPendingAccess: boolean;
+  status: "pending" | "accepted" | "declined" | "revoked" | null;
+  family: { id: string; name: string } | null;
+  createdAt: string | null;
+}
+export interface FamilyInviteResponse {
+  invitation: FamilyInvitation;
+  email: { ok: boolean; mode: "provider" | "dev-log" };
+}

@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { Controller, useForm } from "react-hook-form";
-import { Keyboard, StyleSheet, View } from "react-native";
+import { Image, Keyboard, Pressable, StyleSheet, View } from "react-native";
+import * as ImagePicker from "expo-image-picker";
 import { router } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
 import {
@@ -12,7 +13,7 @@ import {
   TextButton,
   AppText,
 } from "../../src/components";
-import { updateCurrentUserProfile } from "../../src/features/auth/api";
+import { removeCurrentUserAvatar, updateCurrentUserProfile, uploadCurrentUserAvatar } from "../../src/features/auth/api";
 import { useAuth } from "../../src/features/auth/AuthProvider";
 import { onboardingStorage } from "../../src/features/auth/onboardingStorage";
 import { ApiError } from "../../src/lib/api/client";
@@ -27,8 +28,11 @@ type FormValues = {
 };
 const NORWAY = "+47";
 export default function ProfileScreen() {
-  const { accessToken } = useAuth();
+  const { accessToken, user, setCurrentUser } = useAuth();
   const [serverError, setServerError] = useState<string | null>(null);
+  const [avatarUri, setAvatarUri] = useState<string | null>(user?.avatarUrl ?? null);
+  const [avatarAsset, setAvatarAsset] = useState<ImagePicker.ImagePickerAsset | null>(null);
+  const [avatarBusy, setAvatarBusy] = useState(false);
   const {
     control,
     reset,
@@ -49,6 +53,43 @@ export default function ProfileScreen() {
       if (d) reset(d);
     });
   }, [reset]);
+
+  async function pickAvatar() {
+    if (!accessToken || avatarBusy) return;
+    setServerError(null);
+    const permission = await ImagePicker.requestMediaLibraryPermissionsAsync();
+    if (!permission.granted) {
+      setServerError("Gi tilgang til bildebiblioteket for å velge profilbilde.");
+      return;
+    }
+    const result = await ImagePicker.launchImageLibraryAsync({
+      allowsEditing: true,
+      aspect: [1, 1],
+      quality: 0.85,
+      mediaTypes: ["images"],
+    });
+    if (result.canceled || !result.assets[0]) return;
+    const asset = result.assets[0];
+    setAvatarAsset(asset);
+    setAvatarUri(asset.uri);
+  }
+
+  async function removeAvatar() {
+    if (!accessToken || avatarBusy) return;
+    setAvatarBusy(true);
+    setServerError(null);
+    try {
+      const updated = await removeCurrentUserAvatar(accessToken);
+      setCurrentUser(updated);
+      setAvatarAsset(null);
+      setAvatarUri(null);
+    } catch (e) {
+      setServerError(e instanceof ApiError ? e.message : "Kunne ikke fjerne profilbildet akkurat nå.");
+    } finally {
+      setAvatarBusy(false);
+    }
+  }
+
   async function onSubmit(v: FormValues) {
     if (!accessToken) return;
     Keyboard.dismiss();
@@ -70,13 +111,21 @@ export default function ProfileScreen() {
       return;
     }
     try {
-      await updateCurrentUserProfile(accessToken, {
+      const updatedProfile = await updateCurrentUserProfile(accessToken, {
         firstName: trimmed.firstName,
         middleName: trimmed.middleName || null,
         lastName: trimmed.lastName,
         phone: `${NORWAY} ${trimmed.phoneNumber}`.trim(),
       });
-      await onboardingStorage.saveProfileDraft(trimmed);
+      let finalUser = updatedProfile;
+      if (avatarAsset) {
+        setAvatarBusy(true);
+        const mimeType = avatarAsset.mimeType ?? "image/jpeg";
+        const ext = mimeType.includes("png") ? "png" : mimeType.includes("webp") ? "webp" : "jpg";
+        finalUser = await uploadCurrentUserAvatar(accessToken, { uri: avatarAsset.uri, name: avatarAsset.fileName ?? `avatar.${ext}`, type: mimeType });
+      }
+      setCurrentUser(finalUser);
+      await onboardingStorage.clearProfileDraft();
       router.push("/(onboarding)/family-start");
     } catch (e) {
       setServerError(
@@ -84,18 +133,17 @@ export default function ProfileScreen() {
           ? e.message
           : "Kunne ikke lagre profilen akkurat nå. Prøv igjen.",
       );
+    } finally {
+      setAvatarBusy(false);
     }
   }
   return (
     <AuthScreenShell title="Fortell litt om deg selv" lead="">
       <AuthFormStack accessibilityLabel="Profilskjema">
         <View accessible={false} style={styles.avatar}>
-          <Ionicons
-            name="person-outline"
-            size={48}
-            color={theme.colors.primaryStrong}
-          />
-          <AppText style={styles.photo}>Legg til bilde (anbefalt)</AppText>
+          {avatarUri ? <Image source={{ uri: avatarUri }} style={styles.avatarImage} /> : <Ionicons name="person-outline" size={48} color={theme.colors.primaryStrong} />}
+          <Pressable accessibilityRole="button" onPress={pickAvatar} disabled={avatarBusy} style={styles.photoButton}><AppText style={styles.photo}>{avatarUri ? "Bytt bilde" : "Legg til bilde (anbefalt)"}</AppText></Pressable>
+          {avatarUri ? <TextButton title="Fjern bilde" onPress={removeAvatar} disabled={avatarBusy} /> : null}
         </View>
         {(
           [
@@ -219,5 +267,7 @@ export default function ProfileScreen() {
 }
 const styles = StyleSheet.create({
   avatar: { alignItems: "center", gap: theme.spacing.sm },
+  avatarImage: { width: 96, height: 96, borderRadius: 48, backgroundColor: theme.colors.inputBackground },
+  photoButton: { minHeight: 44, justifyContent: "center" },
   photo: { color: theme.colors.primaryStrong, fontWeight: "800" },
 });
