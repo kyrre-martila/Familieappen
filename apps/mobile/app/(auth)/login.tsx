@@ -9,11 +9,11 @@ import { theme } from "../../src/theme/tokens";
 type LoginFormValues = { email: string; password: string };
 
 export default function LoginScreen() {
-  const { login, isLoading } = useAuth();
+  const { login, isLoggingIn } = useAuth();
   const [showPassword, setShowPassword] = useState(false);
   const [serverError, setServerError] = useState<string | null>(null);
   const { control, handleSubmit, formState: { errors, isSubmitting, isValid } } = useForm<LoginFormValues>({ mode: "onChange", defaultValues: { email: "", password: "" } });
-  const disabled = isSubmitting || isLoading || !isValid;
+  const disabled = isSubmitting || isLoggingIn || !isValid;
 
   async function onSubmit(values: LoginFormValues) {
     setServerError(null);
@@ -49,8 +49,8 @@ export default function LoginScreen() {
             </View>
           )} />
           {serverError ? <AppText accessibilityRole="alert" style={styles.errorBox}>{serverError}</AppText> : null}
-          <Button accessibilityLabel="Logg inn" disabled={disabled} onPress={handleSubmit(onSubmit)} title={isSubmitting || isLoading ? "Logger inn…" : "Logg inn"} />
-          {isSubmitting || isLoading ? <ActivityIndicator accessibilityLabel="Logger inn" color={theme.colors.primary} /> : null}
+          <Button accessibilityLabel="Logg inn" disabled={disabled} onPress={handleSubmit(onSubmit)} title={isSubmitting || isLoggingIn ? "Logger inn…" : "Logg inn"} />
+          {isSubmitting || isLoggingIn ? <ActivityIndicator accessibilityLabel="Logger inn" color={theme.colors.primary} /> : null}
         </Card>
       </Screen>
     </KeyboardAvoidingView>
