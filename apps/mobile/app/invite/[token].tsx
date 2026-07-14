@@ -1,19 +1,9 @@
 import { useLocalSearchParams } from "expo-router";
-import { Text } from "react-native";
-import { tokens } from "@familieappen/ui";
-import { ScreenShell } from "../(tabs)/screenShell";
+import { AppText, Card } from "../../src/components";
+import { PlaceholderScreen } from "../../src/components/PlaceholderScreen";
+import { theme } from "../../src/theme/tokens";
 
 export default function InvitationDeepLinkScreen() {
   const { token } = useLocalSearchParams<{ token?: string }>();
-
-  return (
-    <ScreenShell
-      title="Du er invitert!"
-      description="Denne ruten gjør at native appen kan åpne samme invitasjonstoken som webflyten når Universal Links og App Links aktiveres."
-    >
-      <Text style={{ color: tokens.colors.muted }}>
-        Invitasjon: {token ?? "mangler token"}
-      </Text>
-    </ScreenShell>
-  );
+  return <PlaceholderScreen title="Du er invitert" description="Invitasjonsruten er bevart for fremtidige Universal Links og App Links."><Card><AppText variant="label">Invitasjonstoken</AppText><AppText style={{ color: theme.colors.textMuted }}>{token ?? "Mangler token"}</AppText></Card></PlaceholderScreen>;
 }
