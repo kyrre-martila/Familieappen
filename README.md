@@ -69,7 +69,7 @@ Equivalent package-level command:
 pnpm --filter @familieappen/mobile start
 ```
 
-The mobile app currently contains the Expo Run 0 shell. It can be attempted in Expo Go for basic route and placeholder validation, but native configuration and full notification/push behavior must be tested later with a development build. `expo-notifications` is installed as foundation only; push-token registration and end-to-end push delivery are not implemented or verified. No physical-device validation is claimed unless it is explicitly documented in a later run.
+The mobile app uses `EXPO_PUBLIC_API_URL` as the full API base including the backend prefix. Production defaults to `https://api-familieappen.martila.no/api`; local physical-device testing should use a LAN URL such as `EXPO_PUBLIC_API_URL=http://192.168.1.50:4000/api`. Endpoint paths remain prefix-free, for example `/auth/login`, `/auth/logout`, and `/me`.
 
 ## Run the API
 

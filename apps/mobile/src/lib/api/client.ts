@@ -1,4 +1,5 @@
 import { appConfig } from "../../config/env";
+import { buildApiUrl } from "./url";
 
 export type ApiErrorPayload = { code?: string; message?: string };
 export type ApiErrorBody = { error?: ApiErrorPayload; message?: string | string[]; statusCode?: number };
@@ -22,7 +23,7 @@ export async function apiRequest<T>(path: string, options: RequestOptions = {}):
 
   let response: Response;
   try {
-    response = await fetch(`${appConfig.apiUrl}${path.startsWith("/") ? path : `/${path}`}`, {
+    response = await fetch(buildApiUrl(appConfig.apiUrl, path), {
       ...options,
       headers,
       body: options.body === undefined ? undefined : isFormData ? options.body as BodyInit : JSON.stringify(options.body)
@@ -45,7 +46,14 @@ async function parseApiError(response: Response): Promise<ApiError> {
   const body = await response.json().catch(() => null) as ApiErrorBody | null;
   const code = body?.error?.code;
   const backendMessage = body?.error?.message ?? (Array.isArray(body?.message) ? body.message.join("\n") : body?.message);
-  return new ApiError(backendMessage ?? defaultErrorMessage(code, response.status), response.status, code, body);
+  const message = response.status === 404 && isNestRouteNotFoundMessage(backendMessage)
+    ? "Mobilappen er koblet til feil API-adresse."
+    : backendMessage ?? defaultErrorMessage(code, response.status);
+  return new ApiError(message, response.status, code, body);
+}
+
+function isNestRouteNotFoundMessage(message: string | undefined): boolean {
+  return message ? /^Cannot (GET|POST|PUT|PATCH|DELETE) \/.+/.test(message) : false;
 }
 
 function defaultErrorMessage(code: string | undefined, status: number): string {

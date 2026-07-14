@@ -12,12 +12,12 @@ pnpm --filter @familieappen/mobile android
 pnpm --filter @familieappen/mobile web
 ```
 
-The default API base is `https://api-familieappen.martila.no`. Override with `EXPO_PUBLIC_API_URL` in `apps/mobile/.env`.
+The default API base is `https://api-familieappen.martila.no/api`. `EXPO_PUBLIC_API_URL` is the full API base and must include the backend API prefix (`/api` in the default backend configuration). Override it in `apps/mobile/.env`. Endpoint paths such as `/auth/login`, `/auth/logout`, and `/me` are joined with this central base; do not add `/api` to each endpoint.
 
 For a physical iPhone against a local API, do not use `localhost`; use your computer's LAN IP, for example:
 
 ```bash
-EXPO_PUBLIC_API_URL=http://192.168.1.50:3000 pnpm --filter @familieappen/mobile start
+EXPO_PUBLIC_API_URL=http://192.168.1.50:4000/api pnpm --filter @familieappen/mobile start
 ```
 
 ## Expo Go and development builds
