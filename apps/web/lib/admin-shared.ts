@@ -99,6 +99,8 @@ export interface AdminUserStatusUpdate {
   updatedAt: string;
 }
 
+export interface AdvertisementStatsSummary { impressions:number; clicks:number; ctr:number; last7Days:{impressions:number; clicks:number}; last30Days:{impressions:number; clicks:number}; perPlacement:Array<{placement:AdvertisementPlacement; impressions:number; clicks:number}>; }
+export interface AdvertisementStats extends AdvertisementStatsSummary { activeAdvertisementCount:number; advertisements:Array<{id:string; title:string; status:AdvertisementStatus; placements:AdvertisementPlacement[]; impressions:number; clicks:number; ctr:number}>; }
 export interface AdminStatistics {
   totalUsers: number;
   totalFamilies: number;
@@ -108,6 +110,7 @@ export interface AdminStatistics {
   remindersCreatedLast30Days: number;
   activeCalendarImports: number;
   advertisementsByStatus: Array<{ status: "DRAFT" | "SCHEDULED" | "ACTIVE" | "PAUSED" | "ENDED" | string; count: number }>;
+  advertisementStats: AdvertisementStats;
 }
 
 
@@ -115,7 +118,7 @@ export type AdvertisementStatus = "DRAFT" | "SCHEDULED" | "ACTIVE" | "PAUSED" | 
 export type AdvertisementPlacement = "HOME" | "CALENDAR" | "MENU" | "WISHLIST" | "SHOPPING";
 export type AdvertisementImageVariant = "MOBILE" | "TABLET" | "DESKTOP";
 export interface AdvertisementImage { url:string; width:number; height:number; mimeType:string; }
-export interface Advertisement { id:string; title:string; body:string|null; imageUrl:string|null; altText:string|null; targetUrl:string|null; placements:AdvertisementPlacement[]; status:AdvertisementStatus; startsAt:string|null; endsAt:string|null; images:{mobile:AdvertisementImage|null; tablet:AdvertisementImage|null; desktop:AdvertisementImage|null}; createdBy?: Pick<AdminUser,"id"|"name"|"email"> | null; createdAt:string; updatedAt:string; }
+export interface Advertisement { id:string; title:string; body:string|null; imageUrl:string|null; altText:string|null; targetUrl:string|null; placements:AdvertisementPlacement[]; status:AdvertisementStatus; startsAt:string|null; endsAt:string|null; images:{mobile:AdvertisementImage|null; tablet:AdvertisementImage|null; desktop:AdvertisementImage|null}; createdBy?: Pick<AdminUser,"id"|"name"|"email"> | null; createdAt:string; updatedAt:string; statistics?:AdvertisementStatsSummary; }
 export interface PageResponse<T> { page:number; pageSize:number; total:number; items:T[]; }
 export type AdvertisementListResponse = PageResponse<Advertisement>;
 export interface AdvertisementMutation { title:string; altText:string|null; targetUrl:string|null; placements:AdvertisementPlacement[]; status:AdvertisementStatus; startsAt:string|null; endsAt:string|null; }

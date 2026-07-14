@@ -33,17 +33,9 @@ export function AdvertisementCard({ advertisement }: { advertisement: PublicAdve
 
   if (hidden || !image || !imageUrl || !advertisement.altText) return null;
 
-  async function click(event: MouseEvent<HTMLAnchorElement>) {
-    event.preventDefault();
-    const opened = window.open("about:blank", "_blank", "noopener,noreferrer");
-    try {
-      await recordAdvertisementClick(advertisement.id, advertisement.placement);
-    } catch {
-      // Advertisement failures must not block the user from reaching the advertiser.
-    } finally {
-      if (opened) opened.location.href = advertisement.targetUrl;
-      else window.location.href = advertisement.targetUrl;
-    }
+  function click(event: MouseEvent<HTMLAnchorElement>) {
+    if (event.defaultPrevented || event.button !== 0 || event.metaKey || event.altKey || event.ctrlKey || event.shiftKey) return;
+    void recordAdvertisementClick(advertisement.id, advertisement.placement).catch(() => undefined);
   }
 
   return (

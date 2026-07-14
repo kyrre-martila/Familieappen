@@ -135,7 +135,7 @@ export class AdminApiController {
       this.service.deleteFamily(familyId, b, r.admin, this.meta(r)),
     );
   }
-  @Get("statistics") @AdminRoles("SUPER_ADMIN", "ANALYST") statistics() {
+  @Get("statistics") @AdminRoles("SUPER_ADMIN", "ANALYST", "AD_MANAGER") statistics() {
     return this.wrap(this.service.statistics());
   }
   @Get("feedback") @AdminRoles("SUPER_ADMIN", "SUPPORT") feedback() {
