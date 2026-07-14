@@ -1,5 +1,5 @@
 declare const process: { env: { EXPO_PUBLIC_API_URL?: string } };
-const productionApiUrl = "https://api-familieappen.martila.no";
+const productionApiUrl = "https://api-familieappen.martila.no/api";
 
 function normalizeApiUrl(value: string | undefined): string {
   const candidate = value?.trim() || productionApiUrl;
