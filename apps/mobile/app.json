@@ -7,17 +7,10 @@
     "orientation": "portrait",
     "userInterfaceStyle": "automatic",
     "newArchEnabled": true,
-    "plugins": ["expo-router"],
-    "ios": {
-      "supportsTablet": true
-    },
-    "android": {
-      "adaptiveIcon": {
-        "backgroundColor": "#fffaf3"
-      }
-    },
-    "web": {
-      "bundler": "metro"
-    }
+    "plugins": ["expo-router", "expo-secure-store", "expo-splash-screen", "expo-notifications"],
+    "splash": { "backgroundColor": "#fffaf3", "resizeMode": "contain" },
+    "ios": { "supportsTablet": true },
+    "android": { "adaptiveIcon": { "backgroundColor": "#fffaf3" } },
+    "web": { "bundler": "metro" }
   }
 }
