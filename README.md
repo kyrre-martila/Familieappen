@@ -69,7 +69,7 @@ Equivalent package-level command:
 pnpm --filter @familieappen/mobile start
 ```
 
-The mobile app is not the current validation focus and remains untouched by the web shell work.
+The mobile app currently contains the Expo Run 0 shell. It can be attempted in Expo Go for basic route and placeholder validation, but native configuration and full notification/push behavior must be tested later with a development build. `expo-notifications` is installed as foundation only; push-token registration and end-to-end push delivery are not implemented or verified. No physical-device validation is claimed unless it is explicitly documented in a later run.
 
 ## Run the API
 
