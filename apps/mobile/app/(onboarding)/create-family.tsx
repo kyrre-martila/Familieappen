@@ -18,7 +18,7 @@ import { ApiError } from "../../src/lib/api/client";
 import { theme } from "../../src/theme/tokens";
 type FormValues = { familyName: string };
 export default function CreateFamilyScreen() {
-  const { accessToken, refreshFamilyStatus } = useAuth();
+  const { accessToken, refreshFamilyStatus, startInviteMembersTransition } = useAuth();
   const [serverError, setServerError] = useState<string | null>(null);
   const {
     control,
@@ -39,8 +39,9 @@ export default function CreateFamilyScreen() {
     try {
       const created = await createFamily(accessToken, { name });
       if (!created.family.code) await getFamily(accessToken, created.family.id);
+      await startInviteMembersTransition(created.family.id);
       await refreshFamilyStatus();
-      router.replace("/(onboarding)/invite-members");
+      router.replace({ pathname: "/(onboarding)/invite-members", params: { familyId: created.family.id } });
     } catch (e) {
       setServerError(
         e instanceof ApiError

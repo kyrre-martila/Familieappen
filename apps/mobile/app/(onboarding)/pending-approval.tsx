@@ -31,10 +31,11 @@ export default function PendingApprovalScreen() {
   }, [refreshFamilyStatus]);
 
   useEffect(() => {
+    if (familyStatus !== "pending") return undefined;
     const sub = AppState.addEventListener("change", (state) => { if (state === "active") void checkStatus("auto"); });
     const interval = setInterval(() => void checkStatus("auto"), 120000);
     return () => { sub.remove(); clearInterval(interval); };
-  }, [checkStatus]);
+  }, [checkStatus, familyStatus]);
 
   return <AuthScreenShell title="Forespørsel sendt til familien" lead="Du venter på godkjenning for å bli med i familien.">
     <View style={styles.stack}>

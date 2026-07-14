@@ -1,7 +1,9 @@
 import { secureStorage } from "../../lib/storage/secureStorage";
+import type { InviteMembersTransition } from "./inviteTransition";
 
 const PENDING_FAMILY_REQUEST_KEY = "familieappen.mobile.pendingFamilyRequest";
 const ONBOARDING_PROFILE_KEY = "familieappen.mobile.onboardingProfile";
+const INVITE_MEMBERS_TRANSITION_KEY = "familieappen.mobile.onboardingInviteMembers.v1";
 
 export type OnboardingProfileDraft = {
   birthDate: string;
@@ -20,6 +22,15 @@ export const onboardingStorage = {
   },
   async getPendingFamilyRequest() {
     return secureStorage.getItem(PENDING_FAMILY_REQUEST_KEY);
+  },
+  async saveInviteMembersTransition(transition: InviteMembersTransition) {
+    await secureStorage.setItem(INVITE_MEMBERS_TRANSITION_KEY, JSON.stringify(transition));
+  },
+  async getInviteMembersTransitionRaw() {
+    return secureStorage.getItem(INVITE_MEMBERS_TRANSITION_KEY);
+  },
+  async clearInviteMembersTransition() {
+    await secureStorage.deleteItem(INVITE_MEMBERS_TRANSITION_KEY);
   },
   async saveProfileDraft(profile: OnboardingProfileDraft) {
     await secureStorage.setItem(

@@ -27,6 +27,8 @@ type FormValues = {
   birthDate: string;
 };
 const NORWAY = "+47";
+const MAX_AVATAR_BYTES = 2 * 1024 * 1024;
+const ALLOWED_AVATAR_TYPES = new Set(["image/jpeg", "image/png", "image/webp"]);
 export default function ProfileScreen() {
   const { accessToken, user, setCurrentUser } = useAuth();
   const [serverError, setServerError] = useState<string | null>(null);
@@ -70,6 +72,15 @@ export default function ProfileScreen() {
     });
     if (result.canceled || !result.assets[0]) return;
     const asset = result.assets[0];
+    const mimeType = asset.mimeType ?? "image/jpeg";
+    if (!ALLOWED_AVATAR_TYPES.has(mimeType)) {
+      setServerError("Profilbildet må være JPEG, PNG eller WebP.");
+      return;
+    }
+    if (typeof asset.fileSize === "number" && asset.fileSize > MAX_AVATAR_BYTES) {
+      setServerError("Profilbildet er for stort. Velg et bilde under 2 MB.");
+      return;
+    }
     setAvatarAsset(asset);
     setAvatarUri(asset.uri);
   }
@@ -103,9 +114,7 @@ export default function ProfileScreen() {
     };
     if (
       !trimmed.firstName ||
-      !trimmed.lastName ||
-      !trimmed.phoneNumber ||
-      !trimmed.birthDate
+      !trimmed.lastName
     ) {
       setServerError("Fyll ut feltene som er merket med stjerne.");
       return;
@@ -115,14 +124,17 @@ export default function ProfileScreen() {
         firstName: trimmed.firstName,
         middleName: trimmed.middleName || null,
         lastName: trimmed.lastName,
-        phone: `${NORWAY} ${trimmed.phoneNumber}`.trim(),
+        phone: trimmed.phoneNumber ? `${NORWAY} ${trimmed.phoneNumber}`.trim() : null,
       });
       let finalUser = updatedProfile;
       if (avatarAsset) {
         setAvatarBusy(true);
         const mimeType = avatarAsset.mimeType ?? "image/jpeg";
+        if (!ALLOWED_AVATAR_TYPES.has(mimeType)) throw new ApiError("Profilbildet må være JPEG, PNG eller WebP.", 400, "avatar.invalid_type");
+        if (typeof avatarAsset.fileSize === "number" && avatarAsset.fileSize > MAX_AVATAR_BYTES) throw new ApiError("Profilbildet er for stort. Velg et bilde under 2 MB.", 413, "avatar.too_large");
         const ext = mimeType.includes("png") ? "png" : mimeType.includes("webp") ? "webp" : "jpg";
-        finalUser = await uploadCurrentUserAvatar(accessToken, { uri: avatarAsset.uri, name: avatarAsset.fileName ?? `avatar.${ext}`, type: mimeType });
+        const safeName = avatarAsset.fileName && /^[^/\\]+\.(jpe?g|png|webp)$/i.test(avatarAsset.fileName) ? avatarAsset.fileName : `avatar.${ext}`;
+        finalUser = await uploadCurrentUserAvatar(accessToken, { uri: avatarAsset.uri, name: safeName, type: mimeType });
       }
       setCurrentUser(finalUser);
       await onboardingStorage.clearProfileDraft();
@@ -196,10 +208,9 @@ export default function ProfileScreen() {
         <Controller
           control={control}
           name="phoneNumber"
-          rules={{ required: "Fyll ut feltene som er merket med stjerne." }}
           render={({ field: { onChange, onBlur, value } }) => (
             <FormField
-              label="Telefonnummer *"
+              label="Telefonnummer"
               error={errors.phoneNumber?.message}
               leadingIcon={
                 <Ionicons
@@ -226,10 +237,9 @@ export default function ProfileScreen() {
         <Controller
           control={control}
           name="birthDate"
-          rules={{ required: "Fyll ut feltene som er merket med stjerne." }}
           render={({ field: { onChange, onBlur, value } }) => (
             <FormField
-              label="Fødselsdato *"
+              label="Fødselsdato"
               error={errors.birthDate?.message}
               leadingIcon={
                 <Ionicons
