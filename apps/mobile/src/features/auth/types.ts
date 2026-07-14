@@ -23,7 +23,20 @@ export interface AuthResponse {
   tokens: AuthTokens;
 }
 
-export interface LogoutResponse { message: string }
+export interface LogoutResponse {
+  message: string;
+}
 
-export interface PasswordResetMessage { message: string }
-export interface FamilyWithMembership { family: import("@familieappen/shared").Family; membership: import("@familieappen/shared").FamilyMember }
+export interface PasswordResetMessage {
+  message: string;
+}
+export interface FamilyWithMembership {
+  family: import("@familieappen/shared").Family;
+  membership: import("@familieappen/shared").FamilyMember;
+}
+
+export interface FamilyDetails {
+  family: import("@familieappen/shared").Family;
+  members: import("@familieappen/shared").FamilyMember[];
+}
+export type FamilyInvitation = import("@familieappen/shared").FamilyInvitation;
