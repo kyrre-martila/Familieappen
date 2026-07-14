@@ -9,7 +9,7 @@ import { theme } from "../../src/theme/tokens";
 type LoginFormValues = { email: string; password: string };
 
 export default function LoginScreen() {
-  const { login, isLoggingIn } = useAuth();
+  const { login, isLoggingIn, restoreError } = useAuth();
   const [showPassword, setShowPassword] = useState(false);
   const [serverError, setServerError] = useState<string | null>(null);
   const { control, handleSubmit, formState: { errors, isSubmitting, isValid } } = useForm<LoginFormValues>({ mode: "onChange", defaultValues: { email: "", password: "" } });
@@ -48,6 +48,7 @@ export default function LoginScreen() {
               {errors.password ? <AppText accessibilityRole="alert" style={styles.error}>{errors.password.message}</AppText> : null}
             </View>
           )} />
+          {restoreError ? <AppText accessibilityRole="alert" style={styles.restoreBox}>{restoreError}</AppText> : null}
           {serverError ? <AppText accessibilityRole="alert" style={styles.errorBox}>{serverError}</AppText> : null}
           <Button accessibilityLabel="Logg inn" disabled={disabled} onPress={handleSubmit(onSubmit)} title={isSubmitting || isLoggingIn ? "Logger inn…" : "Logg inn"} />
           {isSubmitting || isLoggingIn ? <ActivityIndicator accessibilityLabel="Logger inn" color={theme.colors.primary} /> : null}
@@ -57,4 +58,4 @@ export default function LoginScreen() {
   );
 }
 
-const styles = StyleSheet.create({ root: { flex: 1, backgroundColor: theme.colors.background }, muted: { color: theme.colors.textMuted }, field: { gap: theme.spacing.sm }, input: { minHeight: 52, borderRadius: theme.radius.md, borderWidth: 1, borderColor: theme.colors.border, backgroundColor: theme.colors.surface, paddingHorizontal: theme.spacing.md, color: theme.colors.text, fontSize: theme.typography.body }, inputError: { borderColor: theme.colors.error }, passwordRow: { minHeight: 52, flexDirection: "row", alignItems: "center", gap: theme.spacing.sm, borderRadius: theme.radius.md, borderWidth: 1, borderColor: theme.colors.border, backgroundColor: theme.colors.surface, paddingHorizontal: theme.spacing.md }, passwordInput: { flex: 1, color: theme.colors.text, fontSize: theme.typography.body }, toggle: { color: theme.colors.primaryStrong, fontWeight: "800" }, error: { color: theme.colors.error }, errorBox: { borderRadius: theme.radius.md, backgroundColor: theme.colors.errorSoft, color: theme.colors.error, padding: theme.spacing.md } });
+const styles = StyleSheet.create({ root: { flex: 1, backgroundColor: theme.colors.background }, muted: { color: theme.colors.textMuted }, field: { gap: theme.spacing.sm }, input: { minHeight: 52, borderRadius: theme.radius.md, borderWidth: 1, borderColor: theme.colors.border, backgroundColor: theme.colors.surface, paddingHorizontal: theme.spacing.md, color: theme.colors.text, fontSize: theme.typography.body }, inputError: { borderColor: theme.colors.error }, passwordRow: { minHeight: 52, flexDirection: "row", alignItems: "center", gap: theme.spacing.sm, borderRadius: theme.radius.md, borderWidth: 1, borderColor: theme.colors.border, backgroundColor: theme.colors.surface, paddingHorizontal: theme.spacing.md }, passwordInput: { flex: 1, color: theme.colors.text, fontSize: theme.typography.body }, toggle: { color: theme.colors.primaryStrong, fontWeight: "800" }, error: { color: theme.colors.error }, restoreBox: { borderRadius: theme.radius.md, backgroundColor: theme.colors.primarySoft, color: theme.colors.primaryStrong, padding: theme.spacing.md }, errorBox: { borderRadius: theme.radius.md, backgroundColor: theme.colors.errorSoft, color: theme.colors.error, padding: theme.spacing.md } });
