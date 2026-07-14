@@ -92,6 +92,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const login = useCallback(async (input: { email: string; password: string }) => {
     setIsLoggingIn(true);
+    setRestoreError(null);
     try {
       const auth = await loginWithEmail(input);
       try {
@@ -117,11 +118,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     setIsLoggingOut(true);
     const token = accessToken;
     try {
-      if (token) await logoutSession(token);
-    } catch {
-      // Local logout must still complete if the server session is already gone or unreachable.
+      try {
+        if (token) await logoutSession(token);
+      } catch {
+        // Local logout must still complete if the server session is already gone or unreachable.
+      } finally {
+        await clearLocalSession();
+      }
     } finally {
-      await clearLocalSession();
       setIsLoggingOut(false);
     }
   }, [accessToken, clearLocalSession]);
