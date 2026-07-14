@@ -33,6 +33,8 @@ import {
   type AuthDestination,
   type FamilyBootstrapStatus,
 } from "./routes";
+import { createInviteMembersTransition, getValidInviteMembersTransition, parseInviteMembersTransition } from "./inviteTransition";
+import { onboardingStorage } from "./onboardingStorage";
 import type { AuthResponse, AuthUser } from "./types";
 
 export type AuthStatus = "unknown" | "authenticated" | "unauthenticated";
@@ -57,6 +59,8 @@ type AuthContextValue = {
     password: string;
   }) => Promise<void>;
   refreshFamilyStatus: () => Promise<void>;
+  startInviteMembersTransition: (familyId: string) => Promise<void>;
+  completeInviteMembersTransition: () => Promise<void>;
   setCurrentUser: (user: AuthUser) => void;
   logout: () => Promise<void>;
   restoreSession: () => Promise<void>;
@@ -75,6 +79,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [isLoggingIn, setIsLoggingIn] = useState(false);
   const [isLoggingOut, setIsLoggingOut] = useState(false);
   const [restoreError, setRestoreError] = useState<string | null>(null);
+  const [activeInviteTransition, setActiveInviteTransition] = useState(false);
   const restorePromiseRef = useRef<Promise<void> | null>(null);
   const mountedRef = useRef(true);
 
@@ -89,11 +94,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     setAccessToken(null);
     setUser(null);
     setFamilyStatus("unknown");
+    setActiveInviteTransition(false);
     setStatus("unauthenticated");
   }, []);
 
   const clearLocalSession = useCallback(async () => {
     await authStorage.clearSession();
+    await onboardingStorage.clearInviteMembersTransition();
     await queryClient.clear();
     setUnauthenticatedState();
   }, [queryClient, setUnauthenticatedState]);
@@ -123,6 +130,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           ]);
           setAccessToken(session.accessToken);
           setUser(restoredUser);
+          const transition = parseInviteMembersTransition(await onboardingStorage.getInviteMembersTransitionRaw());
+          const validTransition = getValidInviteMembersTransition(transition, restoredUser, families);
+          if (transition && !validTransition) await onboardingStorage.clearInviteMembersTransition();
+          setActiveInviteTransition(Boolean(validTransition));
           setFamilyStatus(resolveFamilyStatus(families, pendingAccess, restoredUser));
           setStatus("authenticated");
         } catch (error) {
@@ -169,6 +180,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       queryClient.setQueryData(["auth", "families"], families);
       setAccessToken(auth.tokens.accessToken);
       setUser(validatedUser);
+      const transition = parseInviteMembersTransition(await onboardingStorage.getInviteMembersTransitionRaw());
+      const validTransition = getValidInviteMembersTransition(transition, validatedUser, families);
+      if (transition && !validTransition) await onboardingStorage.clearInviteMembersTransition();
+      setActiveInviteTransition(Boolean(validTransition));
       setFamilyStatus(resolveFamilyStatus(families, pendingAccess, validatedUser));
       setStatus("authenticated");
     },
@@ -178,16 +193,39 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const refreshFamilyStatus = useCallback(async () => {
     const token = accessToken;
     if (!token) return;
-    const [families, pendingAccess, currentUser] = await Promise.all([
-      listFamilies(token),
-      getMyPendingFamilyAccess(token),
-      getCurrentUser(token),
-    ]);
-    queryClient.setQueryData(["auth", "families"], families);
-    queryClient.setQueryData(["auth", "me"], currentUser);
-    setUser(currentUser);
-    setFamilyStatus(resolveFamilyStatus(families, pendingAccess, currentUser));
-  }, [accessToken, queryClient]);
+    try {
+      const [families, pendingAccess, currentUser] = await Promise.all([
+        listFamilies(token),
+        getMyPendingFamilyAccess(token),
+        getCurrentUser(token),
+      ]);
+      queryClient.setQueryData(["auth", "families"], families);
+      queryClient.setQueryData(["auth", "me"], currentUser);
+      setUser(currentUser);
+      const transition = parseInviteMembersTransition(await onboardingStorage.getInviteMembersTransitionRaw());
+      const validTransition = getValidInviteMembersTransition(transition, currentUser, families);
+      if (transition && !validTransition) await onboardingStorage.clearInviteMembersTransition();
+      setActiveInviteTransition(Boolean(validTransition));
+      setFamilyStatus(resolveFamilyStatus(families, pendingAccess, currentUser));
+    } catch (error) {
+      if (isUnauthorizedApiError(error)) {
+        await clearLocalSession();
+        router.replace("/(auth)/login");
+      }
+      throw error;
+    }
+  }, [accessToken, clearLocalSession, queryClient]);
+
+  const startInviteMembersTransition = useCallback(async (familyId: string) => {
+    if (!user) return;
+    await onboardingStorage.saveInviteMembersTransition(createInviteMembersTransition(user.id, familyId));
+    setActiveInviteTransition(true);
+  }, [user]);
+
+  const completeInviteMembersTransition = useCallback(async () => {
+    await onboardingStorage.clearInviteMembersTransition();
+    setActiveInviteTransition(false);
+  }, []);
 
   const setCurrentUser = useCallback((nextUser: AuthUser) => {
     setUser(nextUser);
@@ -259,6 +297,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     status === "authenticated"
       ? { auth: "authenticated", familyStatus }
       : { auth: "unauthenticated" },
+    { activeInviteTransition },
   );
   const value = useMemo<AuthContextValue>(
     () => ({
@@ -277,6 +316,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       completeAuthentication,
       register,
       refreshFamilyStatus,
+      startInviteMembersTransition,
+      completeInviteMembersTransition,
       setCurrentUser,
       logout,
       restoreSession,
@@ -292,6 +333,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       login,
       logout,
       refreshFamilyStatus,
+      startInviteMembersTransition,
+      completeInviteMembersTransition,
       register,
       restoreError,
       setCurrentUser,

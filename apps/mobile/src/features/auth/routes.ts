@@ -11,6 +11,7 @@ export type AuthDestination =
   | "/(onboarding)/profile"
   | "/(onboarding)/family-start"
   | "/(onboarding)/pending-approval"
+  | "/(onboarding)/invite-members"
   | "/(app)/(tabs)";
 export type AuthRoutingState =
   | { auth: "unauthenticated" }
@@ -29,13 +30,15 @@ export const FAMILY_STATUS_DESTINATIONS: Record<
 
 export function getPostAuthDestination(
   state: AuthRoutingState,
+  options: { activeInviteTransition?: boolean } = {},
 ): AuthDestination {
   if (state.auth === "unauthenticated") return "/(auth)/login";
+  if (options.activeInviteTransition && state.familyStatus === "ready") return "/(onboarding)/invite-members";
   return FAMILY_STATUS_DESTINATIONS[state.familyStatus];
 }
 
 export function isProfileComplete(user: AuthUser): boolean {
-  return Boolean(user.firstName?.trim() && user.lastName?.trim() && user.phone?.trim());
+  return Boolean(user.firstName?.trim() && user.lastName?.trim());
 }
 
 export function resolveFamilyStatus(
@@ -85,6 +88,8 @@ function pathsMatchDestination(
       currentPath === "/pending-approval" ||
       currentPath === "/onboarding/pending-approval"
     );
+  if (authDestination === "/(onboarding)/invite-members")
+    return currentPath === "/invite-members" || currentPath === "/onboarding/invite-members";
   return false;
 }
 
