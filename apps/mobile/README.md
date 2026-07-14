@@ -14,29 +14,27 @@ pnpm --filter @familieappen/mobile web
 
 The default production API base is `https://api-familieappen.martila.no/api`. `EXPO_PUBLIC_API_URL` is the full API base and must include the backend API prefix (`/api` in the default backend configuration). Endpoint paths such as `/auth/login`, `/auth/logout`, `/auth/forgot-password`, `/auth/reset-password`, `/me`, and `/families` are joined with this central base; do not add `/api` to each endpoint.
 
-For physical iPhone testing with Expo Go and a local API, do not use `localhost`; use a LAN IP or a tunnel:
+For ordinary physical-device Expo Go testing against the production backend, keep the API base explicit and start Metro through Expo tunnel:
 
 ```bash
-EXPO_PUBLIC_API_URL=https://<your-ngrok-host>/api pnpm --filter @familieappen/mobile start -- --tunnel
+EXPO_PUBLIC_API_URL=https://api-familieappen.martila.no/api pnpm --filter @familieappen/mobile start -- --tunnel
 ```
 
-ngrok and Expo tunnel startup can fail temporarily. Retry the tunnel command and verify that the final API URL still includes `/api` before testing.
+Expo `--tunnel` exposes the Metro bundler to Expo Go. It does not proxy FamilieAppens API and its tunnel URL must not be reused as `EXPO_PUBLIC_API_URL`. Testing against a local API requires either a LAN address such as `http://<your-lan-ip>:<api-port>/api` or a separate, explicit API tunnel whose URL points to the API server and still includes `/api`.
 
 ## Auth routing and onboarding gate
 
 Run 1B validates a session by loading `/me` and then `/families`. The central routing function maps these backend-backed states:
 
 - unauthenticated: `/(auth)/login`
+- authenticated + at least one family from `GET /families`: `/(app)/(tabs)`
 - authenticated + no families from `GET /families`: `/(onboarding)/family-start`
-- authenticated + family membership status `pending` or `rejected` and no approved family: `/(onboarding)/pending-approval`
-- authenticated + at least one approved family membership: `/(app)/(tabs)`
-- blocked/unsupported authenticated state: `/(onboarding)/blocked`
+- authenticated + stable pending state: `/(onboarding)/pending-approval` (not currently discoverable by the mobile bootstrap API)
 
 The temporary onboarding routes are placeholders only:
 
 - `/(onboarding)/family-start`
 - `/(onboarding)/pending-approval`
-- `/(onboarding)/blocked`
 
 They explain the backend status, include logout, and do not create families, join by code, collect personal information, or simulate onboarding locally. Run 2 should replace these placeholders with real onboarding screens.
 
@@ -44,7 +42,7 @@ They explain the backend status, include logout, and do not create families, joi
 
 `/(auth)/forgot-password` calls `POST /auth/forgot-password` with the e-mail address. The UI always shows a generic success message so it does not reveal whether the e-mail exists.
 
-The backend sends reset e-mail links to the web base URL today (`/reset-password?token=...`). Mobile implements `reset-password/[token]` against the existing `POST /auth/reset-password` API so a native deep link can complete a reset if a future e-mail link is built as, for example, `familieappen://reset-password/<token>`. Run 1B does not change backend e-mail generation and does not claim Universal Links/App Links are production verified.
+The backend sends reset e-mail links to the web base URL today (`/reset-password?token=...`). Mobile implements both `/reset-password?token=...` and `reset-password/[token]` against the existing `POST /auth/reset-password` API so a native deep link can complete a reset if a future e-mail link is built as, for example, `familieappen://reset-password/<token>`. Run 1B does not change backend e-mail generation and does not claim Universal Links/App Links are production verified.
 
 Reset tokens are never stored in SecureStore. Password reset uses the backend's current password rule: 8 to 1024 characters.
 

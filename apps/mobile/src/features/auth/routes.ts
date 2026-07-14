@@ -1,31 +1,40 @@
 import type { FamilyWithMembership } from "./types";
 
 export type FamilyBootstrapStatus = "unknown" | "no-family" | "pending" | "ready";
-export type AuthDestination = "/(auth)/login" | "/(onboarding)/family-start" | "/(onboarding)/pending-approval" | "/(onboarding)/blocked" | "/(app)/(tabs)";
-
+export type AuthDestination = "/(auth)/login" | "/(onboarding)/family-start" | "/(onboarding)/pending-approval" | "/(app)/(tabs)";
 export type AuthRoutingState =
   | { auth: "unauthenticated" }
-  | { auth: "authenticated"; familyStatus: FamilyBootstrapStatus; blocked?: boolean };
+  | { auth: "authenticated"; familyStatus: FamilyBootstrapStatus };
+
+export const FAMILY_STATUS_DESTINATIONS: Record<FamilyBootstrapStatus, Exclude<AuthDestination, "/(auth)/login">> = {
+  unknown: "/(onboarding)/family-start",
+  "no-family": "/(onboarding)/family-start",
+  pending: "/(onboarding)/pending-approval",
+  ready: "/(app)/(tabs)",
+};
 
 export function getPostAuthDestination(state: AuthRoutingState): AuthDestination {
   if (state.auth === "unauthenticated") return "/(auth)/login";
-  if (state.blocked) return "/(onboarding)/blocked";
-  switch (state.familyStatus) {
-    case "ready": return "/(app)/(tabs)";
-    case "pending": return "/(onboarding)/pending-approval";
-    case "no-family":
-    case "unknown":
-      return "/(onboarding)/family-start";
-  }
+  return FAMILY_STATUS_DESTINATIONS[state.familyStatus];
 }
 
 export function resolveFamilyStatus(families: FamilyWithMembership[]): FamilyBootstrapStatus {
-  if (families.length === 0) return "no-family";
-  return families.some((family) => getMembershipStatus(family) === "approved") ? "ready" : "pending";
+  return families.length > 0 ? "ready" : "no-family";
 }
 
-function getMembershipStatus(family: FamilyWithMembership): "approved" | "pending" | "rejected" {
-  const membership = family.membership as FamilyWithMembership["membership"] & { familyMembershipStatus?: unknown; membershipStatus?: unknown; status?: unknown };
-  const status = membership.familyMembershipStatus ?? membership.membershipStatus ?? membership.status;
-  return status === "pending" || status === "rejected" ? status : "approved";
+export function getOnboardingRedirect(currentPath: string, authDestination: AuthDestination): AuthDestination | null {
+  if (pathsMatchDestination(currentPath, authDestination)) return null;
+  return authDestination;
+}
+
+function pathsMatchDestination(currentPath: string, authDestination: AuthDestination): boolean {
+  if (currentPath === authDestination) return true;
+  if (authDestination === "/(onboarding)/family-start") return currentPath === "/family-start" || currentPath === "/onboarding/family-start";
+  if (authDestination === "/(onboarding)/pending-approval") return currentPath === "/pending-approval" || currentPath === "/onboarding/pending-approval";
+  return false;
+}
+
+export function getResetTokenFromParam(token: string | string[] | undefined): string | undefined {
+  if (Array.isArray(token)) return token[0];
+  return token;
 }

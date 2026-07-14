@@ -24,7 +24,7 @@ export default function ForgotPasswordScreen() {
       setMessage(GENERIC_FORGOT_PASSWORD_MESSAGE);
     } catch (error) {
       if (error instanceof ApiError && error.code === "network.unavailable") setServerError(error.message);
-      else if (error instanceof ApiError && error.status === 400) setServerError("Skriv inn en gyldig e-postadresse.");
+      else if (error instanceof ApiError && (error.status === 400 || error.status === 404)) setMessage(GENERIC_FORGOT_PASSWORD_MESSAGE);
       else setServerError("Kunne ikke sende forespørselen akkurat nå. Prøv igjen.");
     }
   }

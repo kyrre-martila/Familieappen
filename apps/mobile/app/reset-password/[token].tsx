@@ -5,12 +5,14 @@ import { router, useLocalSearchParams } from "expo-router";
 import { AppText, Button, Screen } from "../../src/components";
 import { resetPassword } from "../../src/features/auth/api";
 import { mapResetPasswordError } from "../../src/features/auth/errors";
+import { getResetTokenFromParam } from "../../src/features/auth/routes";
 import { theme } from "../../src/theme/tokens";
 
 type FormValues = { password: string; confirmPassword: string };
 
 export default function ResetPasswordScreen() {
-  const { token } = useLocalSearchParams<{ token: string }>();
+  const { token: tokenParam } = useLocalSearchParams<{ token?: string | string[] }>();
+  const token = getResetTokenFromParam(tokenParam);
   const [serverError, setServerError] = useState<string | null>(null);
   const [message, setMessage] = useState<string | null>(null);
   const [showPassword, setShowPassword] = useState(false);
