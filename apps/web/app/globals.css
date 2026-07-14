@@ -16036,13 +16036,21 @@ button.family-settings-row:focus-visible:not(:disabled) {
 .admin-impact-list dd { margin: .15rem 0 0; font-weight: 700; }
 @media (max-width: 640px) { .admin-dialog { width: 100%; max-height: calc(100vh - (2 * var(--gutter))); overflow: auto; } .admin-dialog-actions { position: sticky; bottom: calc(-1 * var(--card-padding)); padding-top: var(--space-s); background: var(--color-surface); flex-direction: column-reverse; } }
 .admin-creative-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: var(--space-m); }
-.admin-creative-card { display: grid; gap: var(--space-s); min-width: 0; border: 1px solid var(--color-border); border-radius: var(--radius-l); padding: var(--space-m); background: color-mix(in srgb, var(--color-surface) 96%, var(--color-primary-soft)); }
-.admin-creative-preview { display: block; width: 100%; max-height: 16rem; object-fit: contain; border: 1px solid var(--color-border); border-radius: var(--radius-m); background: color-mix(in srgb, var(--color-border) 22%, transparent); }
+.admin-creative-card { display: grid; gap: var(--space-s); min-width: 0; max-width: 100%; overflow: hidden; border: 1px solid var(--color-border); border-radius: var(--radius-l); padding: var(--space-m); background: color-mix(in srgb, var(--color-surface) 96%, var(--color-primary-soft)); }
+.admin-creative-preview { display: block; max-width: 100%; width: 100%; height: auto; max-height: 16rem; object-fit: contain; border: 1px solid var(--color-border); border-radius: var(--radius-m); background: color-mix(in srgb, var(--color-border) 22%, transparent); }
+.admin-placement-list { display: grid; gap: var(--space-xs); }
+.admin-placement-row { display: flex; align-items: center; gap: var(--space-s); border: 1px solid var(--color-border); border-radius: var(--radius-m); padding: .45rem .6rem; cursor: pointer; background: var(--color-surface); }
+.admin-placement-row:hover { border-color: var(--color-primary); background: var(--color-primary-soft); }
+.admin-placement-row input { position: absolute; opacity: 0; pointer-events: none; }
+.admin-placement-box { width: 1rem; height: 1rem; display: inline-grid; place-items: center; flex: 0 0 auto; border: 2px solid var(--color-primary); border-radius: .25rem; background: var(--color-surface); }
+.admin-placement-row input:checked + .admin-placement-box { background: var(--color-primary); }
+.admin-placement-row input:checked + .admin-placement-box::after { content: ""; width: .3rem; height: .55rem; border: solid var(--color-surface); border-width: 0 2px 2px 0; transform: rotate(45deg); }
+.admin-placement-row:has(input:focus-visible) { outline: 3px solid color-mix(in srgb, var(--color-primary) 45%, transparent); outline-offset: 2px; }
 .admin-readiness { display: grid; gap: var(--space-xs); }
 .admin-readiness p { margin: 0; overflow-wrap: anywhere; }
 .admin-field small, .admin-muted { color: var(--color-muted); overflow-wrap: anywhere; }
 @media (max-width: 980px) { .admin-creative-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
-@media (max-width: 680px) { .admin-creative-grid { grid-template-columns: 1fr; } }
+@media (max-width: 680px) { .admin-creative-grid { grid-template-columns: 1fr; } .admin-creative-preview { max-height: 12rem; } }
 
 .advertisement-card {
   display: block;

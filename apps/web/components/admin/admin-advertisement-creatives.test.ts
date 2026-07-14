@@ -1,6 +1,8 @@
 import { readFileSync } from "node:fs";
 import assert from "node:assert/strict";
 const form = readFileSync("components/admin/AdminAdvertisementFormClient.tsx", "utf8");
+const css = readFileSync("app/globals.css", "utf8");
+const stats = readFileSync("components/admin/AdminStatisticsClient.tsx", "utf8");
 const clientApi = readFileSync("lib/admin-client-api.ts", "utf8");
 const shared = readFileSync("lib/admin-shared.ts", "utf8");
 assert(form.includes('status:"DRAFT"'));
@@ -14,7 +16,14 @@ assert(form.includes('Remove tablet creative?') || form.includes('Remove ${v.toL
 assert(form.includes('Publishing is blocked until'));
 assert(form.includes('This advertisement uses the legacy format'));
 assert(form.includes('alt={form.altText||'));
+assert(form.includes('admin-placement-list') && form.includes('admin-placement-row'));
+assert(form.includes('form.placements.includes(p)') && form.includes('[...form.placements,p]'));
+assert(form.includes('Advertisement statistics') && form.includes('last7Days') && form.includes('last30Days') && form.includes('perPlacement'));
+assert(css.includes('.admin-creative-preview') && css.includes('max-width: 100%') && css.includes('object-fit: contain') && css.includes('max-height: 12rem'));
+assert(css.includes('.admin-creative-grid { grid-template-columns: 1fr; }'));
+assert(css.includes('.admin-placement-row') && css.includes('.admin-placement-box') && css.includes('input:checked'));
+assert(stats.includes('Advertisement statistics') && stats.includes('Overall CTR') && stats.includes('activeAdvertisementCount'));
 assert(clientApi.includes('FormData') && clientApi.includes('body.set("image", file)'));
 assert(clientApi.includes('/images/${variant}'));
-assert(shared.includes('adminAdvertisementErrorMessage'));
+assert(shared.includes('adminAdvertisementErrorMessage') && shared.includes('AdvertisementStats'));
 console.log("admin advertisement creative source tests passed");

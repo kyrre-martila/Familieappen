@@ -953,6 +953,7 @@ export class AdminApiService {
         status: a.status,
         count: a._count._all,
       })),
+      advertisementStats: await this.advertisementStats(),
     };
   }
 
@@ -982,7 +983,7 @@ export class AdminApiService {
       include: { createdBy: { select: { id: true, name: true, email: true } }, placements: { select: { placement: true } } },
     });
     if (!a) throw new NotFoundException("Advertisement not found");
-    return this.ad(a);
+    return { ...this.ad(a), statistics: await this.advertisementStats(id) };
   }
   async createAdvertisement(
     b: AdvertisementMutationDto,
@@ -1692,6 +1693,25 @@ export class AdminApiService {
       ? `${text.slice(0, 77)}...`
       : text || "Untitled submission";
   }
+  private async advertisementStats(advertisementId?: string) {
+    const now = Date.now(), day = 864e5;
+    const where = advertisementId ? { advertisementId } : {};
+    const events = await ((this.db as any).advertisementEvent?.findMany?.({ where, select: { advertisementId: true, type: true, metadata: true, occurredAt: true } }) ?? Promise.resolve([]));
+    const ads = await this.db.advertisement.findMany({
+      ...(advertisementId ? { where: { id: advertisementId } } : {}),
+      include: { placements: { select: { placement: true } } },
+    });
+    const count = (type: string, days?: number, placement?: string, id?: string) => events.filter((e: any) =>
+      e.type === type && (!id || e.advertisementId === id) && (!days || new Date(e.occurredAt).getTime() >= now - days * day) && (!placement || e.metadata?.placement === placement)
+    ).length;
+    const summary = (id?: string) => { const impressions = count("IMPRESSION", undefined, undefined, id), clicks = count("CLICK", undefined, undefined, id); return { impressions, clicks, ctr: this.ctr(clicks, impressions), last7Days: { impressions: count("IMPRESSION", 7, undefined, id), clicks: count("CLICK", 7, undefined, id) }, last30Days: { impressions: count("IMPRESSION", 30, undefined, id), clicks: count("CLICK", 30, undefined, id) } }; };
+    const total = summary(advertisementId);
+    const activeAdvertisementCount = ads.filter((a: any) => a.status === "ACTIVE").length;
+    const rows = ads.map((a: any) => ({ id: a.id, title: a.title, status: a.status, placements: this.adPlacementArray(a), ...summary(a.id) }));
+    const perPlacement = AD_PLACEMENTS.map((placement) => ({ placement, impressions: count("IMPRESSION", undefined, placement, advertisementId), clicks: count("CLICK", undefined, placement, advertisementId) })).filter((p) => p.impressions || p.clicks);
+    return { ...total, activeAdvertisementCount, perPlacement, advertisements: rows };
+  }
+  private ctr(clicks: number, impressions: number) { return impressions ? Math.round((clicks / impressions) * 10000) / 100 : 0; }
   private ad = (a: any) => ({
     id: a.id,
     title: a.title,
