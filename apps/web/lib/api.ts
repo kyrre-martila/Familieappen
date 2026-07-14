@@ -46,7 +46,7 @@ type LegacyWishlistItem = WishlistItem & {
 
 
 
-export type AdvertisementPlacement = "HOME" | "CALENDAR" | "MENU";
+export type AdvertisementPlacement = "HOME" | "CALENDAR" | "MENU" | "WISHLIST" | "SHOPPING";
 export type AdvertisementImageVariant = { url: string; width: number; height: number; mimeType: string | null };
 export interface PublicAdvertisement { id: string; placement: AdvertisementPlacement; targetUrl: string; altText: string; images: { mobile: AdvertisementImageVariant; tablet: AdvertisementImageVariant | null; desktop: AdvertisementImageVariant | null } }
 

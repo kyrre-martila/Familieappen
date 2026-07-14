@@ -1,6 +1,6 @@
 # Public advertisements
 
-FamilieAppen renders static, image-led advertisements in the normal authenticated app through `GET /api/advertisements` and `GET /api/advertisements?placement=HOME|MENU|CALENDAR`.
+FamilieAppen renders static, image-led advertisements in the normal authenticated app through `GET /api/advertisements` and `GET /api/advertisements?placement=HOME|MENU|CALENDAR|WISHLIST|SHOPPING`.
 
 The public API only returns active, currently scheduled advertisements with mobile creative, alt text, and an HTTPS target URL. It excludes drafts, paused or ended ads, legacy image-only ads, invalid URLs, missing alt text, and internal admin metadata.
 
@@ -12,7 +12,7 @@ Returned fields are: `id`, `placement`, `targetUrl`, `altText`, and responsive `
 - `MENU`: one card near the bottom before logout/about-style footer content.
 - `CALENDAR`: one card below the calendar content/list.
 
-Future placement enum values are ignored until explicitly integrated.
+Supported placements are `HOME`, `CALENDAR`, `MENU`, `WISHLIST`, and `SHOPPING`. An advertisement can be linked to multiple placements through the normalized `AdvertisementPlacementLink` table; each public response still contains the requested singular `placement` for rendering and tracking.
 
 ## Responsive selection and fallbacks
 

@@ -47,8 +47,8 @@ export function AdvertisementCard({ advertisement }: { advertisement: PublicAdve
   }
 
   return (
-    <a ref={ref} className="advertisement-card" href={advertisement.targetUrl} target="_blank" rel="noopener noreferrer sponsored" onClick={click} aria-label={`Advertisement: ${advertisement.altText}`}>
-      <span className="advertisement-card__label">Advertisement</span>
+    <a ref={ref} className="advertisement-card" href={advertisement.targetUrl} target="_blank" rel="noopener noreferrer sponsored" onClick={click} aria-label={`Annonse: ${advertisement.altText}`}>
+      <span className="advertisement-card__label">Annonse</span>
       <img className="advertisement-card__image" src={imageUrl} width={image.width} height={image.height} alt={advertisement.altText} loading="lazy" decoding="async" onError={() => setHidden(true)} />
     </a>
   );
