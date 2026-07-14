@@ -11,7 +11,8 @@
     "typecheck": "tsc -p tsconfig.json --noEmit",
     "build": "pnpm typecheck && npx expo export --platform ios --output-dir dist/ios --clear",
     "lint": "expo lint",
-    "test:urls": "tsx src/lib/api/url.test.ts"
+    "test:urls": "tsx src/lib/api/url.test.ts",
+    "test:auth": "tsx src/features/auth/routes.test.ts && tsx src/features/auth/errors.test.ts"
   },
   "dependencies": {
     "@expo/vector-icons": "^15.1.1",
@@ -32,7 +33,7 @@
     "react": "19.1.0",
     "react-dom": "19.1.0",
     "react-hook-form": "^7.81.0",
-    "react-native": "0.81.0",
+    "react-native": "0.81.5",
     "react-native-gesture-handler": "~2.28.0",
     "react-native-reanimated": "~4.1.7",
     "react-native-safe-area-context": "~5.6.0",
@@ -40,9 +41,9 @@
     "react-native-worklets": "0.5.1"
   },
   "devDependencies": {
-    "@types/react": "^19.1.0",
+    "@types/react": "~19.1.10",
     "eslint": "^9.39.5",
-    "eslint-config-expo": "^57.0.0",
+    "eslint-config-expo": "~10.0.0",
     "tsx": "^4.22.4",
     "typescript": "^5.9.3"
   }

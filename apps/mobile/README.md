@@ -12,30 +12,58 @@ pnpm --filter @familieappen/mobile android
 pnpm --filter @familieappen/mobile web
 ```
 
-The default API base is `https://api-familieappen.martila.no/api`. `EXPO_PUBLIC_API_URL` is the full API base and must include the backend API prefix (`/api` in the default backend configuration). Override it in `apps/mobile/.env`. Endpoint paths such as `/auth/login`, `/auth/logout`, and `/me` are joined with this central base; do not add `/api` to each endpoint.
+The default production API base is `https://api-familieappen.martila.no/api`. `EXPO_PUBLIC_API_URL` is the full API base and must include the backend API prefix (`/api` in the default backend configuration). Endpoint paths such as `/auth/login`, `/auth/logout`, `/auth/forgot-password`, `/auth/reset-password`, `/me`, and `/families` are joined with this central base; do not add `/api` to each endpoint.
 
-For a physical iPhone against a local API, do not use `localhost`; use your computer's LAN IP, for example:
+For physical iPhone testing with Expo Go and a local API, do not use `localhost`; use a LAN IP or a tunnel:
 
 ```bash
-EXPO_PUBLIC_API_URL=http://192.168.1.50:4000/api pnpm --filter @familieappen/mobile start
+EXPO_PUBLIC_API_URL=https://<your-ngrok-host>/api pnpm --filter @familieappen/mobile start -- --tunnel
 ```
+
+ngrok and Expo tunnel startup can fail temporarily. Retry the tunnel command and verify that the final API URL still includes `/api` before testing.
+
+## Auth routing and onboarding gate
+
+Run 1B validates a session by loading `/me` and then `/families`. The central routing function maps these backend-backed states:
+
+- unauthenticated: `/(auth)/login`
+- authenticated + no families from `GET /families`: `/(onboarding)/family-start`
+- authenticated + family membership status `pending` or `rejected` and no approved family: `/(onboarding)/pending-approval`
+- authenticated + at least one approved family membership: `/(app)/(tabs)`
+- blocked/unsupported authenticated state: `/(onboarding)/blocked`
+
+The temporary onboarding routes are placeholders only:
+
+- `/(onboarding)/family-start`
+- `/(onboarding)/pending-approval`
+- `/(onboarding)/blocked`
+
+They explain the backend status, include logout, and do not create families, join by code, collect personal information, or simulate onboarding locally. Run 2 should replace these placeholders with real onboarding screens.
+
+## Forgot password and reset password
+
+`/(auth)/forgot-password` calls `POST /auth/forgot-password` with the e-mail address. The UI always shows a generic success message so it does not reveal whether the e-mail exists.
+
+The backend sends reset e-mail links to the web base URL today (`/reset-password?token=...`). Mobile implements `reset-password/[token]` against the existing `POST /auth/reset-password` API so a native deep link can complete a reset if a future e-mail link is built as, for example, `familieappen://reset-password/<token>`. Run 1B does not change backend e-mail generation and does not claim Universal Links/App Links are production verified.
+
+Reset tokens are never stored in SecureStore. Password reset uses the backend's current password rule: 8 to 1024 characters.
+
+## Session and logout boundaries
+
+Only the bearer access token and metadata (`expiresAt`, `storedAt`, token type) are stored in SecureStore. During restore, an obviously expired token is cleared before `/me`; otherwise `/me` validates the token and `/families` selects the same post-auth destination as a fresh login. A `401` clears local session state. Network restore errors keep the stored token for a later launch retry but do not enter authenticated UI.
+
+Automatic refresh-token use is still out of scope. The backend may set a refresh token as an HttpOnly cookie, but Run 1B does not persist or use refresh tokens directly. Cookie/refresh behavior must be verified later in a development build on physical iOS and Android; Expo Go is not enough proof.
+
+Logout is available from app menu and all onboarding placeholders. It attempts server logout, always clears SecureStore and React Query cache locally, and replaces navigation with login.
+
+## Deactivated or blocked users
+
+The backend guard returns unauthorized when an account is no longer active. Mobile clears the local session on 401. A dedicated blocked placeholder exists for future stable blocked states, but Run 1B does not invent a new backend status or expose admin-only fields.
 
 ## Expo Go and development builds
 
-The current dependencies are Expo SDK-compatible and should run in Expo Go for Run 1A. A development build becomes necessary when adding custom native modules, native configuration not supported by Expo Go, or push notification behavior that must be tested end-to-end on-device.
+The current dependencies are aligned with Expo SDK 54 metadata. A development build becomes necessary when testing native behavior that Expo Go cannot prove, including future cookie/refresh handling, production deep-link association, push notifications, and native Universal Links/App Links.
 
-## Run 1A auth/session boundaries
+## Run 1B limitations / Run 2 handoff
 
-The mobile Run 1A auth model intentionally separates session state from operation state:
-
-- `status` is only `unknown`, `authenticated`, or `unauthenticated`; `unknown` is used before the first SecureStore restore attempt finishes.
-- `isRestoring`, `isLoggingIn`, and `isLoggingOut` track in-flight operations and must not be treated as proof of authentication.
-- Route guards wait only for `isRestoring`. A user-initiated login request keeps the login screen mounted so backend errors can be shown and fields can be re-enabled.
-
-Run 1A stores only the bearer access token and metadata (`expiresAt`, `storedAt`, token type) in SecureStore. During restore, an obviously expired token is cleared without calling `/me`; otherwise `/me` validates the token before app content is shown. A `401` from `/me` clears the local session. If restore cannot reach the network, Run 1A does not enter an offline authenticated mode: the access token remains in SecureStore for a later launch retry, but the current app session stays unauthenticated until `/me` can validate it.
-
-The backend may set a refresh token as an HttpOnly cookie, but automatic refresh is not implemented in Run 1A and the mobile client does not persist or use refresh tokens directly. Cookie behavior for the later refresh design must be verified in a development build on physical iOS and Android devices; Expo Go alone must not be treated as proof of full cookie/refresh support.
-
-## Run 1A limitations
-
-No onboarding, push-token registration, offline queue, persisted query cache, automatic token refresh, calendar, tasks, shopping, meals or wishlist domain logic is implemented yet.
+Not implemented in this run: registration changes, personal-information forms, family creation, join-code flow, invitation acceptance changes, member administration, refresh tokens, push, offline auth, biometrics, Apple/Google login, or calendar/husk/shopping/meals/wishlist feature logic.

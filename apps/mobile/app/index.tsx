@@ -4,14 +4,14 @@ import BootstrapScreen from "./splash";
 import { useAuth } from "../src/features/auth/AuthProvider";
 
 export default function IndexRoute() {
-  const { isRestoring, isAuthenticated } = useAuth();
+  const { isRestoring, isAuthenticated, authDestination } = useAuth();
   useEffect(() => {
     if (isRestoring) return;
     const navigation = requestAnimationFrame(() => {
-      router.replace(isAuthenticated ? "/(app)/(tabs)" : "/(auth)/login");
+      router.replace(isAuthenticated ? authDestination : "/(auth)/login");
     });
     return () => cancelAnimationFrame(navigation);
-  }, [isAuthenticated, isRestoring]);
+  }, [authDestination, isAuthenticated, isRestoring]);
 
   return <BootstrapScreen />;
 }
