@@ -64,6 +64,8 @@ enum AdvertisementPlacement {
   HOME
   CALENDAR
   MENU
+  WISHLIST
+  SHOPPING
 }
 
 enum AdvertisementEventType {
@@ -131,7 +133,7 @@ model Advertisement {
   imageUrl             String?
   altText              String?
   targetUrl            String?
-  placement            AdvertisementPlacement
+  placements           AdvertisementPlacementLink[]
   status               AdvertisementStatus    @default(DRAFT)
   startsAt             DateTime?
   endsAt               DateTime?
@@ -157,6 +159,16 @@ model Advertisement {
   @@index([startsAt, endsAt])
   @@index([createdById])
   @@map("advertisements")
+}
+
+model AdvertisementPlacementLink {
+  advertisementId String
+  placement       AdvertisementPlacement
+  advertisement   Advertisement @relation(fields: [advertisementId], references: [id], onDelete: Cascade)
+
+  @@id([advertisementId, placement])
+  @@index([placement])
+  @@map("advertisement_placement_links")
 }
 
 model AdvertisementEvent {

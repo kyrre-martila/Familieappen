@@ -16,6 +16,7 @@ import {
 } from "lucide-react";
 
 import { AppShell } from "../../components/AppShell";
+import { AdvertisementPlacementCard } from "../../components/AdvertisementCard";
 import { UserAvatar } from "../../components/avatar/UserAvatar";
 import { LockedFeatureState } from "../../components/PendingAccess";
 import { useFamilyAccess } from "../../components/ProtectedFamilyRoute";
@@ -697,6 +698,7 @@ function WishlistPageInner() {
     <AppShell title="Ønskeliste" titleAction={activeTab === "mine" ? <WishlistShareButton /> : undefined}>
       <PageContainer>
         <WishlistContent activeTab={activeTab} />
+        {activeTab === "mine" ? <AdvertisementPlacementCard placement="WISHLIST" /> : null}
       </PageContainer>
     </AppShell>
   );

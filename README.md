@@ -133,7 +133,7 @@ Admin passwords are never stored in the frontend. Admin password reset and MFA a
 
 ### Advertisements
 
-Advertisement management uses `/api/admin/advertisements` and supports `DRAFT`, `SCHEDULED`, `ACTIVE`, `PAUSED`, and `ENDED` statuses with `HOME`, `CALENDAR`, and `MENU` placements. The first admin UI version supports title, plain-text body, image URL, target URL, placement, status, and optional start/end dates. Image upload, billing, purchasing, advanced targeting, behavioral profiling, rich text, and impression/click tracking from admin previews are intentionally out of scope.
+Advertisement management uses `/api/admin/advertisements` and supports `DRAFT`, `SCHEDULED`, `ACTIVE`, `PAUSED`, and `ENDED` statuses with `HOME`, `CALENDAR`, `MENU`, `WISHLIST`, and `SHOPPING` placements. Advertisements can be assigned to several placements at the same time through a normalized join table. The admin UI supports title, target URL, multiple placements, status, optional start/end dates, and uploaded creatives. Image upload, billing, purchasing, advanced targeting, behavioral profiling, rich text, and impression/click tracking from admin previews are intentionally out of scope.
 
 ### Audit log
 

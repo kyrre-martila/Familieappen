@@ -4,7 +4,7 @@ FamilieAppen advertisements are image-led creative assets. The admin title is in
 
 ## Admin create-draft-first flow
 
-Admins create a `DRAFT` advertisement first with an internal title, placement, optional alt text, optional HTTPS target URL and optional schedule. Upload controls are shown only after the draft has an advertisement ID because the protected upload endpoints are advertisement-scoped.
+Admins create a `DRAFT` advertisement first with an internal title, one or more placements, optional alt text, optional HTTPS target URL and optional schedule. Upload controls are shown only after the draft has an advertisement ID because the protected upload endpoints are advertisement-scoped.
 
 After draft creation, the admin detail page manages metadata independently from image upload. Metadata saves do not reset image state, and image uploads update only the changed viewport variant.
 
@@ -13,7 +13,7 @@ After draft creation, the admin detail page manages metadata independently from 
 - **Internal title:** used only in admin and never shown to app users.
 - **Alt text:** describes the advertisement image for users who cannot see it. It applies to the creative as a whole.
 - **Target URL:** must be HTTPS before an advertisement can be scheduled or activated.
-- **Placement:** uses the backend placement enum.
+- **Placements:** use the backend placement enum and are stored in a normalized join table. Drafts may be incomplete, but scheduled and active advertisements require at least one placement.
 - **Schedule:** start and end are optional where backend lifecycle rules allow them; end cannot be before start.
 
 Legacy `body` and `imageUrl` values are preserved by the backend but are deprecated in the primary admin UI. Legacy-only rows show a non-destructive warning and must be updated with a mobile creative and alt text before scheduling or activation.

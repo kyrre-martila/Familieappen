@@ -11,6 +11,7 @@ import {
   type ReactNode,
 } from "react";
 import Link from "next/link";
+import { AdvertisementPlacementCard } from "../../components/AdvertisementCard";
 import { AppShell } from "../../components/AppShell";
 import { useRouter } from "next/navigation";
 import {
@@ -1155,6 +1156,8 @@ export function ShoppingPageClient({
                   </div>
                 )}
               </section>
+
+              <AdvertisementPlacementCard placement="SHOPPING" />
 
               <section
                 className="shopping-section shopping-catalog-section"

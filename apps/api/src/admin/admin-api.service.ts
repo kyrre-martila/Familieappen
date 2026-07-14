@@ -31,7 +31,7 @@ import {
 
 type Meta = { ipAddress?: string | null; userAgent?: string | null };
 const AD_STATUSES = ["DRAFT", "SCHEDULED", "ACTIVE", "PAUSED", "ENDED"];
-const AD_PLACEMENTS = ["HOME", "CALENDAR", "MENU"];
+const AD_PLACEMENTS = ["HOME", "CALENDAR", "MENU", "WISHLIST", "SHOPPING"];
 const ADMIN_ROLES = ["SUPER_ADMIN", "SUPPORT", "ANALYST", "AD_MANAGER"];
 const FAMILY_ROLES = ["OWNER", "PARENT", "CHILD", "GUEST"];
 const SOURCE_FAMILY_ACTIONS = ["PRESERVE", "DELETE_IF_EMPTY"];
@@ -970,6 +970,7 @@ export class AdminApiService {
         orderBy: { createdAt: "desc" },
         include: {
           createdBy: { select: { id: true, name: true, email: true } },
+          placements: { select: { placement: true } },
         },
       }),
     ]);
@@ -978,7 +979,7 @@ export class AdminApiService {
   async advertisement(id: string) {
     const a = await this.db.advertisement.findUnique({
       where: { id },
-      include: { createdBy: { select: { id: true, name: true, email: true } } },
+      include: { createdBy: { select: { id: true, name: true, email: true } }, placements: { select: { placement: true } } },
     });
     if (!a) throw new NotFoundException("Advertisement not found");
     return this.ad(a);
@@ -989,10 +990,10 @@ export class AdminApiService {
     meta: Meta,
   ) {
     const data = this.adInput(b, true);
-    const a = await this.db.advertisement.create({
+    const a = await this.db.$transaction(async (tx: any) => tx.advertisement.create({
       data: { ...data, createdById: admin.id },
-      include: { createdBy: { select: { id: true, name: true, email: true } } },
-    });
+      include: { createdBy: { select: { id: true, name: true, email: true } }, placements: { select: { placement: true } } },
+    }));
     await this.audit(
       admin.id,
       AdminAuditAction.ADVERTISEMENT_CREATED,
@@ -1011,18 +1012,19 @@ export class AdminApiService {
   ) {
     const current = await this.db.advertisement.findUnique({
       where: { id },
-      include: { createdBy: { select: { id: true, name: true, email: true } } },
+      include: { createdBy: { select: { id: true, name: true, email: true } }, placements: { select: { placement: true } } },
     });
     if (!current) throw new NotFoundException("Advertisement not found");
     const data = this.adInput(b, false, current);
-    const a = await this.db.advertisement
+    const a = await this.db.$transaction(async (tx: any) => tx.advertisement
       .update({
         where: { id },
         data,
         include: {
           createdBy: { select: { id: true, name: true, email: true } },
+          placements: { select: { placement: true } },
         },
-      })
+      }))
       .catch(() => {
         throw new NotFoundException("Advertisement not found");
       });
@@ -1097,7 +1099,7 @@ export class AdminApiService {
     const v = this.variant(variant);
     const before = await this.db.advertisement.findUnique({
       where: { id },
-      include: { createdBy: { select: { id: true, name: true, email: true } } },
+      include: { createdBy: { select: { id: true, name: true, email: true } }, placements: { select: { placement: true } } },
     });
     if (!before) throw new NotFoundException("Advertisement not found");
     const img = this.validateAdImage(file);
@@ -1120,6 +1122,7 @@ export class AdminApiService {
         data,
         include: {
           createdBy: { select: { id: true, name: true, email: true } },
+          placements: { select: { placement: true } },
         },
       });
       const old = before[`${prefix}ImagePath`];
@@ -1162,7 +1165,7 @@ export class AdminApiService {
       );
     const a = await this.db.advertisement.findUnique({
       where: { id },
-      include: { createdBy: { select: { id: true, name: true, email: true } } },
+      include: { createdBy: { select: { id: true, name: true, email: true } }, placements: { select: { placement: true } } },
     });
     if (!a) throw new NotFoundException("Advertisement not found");
     const prefix = v.toLowerCase();
@@ -1174,7 +1177,7 @@ export class AdminApiService {
     const updated = await this.db.advertisement.update({
       where: { id },
       data,
-      include: { createdBy: { select: { id: true, name: true, email: true } } },
+      include: { createdBy: { select: { id: true, name: true, email: true } }, placements: { select: { placement: true } } },
     });
     void this.removeAdFileIfUnreferenced(old);
     await this.audit(
@@ -1583,8 +1586,10 @@ export class AdminApiService {
     if (create || b.title !== undefined)
       data.title = this.reqStr(b.title, "title");
     if (b.body !== undefined) data.body = null;
-    if (create || b.placement !== undefined)
-      data.placement = this.enumVal(b.placement, AD_PLACEMENTS, "placement");
+    if (create || b.placements !== undefined || b.placement !== undefined) {
+      const placements = this.adPlacements(b.placements !== undefined ? b.placements : b.placement, create);
+      data.placements = { deleteMany: {}, create: placements.map((placement: string) => ({ placement })) };
+    }
     if (b.status !== undefined)
       data.status = this.enumVal(b.status, AD_STATUSES, "status");
     if (b.imageUrl !== undefined) data.imageUrl = null;
@@ -1604,7 +1609,9 @@ export class AdminApiService {
     const merged = { ...(current ?? {}), ...data };
     if (merged.startsAt && merged.endsAt && merged.endsAt < merged.startsAt)
       throw new BadRequestException("endsAt cannot be before startsAt");
+    const mergedPlacements = data.placements?.create?.map((p: any) => p.placement) ?? this.adPlacementArray(current);
     if (["SCHEDULED", "ACTIVE"].includes(merged.status)) {
+      if (mergedPlacements.length === 0) throw new BadRequestException("at least one placement is required before publishing advertisement");
       if (!this.str(merged.altText))
         throw new BadRequestException(
           "altText is required before publishing advertisement",
@@ -1622,6 +1629,21 @@ export class AdminApiService {
         throw new BadRequestException("mobile image file is missing");
     }
     return data;
+  }
+
+  private adPlacements(value: unknown, create: boolean) {
+    if (value === undefined || value === null) return create ? [] : [];
+    const raw = Array.isArray(value) ? value : [value];
+    const out: string[] = [];
+    for (const item of raw) {
+      const placement = this.enumVal(item, AD_PLACEMENTS, "placement") as string;
+      if (!out.includes(placement)) out.push(placement);
+    }
+    return out;
+  }
+  private adPlacementArray(a: any) {
+    if (Array.isArray(a?.placements)) return a.placements.map((p: any) => typeof p === "string" ? p : p.placement).filter(Boolean);
+    return a?.placement ? [a.placement] : [];
   }
   private url(v: unknown, n: string) {
     const s = this.reqStr(v, n);
@@ -1677,7 +1699,7 @@ export class AdminApiService {
     imageUrl: a.imageUrl ?? null,
     altText: a.altText ?? null,
     targetUrl: a.targetUrl,
-    placement: a.placement,
+    placements: this.adPlacementArray(a),
     status: a.status,
     startsAt: a.startsAt?.toISOString?.() ?? null,
     endsAt: a.endsAt?.toISOString?.() ?? null,
