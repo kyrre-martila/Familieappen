@@ -1,12 +1,14 @@
-import type { FamilyWithMembership } from "./types";
+import type { AuthUser, CurrentUserPendingFamilyAccess, FamilyWithMembership } from "./types";
 
 export type FamilyBootstrapStatus =
   | "unknown"
   | "no-family"
   | "pending"
+  | "profile-incomplete"
   | "ready";
 export type AuthDestination =
   | "/(auth)/login"
+  | "/(onboarding)/profile"
   | "/(onboarding)/family-start"
   | "/(onboarding)/pending-approval"
   | "/(app)/(tabs)";
@@ -19,6 +21,7 @@ export const FAMILY_STATUS_DESTINATIONS: Record<
   Exclude<AuthDestination, "/(auth)/login">
 > = {
   unknown: "/(onboarding)/family-start",
+  "profile-incomplete": "/(onboarding)/profile",
   "no-family": "/(onboarding)/family-start",
   pending: "/(onboarding)/pending-approval",
   ready: "/(app)/(tabs)",
@@ -31,10 +34,18 @@ export function getPostAuthDestination(
   return FAMILY_STATUS_DESTINATIONS[state.familyStatus];
 }
 
+export function isProfileComplete(user: AuthUser): boolean {
+  return Boolean(user.firstName?.trim() && user.lastName?.trim() && user.phone?.trim());
+}
+
 export function resolveFamilyStatus(
   families: FamilyWithMembership[],
+  pendingAccess?: CurrentUserPendingFamilyAccess | null,
+  user?: AuthUser | null,
 ): FamilyBootstrapStatus {
-  return families.length > 0 ? "ready" : "no-family";
+  if (user && !isProfileComplete(user)) return "profile-incomplete";
+  if (families.length > 0) return "ready";
+  return pendingAccess?.hasPendingAccess && pendingAccess.status === "pending" ? "pending" : "no-family";
 }
 
 export function getOnboardingRedirect(
@@ -60,6 +71,12 @@ function pathsMatchDestination(
       "/onboarding/create-family",
       "/join-family",
       "/onboarding/join-family",
+      "/invite-members",
+      "/onboarding/invite-members",
+      "/terms",
+      "/onboarding/terms",
+      "/privacy",
+      "/onboarding/privacy",
       "/pending-approval",
       "/onboarding/pending-approval",
     ].includes(currentPath);

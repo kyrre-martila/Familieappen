@@ -10,6 +10,7 @@ import {
   FamilyInvitationDto,
   FamilyInviteRequestDto,
   FamilyInviteResponseDto,
+  CurrentUserPendingFamilyAccessDto,
   FamilyMemberDto,
   JoinFamilyByCodeRequestDto,
   FamilyWithMembershipDto,
@@ -45,6 +46,11 @@ export class FamiliesController {
     @Body() body: JoinFamilyByCodeRequestDto
   ): Promise<ApiResponse<FamilyInvitationDto>> {
     return createApiResponse(await this.familiesService.joinFamilyByCode(request.user.id, body));
+  }
+
+  @Get("my-pending-access")
+  async getMyPendingAccess(@Req() request: AuthenticatedRequest): Promise<ApiResponse<CurrentUserPendingFamilyAccessDto>> {
+    return createApiResponse(await this.familiesService.getCurrentUserPendingAccess(request.user.id));
   }
 
   @Get()

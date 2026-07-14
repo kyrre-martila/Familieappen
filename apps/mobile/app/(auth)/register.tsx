@@ -213,6 +213,10 @@ export default function RegisterScreen() {
             </Pressable>
           )}
         />
+        <View style={styles.legalLinks}>
+          <Link href="/(auth)/terms" asChild><Pressable accessibilityRole="link" style={styles.link}><AppText style={styles.linkText}>Les vilkår</AppText></Pressable></Link>
+          <Link href="/(auth)/privacy" asChild><Pressable accessibilityRole="link" style={styles.link}><AppText style={styles.linkText}>Les personvern</AppText></Pressable></Link>
+        </View>
         {errors.terms?.message ? (
           <InlineMessage type="error">{errors.terms.message}</InlineMessage>
         ) : null}
@@ -249,6 +253,7 @@ const styles = StyleSheet.create({
     gap: theme.spacing.sm,
   },
   termsText: { flex: 1, color: theme.colors.text },
+  legalLinks: { flexDirection: "row", justifyContent: "center", gap: theme.spacing.md, flexWrap: "wrap" },
   loginRow: {
     minHeight: 44,
     flexDirection: "row",

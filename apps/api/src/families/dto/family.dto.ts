@@ -87,3 +87,10 @@ export interface FamilyDetailsDto {
   family: FamilyDto;
   members: FamilyMemberDto[];
 }
+
+export interface CurrentUserPendingFamilyAccessDto {
+  hasPendingAccess: boolean;
+  status: FamilyInvitationStatusDto | null;
+  family: Pick<FamilyDto, "id" | "name"> | null;
+  createdAt: string | null;
+}

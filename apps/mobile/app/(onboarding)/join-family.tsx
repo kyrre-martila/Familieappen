@@ -26,7 +26,7 @@ function normalize(v: string) {
   return v.trim().toUpperCase().replace(/\s+/g, "");
 }
 export default function JoinFamilyScreen() {
-  const { accessToken } = useAuth();
+  const { accessToken, refreshFamilyStatus } = useAuth();
   const [found, setFound] = useState(false);
   const [serverError, setServerError] = useState<string | null>(null);
   const {
@@ -82,6 +82,7 @@ export default function JoinFamilyScreen() {
             title="Gå videre"
             onPress={async () => {
               await onboardingStorage.savePendingFamilyRequest(normalized);
+              await refreshFamilyStatus();
               router.replace("/(onboarding)/pending-approval");
             }}
           />

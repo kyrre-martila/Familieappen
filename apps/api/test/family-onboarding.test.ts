@@ -231,6 +231,7 @@ class InMemoryFamilyPrismaService {
         },
       },
       shoppingList: {
+        findFirst: async ({ where }: { where: { familyId: string } }) => [...this.shoppingLists.values()].find((list) => list.familyId === where.familyId) ?? null,
         findUnique: async ({ where }: { where: { familyId: string } }) => [...this.shoppingLists.values()].find((list) => list.familyId === where.familyId) ?? null,
         create: async ({ data }: { data: { familyId: string; name: string } }) => {
           const shoppingList = { id: `shopping-${data.familyId}`, ...data };
@@ -257,21 +258,24 @@ class InMemoryFamilyPrismaService {
         findMany: async () => [],
       },
       familyInvitation: {
-        findFirst: async ({ where }: { where: { id?: string; familyId: string; invitedUserId?: string; invitedEmail?: { equals: string }; status?: FamilyInvitationRecord["status"]; source?: FamilyInvitationRecord["source"]; OR?: Array<{ invitedUserId?: string; invitedEmail?: { equals: string } }> } }): Promise<FamilyInvitationRecord | null> => {
-          return [...this.familyInvitations.values()].find((invitation) => {
+        findFirst: async ({ where, include }: { where: { id?: string; familyId?: string; invitedUserId?: string; invitedEmail?: { equals: string }; status?: FamilyInvitationRecord["status"]; source?: FamilyInvitationRecord["source"]; OR?: Array<{ invitedUserId?: string; invitedEmail?: { equals: string } }> }; include?: unknown }): Promise<FamilyInvitationRecord | null> => {
+          const found = [...this.familyInvitations.values()].find((invitation) => {
             const matchesOr = !where.OR || where.OR.some((condition) =>
               (condition.invitedUserId && invitation.invitedUserId === condition.invitedUserId) ||
               (condition.invitedEmail && invitation.invitedEmail.toLowerCase() === condition.invitedEmail.equals.toLowerCase()),
             );
 
             return (!where.id || invitation.id === where.id) &&
-              invitation.familyId === where.familyId &&
+              (!where.familyId || invitation.familyId === where.familyId) &&
               (!where.invitedUserId || invitation.invitedUserId === where.invitedUserId) &&
               (!where.invitedEmail || invitation.invitedEmail.toLowerCase() === where.invitedEmail.equals.toLowerCase()) &&
               (!where.status || invitation.status === where.status) &&
               (!where.source || invitation.source === where.source) &&
               matchesOr;
           }) ?? null;
+          if (!found) return null;
+          if (include) return { ...found, family: this.families.get(found.familyId) } as FamilyInvitationRecord;
+          return found;
         },
         create: async ({ data }: { data: Omit<FamilyInvitationRecord, "id" | "status" | "acceptedAt" | "declinedAt" | "revokedAt" | "createdAt" | "updatedAt"> }): Promise<FamilyInvitationRecord> => {
           const invitation: FamilyInvitationRecord = {
@@ -314,6 +318,7 @@ async function run(): Promise<void> {
   const service = new FamiliesService(
     prisma as never,
     familyAuthorization as never,
+    {} as never,
     {} as never,
   );
 
@@ -366,6 +371,14 @@ async function run(): Promise<void> {
   assert.equal(joinRequest.source, "join_request", "join-by-code marks the record as an inbound join request");
   assert.equal(joinRequest.invitedEmail, "anne@example.com", "join-by-code records the requesting user email");
 
+  const pendingAccess = await service.getCurrentUserPendingAccess("user-2");
+  assert.equal(pendingAccess.hasPendingAccess, true, "pending-access reports the current user pending join request");
+  assert.equal(pendingAccess.status, "pending", "pending-access uses pending as the active onboarding status");
+  assert.equal(pendingAccess.family?.id, first.family.id, "pending-access returns safe family identity");
+
+  const otherUserPendingAccess = await service.getCurrentUserPendingAccess("user-3");
+  assert.equal(otherUserPendingAccess.hasPendingAccess, false, "pending-access does not leak another user pending request");
+
   const duplicateJoinRequest = await service.joinFamilyByCode("user-2", { code: first.family.code });
   assert.equal(duplicateJoinRequest.id, joinRequest.id, "duplicate join-by-code returns the existing pending request");
   assert.equal(prisma.invitationCount(), 1, "duplicate join-by-code does not create duplicate pending requests");
@@ -379,6 +392,9 @@ async function run(): Promise<void> {
   const approvedRequest = await service.approveFamilyJoinRequest("user-1", first.family.id, joinRequest.id);
   assert.equal(approvedRequest.status, "accepted", "approving a join request marks it accepted");
   assert.equal(prisma.hasMember("user-2", first.family.id), true, "approving a join request creates a family member");
+
+  const closedPendingAccess = await service.getCurrentUserPendingAccess("user-2");
+  assert.equal(closedPendingAccess.hasPendingAccess, false, "accepted join requests are not active pending access");
 
   await assert.rejects(
     () => service.approveFamilyJoinRequest("user-1", first.family.id, joinRequest.id),
@@ -401,6 +417,8 @@ async function run(): Promise<void> {
   const rejectableRequest = await service.joinFamilyByCode("user-3", { code: first.family.code });
   const rejectedRequest = await service.rejectFamilyJoinRequest("user-1", first.family.id, rejectableRequest.id);
   assert.equal(rejectedRequest.status, "declined", "rejecting a join request marks it declined");
+  const rejectedPendingAccess = await service.getCurrentUserPendingAccess("user-3");
+  assert.equal(rejectedPendingAccess.hasPendingAccess, false, "declined join requests are not active pending access");
   assert.equal(prisma.hasMember("user-3", first.family.id), false, "rejecting a join request does not create a family member");
 
   console.log("family onboarding idempotency and code tests passed");
