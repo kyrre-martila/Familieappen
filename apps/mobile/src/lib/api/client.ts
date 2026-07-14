@@ -1,23 +1,56 @@
 import { appConfig } from "../../config/env";
 
-export type ApiErrorBody = { message?: string | string[]; error?: string; statusCode?: number };
+export type ApiErrorPayload = { code?: string; message?: string };
+export type ApiErrorBody = { error?: ApiErrorPayload; message?: string | string[]; statusCode?: number };
+export type ApiEnvelope<T> = { data: T };
+
 export class ApiError extends Error {
-  constructor(message: string, readonly status: number, readonly body: ApiErrorBody | null) { super(message); }
+  constructor(message: string, readonly status: number, readonly code?: string, readonly body?: ApiErrorBody | null) {
+    super(message);
+  }
 }
 
-type RequestOptions = RequestInit & { accessToken?: string | null };
+type RequestOptions = Omit<RequestInit, "body"> & { accessToken?: string | null; body?: unknown };
 
-export async function apiFetch<T>(path: string, options: RequestOptions = {}): Promise<T> {
+export async function apiRequest<T>(path: string, options: RequestOptions = {}): Promise<T> {
   const headers = new Headers(options.headers);
   headers.set("Accept", "application/json");
-  if (options.body && !headers.has("Content-Type")) headers.set("Content-Type", "application/json");
+
+  const isFormData = typeof FormData !== "undefined" && options.body instanceof FormData;
+  if (options.body !== undefined && !isFormData && !headers.has("Content-Type")) headers.set("Content-Type", "application/json");
   if (options.accessToken) headers.set("Authorization", `Bearer ${options.accessToken}`);
-  const response = await fetch(`${appConfig.apiUrl}${path.startsWith("/") ? path : `/${path}`}`, { ...options, headers });
-  if (!response.ok) {
-    const body = await response.json().catch(() => null) as ApiErrorBody | null;
-    const message = Array.isArray(body?.message) ? body.message.join("\n") : body?.message ?? body?.error ?? `API request failed (${response.status})`;
-    throw new ApiError(message, response.status, body);
+
+  let response: Response;
+  try {
+    response = await fetch(`${appConfig.apiUrl}${path.startsWith("/") ? path : `/${path}`}`, {
+      ...options,
+      headers,
+      body: options.body === undefined ? undefined : isFormData ? options.body as BodyInit : JSON.stringify(options.body)
+    });
+  } catch {
+    throw new ApiError("Kunne ikke nå serveren. Sjekk tilkoblingen og prøv igjen.", 0, "network.unavailable");
   }
+
+  if (!response.ok) throw await parseApiError(response);
   if (response.status === 204) return undefined as T;
-  return response.json() as Promise<T>;
+
+  const envelope = await response.json().catch(() => null) as ApiEnvelope<T> | null;
+  if (!envelope || !("data" in envelope)) throw new ApiError("Ugyldig svar fra serveren.", response.status, "server.invalid_response");
+  return envelope.data;
+}
+
+export const apiFetch = apiRequest;
+
+async function parseApiError(response: Response): Promise<ApiError> {
+  const body = await response.json().catch(() => null) as ApiErrorBody | null;
+  const code = body?.error?.code;
+  const backendMessage = body?.error?.message ?? (Array.isArray(body?.message) ? body.message.join("\n") : body?.message);
+  return new ApiError(backendMessage ?? defaultErrorMessage(code, response.status), response.status, code, body);
+}
+
+function defaultErrorMessage(code: string | undefined, status: number): string {
+  if (code?.startsWith("auth.")) return "Økten er utløpt. Logg inn på nytt.";
+  if (code?.startsWith("validation.")) return "Sjekk feltene og prøv igjen.";
+  if (status === 0) return "Kunne ikke nå serveren.";
+  return "Noe gikk galt. Prøv igjen.";
 }
