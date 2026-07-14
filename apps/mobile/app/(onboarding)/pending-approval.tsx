@@ -1,2 +1,2 @@
 import { OnboardingPlaceholder } from "../../src/features/auth/OnboardingPlaceholder";
-export default function PendingApprovalScreen() { return <OnboardingPlaceholder title="Venter på godkjenning" description="Backend lagrer ventende join-forespørsler som familieinvitasjoner. Mobilens bootstrap kan ikke slå opp denne statusen ennå, men ruten er beskyttet dersom en stabil pending-status blir satt av en faktisk flyt." />; }
+export default function PendingApprovalScreen() { return <OnboardingPlaceholder variant="pending-approval" />; }
