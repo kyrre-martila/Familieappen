@@ -1,9 +1,11 @@
-import { createContext, useCallback, useContext, useEffect, useMemo, useState, type ReactNode } from "react";
+import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
+import { router } from "expo-router";
 import { useQueryClient } from "@tanstack/react-query";
 import { ApiError } from "../../lib/api/client";
 import { authStorage } from "../../lib/auth/authStorage";
-import { getCurrentUser, loginWithEmail, logoutSession } from "./api";
+import { getCurrentUser, listFamilies, loginWithEmail, logoutSession } from "./api";
 import { isNetworkApiError, isStoredSessionExpired, isUnauthorizedApiError, POST_LOGIN_SESSION_ERROR_MESSAGE, RESTORE_NETWORK_MESSAGE } from "./sessionPolicy";
+import { getPostAuthDestination, resolveFamilyStatus, type AuthDestination, type FamilyBootstrapStatus } from "./routes";
 import type { AuthUser } from "./types";
 
 export type AuthStatus = "unknown" | "authenticated" | "unauthenticated";
@@ -12,6 +14,8 @@ type AuthContextValue = {
   status: AuthStatus;
   user: AuthUser | null;
   accessToken: string | null;
+  familyStatus: FamilyBootstrapStatus;
+  authDestination: AuthDestination;
   isRestoring: boolean;
   isLoggingIn: boolean;
   isLoggingOut: boolean;
@@ -30,14 +34,20 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [status, setStatus] = useState<AuthStatus>("unknown");
   const [user, setUser] = useState<AuthUser | null>(null);
   const [accessToken, setAccessToken] = useState<string | null>(null);
+  const [familyStatus, setFamilyStatus] = useState<FamilyBootstrapStatus>("unknown");
   const [isRestoring, setIsRestoring] = useState(true);
   const [isLoggingIn, setIsLoggingIn] = useState(false);
   const [isLoggingOut, setIsLoggingOut] = useState(false);
   const [restoreError, setRestoreError] = useState<string | null>(null);
+  const restorePromiseRef = useRef<Promise<void> | null>(null);
+  const mountedRef = useRef(true);
+
+  useEffect(() => () => { mountedRef.current = false; }, []);
 
   const setUnauthenticatedState = useCallback(() => {
     setAccessToken(null);
     setUser(null);
+    setFamilyStatus("unknown");
     setStatus("unauthenticated");
   }, []);
 
@@ -48,6 +58,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, [queryClient, setUnauthenticatedState]);
 
   const restoreSession = useCallback(async () => {
+    if (restorePromiseRef.current) return restorePromiseRef.current;
+    const restorePromise = (async () => {
+    if (!mountedRef.current) return;
     setIsRestoring(true);
     setRestoreError(null);
     try {
@@ -63,8 +76,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
       try {
         const restoredUser = await getCurrentUser(session.accessToken);
+        const families = await listFamilies(session.accessToken);
         setAccessToken(session.accessToken);
         setUser(restoredUser);
+        setFamilyStatus(resolveFamilyStatus(families));
         setStatus("authenticated");
       } catch (error) {
         if (isUnauthorizedApiError(error)) {
@@ -79,10 +94,15 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           return;
         }
         await clearLocalSession();
+        router.replace("/(auth)/login");
       }
     } finally {
-      setIsRestoring(false);
+      if (mountedRef.current) setIsRestoring(false);
+      restorePromiseRef.current = null;
     }
+    })();
+    restorePromiseRef.current = restorePromise;
+    return restorePromise;
   }, [clearLocalSession, setUnauthenticatedState]);
 
   useEffect(() => {
@@ -98,10 +118,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       try {
         await authStorage.saveSession(auth.tokens);
         const validatedUser = await getCurrentUser(auth.tokens.accessToken);
+        const families = await listFamilies(auth.tokens.accessToken);
         await queryClient.clear();
         queryClient.setQueryData(["auth", "me"], validatedUser);
+        queryClient.setQueryData(["auth", "families"], families);
         setAccessToken(auth.tokens.accessToken);
         setUser(validatedUser);
+        setFamilyStatus(resolveFamilyStatus(families));
         setStatus("authenticated");
       } catch {
         await authStorage.clearSession();
@@ -124,13 +147,15 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         // Local logout must still complete if the server session is already gone or unreachable.
       } finally {
         await clearLocalSession();
+        router.replace("/(auth)/login");
       }
     } finally {
       setIsLoggingOut(false);
     }
   }, [accessToken, clearLocalSession]);
 
-  const value = useMemo<AuthContextValue>(() => ({ status, user, accessToken, isRestoring, isLoggingIn, isLoggingOut, isLoading: isRestoring, isAuthenticated: status === "authenticated", restoreError, login, logout, restoreSession }), [accessToken, isLoggingIn, isLoggingOut, isRestoring, login, logout, restoreError, restoreSession, status, user]);
+  const authDestination = getPostAuthDestination(status === "authenticated" ? { auth: "authenticated", familyStatus } : { auth: "unauthenticated" });
+  const value = useMemo<AuthContextValue>(() => ({ status, user, accessToken, familyStatus, authDestination, isRestoring, isLoggingIn, isLoggingOut, isLoading: isRestoring, isAuthenticated: status === "authenticated", restoreError, login, logout, restoreSession }), [accessToken, authDestination, familyStatus, isLoggingIn, isLoggingOut, isRestoring, login, logout, restoreError, restoreSession, status, user]);
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
 }
 

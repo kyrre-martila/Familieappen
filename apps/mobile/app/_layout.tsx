@@ -19,5 +19,5 @@ export default function RootLayout() {
   }, []);
   useEffect(() => { if (ready) SplashScreen.hideAsync().catch(() => undefined); }, [ready]);
   if (!ready) return null;
-  return <ErrorBoundary><AppProviders><Stack screenOptions={{ headerShown: false, contentStyle: { backgroundColor: theme.colors.background } }}><Stack.Screen name="splash" /><Stack.Screen name="(auth)" /><Stack.Screen name="(app)" /><Stack.Screen name="invite/[token]" /></Stack><StatusBar style="dark" backgroundColor={theme.colors.background} /></AppProviders></ErrorBoundary>;
+  return <ErrorBoundary><AppProviders><Stack screenOptions={{ headerShown: false, contentStyle: { backgroundColor: theme.colors.background } }}><Stack.Screen name="splash" /><Stack.Screen name="(auth)" /><Stack.Screen name="(app)" /><Stack.Screen name="(onboarding)" /><Stack.Screen name="invite/[token]" /><Stack.Screen name="reset-password" /><Stack.Screen name="reset-password/[token]" /></Stack><StatusBar style="dark" backgroundColor={theme.colors.background} /></AppProviders></ErrorBoundary>;
 }

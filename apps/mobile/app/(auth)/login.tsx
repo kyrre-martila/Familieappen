@@ -1,8 +1,9 @@
 import { useState } from "react";
 import { Controller, useForm } from "react-hook-form";
-import { ActivityIndicator, KeyboardAvoidingView, Platform, Pressable, StyleSheet, TextInput, View } from "react-native";
+import { ActivityIndicator, Keyboard, KeyboardAvoidingView, Platform, Pressable, StyleSheet, TextInput, View } from "react-native";
+import { Link } from "expo-router";
 import { AppText, Button, Card, Screen } from "../../src/components";
-import { ApiError } from "../../src/lib/api/client";
+import { mapAuthError } from "../../src/features/auth/errors";
 import { useAuth } from "../../src/features/auth/AuthProvider";
 import { theme } from "../../src/theme/tokens";
 
@@ -16,11 +17,12 @@ export default function LoginScreen() {
   const disabled = isSubmitting || isLoggingIn || !isValid;
 
   async function onSubmit(values: LoginFormValues) {
+    Keyboard.dismiss();
     setServerError(null);
     try {
       await login({ email: values.email.trim(), password: values.password });
     } catch (error) {
-      setServerError(error instanceof ApiError ? error.message : "Kunne ikke logge inn. Prøv igjen.");
+      setServerError(mapAuthError(error, "Kunne ikke logge inn. Prøv igjen."));
     }
   }
 
@@ -34,7 +36,7 @@ export default function LoginScreen() {
           <Controller control={control} name="email" rules={{ required: "E-post er påkrevd.", pattern: { value: /^[^\s@]+@[^\s@]+\.[^\s@]+$/, message: "Skriv inn en gyldig e-postadresse." } }} render={({ field: { onChange, onBlur, value } }) => (
             <View style={styles.field}>
               <AppText variant="label">E-post</AppText>
-              <TextInput accessibilityLabel="E-post" autoCapitalize="none" autoComplete="email" autoCorrect={false} inputMode="email" keyboardType="email-address" onBlur={onBlur} onChangeText={onChange} placeholder="navn@eksempel.no" style={[styles.input, errors.email && styles.inputError]} textContentType="username" value={value} />
+              <TextInput accessibilityLabel="E-post" autoCapitalize="none" autoComplete="email" autoCorrect={false} inputMode="email" keyboardType="email-address" onBlur={onBlur} onChangeText={(text) => { setServerError(null); onChange(text); }} placeholder="navn@eksempel.no" style={[styles.input, errors.email && styles.inputError]} textContentType="username" value={value} />
               {errors.email ? <AppText accessibilityRole="alert" style={styles.error}>{errors.email.message}</AppText> : null}
             </View>
           )} />
@@ -42,7 +44,7 @@ export default function LoginScreen() {
             <View style={styles.field}>
               <AppText variant="label">Passord</AppText>
               <View style={[styles.passwordRow, errors.password && styles.inputError]}>
-                <TextInput accessibilityLabel="Passord" autoCapitalize="none" autoComplete="password" onBlur={onBlur} onChangeText={onChange} placeholder="Passord" secureTextEntry={!showPassword} style={styles.passwordInput} textContentType="password" value={value} />
+                <TextInput accessibilityLabel="Passord" autoCapitalize="none" autoComplete="password" onBlur={onBlur} onChangeText={(text) => { setServerError(null); onChange(text); }} onSubmitEditing={() => { if (!disabled) void handleSubmit(onSubmit)(); }} placeholder="Passord" returnKeyType="done" secureTextEntry={!showPassword} style={styles.passwordInput} textContentType="password" value={value} />
                 <Pressable accessibilityRole="button" accessibilityLabel={showPassword ? "Skjul passord" : "Vis passord"} hitSlop={8} onPress={() => setShowPassword((current) => !current)}><AppText style={styles.toggle}>{showPassword ? "Skjul" : "Vis"}</AppText></Pressable>
               </View>
               {errors.password ? <AppText accessibilityRole="alert" style={styles.error}>{errors.password.message}</AppText> : null}
@@ -51,6 +53,7 @@ export default function LoginScreen() {
           {restoreError ? <AppText accessibilityRole="alert" style={styles.restoreBox}>{restoreError}</AppText> : null}
           {serverError ? <AppText accessibilityRole="alert" style={styles.errorBox}>{serverError}</AppText> : null}
           <Button accessibilityLabel="Logg inn" disabled={disabled} onPress={handleSubmit(onSubmit)} title={isSubmitting || isLoggingIn ? "Logger inn…" : "Logg inn"} />
+          <Link href="/(auth)/forgot-password" asChild><Pressable accessibilityRole="link" accessibilityLabel="Glemt passord"><AppText style={styles.forgotLink}>Glemt passord?</AppText></Pressable></Link>
           {isSubmitting || isLoggingIn ? <ActivityIndicator accessibilityLabel="Logger inn" color={theme.colors.primary} /> : null}
         </Card>
       </Screen>
@@ -58,4 +61,4 @@ export default function LoginScreen() {
   );
 }
 
-const styles = StyleSheet.create({ root: { flex: 1, backgroundColor: theme.colors.background }, muted: { color: theme.colors.textMuted }, field: { gap: theme.spacing.sm }, input: { minHeight: 52, borderRadius: theme.radius.md, borderWidth: 1, borderColor: theme.colors.border, backgroundColor: theme.colors.surface, paddingHorizontal: theme.spacing.md, color: theme.colors.text, fontSize: theme.typography.body }, inputError: { borderColor: theme.colors.error }, passwordRow: { minHeight: 52, flexDirection: "row", alignItems: "center", gap: theme.spacing.sm, borderRadius: theme.radius.md, borderWidth: 1, borderColor: theme.colors.border, backgroundColor: theme.colors.surface, paddingHorizontal: theme.spacing.md }, passwordInput: { flex: 1, color: theme.colors.text, fontSize: theme.typography.body }, toggle: { color: theme.colors.primaryStrong, fontWeight: "800" }, error: { color: theme.colors.error }, restoreBox: { borderRadius: theme.radius.md, backgroundColor: theme.colors.primarySoft, color: theme.colors.primaryStrong, padding: theme.spacing.md }, errorBox: { borderRadius: theme.radius.md, backgroundColor: theme.colors.errorSoft, color: theme.colors.error, padding: theme.spacing.md } });
+const styles = StyleSheet.create({ root: { flex: 1, backgroundColor: theme.colors.background }, muted: { color: theme.colors.textMuted }, field: { gap: theme.spacing.sm }, input: { minHeight: 52, borderRadius: theme.radius.md, borderWidth: 1, borderColor: theme.colors.border, backgroundColor: theme.colors.surface, paddingHorizontal: theme.spacing.md, color: theme.colors.text, fontSize: theme.typography.body }, inputError: { borderColor: theme.colors.error }, passwordRow: { minHeight: 52, flexDirection: "row", alignItems: "center", gap: theme.spacing.sm, borderRadius: theme.radius.md, borderWidth: 1, borderColor: theme.colors.border, backgroundColor: theme.colors.surface, paddingHorizontal: theme.spacing.md }, passwordInput: { flex: 1, color: theme.colors.text, fontSize: theme.typography.body }, toggle: { color: theme.colors.primaryStrong, fontWeight: "800" }, error: { color: theme.colors.error }, restoreBox: { borderRadius: theme.radius.md, backgroundColor: theme.colors.primarySoft, color: theme.colors.primaryStrong, padding: theme.spacing.md }, forgotLink: { color: theme.colors.primaryStrong, fontWeight: "800", textAlign: "center" }, errorBox: { borderRadius: theme.radius.md, backgroundColor: theme.colors.errorSoft, color: theme.colors.error, padding: theme.spacing.md } });

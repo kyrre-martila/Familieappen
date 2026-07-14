@@ -24,3 +24,6 @@ export interface AuthResponse {
 }
 
 export interface LogoutResponse { message: string }
+
+export interface PasswordResetMessage { message: string }
+export interface FamilyWithMembership { family: import("@familieappen/shared").Family; membership: import("@familieappen/shared").FamilyMember }
