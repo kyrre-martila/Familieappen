@@ -1,4 +1,4 @@
-import type { CalendarEvent } from "@familieappen/shared";
+import type { CalendarEvent, CalendarEventRecurrenceFrequency } from "@familieappen/shared";
 
 export type CalendarEventForm = {
   title: string;
@@ -8,6 +8,8 @@ export type CalendarEventForm = {
   endTime: string;
   location: string;
   description: string;
+  recurrenceFrequency: CalendarEventRecurrenceFrequency;
+  recurrenceUntil: string;
 };
 
 export type CreateCalendarEventPayload = {
@@ -19,26 +21,36 @@ export type CreateCalendarEventPayload = {
   startsAt: string;
   endsAt: string | null;
   allDay: boolean;
-  recurrenceFrequency: "never";
-  recurrenceUntil: null;
+  recurrenceFrequency: CalendarEventRecurrenceFrequency;
+  recurrenceUntil: string | null;
   participantFamilyMemberIds: string[];
 };
 
-export type UpdateCalendarEventPayload = {
+export type SeriesUpdateCalendarEventPayload = {
   title: string;
   description: string | null;
   location: string | null;
   startsAt: string;
   endsAt: string | null;
   allDay: boolean;
+  recurrenceFrequency?: CalendarEventRecurrenceFrequency;
+  recurrenceUntil?: string | null;
 };
+
+export type OccurrenceUpdateCalendarEventPayload = Omit<SeriesUpdateCalendarEventPayload, "recurrenceFrequency" | "recurrenceUntil">;
+export type UpdateCalendarEventPayload = SeriesUpdateCalendarEventPayload;
 
 export type CalendarEventFormErrors = Partial<Record<keyof CalendarEventForm | "form", string>>;
 
 const datePattern = /^\d{4}-\d{2}-\d{2}$/;
 const timePattern = /^\d{2}:\d{2}$/;
 
-export const defaultCalendarEventForm = (date: string): CalendarEventForm => ({ title: "", date, allDay: true, startTime: "09:00", endTime: "10:00", location: "", description: "" });
+export const calendarRecurrenceOptions = ["never", "daily", "weekly", "monthly", "yearly"] as const satisfies readonly CalendarEventRecurrenceFrequency[];
+export function isCalendarRecurrenceFrequency(value: unknown): value is CalendarEventRecurrenceFrequency { return typeof value === "string" && (calendarRecurrenceOptions as readonly string[]).includes(value); }
+export function getCalendarRecurrenceLabel(frequency: CalendarEventRecurrenceFrequency): string { return ({ never: "Aldri", daily: "Daglig", weekly: "Ukentlig", monthly: "Månedlig", yearly: "Årlig" } as const)[frequency]; }
+export function getCalendarRecurrenceDescription(frequency: CalendarEventRecurrenceFrequency): string { return ({ never: "Hendelsen skjer bare én gang.", daily: "Hendelsen gjentas hver dag.", weekly: "Hendelsen gjentas hver uke.", monthly: "Hendelsen gjentas hver måned.", yearly: "Hendelsen gjentas hvert år." } as const)[frequency]; }
+export function shouldShowCalendarRecurrenceUntil(frequency: CalendarEventRecurrenceFrequency): boolean { return frequency !== "never"; }
+export const defaultCalendarEventForm = (date: string): CalendarEventForm => ({ title: "", date, allDay: true, startTime: "09:00", endTime: "10:00", location: "", description: "", recurrenceFrequency: "never", recurrenceUntil: "" });
 
 export function isValidDateString(date: string): boolean {
   if (!datePattern.test(date)) return false;
@@ -57,7 +69,19 @@ export function toLocalDateTimeString(date: string, time: string | null | undefi
   return `${date}T${allDay || !time ? "00:00" : time}:00.000Z`;
 }
 
-export function validateCalendarEventForm(form: CalendarEventForm): CalendarEventFormErrors {
+export function recurrenceUntilToApiDateTime(date: string): string { return `${date}T23:59:59.999Z`; }
+export function apiDateTimeToLocalDate(value: string | null | undefined): string { return typeof value === "string" && datePattern.test(value.slice(0, 10)) ? value.slice(0, 10) : ""; }
+export function validateCalendarRecurrence(form: Pick<CalendarEventForm, "date" | "recurrenceFrequency" | "recurrenceUntil">): CalendarEventFormErrors {
+  const errors: CalendarEventFormErrors = {};
+  if (!isCalendarRecurrenceFrequency(form.recurrenceFrequency)) errors.recurrenceFrequency = "Velg en gyldig gjentakelse.";
+  if (form.recurrenceFrequency === "never") return errors;
+  if (!form.recurrenceUntil) errors.recurrenceUntil = "Velg sluttdato for gjentakelsen.";
+  else if (!isValidDateString(form.recurrenceUntil)) errors.recurrenceUntil = "Velg en gyldig sluttdato.";
+  else if (isValidDateString(form.date) && form.recurrenceUntil < form.date) errors.recurrenceUntil = "Sluttdato kan ikke være før startdato.";
+  return errors;
+}
+
+export function validateCalendarEventForm(form: CalendarEventForm, options: { allowRecurrence?: boolean } = {}): CalendarEventFormErrors {
   const errors: CalendarEventFormErrors = {};
   if (!form.title.trim()) errors.title = "Tittel må fylles ut.";
   if (!isValidDateString(form.date)) errors.date = "Velg en gyldig dato.";
@@ -66,6 +90,7 @@ export function validateCalendarEventForm(form: CalendarEventForm): CalendarEven
     if (!isValidTimeString(form.endTime)) errors.endTime = "Velg et gyldig sluttidspunkt.";
     if (!errors.startTime && !errors.endTime && form.endTime <= form.startTime) errors.endTime = "Sluttid må være etter starttid.";
   }
+  if (options.allowRecurrence !== false) Object.assign(errors, validateCalendarRecurrence(form));
   return errors;
 }
 
@@ -74,18 +99,25 @@ function normalizeTime(time: string | null | undefined, fallback: string) {
   return match ? `${match[1].padStart(2, "0")}:${match[2]}` : fallback;
 }
 
-export function calendarEventToForm(event: Pick<CalendarEvent, "title" | "date" | "allDay" | "startTime" | "endTime" | "location" | "description">): CalendarEventForm {
-  return { title: event.title, date: event.date, allDay: event.allDay, startTime: normalizeTime(event.startTime, "09:00"), endTime: normalizeTime(event.endTime, "10:00"), location: event.location ?? "", description: event.description ?? "" };
+export function calendarEventToForm(event: Pick<CalendarEvent, "title" | "date" | "allDay" | "startTime" | "endTime" | "location" | "description" | "recurrence" | "recurrenceFrequency" | "recurrenceUntil">): CalendarEventForm {
+  const frequency = event.recurrence?.frequency ?? event.recurrenceFrequency ?? "never";
+  return { title: event.title, date: event.date, allDay: event.allDay, startTime: normalizeTime(event.startTime, "09:00"), endTime: normalizeTime(event.endTime, "10:00"), location: event.location ?? "", description: event.description ?? "", recurrenceFrequency: isCalendarRecurrenceFrequency(frequency) ? frequency : "never", recurrenceUntil: apiDateTimeToLocalDate(event.recurrenceUntil ?? event.recurrence?.until) };
 }
 
 export function createCalendarEventPayload(form: CalendarEventForm): CreateCalendarEventPayload {
   return {
     title: form.title.trim(), description: form.description.trim() || null, location: form.location.trim() || null, icon: "family", reminderMinutesBefore: null,
     startsAt: toLocalDateTimeString(form.date, form.startTime, form.allDay), endsAt: form.allDay ? toLocalDateTimeString(form.date, null, true) : toLocalDateTimeString(form.date, form.endTime, false),
-    allDay: form.allDay, recurrenceFrequency: "never", recurrenceUntil: null, participantFamilyMemberIds: [],
+    allDay: form.allDay, recurrenceFrequency: form.recurrenceFrequency, recurrenceUntil: form.recurrenceFrequency === "never" ? null : recurrenceUntilToApiDateTime(form.recurrenceUntil), participantFamilyMemberIds: [],
   };
 }
 
-export function updateCalendarEventPayload(form: CalendarEventForm): UpdateCalendarEventPayload {
-  return { title: form.title.trim(), description: form.description.trim() || null, location: form.location.trim() || null, startsAt: toLocalDateTimeString(form.date, form.startTime, form.allDay), endsAt: form.allDay ? toLocalDateTimeString(form.date, null, true) : toLocalDateTimeString(form.date, form.endTime, false), allDay: form.allDay };
+export function updateCalendarEventPayload(form: CalendarEventForm, options: { includeRecurrence?: boolean } = {}): SeriesUpdateCalendarEventPayload | OccurrenceUpdateCalendarEventPayload {
+  const payload: SeriesUpdateCalendarEventPayload = { title: form.title.trim(), description: form.description.trim() || null, location: form.location.trim() || null, startsAt: toLocalDateTimeString(form.date, form.startTime, form.allDay), endsAt: form.allDay ? toLocalDateTimeString(form.date, null, true) : toLocalDateTimeString(form.date, form.endTime, false), allDay: form.allDay };
+  if (options.includeRecurrence) { payload.recurrenceFrequency = form.recurrenceFrequency; payload.recurrenceUntil = form.recurrenceFrequency === "never" ? null : recurrenceUntilToApiDateTime(form.recurrenceUntil); }
+  return payload;
+}
+export function occurrenceUpdateCalendarEventPayload(form: CalendarEventForm): OccurrenceUpdateCalendarEventPayload {
+  const { recurrenceFrequency: _frequency, recurrenceUntil: _until, ...payload } = updateCalendarEventPayload(form, { includeRecurrence: false }) as SeriesUpdateCalendarEventPayload;
+  return payload;
 }

@@ -5,7 +5,7 @@ import { listFamilies } from "../../auth/api";
 import { useAuth } from "../../auth/AuthProvider";
 import { ApiError } from "../../../lib/api/client";
 import { updateCalendarEvent, updateCalendarEventOccurrence } from "../api";
-import { updateCalendarEventPayload, type CalendarEventForm } from "../eventForm";
+import { occurrenceUpdateCalendarEventPayload, updateCalendarEventPayload, type CalendarEventForm } from "../eventForm";
 import { calendarEventsInvalidationKey, moveCalendarEventBetweenDays, replaceCalendarEventInDay, replaceCalendarEventOccurrenceInDay } from "../cache";
 import { calendarQueryKeys } from "../queryKeys";
 import { buildUpdatedCalendarEventDetailPath, validateCalendarEventUpdateScope, type CalendarEventEditScope } from "../events";
@@ -22,8 +22,8 @@ export function useUpdateCalendarEvent(input: { eventId: string; previousEvent: 
       const scopeError = validateCalendarEventUpdateScope({ previousEvent: input.previousEvent, scope: input.scope, occurrenceDate: input.occurrenceDate });
       if (scopeError) throw new Error(scopeError);
       return input.scope === "occurrence"
-        ? updateCalendarEventOccurrence(accessToken!, familyId!, input.eventId, input.occurrenceDate!, updateCalendarEventPayload(form))
-        : updateCalendarEvent(accessToken!, familyId!, input.eventId, updateCalendarEventPayload(form));
+        ? updateCalendarEventOccurrence(accessToken!, familyId!, input.eventId, input.occurrenceDate!, occurrenceUpdateCalendarEventPayload(form))
+        : updateCalendarEvent(accessToken!, familyId!, input.eventId, updateCalendarEventPayload(form, { includeRecurrence: true }));
     },
     onSuccess: (event) => {
       if (familyId) {
