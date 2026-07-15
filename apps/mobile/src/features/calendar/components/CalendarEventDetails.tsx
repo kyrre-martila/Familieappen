@@ -1,10 +1,11 @@
 import { Ionicons } from "@expo/vector-icons";
 import type React from "react";
-import { Pressable, StyleSheet, View } from "react-native";
+import { Modal, Pressable, StyleSheet, View } from "react-native";
 import { AppText } from "../../../components/AppText";
 import { Card } from "../../../components/Card";
 import { theme } from "../../../theme/tokens";
-import { buildCalendarEventEditPath, canEditCalendarEvent, getCalendarEventEditRestriction, getCalendarEventIdentity, type CalendarEventViewModel } from "../events";
+import { buildCalendarEventEditPath, canEditCalendarEvent, getCalendarEventEditRestriction, getCalendarEventEditScopeDescription, getCalendarEventEditScopeLabel, getCalendarEventEditScopes, getCalendarEventIdentity, requiresCalendarEventEditScope, type CalendarEventEditScope, type CalendarEventViewModel } from "../events";
+import { useState } from "react";
 
 type IconName = React.ComponentProps<typeof Ionicons>["name"];
 
@@ -16,6 +17,7 @@ function DetailRow({ row }: { row: Row }) {
 }
 
 export function CalendarEventDetails({ event, onEdit }: { event: CalendarEventViewModel; onEdit?: (path: ReturnType<typeof buildCalendarEventEditPath>) => void }) {
+  const [scopeOpen, setScopeOpen] = useState(false);
   const participantLabel = event.participantNames.length ? event.participantNames.join(", ") : "Hele familien";
   const rows: Row[] = [
     { icon: "calendar-outline", label: "Dato", value: event.detailDateLabel },
@@ -28,7 +30,16 @@ export function CalendarEventDetails({ event, onEdit }: { event: CalendarEventVi
     { icon: "document-text-outline", label: "Beskrivelse", value: event.description, multiline: true },
   ];
   const restriction = getCalendarEventEditRestriction(event);
-  return <View style={styles.root} accessibilityLabel="Kalenderhendelse"><Card style={styles.hero}><AppText variant="small" style={styles.source}>{event.sourceLabel} • {event.detailDateLabel}</AppText><AppText variant="title" style={styles.title}>{event.title}</AppText>{canEditCalendarEvent(event) && onEdit ? <Pressable accessibilityRole="button" accessibilityLabel="Rediger kalenderhendelse" onPress={() => onEdit(buildCalendarEventEditPath(getCalendarEventIdentity(event)))} style={({ pressed }) => [styles.editButton, pressed && styles.pressed]}><Ionicons name="create-outline" size={18} color={theme.colors.primaryStrong} /><AppText style={styles.editText}>Rediger</AppText></Pressable> : restriction ? <AppText variant="small" style={styles.muted}>{restriction}</AppText> : null}{event.isImported ? <View style={styles.badge}><Ionicons name="download-outline" size={14} color={theme.colors.primaryStrong} /><AppText variant="small" style={styles.badgeText}>Importert hendelse</AppText></View> : null}</Card><Card style={styles.details}>{rows.map((row) => <DetailRow key={row.label} row={row} />)}</Card></View>;
+  const identity = getCalendarEventIdentity(event);
+  function edit(scope?: CalendarEventEditScope) {
+    if (!onEdit) return;
+    onEdit(buildCalendarEventEditPath({ ...identity, scope, occurrenceDate: scope === "series" ? undefined : identity.occurrenceDate }));
+  }
+  function handleEdit() {
+    if (requiresCalendarEventEditScope(event)) setScopeOpen(true);
+    else edit();
+  }
+  return <View style={styles.root} accessibilityLabel="Kalenderhendelse"><Card style={styles.hero}><AppText variant="small" style={styles.source}>{event.sourceLabel} • {event.detailDateLabel}</AppText><AppText variant="title" style={styles.title}>{event.title}</AppText>{canEditCalendarEvent(event) && onEdit ? <Pressable accessibilityRole="button" accessibilityLabel="Rediger kalenderhendelse" onPress={handleEdit} style={({ pressed }) => [styles.editButton, pressed && styles.pressed]}><Ionicons name="create-outline" size={18} color={theme.colors.primaryStrong} /><AppText style={styles.editText}>Rediger</AppText></Pressable> : restriction ? <AppText variant="small" style={styles.muted}>{restriction}</AppText> : null}{event.isImported ? <View style={styles.badge}><Ionicons name="download-outline" size={14} color={theme.colors.primaryStrong} /><AppText variant="small" style={styles.badgeText}>Importert hendelse</AppText></View> : null}</Card><Card style={styles.details}>{rows.map((row) => <DetailRow key={row.label} row={row} />)}</Card><Modal visible={scopeOpen} transparent animationType="fade" onRequestClose={() => setScopeOpen(false)}><View style={styles.modalBackdrop}><Card style={styles.scopeCard}><AppText variant="title">Hva vil du redigere?</AppText><AppText style={styles.muted}>Velg om endringen bare gjelder denne hendelsen eller hele serien.</AppText>{getCalendarEventEditScopes(event).map((scope) => <Pressable key={scope} accessibilityRole="button" accessibilityLabel={`${getCalendarEventEditScopeLabel(scope)}. ${getCalendarEventEditScopeDescription(scope)}`} onPress={() => { setScopeOpen(false); edit(scope); }} style={({ pressed }) => [styles.scopeButton, pressed && styles.scopePressed]}><AppText style={styles.scopeTitle}>{getCalendarEventEditScopeLabel(scope)}</AppText><AppText variant="small" style={styles.muted}>{getCalendarEventEditScopeDescription(scope)}</AppText></Pressable>)}<Pressable accessibilityRole="button" accessibilityLabel="Avbryt redigering" onPress={() => setScopeOpen(false)} style={({ pressed }) => [styles.cancelButton, pressed && styles.pressed]}><AppText style={styles.cancelText}>Avbryt</AppText></Pressable></Card></View></Modal></View>;
 }
 
 const styles = StyleSheet.create({
@@ -48,4 +59,11 @@ const styles = StyleSheet.create({
   rowLabel: { color: theme.colors.textMuted, fontWeight: "800" },
   rowValue: { flexWrap: "wrap" },
   multiline: { lineHeight: 22 },
+  modalBackdrop: { flex: 1, justifyContent: "center", padding: theme.spacing.lg, backgroundColor: "rgba(15, 23, 42, 0.45)" },
+  scopeCard: { gap: theme.spacing.md },
+  scopeButton: { minHeight: 64, justifyContent: "center", gap: 2, borderWidth: 1, borderColor: theme.colors.border, borderRadius: theme.radius.lg, padding: theme.spacing.md, backgroundColor: theme.colors.surface },
+  scopePressed: { borderColor: theme.colors.primary, backgroundColor: theme.colors.primarySoft },
+  scopeTitle: { fontWeight: "800" },
+  cancelButton: { minHeight: 44, alignItems: "center", justifyContent: "center", borderRadius: theme.radius.pill, backgroundColor: theme.colors.background },
+  cancelText: { fontWeight: "800", color: theme.colors.textMuted },
 });

@@ -1,6 +1,6 @@
 import type { CalendarEvent } from "@familieappen/shared";
 import { calendarQueryKeys } from "./queryKeys";
-import { buildCalendarEventDetailPath, buildCalendarEventEditPath, canEditCalendarEvent, findCalendarEventOccurrence, formatCalendarEventDate, formatEventTimeLabel, getCalendarEventEditRestriction, getCalendarEventIdentity, mapCalendarEventToViewModel, sortCalendarEvents } from "./events";
+import { buildCalendarEventDetailPath, buildCalendarEventEditPath, canEditCalendarEvent, findCalendarEventOccurrence, formatCalendarEventDate, formatEventTimeLabel, getCalendarEventEditRestriction, getCalendarEventEditScopeDescription, getCalendarEventEditScopeLabel, getCalendarEventIdentity, getCalendarEventEditScopes, isValidCalendarOccurrenceDate, mapCalendarEventToViewModel, parseCalendarEventEditScope, requiresCalendarEventEditScope, sortCalendarEvents, validateCalendarEventEditRoute } from "./events";
 import { getCalendarEventBackAction } from "./navigation";
 import { getCalendarDayRange, parseDateString, formatDateString } from "./date";
 
@@ -83,6 +83,19 @@ assertEqual(getCalendarEventBackAction(false), "fallback", "uses calendar fallba
 const editableVm = mapCalendarEventToViewModel(event({ id: "editable", source: "manual", icsSourceId: null, recurrence: null, recurrenceFrequency: "never" }));
 assertEqual(canEditCalendarEvent(editableVm), true, "ordinary manual events can be edited");
 assertEqual(getCalendarEventEditRestriction(mapCalendarEventToViewModel(event({ source: "ics", icsSourceId: "ics-1" }))), "Importerte kalenderhendelser kan ikke redigeres i appen ennå.", "imported events are blocked from editing");
-assertEqual(canEditCalendarEvent(mapCalendarEventToViewModel(event({ recurrenceFrequency: "weekly", recurrence: { frequency: "weekly", until: null } }))), false, "recurring events are blocked until recurrence scope exists");
+assertEqual(canEditCalendarEvent(mapCalendarEventToViewModel(event({ recurrenceFrequency: "weekly", recurrence: { frequency: "weekly", until: null } }))), true, "recurring events can be edited with an explicit scope");
 assertEqual(buildCalendarEventEditPath({ eventId: "event-a" }), { pathname: "/(app)/calendar/[eventId]/edit", params: { eventId: "event-a" } }, "builds full edit route with eventId");
-assertEqual(buildCalendarEventEditPath({ eventId: "series-a", occurrenceDate: "2026-07-15" }), { pathname: "/(app)/calendar/[eventId]/edit", params: { eventId: "series-a", occurrenceDate: "2026-07-15" } }, "includes occurrenceDate in edit route");
+assertEqual(buildCalendarEventEditPath({ eventId: "series-a", occurrenceDate: "2026-07-15", scope: "occurrence" }), { pathname: "/(app)/calendar/[eventId]/edit", params: { eventId: "series-a", occurrenceDate: "2026-07-15", scope: "occurrence" } }, "edit-path for occurrence includes occurrenceDate and scope");
+assertEqual(buildCalendarEventEditPath({ eventId: "series-a", scope: "series" }), { pathname: "/(app)/calendar/[eventId]/edit", params: { eventId: "series-a", scope: "series" } }, "edit-path for series includes scope and full Expo Router path");
+assertEqual(parseCalendarEventEditScope("occurrence"), "occurrence", "parses occurrence scope");
+assertEqual(parseCalendarEventEditScope("series"), "series", "parses series scope");
+assertEqual(parseCalendarEventEditScope("future"), null, "rejects invalid edit scope");
+assertEqual(isValidCalendarOccurrenceDate("2026-07-15"), true, "validates occurrence date");
+assertEqual(isValidCalendarOccurrenceDate("2026-02-31"), false, "rejects impossible occurrence date");
+assertEqual(validateCalendarEventEditRoute({ scope: "occurrence" }), "Kun denne krever en gyldig forekomstdato.", "missing occurrenceDate for occurrence is rejected");
+assertEqual(getCalendarEventEditScopeLabel("occurrence"), "Kun denne", "labels occurrence scope");
+assertEqual(getCalendarEventEditScopeDescription("series"), "Endrer alle hendelsene i denne serien.", "describes series scope");
+assertEqual(requiresCalendarEventEditScope(recurringVm), true, "recurring occurrence requires scope choice");
+assertEqual(requiresCalendarEventEditScope(editableVm), false, "single event does not require scope choice");
+assertEqual(getCalendarEventEditScopes(recurringVm), ["occurrence", "series"], "recurring event exposes both edit scopes");
+assertEqual(getCalendarEventEditScopes(imported), [], "imported event exposes no edit scopes");

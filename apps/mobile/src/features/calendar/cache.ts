@@ -11,7 +11,7 @@ export function calendarEventsInvalidationKey() {
 
 
 function isSameCalendarEventIdentity(event: CalendarEvent, target: CalendarEvent) {
-  return event.id === target.id || Boolean(target.occurrenceDate && event.recurringEventId === target.recurringEventId && event.occurrenceDate === target.occurrenceDate);
+  return event.id === target.id || Boolean(target.occurrenceDate && (event.recurringEventId ?? event.id) === (target.recurringEventId ?? target.id) && event.occurrenceDate === target.occurrenceDate);
 }
 
 export function mergeUpdatedCalendarEvent(current: CalendarEvent | undefined, event: CalendarEvent): CalendarEvent | undefined {
@@ -34,4 +34,11 @@ export function removeCalendarEventFromDay(current: CalendarEvent[] | undefined,
 
 export function moveCalendarEventBetweenDays(current: CalendarEvent[] | undefined, event: CalendarEvent, day: string): CalendarEvent[] | undefined {
   return event.date === day ? replaceCalendarEventInDay(current, event) : removeCalendarEventFromDay(current, event);
+}
+
+export function replaceCalendarEventOccurrenceInDay(current: CalendarEvent[] | undefined, event: CalendarEvent, previous: { eventId: string; occurrenceDate: string; date: string }): CalendarEvent[] | undefined {
+  if (!current) return current;
+  const targetSeriesId = event.recurringEventId ?? previous.eventId;
+  const withoutPrevious = current.filter((item) => !((item.recurringEventId ?? item.id) === targetSeriesId && item.occurrenceDate === previous.occurrenceDate));
+  return event.date === previous.date ? replaceCalendarEventInDay(withoutPrevious, event) : withoutPrevious;
 }
