@@ -2,6 +2,7 @@ import { router } from "expo-router";
 import { RefreshControl, StyleSheet, View } from "react-native";
 import { Screen } from "../../../components/Screen";
 import { AppText } from "../../../components/AppText";
+import { Button } from "../../../components/Button";
 import { EmptyState, ErrorState, LoadingState } from "../../../components/States";
 import { theme } from "../../../theme/tokens";
 import { formatMonthTitle, formatSelectedDate } from "../date";
@@ -18,6 +19,7 @@ export function CalendarShell() {
       <AppText variant="label">Kalender</AppText>
       <AppText variant="title">{formatMonthTitle(calendar.selectedDate)}</AppText>
       <AppText style={styles.description}>Familiehendelser fra samme kalender-API som web.</AppText>
+      <Button title="Ny hendelse" onPress={() => router.push("/(app)/calendar/create")} accessibilityLabel="Opprett ny kalenderhendelse" />
     </View>
     <CalendarWeekNav selectedDate={calendar.selectedDate} onSelectDate={calendar.setSelectedDate} eventDates={eventDates} />
     {calendar.loading ? <LoadingState title="Laster kalender" description="Henter hendelser for familien." /> : calendar.error ? <ErrorState description="Kunne ikke hente kalenderen akkurat nå." onRetry={() => void calendar.refresh()} /> : <View style={styles.daySection}>
