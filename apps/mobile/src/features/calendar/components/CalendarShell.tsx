@@ -6,6 +6,7 @@ import { theme } from "../../../theme/tokens";
 import { formatMonthTitle, formatSelectedDate } from "../date";
 import { useCalendar } from "../hooks/useCalendar";
 import { CalendarWeekNav } from "./CalendarWeekNav";
+import { CalendarEventCard } from "./CalendarEventCard";
 
 export function CalendarShell() {
   const calendar = useCalendar();
@@ -19,8 +20,8 @@ export function CalendarShell() {
     <CalendarWeekNav selectedDate={calendar.selectedDate} onSelectDate={calendar.setSelectedDate} eventDates={eventDates} />
     {calendar.loading ? <LoadingState title="Laster kalender" description="Henter hendelser for familien." /> : calendar.error ? <ErrorState description="Kunne ikke hente kalenderen akkurat nå." onRetry={() => void calendar.refresh()} /> : <View style={styles.daySection}>
       <AppText variant="heading">{formatSelectedDate(calendar.selectedDate)}</AppText>
-      {calendar.eventsForSelectedDate.length === 0 ? <EmptyState title="Ingen hendelser" description="Denne dagen er rolig foreløpig." /> : calendar.eventsForSelectedDate.map((event) => <View key={event.id} style={styles.eventPreview}><AppText variant="small" style={styles.time}>{event.allDay ? "Hele dagen" : event.startTime ?? ""}</AppText><AppText variant="lead">{event.title}</AppText></View>)}
+      {calendar.eventsForSelectedDate.length === 0 ? <EmptyState title="Ingen hendelser" description="Denne dagen er rolig foreløpig. Nye hendelser fra web dukker opp her." /> : <View style={styles.eventList} accessibilityLabel="Hendelser for valgt dato">{calendar.eventsForSelectedDate.map((event) => <CalendarEventCard key={event.id} event={event} />)}</View>}
     </View>}
   </Screen>;
 }
-const styles = StyleSheet.create({ header: { gap: theme.spacing.xs }, description: { color: theme.colors.textMuted }, daySection: { gap: theme.spacing.md }, eventPreview: { padding: theme.spacing.md, borderRadius: theme.radius.md, backgroundColor: theme.colors.surfaceWarm, borderWidth: 1, borderColor: theme.colors.border }, time: { color: theme.colors.primary, fontWeight: "800" } });
+const styles = StyleSheet.create({ header: { gap: theme.spacing.xs }, description: { color: theme.colors.textMuted }, daySection: { gap: theme.spacing.md }, eventList: { gap: theme.spacing.md } });
