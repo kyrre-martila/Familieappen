@@ -10425,8 +10425,17 @@ button.calendar-chip {
   font-weight: 850;
 }
 
+.meal-inline-editor-anchor {
+  min-height: calc(var(--space-xl) * 4.9);
+}
+
 .meal-inline-editor {
-  overflow: hidden;
+  position: fixed;
+  z-index: 50;
+  max-height: calc(100svh - (var(--space-m) * 2));
+  overflow: auto;
+  overscroll-behavior: contain;
+  -webkit-overflow-scrolling: touch;
   border: 1px solid
     color-mix(in srgb, var(--color-primary) 16%, var(--color-border));
   border-radius: var(--radius-l);
