@@ -9,6 +9,7 @@ import { Ionicons } from "@expo/vector-icons";
 import { AuthFormStack, AuthScreenShell, FormField, InlineMessage, PrimaryButton, TextButton, AppText } from "../../src/components";
 import { removeCurrentUserAvatar, updateCurrentUserProfile, uploadCurrentUserAvatar } from "../../src/features/auth/api";
 import { useAuth } from "../../src/features/auth/AuthProvider";
+import { getProfileOnboardingSecondaryActions } from "../../src/features/auth/onboardingNavigation";
 import { onboardingStorage } from "../../src/features/auth/onboardingStorage";
 import { birthDatePartsFromDate, birthDatePartsToLocalDate, formatBirthDateForApi, formatBirthDateForDisplay, formatNorwegianPhoneForApi, getAvatarPreviewUri, isFutureBirthDate, normalizeNorwegianPhoneNational, parseBirthDateFromApi, parsePhoneFromApi, type BirthDateParts } from "../../src/features/auth/profile/profileValidation";
 import { ApiError } from "../../src/lib/api/client";
@@ -19,7 +20,7 @@ const MAX_AVATAR_BYTES = 2 * 1024 * 1024;
 const ALLOWED_AVATAR_TYPES = new Set(["image/jpeg", "image/png", "image/webp", "image/heic", "image/heif"]);
 
 export default function ProfileScreen() {
-  const { accessToken, user, setCurrentUser } = useAuth();
+  const { accessToken, user, setCurrentUser, logout, isLoggingOut } = useAuth();
   const [serverError, setServerError] = useState<string | null>(null);
   const [serverAvatarUri, setServerAvatarUri] = useState<string | null>(user?.avatarUrl ?? null);
   const [localAvatarUri, setLocalAvatarUri] = useState<string | null>(null);
@@ -104,6 +105,7 @@ export default function ProfileScreen() {
   }
 
   const selectedDate = useMemo(() => birthDatePartsToLocalDate(getValues("birthDate") ?? { year: 1990, month: 1, day: 1 }), [getValues]);
+  const secondaryActions = getProfileOnboardingSecondaryActions(router.canGoBack());
 
   return <AuthScreenShell title="Fortell litt om deg selv" lead=""><AuthFormStack accessibilityLabel="Profilskjema">
     <View accessible={false} style={styles.avatar}>{avatarUri ? <Image source={{ uri: avatarUri }} style={styles.avatarImage} contentFit="cover" onError={() => setServerError("Kunne ikke vise bildet lokalt. Prøv et annet bilde.")} /> : <Ionicons name="person-outline" size={48} color={theme.colors.primaryStrong} />}<Pressable accessibilityRole="button" onPress={pickAvatar} disabled={isSubmitting} style={styles.photoButton}><AppText style={styles.photo}>{avatarUri ? "Bytt bilde" : "Legg til bilde (anbefalt)"}</AppText></Pressable>{avatarUri ? <TextButton title="Fjern bilde" onPress={removeAvatar} disabled={isSubmitting} /> : null}</View>
@@ -112,7 +114,8 @@ export default function ProfileScreen() {
     <Controller control={control} name="birthDate" rules={{ validate: (value) => !value || !isFutureBirthDate(value) || "Fødselsdato kan ikke være i fremtiden." }} render={({ field: { onChange, value } }) => <View><Pressable accessibilityRole="button" accessibilityLabel={value ? `Fødselsdato ${formatBirthDateForDisplay(value)}` : "Velg fødselsdato"} onPress={() => setShowDatePicker(true)}><FormField label="Fødselsdato" error={errors.birthDate?.message} leadingIcon={<Ionicons name="calendar-outline" size={22} color={theme.colors.textMuted} />} trailingIcon={value ? <Pressable accessibilityRole="button" accessibilityLabel="Tøm fødselsdato" onPress={() => onChange(null)}><Ionicons name="close-circle-outline" size={22} color={theme.colors.textMuted} /></Pressable> : undefined} inputProps={{ editable: false, pointerEvents: "none", accessibilityLabel: "Fødselsdato", placeholder: "Velg fødselsdato", value: formatBirthDateForDisplay(value) }} /></Pressable>{showDatePicker ? <DateTimePicker value={value ? birthDatePartsToLocalDate(value) : selectedDate} mode="date" display={Platform.OS === "ios" ? "spinner" : "default"} maximumDate={new Date()} onChange={(event: DateTimePickerEvent, date?: Date) => { if (Platform.OS !== "ios") setShowDatePicker(false); if (event.type === "set" && date) { setServerError(null); onChange(birthDatePartsFromDate(date)); } }} /> : null}</View>} />
     {serverError ? <InlineMessage type="error">{serverError}</InlineMessage> : null}
     <PrimaryButton disabled={isSubmitting || !isValid} onPress={handleSubmit(onSubmit)} title={isSubmitting ? "Lagrer…" : avatarRetryOnly ? "Prøv bilde på nytt" : "Fortsett"} />
-    <TextButton title="Tilbake" onPress={() => router.back()} />
+    {secondaryActions.includes("back") ? <TextButton title="Tilbake" onPress={() => { if (router.canGoBack()) router.back(); }} /> : null}
+    {secondaryActions.includes("logout") ? <TextButton title={isLoggingOut ? "Logger ut…" : "Logg ut"} disabled={isSubmitting || isLoggingOut} onPress={() => void logout()} /> : null}
   </AuthFormStack></AuthScreenShell>;
 }
 const styles = StyleSheet.create({ avatar: { alignItems: "center", gap: theme.spacing.sm }, avatarImage: { width: 96, height: 96, borderRadius: 48, backgroundColor: theme.colors.inputBackground, overflow: "hidden" }, photoButton: { minHeight: 44, justifyContent: "center" }, photo: { color: theme.colors.primaryStrong, fontWeight: "800" }, countryCode: { color: theme.colors.text, fontWeight: "800" } });
