@@ -10,6 +10,7 @@ import {
   createInviteMembersTransition,
   getValidInviteMembersTransition,
   parseInviteMembersTransition,
+  resolveInviteMembersFamilyId,
 } from "./inviteTransition";
 import type {
   AuthUser,
@@ -244,4 +245,48 @@ equal(
   null,
 );
 equal(getValidInviteMembersTransition({ ...transition, familyId: "missing" }, completeUser, [family]), null);
+equal(
+  resolveInviteMembersFamilyId({
+    routeFamilyId: null,
+    transition,
+    user: completeUser,
+    families: [family],
+  }),
+  "family-1",
+);
+equal(
+  resolveInviteMembersFamilyId({
+    routeFamilyId: "family-1",
+    transition: null,
+    user: completeUser,
+    families: [family],
+  }),
+  "family-1",
+);
+equal(
+  resolveInviteMembersFamilyId({
+    routeFamilyId: "missing",
+    transition,
+    user: completeUser,
+    families: [family],
+  }),
+  null,
+);
+equal(
+  resolveInviteMembersFamilyId({
+    routeFamilyId: null,
+    transition: { ...transition, familyId: "missing" },
+    user: completeUser,
+    families: [family],
+  }),
+  null,
+);
+equal(
+  getPostAuthDestination(
+    { auth: "authenticated", familyStatus: "ready" },
+    { activeInviteTransition: false },
+  ),
+  "/(app)/(tabs)",
+);
+
 console.log("auth routes tests passed");

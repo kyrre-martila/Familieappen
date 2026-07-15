@@ -20,6 +20,7 @@ type FormValues = { familyName: string };
 export default function CreateFamilyScreen() {
   const { accessToken, refreshFamilyStatus, startInviteMembersTransition } = useAuth();
   const [serverError, setServerError] = useState<string | null>(null);
+  const [createdFamilyId, setCreatedFamilyId] = useState<string | null>(null);
   const {
     control,
     handleSubmit,
@@ -36,17 +37,23 @@ export default function CreateFamilyScreen() {
       setServerError("Skriv inn et familienavn.");
       return;
     }
+    let familyId = createdFamilyId;
     try {
-      const created = await createFamily(accessToken, { name });
-      if (!created.family.code) await getFamily(accessToken, created.family.id);
-      await startInviteMembersTransition(created.family.id);
+      if (!familyId) {
+        const created = await createFamily(accessToken, { name });
+        familyId = created.family.id;
+        setCreatedFamilyId(familyId);
+        if (!created.family.code) await getFamily(accessToken, familyId);
+      }
+      await startInviteMembersTransition(familyId);
       await refreshFamilyStatus();
-      router.replace({ pathname: "/(onboarding)/invite-members", params: { familyId: created.family.id } });
     } catch (e) {
       setServerError(
-        e instanceof ApiError
-          ? e.message
-          : "Kunne ikke opprette familien akkurat nå. Prøv igjen.",
+        familyId
+          ? "Familien er opprettet, men vi kunne ikke gå videre til invitasjoner akkurat nå. Prøv igjen uten å opprette familien på nytt."
+          : e instanceof ApiError
+            ? e.message
+            : "Kunne ikke opprette familien akkurat nå. Prøv igjen.",
       );
     }
   }
