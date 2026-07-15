@@ -1,13 +1,13 @@
 import { useState } from "react";
 import { View, StyleSheet } from "react-native";
-import { router } from "expo-router";
+import { router, useLocalSearchParams } from "expo-router";
 import { AppText } from "../../../src/components/AppText";
 import { Button } from "../../../src/components/Button";
 import { ErrorState, LoadingState } from "../../../src/components/States";
 import { Screen } from "../../../src/components/Screen";
 import { CalendarEventForm } from "../../../src/features/calendar/components/CalendarEventForm";
 import { formatDateString } from "../../../src/features/calendar/date";
-import { defaultCalendarEventForm, type CalendarEventForm as Form } from "../../../src/features/calendar/eventForm";
+import { decodeCalendarEventInitialValues, defaultCalendarEventForm, type CalendarEventForm as Form } from "../../../src/features/calendar/eventForm";
 import { useCreateCalendarEvent } from "../../../src/features/calendar/hooks/useCreateCalendarEvent";
 import { getCalendarEventBackAction } from "../../../src/features/calendar/navigation";
 import { theme } from "../../../src/theme/tokens";
@@ -15,7 +15,8 @@ import { theme } from "../../../src/theme/tokens";
 function backToCalendar() { if (getCalendarEventBackAction(router.canGoBack()) === "back") router.back(); else router.replace("/(app)/(tabs)/calendar"); }
 
 export default function CreateCalendarEventScreen() {
-  const [form, setForm] = useState<Form>(defaultCalendarEventForm(formatDateString(new Date())));
+  const params = useLocalSearchParams<{ initialValues?: string }>();
+  const [form, setForm] = useState<Form>(() => decodeCalendarEventInitialValues(params.initialValues, defaultCalendarEventForm(formatDateString(new Date()))));
   const create = useCreateCalendarEvent();
   const update = <K extends keyof Form>(key: K, value: Form[K]) => { create.resetError(); setForm((current) => ({ ...current, [key]: value })); };
   if (create.familiesLoading) return <Screen bottomInset="screen"><LoadingState title="Klargjør kalender" description="Henter familien før hendelsen kan lagres." /></Screen>;

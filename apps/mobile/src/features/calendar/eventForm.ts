@@ -10,6 +10,9 @@ export type CalendarEventForm = {
   description: string;
   recurrenceFrequency: CalendarEventRecurrenceFrequency;
   recurrenceUntil: string;
+  icon: CalendarEvent["icon"];
+  reminderMinutesBefore: number | null;
+  participantFamilyMemberIds: string[];
 };
 
 export type CreateCalendarEventPayload = {
@@ -50,7 +53,7 @@ export function isCalendarRecurrenceFrequency(value: unknown): value is Calendar
 export function getCalendarRecurrenceLabel(frequency: CalendarEventRecurrenceFrequency): string { return ({ never: "Aldri", daily: "Daglig", weekly: "Ukentlig", monthly: "Månedlig", yearly: "Årlig" } as const)[frequency]; }
 export function getCalendarRecurrenceDescription(frequency: CalendarEventRecurrenceFrequency): string { return ({ never: "Hendelsen skjer bare én gang.", daily: "Hendelsen gjentas hver dag.", weekly: "Hendelsen gjentas hver uke.", monthly: "Hendelsen gjentas hver måned.", yearly: "Hendelsen gjentas hvert år." } as const)[frequency]; }
 export function shouldShowCalendarRecurrenceUntil(frequency: CalendarEventRecurrenceFrequency): boolean { return frequency !== "never"; }
-export const defaultCalendarEventForm = (date: string): CalendarEventForm => ({ title: "", date, allDay: true, startTime: "09:00", endTime: "10:00", location: "", description: "", recurrenceFrequency: "never", recurrenceUntil: "" });
+export const defaultCalendarEventForm = (date: string): CalendarEventForm => ({ title: "", date, allDay: true, startTime: "09:00", endTime: "10:00", location: "", description: "", recurrenceFrequency: "never", recurrenceUntil: "", icon: "family", reminderMinutesBefore: null, participantFamilyMemberIds: [] });
 
 export function isValidDateString(date: string): boolean {
   if (!datePattern.test(date)) return false;
@@ -99,16 +102,42 @@ function normalizeTime(time: string | null | undefined, fallback: string) {
   return match ? `${match[1].padStart(2, "0")}:${match[2]}` : fallback;
 }
 
-export function calendarEventToForm(event: Pick<CalendarEvent, "title" | "date" | "allDay" | "startTime" | "endTime" | "location" | "description" | "recurrence" | "recurrenceFrequency" | "recurrenceUntil">): CalendarEventForm {
+type CalendarEventFormSource = Pick<CalendarEvent, "title" | "date" | "allDay" | "startTime" | "endTime" | "location" | "description" | "recurrence" | "recurrenceFrequency" | "recurrenceUntil" | "icon" | "reminderMinutesBefore" | "participants"> & { participantIds?: string[] };
+
+function getParticipantIds(event: CalendarEventFormSource): string[] {
+  if (Array.isArray(event.participantIds)) return [...event.participantIds];
+  return event.participants.map((participant) => participant.familyMember.id);
+}
+
+export function calendarEventToForm(event: CalendarEventFormSource): CalendarEventForm {
   const frequency = event.recurrence?.frequency ?? event.recurrenceFrequency ?? "never";
-  return { title: event.title, date: event.date, allDay: event.allDay, startTime: normalizeTime(event.startTime, "09:00"), endTime: normalizeTime(event.endTime, "10:00"), location: event.location ?? "", description: event.description ?? "", recurrenceFrequency: isCalendarRecurrenceFrequency(frequency) ? frequency : "never", recurrenceUntil: apiDateTimeToLocalDate(event.recurrenceUntil ?? event.recurrence?.until) };
+  return { title: event.title, date: event.date, allDay: event.allDay, startTime: normalizeTime(event.startTime, "09:00"), endTime: normalizeTime(event.endTime, "10:00"), location: event.location ?? "", description: event.description ?? "", recurrenceFrequency: isCalendarRecurrenceFrequency(frequency) ? frequency : "never", recurrenceUntil: apiDateTimeToLocalDate(event.recurrenceUntil ?? event.recurrence?.until), icon: event.icon, reminderMinutesBefore: event.reminderMinutesBefore, participantFamilyMemberIds: getParticipantIds(event) };
+}
+
+export function calendarEventToDuplicateCreateForm(event: Parameters<typeof calendarEventToForm>[0]): CalendarEventForm {
+  return calendarEventToForm(event);
+}
+
+export function encodeCalendarEventInitialValues(form: CalendarEventForm): string {
+  return encodeURIComponent(JSON.stringify(form));
+}
+
+export function decodeCalendarEventInitialValues(value: string | string[] | null | undefined, fallback: CalendarEventForm): CalendarEventForm {
+  const raw = Array.isArray(value) ? value[0] : value;
+  if (!raw) return fallback;
+  try {
+    const parsed = JSON.parse(decodeURIComponent(raw)) as Partial<CalendarEventForm>;
+    return { ...fallback, ...parsed, participantFamilyMemberIds: Array.isArray(parsed.participantFamilyMemberIds) ? parsed.participantFamilyMemberIds : fallback.participantFamilyMemberIds };
+  } catch {
+    return fallback;
+  }
 }
 
 export function createCalendarEventPayload(form: CalendarEventForm): CreateCalendarEventPayload {
   return {
-    title: form.title.trim(), description: form.description.trim() || null, location: form.location.trim() || null, icon: "family", reminderMinutesBefore: null,
+    title: form.title.trim(), description: form.description.trim() || null, location: form.location.trim() || null, icon: form.icon, reminderMinutesBefore: form.reminderMinutesBefore,
     startsAt: toLocalDateTimeString(form.date, form.startTime, form.allDay), endsAt: form.allDay ? toLocalDateTimeString(form.date, null, true) : toLocalDateTimeString(form.date, form.endTime, false),
-    allDay: form.allDay, recurrenceFrequency: form.recurrenceFrequency, recurrenceUntil: form.recurrenceFrequency === "never" ? null : recurrenceUntilToApiDateTime(form.recurrenceUntil), participantFamilyMemberIds: [],
+    allDay: form.allDay, recurrenceFrequency: form.recurrenceFrequency, recurrenceUntil: form.recurrenceFrequency === "never" ? null : recurrenceUntilToApiDateTime(form.recurrenceUntil), participantFamilyMemberIds: form.participantFamilyMemberIds,
   };
 }
 
