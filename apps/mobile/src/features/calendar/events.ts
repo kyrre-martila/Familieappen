@@ -94,6 +94,12 @@ export function validateCalendarEventEditRoute(input: { isRecurringOccurrence?: 
   return null;
 }
 
+export function validateCalendarEventUpdateScope(input: { previousEvent: Pick<CalendarEvent, "isRecurringOccurrence" | "recurringEventId" | "occurrenceDate"> | null; scope?: CalendarEventEditScope | null; occurrenceDate?: string }): string | null {
+  if (input.scope === "occurrence" && !isValidCalendarOccurrenceDate(input.occurrenceDate)) return "Kun denne krever en gyldig forekomstdato.";
+  if (input.previousEvent?.isRecurringOccurrence && input.previousEvent.recurringEventId && !input.scope) return "Velg om du vil redigere kun denne hendelsen eller hele serien.";
+  return null;
+}
+
 export function getCalendarEventSeriesHydrationError(event: Pick<CalendarEvent, "id" | "isRecurringOccurrence" | "recurringEventId"> | null, eventId: string, scope?: CalendarEventEditScope | null): string | null {
   if (scope !== "series" || !event) return null;
   if (event.isRecurringOccurrence || event.recurringEventId || event.id !== eventId) return "Mobilappen mangler sikkert seriegrunnlag for denne gjentakende hendelsen. Prøv web inntil kalender-API-et kan hente selve serien direkte.";
