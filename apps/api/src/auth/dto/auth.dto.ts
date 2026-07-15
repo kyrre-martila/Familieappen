@@ -32,6 +32,7 @@ export interface SafeUserDto {
   avatarUrl: string | null;
   email: string;
   phone: string | null;
+  birthDate: string | null;
   createdAt: string;
   updatedAt: string;
 }

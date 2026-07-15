@@ -8,6 +8,7 @@ export interface UserProfileDto {
   avatarUrl: string | null;
   email: string;
   phone: string | null;
+  birthDate: string | null;
   createdAt: string;
   updatedAt: string;
 }
@@ -21,6 +22,7 @@ export interface UpdateUserProfileRequestDto {
   avatarUrl?: unknown;
   email?: unknown;
   phone?: unknown;
+  birthDate?: unknown;
 }
 
 export interface ChangePasswordRequestDto {

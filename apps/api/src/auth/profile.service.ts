@@ -7,7 +7,7 @@ import { PrismaService } from "../prisma";
 import { AuthService } from "./auth.service";
 import { ChangePasswordRequestDto, ChangePasswordResponseDto, DeleteAccountRequestDto, DeleteAccountResponseDto, UpdateUserProfileRequestDto, UserProfileDto } from "./dto/profile.dto";
 
-const UPDATE_PROFILE_FIELDS = new Set(["name", "firstName", "middleName", "lastName", "displayName", "avatarUrl", "email", "phone"]);
+const UPDATE_PROFILE_FIELDS = new Set(["name", "firstName", "middleName", "lastName", "displayName", "avatarUrl", "email", "phone", "birthDate"]);
 const PROFILE_IMAGE_UPLOAD_DIR = "/app/uploads/profile-images";
 const PROFILE_IMAGE_PUBLIC_PREFIX = "/uploads/profile-images";
 const MAX_PROFILE_IMAGE_BYTES = 2 * 1024 * 1024;
@@ -26,6 +26,7 @@ type DatabaseProfileUser = {
   avatarUrl?: string | null;
   email: string;
   phone?: string | null;
+  birthDate?: Date | null;
   createdAt: Date;
   updatedAt: Date;
 };
@@ -160,7 +161,7 @@ export class ProfileService {
   async updateCurrentUserProfile(userId: string, input: UpdateUserProfileRequestDto = {}): Promise<UserProfileDto> {
     this.rejectUnknownFields(input);
 
-    const data: { name?: string; firstName?: string; middleName?: string | null; lastName?: string; displayName?: string; avatarUrl?: string | null; email?: string; phone?: string | null } = {};
+    const data: { name?: string; firstName?: string; middleName?: string | null; lastName?: string; displayName?: string; avatarUrl?: string | null; email?: string; phone?: string | null; birthDate?: Date | null } = {};
     const currentUser = await this.prisma.client.user.findUnique({ where: { id: userId } }) as DatabaseProfileUser | null;
 
     if (!currentUser) {
@@ -197,6 +198,10 @@ export class ProfileService {
 
     if ("phone" in input) {
       data.phone = this.validatePhone(input.phone);
+    }
+
+    if ("birthDate" in input) {
+      data.birthDate = this.validateBirthDate(input.birthDate);
     }
 
     if (Object.keys(data).length === 0) {
@@ -437,6 +442,37 @@ export class ProfileService {
     return email;
   }
 
+  private validateBirthDate(value: unknown): Date | null {
+    if (value === null || value === undefined || value === "") {
+      return null;
+    }
+
+    if (typeof value !== "string") {
+      throw new BadRequestException("Birth date must use YYYY-MM-DD format");
+    }
+
+    const match = /^(\d{4})-(\d{2})-(\d{2})$/.exec(value.trim());
+    if (!match) {
+      throw new BadRequestException("Birth date must use YYYY-MM-DD format");
+    }
+
+    const year = Number(match[1]);
+    const month = Number(match[2]);
+    const day = Number(match[3]);
+    const date = new Date(Date.UTC(year, month - 1, day));
+    if (date.getUTCFullYear() !== year || date.getUTCMonth() !== month - 1 || date.getUTCDate() !== day) {
+      throw new BadRequestException("Birth date must be a valid calendar date");
+    }
+
+    const today = new Date();
+    const todayUtc = new Date(Date.UTC(today.getUTCFullYear(), today.getUTCMonth(), today.getUTCDate()));
+    if (date > todayUtc) {
+      throw new BadRequestException("Birth date cannot be in the future");
+    }
+
+    return date;
+  }
+
   private validatePhone(value: unknown): string | null {
     if (value === null || value === undefined) {
       return null;
@@ -472,6 +508,7 @@ export class ProfileService {
       avatarUrl: user.avatarUrl ?? null,
       email: user.email,
       phone: user.phone ?? null,
+      birthDate: user.birthDate ? user.birthDate.toISOString().slice(0, 10) : null,
       createdAt: user.createdAt.toISOString(),
       updatedAt: user.updatedAt.toISOString()
     };

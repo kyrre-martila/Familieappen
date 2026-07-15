@@ -13,12 +13,14 @@
     "lint": "expo lint",
     "test:urls": "tsx src/lib/api/url.test.ts",
     "test:auth": "tsx src/features/auth/routes.test.ts && tsx src/features/auth/errors.test.ts",
-    "test:assets": "tsx src/theme/assets.test.ts"
+    "test:assets": "tsx src/theme/assets.test.ts",
+    "test:profile": "tsx src/features/auth/profile/profileValidation.test.ts"
   },
   "dependencies": {
     "@expo/vector-icons": "^15.1.1",
     "@familieappen/shared": "workspace:*",
     "@familieappen/ui": "workspace:*",
+    "@react-native-community/datetimepicker": "~8.4.7",
     "@react-native-community/netinfo": "11.4.1",
     "@tanstack/react-query": "^5.101.2",
     "expo": "^54.0.0",
