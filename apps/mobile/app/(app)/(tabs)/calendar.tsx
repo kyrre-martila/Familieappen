@@ -1,2 +1,5 @@
-import { PlaceholderScreen } from "../../../src/components/PlaceholderScreen";
-export default function CalendarScreen() { return <PlaceholderScreen title="Kalender" description="Familiekalenderen kobles til API-et senere."  inTab />; }
+import { CalendarShell } from "../../../src/features/calendar/components/CalendarShell";
+
+export default function CalendarScreen() {
+  return <CalendarShell />;
+}
