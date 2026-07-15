@@ -1,6 +1,6 @@
 import { Ionicons } from "@expo/vector-icons";
 import type React from "react";
-import { StyleSheet, View } from "react-native";
+import { Pressable, StyleSheet, View } from "react-native";
 import { AppText } from "../../../components/AppText";
 import { theme } from "../../../theme/tokens";
 import type { CalendarEventViewModel } from "../events";
@@ -17,10 +17,10 @@ const iconByEventIcon: Record<string, IconName> = {
   travel: "airplane-outline",
 };
 
-export function CalendarEventCard({ event }: { event: CalendarEventViewModel }) {
+export function CalendarEventCard({ event, onPress }: { event: CalendarEventViewModel; onPress?: () => void }) {
   const participantLabel = event.participantNames.length ? event.participantNames.join(", ") : "Hele familien";
   const accessibilityLabel = `${event.title}. ${event.accessibilityTimeLabel}. ${event.location ? `Sted: ${event.location}.` : "Ingen lokasjon."} ${participantLabel}.`;
-  return <View style={[styles.card, event.allDay ? styles.allDayCard : styles.timedCard]} accessible accessibilityRole="summary" accessibilityLabel={accessibilityLabel}>
+  return <Pressable style={({ pressed }) => [styles.card, event.allDay ? styles.allDayCard : styles.timedCard, pressed && styles.pressed]} accessibilityRole="button" accessibilityLabel={`Åpne hendelse: ${accessibilityLabel}`} onPress={onPress}>
     <View style={styles.timeColumn}>
       <AppText variant="small" style={[styles.time, event.allDay && styles.allDayTime]}>{event.timeLabel}</AppText>
       {event.isImported ? <View style={styles.badge}><Ionicons name="download-outline" size={13} color={theme.colors.primaryStrong} /><AppText variant="small" style={styles.badgeText}>Importert</AppText></View> : null}
@@ -33,7 +33,7 @@ export function CalendarEventCard({ event }: { event: CalendarEventViewModel }) 
     <View style={styles.iconBubble} aria-hidden>
       <Ionicons name={iconByEventIcon[event.icon] ?? "calendar-outline"} size={24} color={theme.colors.primaryStrong} />
     </View>
-  </View>;
+  </Pressable>;
 }
 
 const styles = StyleSheet.create({
@@ -48,6 +48,7 @@ const styles = StyleSheet.create({
   metaRow: { flexDirection: "row", alignItems: "center", gap: theme.spacing.xs },
   metaText: { flex: 1, color: theme.colors.textMuted },
   iconBubble: { width: 44, height: 44, borderRadius: 22, backgroundColor: theme.colors.surfaceWarm, alignItems: "center", justifyContent: "center" },
+  pressed: { opacity: 0.86, transform: [{ scale: 0.995 }] },
   badge: { flexDirection: "row", alignItems: "center", gap: 3, borderRadius: theme.radius.pill, backgroundColor: theme.colors.surface, paddingHorizontal: theme.spacing.sm, paddingVertical: 2 },
   badgeText: { color: theme.colors.primaryStrong, fontWeight: "800" },
 });
