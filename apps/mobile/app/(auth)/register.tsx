@@ -28,14 +28,7 @@ type FormValues = {
   confirmPassword: string;
   terms: boolean;
 };
-function temporaryName(email: string) {
-  return (
-    email
-      .split("@")[0]
-      ?.replace(/[._-]+/g, " ")
-      .trim() || email
-  );
-}
+const TECHNICAL_REGISTRATION_NAME = "Ny bruker";
 export default function RegisterScreen() {
   const { register } = useAuth();
   const [showPassword, setShowPassword] = useState(false);
@@ -60,7 +53,7 @@ export default function RegisterScreen() {
     setServerError(null);
     try {
       await register({
-        name: temporaryName(values.email.trim()),
+        name: TECHNICAL_REGISTRATION_NAME,
         email: values.email.trim(),
         password: values.password,
       });

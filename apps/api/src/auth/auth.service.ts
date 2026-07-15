@@ -102,10 +102,10 @@ export class AuthService {
       const user = await this.prisma.client.user.create({
         data: {
           name,
-          firstName: this.getFirstNameFromDisplayName(name),
+          firstName: "",
           middleName: null,
-          lastName: this.getLastNameFromDisplayName(name),
-          displayName: name,
+          lastName: "",
+          displayName: "",
           email,
           passwordHash
         }
@@ -406,9 +406,9 @@ export class AuthService {
     return {
       id: user.id,
       name: displayName,
-      firstName: user.firstName || this.getFirstNameFromDisplayName(displayName),
+      firstName: user.firstName ?? "",
       middleName: user.middleName ?? null,
-      lastName: user.lastName || this.getLastNameFromDisplayName(displayName),
+      lastName: user.lastName ?? "",
       displayName,
       avatarUrl: user.avatarUrl ?? null,
       email: user.email,

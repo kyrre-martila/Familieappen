@@ -23,6 +23,10 @@ import { WishlistsService } from "../src/wishlists/wishlists.service";
 type UserRecord = {
   id: string;
   name: string;
+  firstName: string;
+  middleName: string | null;
+  lastName: string;
+  displayName: string;
   email: string;
   passwordHash: string;
   phone: string | null;
@@ -117,7 +121,7 @@ class InMemoryPrismaService {
 
           return [...this.users.values()].find((user) => user.id === where.id) ?? null;
         },
-        create: async ({ data }: { data: { name: string; email: string; passwordHash: string; phone?: string | null } }): Promise<UserRecord> => {
+        create: async ({ data }: { data: { name: string; firstName?: string; middleName?: string | null; lastName?: string; displayName?: string; email: string; passwordHash: string; phone?: string | null } }): Promise<UserRecord> => {
           if (this.users.has(data.email)) {
             const error = new Error("Unique constraint failed") as Error & { code: string };
             error.code = "P2002";
@@ -127,6 +131,10 @@ class InMemoryPrismaService {
           const user: UserRecord = {
             id: `user-${this.nextUserId++}`,
             name: data.name,
+            firstName: data.firstName ?? "",
+            middleName: data.middleName ?? null,
+            lastName: data.lastName ?? "",
+            displayName: data.displayName ?? "",
             email: data.email,
             passwordHash: data.passwordHash,
             phone: data.phone ?? null,
@@ -137,7 +145,7 @@ class InMemoryPrismaService {
           this.users.set(user.email, user);
           return user;
         },
-        update: async ({ where, data }: { where: { id: string }; data: { name?: string; email?: string; phone?: string | null; passwordHash?: string } }): Promise<UserRecord> => {
+        update: async ({ where, data }: { where: { id: string }; data: Partial<Omit<UserRecord, "id" | "createdAt" | "updatedAt">> }): Promise<UserRecord> => {
           const user = [...this.users.values()].find((candidate) => candidate.id === where.id);
 
           if (!user) {
@@ -470,16 +478,19 @@ async function run(): Promise<void> {
     const profile = assertSuccessEnvelope(await request("GET", "/me", { token: alpha.token }), 200);
     assert.equal(profile.id, alpha.userId);
     assert.equal(profile.name, "Alpha");
+    assert.equal(profile.firstName, "");
+    assert.equal(profile.lastName, "");
     assert.equal(profile.email, "alpha-contract@example.com");
     assert.equal(profile.phone, null);
     assert.equal(profile.birthDate, null);
 
     assertErrorEnvelope(await request("GET", "/me"), 401, API_ERROR_CODES.AUTH_REQUIRES_AUTH);
 
-    const beta = await request("POST", "/auth/register", {
+    const betaProfile = (assertSuccessEnvelope(await request("POST", "/auth/register", {
       body: { name: "Beta", email: "beta-contract@example.com", password: "correct-password" }
-    });
-    assertSuccessEnvelope(beta, 201);
+    }), 201) as { user: UserRecord }).user;
+    assert.equal(betaProfile.firstName, "");
+    assert.equal(betaProfile.lastName, "");
 
     const updatedProfile = assertSuccessEnvelope(await request("PATCH", "/me", {
       token: alpha.token,

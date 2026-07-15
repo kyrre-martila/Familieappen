@@ -496,14 +496,14 @@ export class ProfileService {
   }
 
   private toProfileDto(user: DatabaseProfileUser): UserProfileDto {
-    const displayName = user.displayName || this.buildDisplayName(user.firstName || this.getFirstNameFromDisplayName(user.name), user.middleName ?? null, user.lastName || this.getLastNameFromDisplayName(user.name)) || user.name;
+    const displayName = user.displayName || this.buildDisplayName(user.firstName ?? "", user.middleName ?? null, user.lastName ?? "") || user.name;
 
     return {
       id: user.id,
       name: displayName,
-      firstName: user.firstName || this.getFirstNameFromDisplayName(displayName),
+      firstName: user.firstName ?? "",
       middleName: user.middleName ?? null,
-      lastName: user.lastName || this.getLastNameFromDisplayName(displayName),
+      lastName: user.lastName ?? "",
       displayName,
       avatarUrl: user.avatarUrl ?? null,
       email: user.email,
