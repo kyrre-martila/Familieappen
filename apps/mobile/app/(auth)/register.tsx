@@ -7,7 +7,7 @@ import {
   StyleSheet,
   View,
 } from "react-native";
-import { Link, router } from "expo-router";
+import { Link } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
 import {
   AppText,
@@ -64,7 +64,6 @@ export default function RegisterScreen() {
         email: values.email.trim(),
         password: values.password,
       });
-      router.replace("/(onboarding)/profile");
     } catch (error) {
       setServerError(mapAuthError(error, "Noe gikk galt. Prøv igjen."));
     }
