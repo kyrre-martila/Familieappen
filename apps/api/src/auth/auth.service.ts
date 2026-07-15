@@ -14,6 +14,7 @@ import { AuthResponseDto, ForgotPasswordRequestDto, LoginRequestDto, PasswordRes
 const scrypt = promisify(scryptCallback);
 const PASSWORD_HASH_PREFIX = "scrypt";
 const PASSWORD_KEY_LENGTH = 64;
+const TECHNICAL_REGISTRATION_NAMES = new Set(["Ny bruker"]);
 const ACCESS_TOKEN_EXPIRES_IN_SECONDS = 60 * 15;
 const REFRESH_TOKEN_EXPIRES_IN_SECONDS = 60 * 60 * 24 * 30;
 const REFRESH_TOKEN_BYTE_LENGTH = 48;
@@ -84,7 +85,7 @@ export class AuthService {
   ) {}
 
   async register(input: RegisterRequestDto = {}, metadata: SessionMetadata = {}): Promise<AuthSessionResponse> {
-    const name = this.validateName(input.name);
+    const name = this.validateRegistrationName(input.name);
     const email = this.validateEmail(input.email);
     const password = this.validatePassword(input.password);
 
@@ -102,10 +103,10 @@ export class AuthService {
       const user = await this.prisma.client.user.create({
         data: {
           name,
-          firstName: this.getFirstNameFromDisplayName(name),
+          firstName: "",
           middleName: null,
-          lastName: this.getLastNameFromDisplayName(name),
-          displayName: name,
+          lastName: "",
+          displayName: "",
           email,
           passwordHash
         }
@@ -316,18 +317,22 @@ export class AuthService {
     return session;
   }
 
-  private validateName(value: unknown): string {
+  private validateRegistrationName(value: unknown): string {
+    if (value === undefined || value === null) {
+      return "";
+    }
+
     if (typeof value !== "string") {
-      throw new BadRequestException("Name is required");
+      throw new BadRequestException("Name must be a string");
     }
 
     const name = value.trim();
 
-    if (name.length < 1 || name.length > 100) {
-      throw new BadRequestException("Name must be between 1 and 100 characters");
+    if (name.length > 100) {
+      throw new BadRequestException("Name must be at most 100 characters");
     }
 
-    return name;
+    return this.isTechnicalRegistrationName(name) ? "" : name;
   }
 
   private validateEmail(value: unknown): string {
@@ -406,9 +411,9 @@ export class AuthService {
     return {
       id: user.id,
       name: displayName,
-      firstName: user.firstName || this.getFirstNameFromDisplayName(displayName),
+      firstName: user.firstName ?? "",
       middleName: user.middleName ?? null,
-      lastName: user.lastName || this.getLastNameFromDisplayName(displayName),
+      lastName: user.lastName ?? "",
       displayName,
       avatarUrl: user.avatarUrl ?? null,
       email: user.email,
@@ -420,7 +425,13 @@ export class AuthService {
   }
 
   private getResolvedDisplayName(user: Pick<DatabaseUser, "name" | "firstName" | "middleName" | "lastName" | "displayName">): string {
-    return user.displayName || [user.firstName, user.middleName, user.lastName].filter(Boolean).join(" ").trim() || user.name;
+    const profileName = user.displayName || [user.firstName, user.middleName, user.lastName].filter(Boolean).join(" ").trim();
+    if (profileName) return profileName;
+    return this.isTechnicalRegistrationName(user.name) ? "" : user.name;
+  }
+
+  private isTechnicalRegistrationName(name: string | null | undefined): boolean {
+    return TECHNICAL_REGISTRATION_NAMES.has((name ?? "").trim());
   }
 
   private getFirstNameFromDisplayName(name: string): string {

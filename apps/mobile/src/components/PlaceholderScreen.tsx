@@ -1,4 +1,7 @@
-import { AppText, Card, EmptyState, Screen } from ".";
+import { AppText } from "./AppText";
+import { Card } from "./Card";
+import { EmptyState } from "./States";
+import { Screen } from "./Screen";
 import { appConfig } from "../config/env";
 import { theme } from "../theme/tokens";
 
