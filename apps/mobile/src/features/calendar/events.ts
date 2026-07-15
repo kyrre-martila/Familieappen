@@ -56,6 +56,21 @@ export function getCalendarEventIdentity(event: Pick<CalendarEventViewModel, "id
   return { eventId: event.id };
 }
 
+export function buildCalendarEventEditPath(input: { eventId: string; occurrenceDate?: string }): { pathname: "/(app)/calendar/[eventId]/edit"; params: { eventId: string; occurrenceDate?: string } } {
+  return { pathname: "/(app)/calendar/[eventId]/edit", params: input.occurrenceDate ? { eventId: input.eventId, occurrenceDate: input.occurrenceDate } : { eventId: input.eventId } };
+}
+
+export function getCalendarEventEditRestriction(event: Pick<CalendarEventViewModel, "id" | "isImported" | "isRecurringOccurrence" | "recurrenceLabel" | "source"> | null): string | null {
+  if (!event?.id) return "Hendelsen mangler en gyldig id.";
+  if (event.isImported || event.source === "ics") return "Importerte kalenderhendelser kan ikke redigeres i appen ennå.";
+  if (event.isRecurringOccurrence || event.recurrenceLabel) return "Gjentakende hendelser redigeres ikke i denne versjonen.";
+  return null;
+}
+
+export function canEditCalendarEvent(event: Parameters<typeof getCalendarEventEditRestriction>[0]): boolean {
+  return getCalendarEventEditRestriction(event) === null;
+}
+
 export function buildCalendarEventDetailPath(input: { eventId: string; occurrenceDate?: string }): { pathname: "/(app)/calendar/[eventId]"; params: { eventId: string; occurrenceDate?: string } } {
   return { pathname: "/(app)/calendar/[eventId]", params: input.occurrenceDate ? { eventId: input.eventId, occurrenceDate: input.occurrenceDate } : { eventId: input.eventId } };
 }

@@ -1,6 +1,6 @@
 import type { CalendarEvent } from "@familieappen/shared";
 import { calendarQueryKeys } from "./queryKeys";
-import { buildCalendarEventDetailPath, findCalendarEventOccurrence, formatCalendarEventDate, formatEventTimeLabel, getCalendarEventIdentity, mapCalendarEventToViewModel, sortCalendarEvents } from "./events";
+import { buildCalendarEventDetailPath, buildCalendarEventEditPath, canEditCalendarEvent, findCalendarEventOccurrence, formatCalendarEventDate, formatEventTimeLabel, getCalendarEventEditRestriction, getCalendarEventIdentity, mapCalendarEventToViewModel, sortCalendarEvents } from "./events";
 import { getCalendarEventBackAction } from "./navigation";
 import { getCalendarDayRange, parseDateString, formatDateString } from "./date";
 
@@ -80,3 +80,9 @@ assertEqual(findCalendarEventOccurrence([event({ id: "series-a", date: "2026-07-
 assertEqual(findCalendarEventOccurrence([event({ id: "event-a" })], "missing"), null, "unknown event id returns controlled not-found null");
 assertEqual(getCalendarEventBackAction(true), "back", "uses router back when history exists");
 assertEqual(getCalendarEventBackAction(false), "fallback", "uses calendar fallback when router cannot go back");
+const editableVm = mapCalendarEventToViewModel(event({ id: "editable", source: "manual", icsSourceId: null, recurrence: null, recurrenceFrequency: "never" }));
+assertEqual(canEditCalendarEvent(editableVm), true, "ordinary manual events can be edited");
+assertEqual(getCalendarEventEditRestriction(mapCalendarEventToViewModel(event({ source: "ics", icsSourceId: "ics-1" }))), "Importerte kalenderhendelser kan ikke redigeres i appen ennå.", "imported events are blocked from editing");
+assertEqual(canEditCalendarEvent(mapCalendarEventToViewModel(event({ recurrenceFrequency: "weekly", recurrence: { frequency: "weekly", until: null } }))), false, "recurring events are blocked until recurrence scope exists");
+assertEqual(buildCalendarEventEditPath({ eventId: "event-a" }), { pathname: "/(app)/calendar/[eventId]/edit", params: { eventId: "event-a" } }, "builds full edit route with eventId");
+assertEqual(buildCalendarEventEditPath({ eventId: "series-a", occurrenceDate: "2026-07-15" }), { pathname: "/(app)/calendar/[eventId]/edit", params: { eventId: "series-a", occurrenceDate: "2026-07-15" } }, "includes occurrenceDate in edit route");
