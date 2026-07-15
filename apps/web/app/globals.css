@@ -10442,6 +10442,7 @@ button.calendar-chip {
   background: var(--color-surface);
   box-shadow: 0 var(--space-xs) var(--space-m)
     color-mix(in srgb, var(--color-text) 6%, transparent);
+  scrollbar-gutter: stable;
 }
 
 .meal-inline-editor__input-row {
@@ -10485,10 +10486,14 @@ button.calendar-chip {
 }
 
 .meal-inline-editor__actions {
+  position: sticky;
+  top: 0;
+  z-index: 1;
   display: flex;
   justify-content: flex-end;
   gap: var(--space-xs);
   padding: 0 var(--space-s) var(--space-s);
+  background: var(--color-surface);
 }
 
 .meal-inline-editor__actions button {
