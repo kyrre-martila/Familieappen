@@ -345,7 +345,7 @@ function MealsPageContent() {
     setInputValue(meal?.title ?? "");
     window.requestAnimationFrame(() => {
       const timeline = timelineRef.current;
-      const editor = timeline?.querySelector<HTMLElement>(`[data-meal-editor="${offset}"]`);
+      const editor = timeline?.querySelector<HTMLElement>(`[data-meal-editor-anchor="${offset}"]`);
 
       if (!timeline || !editor) {
         return;
