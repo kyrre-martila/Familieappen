@@ -94,6 +94,16 @@ export function validateCalendarEventEditRoute(input: { isRecurringOccurrence?: 
   return null;
 }
 
+export function getCalendarEventSeriesHydrationError(event: Pick<CalendarEvent, "id" | "isRecurringOccurrence" | "recurringEventId"> | null, eventId: string, scope?: CalendarEventEditScope | null): string | null {
+  if (scope !== "series" || !event) return null;
+  if (event.isRecurringOccurrence || event.recurringEventId || event.id !== eventId) return "Mobilappen mangler sikkert seriegrunnlag for denne gjentakende hendelsen. Prøv web inntil kalender-API-et kan hente selve serien direkte.";
+  return null;
+}
+
+export function buildUpdatedCalendarEventDetailPath(input: { requestedEventId: string; scope?: CalendarEventEditScope | null; event: Pick<CalendarEvent, "recurringEventId" | "occurrenceDate"> }): ReturnType<typeof buildCalendarEventDetailPath> {
+  return buildCalendarEventDetailPath({ eventId: input.event.recurringEventId ?? input.requestedEventId, occurrenceDate: input.scope === "series" ? undefined : input.event.occurrenceDate });
+}
+
 export function buildCalendarEventEditPath(input: { eventId: string; occurrenceDate?: string; scope?: CalendarEventEditScope }): { pathname: "/(app)/calendar/[eventId]/edit"; params: { eventId: string; occurrenceDate?: string; scope?: CalendarEventEditScope } } {
   const params: { eventId: string; occurrenceDate?: string; scope?: CalendarEventEditScope } = { eventId: input.eventId };
   if (input.occurrenceDate) params.occurrenceDate = input.occurrenceDate;

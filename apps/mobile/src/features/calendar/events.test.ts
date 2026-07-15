@@ -1,6 +1,6 @@
 import type { CalendarEvent } from "@familieappen/shared";
 import { calendarQueryKeys } from "./queryKeys";
-import { buildCalendarEventDetailPath, buildCalendarEventEditPath, canEditCalendarEvent, findCalendarEventOccurrence, formatCalendarEventDate, formatEventTimeLabel, getCalendarEventEditRestriction, getCalendarEventEditScopeDescription, getCalendarEventEditScopeLabel, getCalendarEventIdentity, getCalendarEventEditScopes, isValidCalendarOccurrenceDate, mapCalendarEventToViewModel, parseCalendarEventEditScope, requiresCalendarEventEditScope, sortCalendarEvents, validateCalendarEventEditRoute } from "./events";
+import { buildCalendarEventDetailPath, buildCalendarEventEditPath, buildUpdatedCalendarEventDetailPath, canEditCalendarEvent, findCalendarEventOccurrence, formatCalendarEventDate, formatEventTimeLabel, getCalendarEventEditRestriction, getCalendarEventEditScopeDescription, getCalendarEventEditScopeLabel, getCalendarEventIdentity, getCalendarEventEditScopes, getCalendarEventSeriesHydrationError, isValidCalendarOccurrenceDate, mapCalendarEventToViewModel, parseCalendarEventEditScope, requiresCalendarEventEditScope, sortCalendarEvents, validateCalendarEventEditRoute } from "./events";
 import { getCalendarEventBackAction } from "./navigation";
 import { getCalendarDayRange, parseDateString, formatDateString } from "./date";
 
@@ -93,9 +93,14 @@ assertEqual(parseCalendarEventEditScope("future"), null, "rejects invalid edit s
 assertEqual(isValidCalendarOccurrenceDate("2026-07-15"), true, "validates occurrence date");
 assertEqual(isValidCalendarOccurrenceDate("2026-02-31"), false, "rejects impossible occurrence date");
 assertEqual(validateCalendarEventEditRoute({ scope: "occurrence" }), "Kun denne krever en gyldig forekomstdato.", "missing occurrenceDate for occurrence is rejected");
+assertEqual(validateCalendarEventEditRoute({ scope: "series" }), null, "series scope is valid without occurrenceDate");
 assertEqual(getCalendarEventEditScopeLabel("occurrence"), "Kun denne", "labels occurrence scope");
 assertEqual(getCalendarEventEditScopeDescription("series"), "Endrer alle hendelsene i denne serien.", "describes series scope");
 assertEqual(requiresCalendarEventEditScope(recurringVm), true, "recurring occurrence requires scope choice");
 assertEqual(requiresCalendarEventEditScope(editableVm), false, "single event does not require scope choice");
 assertEqual(getCalendarEventEditScopes(recurringVm), ["occurrence", "series"], "recurring event exposes both edit scopes");
 assertEqual(getCalendarEventEditScopes(imported), [], "imported event exposes no edit scopes");
+assertEqual(getCalendarEventSeriesHydrationError(event({ id: "series-a", recurrenceFrequency: "weekly", recurrence: { frequency: "weekly", until: null } }), "series-a", "series"), null, "series hydration accepts actual series base event");
+assertEqual(getCalendarEventSeriesHydrationError(seriesOccurrence, "series-a", "series"), "Mobilappen mangler sikkert seriegrunnlag for denne gjentakende hendelsen. Prøv web inntil kalender-API-et kan hente selve serien direkte.", "series hydration rejects generated occurrence as unsafe base");
+assertEqual(buildUpdatedCalendarEventDetailPath({ requestedEventId: "series-a", scope: "occurrence", event: { recurringEventId: "series-a", occurrenceDate: "2026-07-16" } }), { pathname: "/(app)/calendar/[eventId]", params: { eventId: "series-a", occurrenceDate: "2026-07-16" } }, "occurrence save navigates to updated occurrenceDate from response");
+assertEqual(buildUpdatedCalendarEventDetailPath({ requestedEventId: "series-a", scope: "series", event: { recurringEventId: "series-a", occurrenceDate: "2026-07-16" } }), { pathname: "/(app)/calendar/[eventId]", params: { eventId: "series-a" } }, "series save navigates to safe series detail without occurrenceDate");

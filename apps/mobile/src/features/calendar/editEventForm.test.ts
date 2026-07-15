@@ -9,3 +9,7 @@ assertEqual(validateCalendarEventForm({ ...hydrated, title: "   " }).title, "Tit
 assertEqual(validateCalendarEventForm({ ...hydrated, endTime: "08:00" }).endTime, "Sluttid må være etter starttid.", "edit validation rejects end before start");
 assertEqual(updateCalendarEventPayload({ ...hydrated, title: " Ny ", location: " ", description: " Tekst " }), { title: "Ny", description: "Tekst", location: null, startsAt: "2026-03-29T09:00:00.000Z", endsAt: "2026-03-29T10:00:00.000Z", allDay: false }, "maps edit form to PATCH payload");
 assertEqual(updateCalendarEventPayload({ ...hydrated, allDay: true }), { title: "Trening", description: null, location: null, startsAt: "2026-03-29T00:00:00.000Z", endsAt: "2026-03-29T00:00:00.000Z", allDay: true }, "all-day edit payload ignores old clock times");
+const seriesPayload = updateCalendarEventPayload(hydrated);
+assertEqual("recurrenceFrequency" in seriesPayload || "recurrenceUntil" in seriesPayload || "recurrence" in seriesPayload, false, "series edit payload preserves existing recurrence by omitting recurrence fields");
+const occurrencePayload = updateCalendarEventPayload(hydrated);
+assertEqual("recurrenceFrequency" in occurrencePayload || "recurrenceUntil" in occurrencePayload || "recurrence" in occurrencePayload, false, "occurrence edit payload never sends recurrence fields");

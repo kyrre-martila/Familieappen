@@ -8,7 +8,7 @@ import { updateCalendarEvent, updateCalendarEventOccurrence } from "../api";
 import { updateCalendarEventPayload, type CalendarEventForm } from "../eventForm";
 import { calendarEventsInvalidationKey, moveCalendarEventBetweenDays, replaceCalendarEventInDay, replaceCalendarEventOccurrenceInDay } from "../cache";
 import { calendarQueryKeys } from "../queryKeys";
-import { buildCalendarEventDetailPath, type CalendarEventEditScope } from "../events";
+import { buildUpdatedCalendarEventDetailPath, type CalendarEventEditScope } from "../events";
 
 export function getUpdateEventErrorMessage(error: unknown) { if (error instanceof ApiError) return error.message; return "Kunne ikke oppdatere hendelsen akkurat nå. Prøv igjen."; }
 
@@ -33,7 +33,7 @@ export function useUpdateCalendarEvent(input: { eventId: string; previousEvent: 
         queryClient.setQueriesData<CalendarEvent[]>({ queryKey: ["calendar", "events", familyId, "detail", input.eventId] }, (current) => current?.map((item) => item.id === event.id ? event : item));
       }
       void queryClient.invalidateQueries({ queryKey: calendarEventsInvalidationKey() });
-      router.replace(buildCalendarEventDetailPath({ eventId: event.recurringEventId ?? input.eventId, occurrenceDate: input.scope === "series" ? undefined : event.occurrenceDate ?? input.occurrenceDate }));
+      router.replace(buildUpdatedCalendarEventDetailPath({ requestedEventId: input.eventId, scope: input.scope, event }));
     },
   });
   return { familiesLoading: familiesQuery.isLoading, missingContext: Boolean(accessToken && familiesQuery.isSuccess && !familyId), updateEvent: mutation.mutateAsync, saving: mutation.isPending, error: mutation.error ? getUpdateEventErrorMessage(mutation.error) : null, resetError: mutation.reset };
