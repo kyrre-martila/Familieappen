@@ -4,7 +4,7 @@ import { Modal, Pressable, StyleSheet, View } from "react-native";
 import { AppText } from "../../../components/AppText";
 import { Card } from "../../../components/Card";
 import { theme } from "../../../theme/tokens";
-import { buildCalendarEventEditPath, canEditCalendarEvent, getCalendarEventEditRestriction, getCalendarEventEditScopeDescription, getCalendarEventEditScopeLabel, getCalendarEventEditScopes, getCalendarEventIdentity, requiresCalendarEventEditScope, type CalendarEventEditScope, type CalendarEventViewModel } from "../events";
+import { buildCalendarEventEditPath, canDeleteCalendarEvent, canEditCalendarEvent, getCalendarEventDeleteRestriction, getCalendarEventDeleteScopeDescription, getCalendarEventDeleteScopeLabel, getCalendarEventDeleteScopes, getCalendarEventEditRestriction, getCalendarEventEditScopeDescription, getCalendarEventEditScopeLabel, getCalendarEventEditScopes, getCalendarEventIdentity, requiresCalendarEventDeleteScope, requiresCalendarEventEditScope, type CalendarEventDeleteScope, type CalendarEventEditScope, type CalendarEventViewModel } from "../events";
 import { useState } from "react";
 
 type IconName = React.ComponentProps<typeof Ionicons>["name"];
@@ -16,8 +16,11 @@ function DetailRow({ row }: { row: Row }) {
   return <View style={styles.row}><Ionicons name={row.icon} size={22} color={theme.colors.primaryStrong} /><View style={styles.rowText}><AppText variant="small" style={styles.rowLabel}>{row.label}</AppText><AppText style={[styles.rowValue, row.multiline && styles.multiline]}>{row.value}</AppText></View></View>;
 }
 
-export function CalendarEventDetails({ event, onEdit }: { event: CalendarEventViewModel; onEdit?: (path: ReturnType<typeof buildCalendarEventEditPath>) => void }) {
+export function CalendarEventDetails({ event, onEdit, onDelete, deleting = false, deleteError = null, onResetDeleteError }: { event: CalendarEventViewModel; onEdit?: (path: ReturnType<typeof buildCalendarEventEditPath>) => void; onDelete?: (scope?: CalendarEventDeleteScope) => void | Promise<void>; deleting?: boolean; deleteError?: string | null; onResetDeleteError?: () => void }) {
   const [scopeOpen, setScopeOpen] = useState(false);
+  const [deleteOpen, setDeleteOpen] = useState(false);
+  const [deleteScopeOpen, setDeleteScopeOpen] = useState(false);
+  const [selectedDeleteScope, setSelectedDeleteScope] = useState<CalendarEventDeleteScope | undefined>();
   const participantLabel = event.participantNames.length ? event.participantNames.join(", ") : "Hele familien";
   const rows: Row[] = [
     { icon: "calendar-outline", label: "Dato", value: event.detailDateLabel },
@@ -30,6 +33,7 @@ export function CalendarEventDetails({ event, onEdit }: { event: CalendarEventVi
     { icon: "document-text-outline", label: "Beskrivelse", value: event.description, multiline: true },
   ];
   const restriction = getCalendarEventEditRestriction(event);
+  const deleteRestriction = getCalendarEventDeleteRestriction(event);
   const identity = getCalendarEventIdentity(event);
   function edit(scope?: CalendarEventEditScope) {
     if (!onEdit) return;
@@ -39,7 +43,23 @@ export function CalendarEventDetails({ event, onEdit }: { event: CalendarEventVi
     if (requiresCalendarEventEditScope(event)) setScopeOpen(true);
     else edit();
   }
-  return <View style={styles.root} accessibilityLabel="Kalenderhendelse"><Card style={styles.hero}><AppText variant="small" style={styles.source}>{event.sourceLabel} • {event.detailDateLabel}</AppText><AppText variant="title" style={styles.title}>{event.title}</AppText>{canEditCalendarEvent(event) && onEdit ? <Pressable accessibilityRole="button" accessibilityLabel="Rediger kalenderhendelse" onPress={handleEdit} style={({ pressed }) => [styles.editButton, pressed && styles.pressed]}><Ionicons name="create-outline" size={18} color={theme.colors.primaryStrong} /><AppText style={styles.editText}>Rediger</AppText></Pressable> : restriction ? <AppText variant="small" style={styles.muted}>{restriction}</AppText> : null}{event.isImported ? <View style={styles.badge}><Ionicons name="download-outline" size={14} color={theme.colors.primaryStrong} /><AppText variant="small" style={styles.badgeText}>Importert hendelse</AppText></View> : null}</Card><Card style={styles.details}>{rows.map((row) => <DetailRow key={row.label} row={row} />)}</Card><Modal visible={scopeOpen} transparent animationType="fade" onRequestClose={() => setScopeOpen(false)}><View style={styles.modalBackdrop}><Card style={styles.scopeCard}><AppText variant="title">Hva vil du redigere?</AppText><AppText style={styles.muted}>Velg om endringen bare gjelder denne hendelsen eller hele serien.</AppText>{getCalendarEventEditScopes(event).map((scope) => <Pressable key={scope} accessibilityRole="button" accessibilityLabel={`${getCalendarEventEditScopeLabel(scope)}. ${getCalendarEventEditScopeDescription(scope)}`} onPress={() => { setScopeOpen(false); edit(scope); }} style={({ pressed }) => [styles.scopeButton, pressed && styles.scopePressed]}><AppText style={styles.scopeTitle}>{getCalendarEventEditScopeLabel(scope)}</AppText><AppText variant="small" style={styles.muted}>{getCalendarEventEditScopeDescription(scope)}</AppText></Pressable>)}<Pressable accessibilityRole="button" accessibilityLabel="Avbryt redigering" onPress={() => setScopeOpen(false)} style={({ pressed }) => [styles.cancelButton, pressed && styles.pressed]}><AppText style={styles.cancelText}>Avbryt</AppText></Pressable></Card></View></Modal></View>;
+  function requestDelete() {
+    onResetDeleteError?.();
+    if (!onDelete || !canDeleteCalendarEvent(event) || deleting) return;
+    if (requiresCalendarEventDeleteScope(event)) setDeleteScopeOpen(true);
+    else { setSelectedDeleteScope(undefined); setDeleteOpen(true); }
+  }
+  function chooseDeleteScope(scope: CalendarEventDeleteScope) {
+    onResetDeleteError?.();
+    setSelectedDeleteScope(scope);
+    setDeleteScopeOpen(false);
+    setDeleteOpen(true);
+  }
+  async function confirmDelete() {
+    if (!onDelete || deleting) return;
+    await onDelete(selectedDeleteScope);
+  }
+  return <View style={styles.root} accessibilityLabel="Kalenderhendelse"><Card style={styles.hero}><AppText variant="small" style={styles.source}>{event.sourceLabel} • {event.detailDateLabel}</AppText><AppText variant="title" style={styles.title}>{event.title}</AppText>{canEditCalendarEvent(event) && onEdit ? <Pressable accessibilityRole="button" accessibilityLabel="Rediger kalenderhendelse" onPress={handleEdit} style={({ pressed }) => [styles.editButton, pressed && styles.pressed]}><Ionicons name="create-outline" size={18} color={theme.colors.primaryStrong} /><AppText style={styles.editText}>Rediger</AppText></Pressable> : restriction ? <AppText variant="small" style={styles.muted}>{restriction}</AppText> : null}{event.isImported ? <View style={styles.badge}><Ionicons name="download-outline" size={14} color={theme.colors.primaryStrong} /><AppText variant="small" style={styles.badgeText}>Importert hendelse</AppText></View> : null}</Card><Card style={styles.details}>{rows.map((row) => <DetailRow key={row.label} row={row} />)}</Card>{canDeleteCalendarEvent(event) && onDelete ? <Pressable accessibilityRole="button" accessibilityLabel="Slett kalenderhendelse" onPress={requestDelete} disabled={deleting} style={({ pressed }) => [styles.deleteButton, pressed && styles.pressed, deleting && styles.disabled]}><Ionicons name="trash-outline" size={18} color={theme.colors.error} /><AppText style={styles.deleteText}>{deleting ? "Sletter …" : "Slett hendelse"}</AppText></Pressable> : deleteRestriction ? <AppText variant="small" style={styles.muted}>{deleteRestriction}</AppText> : null}<Modal visible={scopeOpen} transparent animationType="fade" onRequestClose={() => setScopeOpen(false)}><View style={styles.modalBackdrop}><Card style={styles.scopeCard}><AppText variant="title">Hva vil du redigere?</AppText><AppText style={styles.muted}>Velg om endringen bare gjelder denne hendelsen eller hele serien.</AppText>{getCalendarEventEditScopes(event).map((scope) => <Pressable key={scope} accessibilityRole="button" accessibilityLabel={`${getCalendarEventEditScopeLabel(scope)}. ${getCalendarEventEditScopeDescription(scope)}`} onPress={() => { setScopeOpen(false); edit(scope); }} style={({ pressed }) => [styles.scopeButton, pressed && styles.scopePressed]}><AppText style={styles.scopeTitle}>{getCalendarEventEditScopeLabel(scope)}</AppText><AppText variant="small" style={styles.muted}>{getCalendarEventEditScopeDescription(scope)}</AppText></Pressable>)}<Pressable accessibilityRole="button" accessibilityLabel="Avbryt redigering" onPress={() => setScopeOpen(false)} style={({ pressed }) => [styles.cancelButton, pressed && styles.pressed]}><AppText style={styles.cancelText}>Avbryt</AppText></Pressable></Card></View></Modal><Modal visible={deleteScopeOpen} transparent animationType="fade" onRequestClose={() => !deleting && setDeleteScopeOpen(false)}><View style={styles.modalBackdrop}><Card style={styles.scopeCard}><AppText variant="title">Hva vil du slette?</AppText><AppText style={styles.muted}>Velg om slettingen bare gjelder denne hendelsen eller hele serien.</AppText>{getCalendarEventDeleteScopes(event).map((scope) => <Pressable key={scope} accessibilityRole="button" accessibilityLabel={`${getCalendarEventDeleteScopeLabel(scope)}. ${getCalendarEventDeleteScopeDescription(scope, event.occurrenceDate)}`} onPress={() => chooseDeleteScope(scope)} disabled={deleting} style={({ pressed }) => [styles.scopeButton, pressed && styles.scopePressed]}><AppText style={styles.scopeTitle}>{getCalendarEventDeleteScopeLabel(scope)}</AppText><AppText variant="small" style={styles.muted}>{getCalendarEventDeleteScopeDescription(scope, event.occurrenceDate)}</AppText></Pressable>)}<Pressable accessibilityRole="button" accessibilityLabel="Avbryt sletting" onPress={() => setDeleteScopeOpen(false)} disabled={deleting} style={({ pressed }) => [styles.cancelButton, pressed && styles.pressed]}><AppText style={styles.cancelText}>Avbryt</AppText></Pressable></Card></View></Modal><Modal visible={deleteOpen} transparent animationType="fade" onRequestClose={() => !deleting && setDeleteOpen(false)}><View style={styles.modalBackdrop}><Card style={styles.scopeCard}><AppText variant="title">Slett hendelse?</AppText><AppText style={styles.muted}>«{event.title}» fjernes fra FamilieAppen-kalenderen.{selectedDeleteScope ? ` ${getCalendarEventDeleteScopeDescription(selectedDeleteScope, event.occurrenceDate)}` : ""}</AppText>{deleteError ? <AppText style={styles.error} accessibilityRole="alert">{deleteError}</AppText> : null}<View style={styles.confirmActions}><Pressable accessibilityRole="button" accessibilityLabel="Avbryt sletting" onPress={() => setDeleteOpen(false)} disabled={deleting} style={({ pressed }) => [styles.cancelAction, pressed && styles.pressed, deleting && styles.disabled]}><AppText style={styles.cancelText}>Avbryt</AppText></Pressable><Pressable accessibilityRole="button" accessibilityLabel="Slett hendelse permanent" onPress={() => void confirmDelete()} disabled={deleting} style={({ pressed }) => [styles.confirmDeleteButton, pressed && styles.pressed, deleting && styles.disabled]}><AppText style={styles.confirmDeleteText}>{deleting ? "Sletter …" : "Slett hendelse"}</AppText></Pressable></View></Card></View></Modal></View>;
 }
 
 const styles = StyleSheet.create({
@@ -66,4 +86,12 @@ const styles = StyleSheet.create({
   scopeTitle: { fontWeight: "800" },
   cancelButton: { minHeight: 44, alignItems: "center", justifyContent: "center", borderRadius: theme.radius.pill, backgroundColor: theme.colors.background },
   cancelText: { fontWeight: "800", color: theme.colors.textMuted },
+  deleteButton: { minHeight: 44, alignSelf: "flex-start", flexDirection: "row", alignItems: "center", gap: theme.spacing.xs, borderRadius: theme.radius.pill, borderWidth: 1, borderColor: theme.colors.error, paddingHorizontal: theme.spacing.md },
+  deleteText: { color: theme.colors.error, fontWeight: "800" },
+  disabled: { opacity: 0.55 },
+  error: { color: theme.colors.error, fontWeight: "700" },
+  confirmActions: { flexDirection: "row", gap: theme.spacing.sm },
+  cancelAction: { minHeight: 44, flex: 1, alignItems: "center", justifyContent: "center", borderRadius: theme.radius.pill, backgroundColor: theme.colors.background },
+  confirmDeleteButton: { minHeight: 44, flex: 1, alignItems: "center", justifyContent: "center", borderRadius: theme.radius.pill, backgroundColor: theme.colors.error },
+  confirmDeleteText: { fontWeight: "800", color: theme.colors.surface },
 });

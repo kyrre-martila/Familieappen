@@ -1,6 +1,6 @@
 import type { CalendarEvent } from "@familieappen/shared";
 import { calendarQueryKeys } from "./queryKeys";
-import { buildCalendarEventDetailPath, buildCalendarEventEditPath, buildUpdatedCalendarEventDetailPath, canEditCalendarEvent, findCalendarEventOccurrence, formatCalendarEventDate, formatEventTimeLabel, getCalendarEventEditRestriction, getCalendarEventEditScopeDescription, getCalendarEventEditScopeLabel, getCalendarEventIdentity, getCalendarEventEditScopes, getCalendarEventSeriesHydrationError, isValidCalendarOccurrenceDate, mapCalendarEventToViewModel, parseCalendarEventEditScope, requiresCalendarEventEditScope, sortCalendarEvents, validateCalendarEventEditRoute, validateCalendarEventUpdateScope } from "./events";
+import { buildCalendarEventDeletePath, buildCalendarEventDetailPath, buildCalendarEventEditPath, buildUpdatedCalendarEventDetailPath, canDeleteCalendarEvent, canEditCalendarEvent, findCalendarEventOccurrence, formatCalendarEventDate, formatEventTimeLabel, getCalendarEventDeleteRestriction, getCalendarEventDeleteScopeDescription, getCalendarEventDeleteScopeLabel, getCalendarEventEditRestriction, getCalendarEventEditScopeDescription, getCalendarEventEditScopeLabel, getCalendarEventIdentity, getCalendarEventEditScopes, getCalendarEventDeleteScopes, getCalendarEventSeriesHydrationError, isValidCalendarOccurrenceDate, mapCalendarEventToViewModel, parseCalendarEventEditScope, requiresCalendarEventDeleteScope, requiresCalendarEventEditScope, sortCalendarEvents, validateCalendarEventDeleteScope, validateCalendarEventEditRoute, validateCalendarEventUpdateScope } from "./events";
 import { getCalendarEventBackAction } from "./navigation";
 import { getCalendarDayRange, parseDateString, formatDateString } from "./date";
 
@@ -114,3 +114,21 @@ assertEqual(validateCalendarEventUpdateScope({ previousEvent: seriesOccurrence, 
 assertEqual(validateCalendarEventUpdateScope({ previousEvent: seriesOccurrence, scope: "occurrence", occurrenceDate: "2026-07-15" }), null, "mutation guard accepts occurrence update with occurrenceDate");
 assertEqual(validateCalendarEventUpdateScope({ previousEvent: seriesOccurrence, scope: "series" }), null, "mutation guard accepts series update without occurrenceDate");
 assertEqual(validateCalendarEventUpdateScope({ previousEvent: event({ id: "single-a" }) }), null, "mutation guard accepts single event without scope");
+
+assertEqual(canDeleteCalendarEvent(editableVm), true, "ordinary manual events can be deleted");
+assertEqual(getCalendarEventDeleteRestriction(imported), "Importerte kalenderhendelser kan ikke slettes i FamilieAppen.", "imported events are blocked from deletion");
+assertEqual(requiresCalendarEventDeleteScope(recurringVm), true, "recurring occurrence requires delete scope choice");
+assertEqual(getCalendarEventDeleteScopes(recurringVm), ["occurrence", "series"], "recurring event exposes both delete scopes");
+assertEqual(getCalendarEventDeleteScopeLabel("occurrence"), "Kun denne", "labels delete occurrence scope");
+assertEqual(getCalendarEventDeleteScopeDescription("occurrence", "2026-07-15"), "Sletter bare hendelsen Onsdag 15. juli 2026.", "describes delete occurrence with date");
+assertEqual(validateCalendarEventDeleteScope({ previousEvent: seriesOccurrence }), "Velg om du vil slette kun denne hendelsen eller hele serien.", "delete mutation guard rejects recurring occurrence without scope");
+assertEqual(validateCalendarEventDeleteScope({ previousEvent: seriesOccurrence, scope: "occurrence", occurrenceDate: "2026-07-15" }), null, "occurrence delete with valid date is valid");
+assertEqual(validateCalendarEventDeleteScope({ previousEvent: seriesOccurrence, scope: "occurrence" }), "Kun denne krever en gyldig forekomstdato.", "occurrence delete without date is rejected");
+assertEqual(validateCalendarEventDeleteScope({ previousEvent: seriesOccurrence, scope: "series" }), null, "series delete without date is valid");
+assertEqual(validateCalendarEventDeleteScope({ previousEvent: seriesOccurrence, scope: "bad" as never }), "Ugyldig slettevalg.", "invalid delete scope is rejected");
+assertEqual(validateCalendarEventDeleteScope({ previousEvent: event({ id: "single-a" }) }), null, "single event without delete scope is valid");
+assertEqual(validateCalendarEventDeleteScope({ previousEvent: event({ id: "import-a", source: "ics", icsSourceId: "ics-1" }) }), "Importerte kalenderhendelser kan ikke slettes i FamilieAppen.", "delete guard rejects imported ICS event");
+assertEqual(buildCalendarEventDeletePath({ eventId: "event/a", scope: null }), "/calendar/events/event%2Fa", "single delete endpoint encodes event id");
+assertEqual(buildCalendarEventDeletePath({ eventId: "series/a", scope: "series" }), "/calendar/events/series%2Fa", "series delete endpoint uses event endpoint");
+assertEqual(buildCalendarEventDeletePath({ eventId: "series/a", scope: "occurrence", occurrenceDate: "2026-07-15" }), "/calendar/events/series%2Fa/occurrences/2026-07-15", "occurrence delete endpoint includes encoded date");
+assertEqual(buildCalendarEventDeletePath({ eventId: "series-a", scope: "occurrence" }), null, "endpoint cannot be selected for invalid occurrence input");

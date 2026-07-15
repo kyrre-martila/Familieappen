@@ -29,6 +29,60 @@ export type CalendarEventEditScope = "occurrence" | "series";
 
 export const calendarEventEditScopes: CalendarEventEditScope[] = ["occurrence", "series"];
 
+export type CalendarEventDeleteScope = CalendarEventEditScope;
+export const calendarEventDeleteScopes: CalendarEventDeleteScope[] = calendarEventEditScopes;
+
+export function parseCalendarEventDeleteScope(scope: string | string[] | null | undefined): CalendarEventDeleteScope | null {
+  return parseCalendarEventEditScope(scope);
+}
+
+export function getCalendarEventDeleteRestriction(event: Pick<CalendarEventViewModel, "id" | "isImported" | "source"> | Pick<CalendarEvent, "id" | "source" | "icsSourceId"> | null): string | null {
+  if (!event?.id) return "Hendelsen mangler en gyldig id.";
+  const imported = "isImported" in event ? event.isImported : event.source === "ics" || Boolean(event.icsSourceId);
+  if (imported || event.source === "ics") return "Importerte kalenderhendelser kan ikke slettes i FamilieAppen.";
+  return null;
+}
+
+export function canDeleteCalendarEvent(event: Parameters<typeof getCalendarEventDeleteRestriction>[0]): boolean {
+  return getCalendarEventDeleteRestriction(event) === null;
+}
+
+export function requiresCalendarEventDeleteScope(event: Pick<CalendarEventViewModel, "isRecurringOccurrence" | "recurringEventId" | "occurrenceDate" | "isImported" | "source"> | null): boolean {
+  return requiresCalendarEventEditScope(event);
+}
+
+export function getCalendarEventDeleteScopes(event: Parameters<typeof requiresCalendarEventDeleteScope>[0]): CalendarEventDeleteScope[] {
+  return requiresCalendarEventDeleteScope(event) ? calendarEventDeleteScopes : [];
+}
+
+export function getCalendarEventDeleteScopeLabel(scope: CalendarEventDeleteScope): string {
+  return getCalendarEventEditScopeLabel(scope);
+}
+
+export function getCalendarEventDeleteScopeDescription(scope: CalendarEventDeleteScope, occurrenceDate?: string): string {
+  if (scope === "occurrence") return occurrenceDate ? `Sletter bare hendelsen ${formatCalendarEventDate(occurrenceDate)}.` : "Sletter bare hendelsen på valgt dato.";
+  return "Sletter alle hendelsene i denne serien.";
+}
+
+export function validateCalendarEventDeleteScope(input: { previousEvent: Pick<CalendarEvent, "id" | "source" | "icsSourceId" | "isRecurringOccurrence" | "recurringEventId" | "occurrenceDate"> | null; scope?: CalendarEventDeleteScope | null; occurrenceDate?: string }): string | null {
+  const restriction = getCalendarEventDeleteRestriction(input.previousEvent);
+  if (restriction) return restriction;
+  if (input.scope !== undefined && input.scope !== null && input.scope !== "occurrence" && input.scope !== "series") return "Ugyldig slettevalg.";
+  if (input.scope === "occurrence" && !isValidCalendarOccurrenceDate(input.occurrenceDate)) return "Kun denne krever en gyldig forekomstdato.";
+  if (input.previousEvent?.isRecurringOccurrence && input.previousEvent.recurringEventId && !input.scope) return "Velg om du vil slette kun denne hendelsen eller hele serien.";
+  return null;
+}
+
+export function buildCalendarEventDeletePath(input: { eventId: string; scope?: CalendarEventDeleteScope | null; occurrenceDate?: string }): string | null {
+  if (input.scope === "occurrence") {
+    if (!isValidCalendarOccurrenceDate(input.occurrenceDate)) return null;
+    return `/calendar/events/${encodeURIComponent(input.eventId)}/occurrences/${encodeURIComponent(input.occurrenceDate)}`;
+  }
+  if (input.scope === "series" || input.scope == null) return `/calendar/events/${encodeURIComponent(input.eventId)}`;
+  return null;
+}
+
+
 const dateFormatter = new Intl.DateTimeFormat("nb-NO", { weekday: "long", day: "numeric", month: "long", year: "numeric" });
 const datePattern = /^\d{4}-\d{2}-\d{2}$/;
 

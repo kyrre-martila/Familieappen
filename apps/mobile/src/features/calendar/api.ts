@@ -1,6 +1,7 @@
 import type { CalendarEvent } from "@familieappen/shared";
 import type { CreateCalendarEventPayload, UpdateCalendarEventPayload } from "./eventForm";
 import { apiRequest } from "../../lib/api/client";
+import { buildCalendarEventDeletePath, type CalendarEventDeleteScope } from "./events";
 
 export function getCalendarEvents(accessToken: string, familyId: string, input: { from: string; to: string }) {
   const params = new URLSearchParams({ from: input.from, to: input.to });
@@ -17,4 +18,11 @@ export function updateCalendarEvent(accessToken: string, familyId: string, event
 
 export function updateCalendarEventOccurrence(accessToken: string, familyId: string, eventId: string, occurrenceDate: string, input: UpdateCalendarEventPayload) {
   return apiRequest<CalendarEvent>(`/calendar/events/${encodeURIComponent(eventId)}/occurrences/${encodeURIComponent(occurrenceDate)}`, { method: "PATCH", accessToken, headers: { "x-family-id": familyId }, body: input });
+}
+
+
+export function deleteCalendarEvent(accessToken: string, familyId: string, eventId: string, input: { scope?: CalendarEventDeleteScope | null; occurrenceDate?: string } = {}) {
+  const path = buildCalendarEventDeletePath({ eventId, scope: input.scope, occurrenceDate: input.occurrenceDate });
+  if (!path) throw new Error("Ugyldig slettevalg.");
+  return apiRequest<CalendarEvent | null>(path, { method: "DELETE", accessToken, headers: { "x-family-id": familyId } });
 }

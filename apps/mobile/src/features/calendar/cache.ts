@@ -42,3 +42,19 @@ export function replaceCalendarEventOccurrenceInDay(current: CalendarEvent[] | u
   const withoutPrevious = current.filter((item) => !((item.recurringEventId ?? item.id) === targetSeriesId && item.occurrenceDate === previous.occurrenceDate));
   return event.date === previous.date ? replaceCalendarEventInDay(withoutPrevious, event) : withoutPrevious;
 }
+
+
+export function removeCalendarEventByIdFromDay(current: CalendarEvent[] | undefined, eventId: string): CalendarEvent[] | undefined {
+  if (!current) return current;
+  return current.filter((item) => item.id !== eventId);
+}
+
+export function removeCalendarEventOccurrenceFromDay(current: CalendarEvent[] | undefined, target: { eventId: string; occurrenceDate: string }): CalendarEvent[] | undefined {
+  if (!current) return current;
+  return current.filter((item) => !((item.recurringEventId ?? item.id) === target.eventId && item.occurrenceDate === target.occurrenceDate));
+}
+
+export function removeCalendarEventSeriesFromDay(current: CalendarEvent[] | undefined, eventId: string): CalendarEvent[] | undefined {
+  if (!current) return current;
+  return current.filter((item) => (item.recurringEventId ?? item.id) !== eventId);
+}
