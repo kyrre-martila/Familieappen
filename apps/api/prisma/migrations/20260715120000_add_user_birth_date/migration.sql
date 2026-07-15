@@ -1,1 +1,1 @@
-ALTER TABLE "User" ADD COLUMN "birthDate" DATE;
+ALTER TABLE "users" ADD COLUMN "birthDate" DATE;
