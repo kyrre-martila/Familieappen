@@ -36,6 +36,8 @@ export function useCalendarEventDetails(eventId: string | null, occurrenceDate?:
   const event = useMemo(() => eventId ? findCalendarEventOccurrence(eventsQuery.data ?? [], eventId, occurrenceDate) : null, [eventsQuery.data, eventId, occurrenceDate]);
   return {
     event: event ? mapCalendarEventToViewModel(event) : null,
+    rawEvent: event ?? null,
+    familyId,
     loading: familiesQuery.isLoading || (eventsQuery.isLoading && !cachedEvent),
     refreshing: familiesQuery.isRefetching || eventsQuery.isRefetching,
     error: familiesQuery.error || eventsQuery.error,
