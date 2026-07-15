@@ -33,3 +33,17 @@ export function getValidInviteMembersTransition(
   if (!transition || !user || transition.userId !== user.id) return null;
   return families.some((item) => item.family.id === transition.familyId) ? transition : null;
 }
+
+export function resolveInviteMembersFamilyId(input: {
+  routeFamilyId?: string | null;
+  transition: InviteMembersTransition | null;
+  user: AuthUser | null;
+  families: FamilyWithMembership[];
+}): string | null {
+  if (input.routeFamilyId) {
+    return input.families.some((item) => item.family.id === input.routeFamilyId)
+      ? input.routeFamilyId
+      : null;
+  }
+  return getValidInviteMembersTransition(input.transition, input.user, input.families)?.familyId ?? null;
+}

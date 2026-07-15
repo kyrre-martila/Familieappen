@@ -28,4 +28,12 @@ ok(familyStartSource.includes("void logout()"), "Family-start secondary action l
 ok(createFamilySource.includes('router.replace("/(onboarding)/family-start")'), "Create-family back replaces to family-start without stacking history");
 ok(joinFamilySource.includes('router.replace("/(onboarding)/family-start")'), "Join-family back replaces to family-start without stacking history");
 
+ok(!createFamilySource.includes('/(onboarding)/invite-members'), "Create-family submit lets central auth routing open invite-members");
+ok(!createFamilySource.includes('router.push'), "Create-family does not push after successful submit");
+const createFamilyReplaceCount = (createFamilySource.match(/router\.replace/g) ?? []).length;
+ok(createFamilyReplaceCount === 1, "Create-family has only the back-button replace routing decision");
+ok(createFamilySource.includes('startInviteMembersTransition(familyId)'), "Create-family stores invite transition before refreshing central auth routing");
+ok(createFamilySource.includes('await refreshFamilyStatus()'), "Create-family refreshes family status for one central routing decision");
+ok(createFamilySource.includes('setCreatedFamilyId(familyId)'), "Create-family keeps created family id so retry does not create a second family");
+
 console.log("onboarding navigation tests passed");

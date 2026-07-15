@@ -6,7 +6,7 @@ import { Ionicons } from "@expo/vector-icons";
 import { AppText, AuthFormStack, AuthScreenShell, FormField, InlineMessage, PrimaryButton, SecondaryButton, TextButton } from "../../src/components";
 import { inviteFamilyMember, listFamilies } from "../../src/features/auth/api";
 import { useAuth } from "../../src/features/auth/AuthProvider";
-import { parseInviteMembersTransition } from "../../src/features/auth/inviteTransition";
+import { parseInviteMembersTransition, resolveInviteMembersFamilyId } from "../../src/features/auth/inviteTransition";
 import { onboardingStorage } from "../../src/features/auth/onboardingStorage";
 import { ApiError } from "../../src/lib/api/client";
 import { theme } from "../../src/theme/tokens";
@@ -52,23 +52,26 @@ export default function InviteMembersScreen() {
       if (!accessToken) return;
       const families = await listFamilies(accessToken);
       if (cancelled) return;
-      if (familyId) {
-        if (!families.some((item) => item.family.id === familyId)) {
-          setFamilyError("Fant ikke familien invitasjonene skulle sendes til. Fullfør onboarding og inviter senere fra familieinnstillinger.");
-        }
-        return;
-      }
       const transition = parseInviteMembersTransition(await onboardingStorage.getInviteMembersTransitionRaw());
-      if (transition && transition.userId === user?.id && families.some((item) => item.family.id === transition.familyId)) {
-        setFamilyId(transition.familyId);
+      const resolvedFamilyId = resolveInviteMembersFamilyId({
+        routeFamilyId: familyId,
+        transition,
+        user,
+        families,
+      });
+      if (resolvedFamilyId) {
+        setFamilyId(resolvedFamilyId);
         return;
       }
-      if (families.length === 1) setFamilyId(families[0].family.id);
-      else setFamilyError("Fant ikke hvilken familie invitasjonene skal sendes til. Fullfør onboarding og inviter senere fra familieinnstillinger.");
+      if (familyId) {
+        setFamilyError("Fant ikke familien invitasjonene skulle sendes til. Fullfør onboarding og inviter senere fra familieinnstillinger.");
+      } else {
+        setFamilyError("Fant ikke hvilken familie invitasjonene skal sendes til. Fullfør onboarding og inviter senere fra familieinnstillinger.");
+      }
     }
     void resolveFamilyId().catch(() => setFamilyError("Kunne ikke hente familien din akkurat nå. Fullfør onboarding og prøv senere."));
     return () => { cancelled = true; };
-  }, [accessToken, familyId, user?.id]);
+  }, [accessToken, familyId, user]);
 
   const finish = useCallback(async () => {
     await completeInviteMembersTransition();
