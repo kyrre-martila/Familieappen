@@ -59,38 +59,57 @@ export function getOnboardingRedirect(
   return authDestination;
 }
 
-function pathsMatchDestination(
+type RouteKey =
+  | "login"
+  | "profile"
+  | "family-start"
+  | "pending-approval"
+  | "invite-members"
+  | "app-tabs";
+
+const DESTINATION_ROUTE_KEYS: Record<AuthDestination, RouteKey> = {
+  "/(auth)/login": "login",
+  "/(onboarding)/profile": "profile",
+  "/(onboarding)/family-start": "family-start",
+  "/(onboarding)/pending-approval": "pending-approval",
+  "/(onboarding)/invite-members": "invite-members",
+  "/(app)/(tabs)": "app-tabs",
+};
+
+const PATH_ROUTE_KEYS: Record<string, RouteKey> = {
+  "/(auth)/login": "login",
+  "/auth/login": "login",
+  "/login": "login",
+  "/(onboarding)/profile": "profile",
+  "/onboarding/profile": "profile",
+  "/profile": "profile",
+  "/(onboarding)/family-start": "family-start",
+  "/onboarding/family-start": "family-start",
+  "/family-start": "family-start",
+  "/(onboarding)/pending-approval": "pending-approval",
+  "/onboarding/pending-approval": "pending-approval",
+  "/pending-approval": "pending-approval",
+  "/(onboarding)/invite-members": "invite-members",
+  "/onboarding/invite-members": "invite-members",
+  "/invite-members": "invite-members",
+  "/(app)/(tabs)": "app-tabs",
+  "/app/tabs": "app-tabs",
+  "/tabs": "app-tabs",
+  "/": "app-tabs",
+};
+
+export function pathsMatchDestination(
   currentPath: string,
   authDestination: AuthDestination,
 ): boolean {
-  if (currentPath === authDestination) return true;
-  if (authDestination === "/(onboarding)/family-start")
-    return [
-      "/family-start",
-      "/onboarding/family-start",
-      "/profile",
-      "/onboarding/profile",
-      "/create-family",
-      "/onboarding/create-family",
-      "/join-family",
-      "/onboarding/join-family",
-      "/invite-members",
-      "/onboarding/invite-members",
-      "/terms",
-      "/onboarding/terms",
-      "/privacy",
-      "/onboarding/privacy",
-      "/pending-approval",
-      "/onboarding/pending-approval",
-    ].includes(currentPath);
-  if (authDestination === "/(onboarding)/pending-approval")
-    return (
-      currentPath === "/pending-approval" ||
-      currentPath === "/onboarding/pending-approval"
-    );
-  if (authDestination === "/(onboarding)/invite-members")
-    return currentPath === "/invite-members" || currentPath === "/onboarding/invite-members";
-  return false;
+  const currentRoute = PATH_ROUTE_KEYS[normalizeRouterPath(currentPath)];
+  return Boolean(currentRoute && currentRoute === DESTINATION_ROUTE_KEYS[authDestination]);
+}
+
+export function normalizeRouterPath(path: string): string {
+  const [withoutQuery] = path.split(/[?#]/);
+  const normalized = withoutQuery.replace(/\/+/g, "/").replace(/\/$/, "");
+  return normalized || "/";
 }
 
 export function getResetTokenFromParam(
