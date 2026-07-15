@@ -1,5 +1,5 @@
 import type { CalendarEvent } from "@familieappen/shared";
-import type { CreateCalendarEventPayload, UpdateCalendarEventPayload } from "./eventForm";
+import type { CreateCalendarEventPayload, OccurrenceUpdateCalendarEventPayload, SeriesUpdateCalendarEventPayload } from "./eventForm";
 import { apiRequest } from "../../lib/api/client";
 import { buildCalendarEventDeletePath, type CalendarEventDeleteScope } from "./events";
 
@@ -12,11 +12,11 @@ export function addCalendarEvent(accessToken: string, familyId: string, input: C
   return apiRequest<CalendarEvent>("/calendar/events", { method: "POST", accessToken, headers: { "x-family-id": familyId }, body: input });
 }
 
-export function updateCalendarEvent(accessToken: string, familyId: string, eventId: string, input: UpdateCalendarEventPayload) {
+export function updateCalendarEvent(accessToken: string, familyId: string, eventId: string, input: SeriesUpdateCalendarEventPayload) {
   return apiRequest<CalendarEvent>(`/calendar/events/${encodeURIComponent(eventId)}`, { method: "PATCH", accessToken, headers: { "x-family-id": familyId }, body: input });
 }
 
-export function updateCalendarEventOccurrence(accessToken: string, familyId: string, eventId: string, occurrenceDate: string, input: UpdateCalendarEventPayload) {
+export function updateCalendarEventOccurrence(accessToken: string, familyId: string, eventId: string, occurrenceDate: string, input: OccurrenceUpdateCalendarEventPayload) {
   return apiRequest<CalendarEvent>(`/calendar/events/${encodeURIComponent(eventId)}/occurrences/${encodeURIComponent(occurrenceDate)}`, { method: "PATCH", accessToken, headers: { "x-family-id": familyId }, body: input });
 }
 

@@ -96,11 +96,14 @@ export function formatCalendarEventDate(date: string): string {
   return label.charAt(0).toUpperCase() + label.slice(1);
 }
 
-export function getCalendarEventRecurrenceLabel(event: Pick<CalendarEvent, "recurrence" | "recurrenceFrequency" | "isRecurringOccurrence">): string | null {
+export function getCalendarEventRecurrenceLabel(event: Pick<CalendarEvent, "recurrence" | "recurrenceFrequency" | "recurrenceUntil" | "isRecurringOccurrence">): string | null {
   const frequency = event.recurrence?.frequency ?? event.recurrenceFrequency;
   if (!frequency || frequency === "never") return null;
   const base = ({ daily: "Gjentas daglig", weekly: "Gjentas ukentlig", monthly: "Gjentas månedlig", yearly: "Gjentas årlig" } as Record<string, string>)[frequency] ?? "Gjentakende hendelse";
-  return event.isRecurringOccurrence ? `${base} • enkeltforekomst` : base;
+  const until = event.recurrenceUntil ?? event.recurrence?.until;
+  const date = typeof until === "string" ? until.slice(0, 10) : null;
+  const withUntil = date ? `${base} til ${date.split("-").reverse().join(".")}` : base;
+  return event.isRecurringOccurrence ? `${withUntil} • enkeltforekomst` : withUntil;
 }
 
 export function getCalendarEventSourceLabel(event: Pick<CalendarEvent, "source" | "icsSourceId">): string {
