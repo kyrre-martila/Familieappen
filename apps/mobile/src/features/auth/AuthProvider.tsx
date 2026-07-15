@@ -101,6 +101,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const clearLocalSession = useCallback(async () => {
     await authStorage.clearSession();
     await onboardingStorage.clearInviteMembersTransition();
+    await onboardingStorage.clearProfileDraft();
     await queryClient.clear();
     setUnauthenticatedState();
   }, [queryClient, setUnauthenticatedState]);

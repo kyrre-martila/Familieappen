@@ -7,6 +7,7 @@ import { PrismaService } from "../prisma";
 import { AuthService } from "./auth.service";
 import { ChangePasswordRequestDto, ChangePasswordResponseDto, DeleteAccountRequestDto, DeleteAccountResponseDto, UpdateUserProfileRequestDto, UserProfileDto } from "./dto/profile.dto";
 
+const TECHNICAL_REGISTRATION_NAMES = new Set(["Ny bruker"]);
 const UPDATE_PROFILE_FIELDS = new Set(["name", "firstName", "middleName", "lastName", "displayName", "avatarUrl", "email", "phone", "birthDate"]);
 const PROFILE_IMAGE_UPLOAD_DIR = "/app/uploads/profile-images";
 const PROFILE_IMAGE_PUBLIC_PREFIX = "/uploads/profile-images";
@@ -495,15 +496,20 @@ export class ProfileService {
     return phone;
   }
 
+  private isTechnicalRegistrationName(name: string | null | undefined): boolean {
+    return TECHNICAL_REGISTRATION_NAMES.has((name ?? "").trim());
+  }
+
   private toProfileDto(user: DatabaseProfileUser): UserProfileDto {
-    const displayName = user.displayName || this.buildDisplayName(user.firstName || this.getFirstNameFromDisplayName(user.name), user.middleName ?? null, user.lastName || this.getLastNameFromDisplayName(user.name)) || user.name;
+    const profileName = user.displayName || this.buildDisplayName(user.firstName ?? "", user.middleName ?? null, user.lastName ?? "");
+    const displayName = profileName || (this.isTechnicalRegistrationName(user.name) ? "" : user.name);
 
     return {
       id: user.id,
       name: displayName,
-      firstName: user.firstName || this.getFirstNameFromDisplayName(displayName),
+      firstName: user.firstName ?? "",
       middleName: user.middleName ?? null,
-      lastName: user.lastName || this.getLastNameFromDisplayName(displayName),
+      lastName: user.lastName ?? "",
       displayName,
       avatarUrl: user.avatarUrl ?? null,
       email: user.email,
