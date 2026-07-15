@@ -1,6 +1,7 @@
 import type { CalendarEvent } from "@familieappen/shared";
 import { calendarQueryKeys } from "./queryKeys";
-import { formatEventTimeLabel, mapCalendarEventToViewModel, sortCalendarEvents } from "./events";
+import { buildCalendarEventDetailPath, findCalendarEventOccurrence, formatCalendarEventDate, formatEventTimeLabel, getCalendarEventIdentity, mapCalendarEventToViewModel, sortCalendarEvents } from "./events";
+import { getCalendarEventBackAction } from "./navigation";
 import { getCalendarDayRange, parseDateString, formatDateString } from "./date";
 
 function assertEqual<T>(actual: T, expected: T, description: string): void {
@@ -58,3 +59,24 @@ assertEqual({ isImported: imported.isImported, participantNames: imported.partic
 assertEqual(getCalendarDayRange("2026-03-29"), { from: "2026-03-29T00:00:00.000Z", to: "2026-03-29T23:59:59.999Z" }, "builds selected day query range without parsing through Date");
 assertEqual(formatDateString(parseDateString("2026-03-29")), "2026-03-29", "keeps DST date stable without UTC date parsing");
 assertEqual(calendarQueryKeys.day("family-1", "2026-03-29"), ["calendar", "events", "family-1", "day", "2026-03-29"], "builds selected-day query key");
+
+
+const normalDetail = buildCalendarEventDetailPath({ eventId: "event-a" });
+assertEqual(normalDetail, { pathname: "/(app)/calendar/[eventId]", params: { eventId: "event-a" } }, "builds full detail route without occurrenceDate for normal event");
+const occurrenceDetail = buildCalendarEventDetailPath({ eventId: "series-a", occurrenceDate: "2026-07-15" });
+assertEqual(occurrenceDetail, { pathname: "/(app)/calendar/[eventId]", params: { eventId: "series-a", occurrenceDate: "2026-07-15" } }, "includes occurrenceDate in detail route for recurring occurrence");
+
+const recurringVm = mapCalendarEventToViewModel(event({ id: "occ-1", recurringEventId: "series-a", occurrenceDate: "2026-07-15", isRecurringOccurrence: true, recurrenceFrequency: "weekly", recurrence: { frequency: "weekly", until: null } }));
+assertEqual(getCalendarEventIdentity(recurringVm), { eventId: "series-a", occurrenceDate: "2026-07-15" }, "uses recurring series id and occurrenceDate for generated occurrences");
+assertEqual(recurringVm.recurrenceLabel, "Gjentas ukentlig • enkeltforekomst", "maps recurring occurrence label");
+
+assertEqual(formatCalendarEventDate("2026-03-29"), "Søndag 29. mars 2026", "formats Norwegian date without UTC day shift");
+assertEqual(formatEventTimeLabel(event({ allDay: true, startTime: null, endTime: null })), "Hele dagen", "formats all-day details text");
+assertEqual(formatEventTimeLabel(event({ startTime: "08:05", endTime: null })), "08:05", "formats missing end time");
+assertEqual(mapCalendarEventToViewModel(event({ source: "ics", icsSourceId: "source-a" })).sourceLabel, "Importert kalender", "maps imported source indicator");
+
+const seriesOccurrence = event({ id: "generated-1", recurringEventId: "series-a", occurrenceDate: "2026-07-16", isRecurringOccurrence: true });
+assertEqual(findCalendarEventOccurrence([event({ id: "series-a", date: "2026-07-01" }), seriesOccurrence], "series-a", "2026-07-16")?.id, "generated-1", "cache lookup resolves correct occurrence by eventId and occurrenceDate");
+assertEqual(findCalendarEventOccurrence([event({ id: "event-a" })], "missing"), null, "unknown event id returns controlled not-found null");
+assertEqual(getCalendarEventBackAction(true), "back", "uses router back when history exists");
+assertEqual(getCalendarEventBackAction(false), "fallback", "uses calendar fallback when router cannot go back");
