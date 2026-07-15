@@ -99,7 +99,7 @@ export default function CreateFamilyScreen() {
         />
         <TextButton
           title="Tilbake"
-          onPress={() => router.push("/(onboarding)/family-start")}
+          onPress={() => router.replace("/(onboarding)/family-start")}
         />
       </AuthFormStack>
     </AuthScreenShell>

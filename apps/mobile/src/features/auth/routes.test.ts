@@ -139,6 +139,35 @@ equal(
   "/(onboarding)/family-start",
 );
 
+
+// Onboarding routes are allowed by phase, not only by exact canonical destination.
+for (const path of [
+  "/family-start",
+  "/onboarding/family-start",
+  "/(onboarding)/family-start",
+]) {
+  equal(getOnboardingRedirect(path, "/(onboarding)/family-start"), null);
+}
+for (const path of [
+  "/create-family",
+  "/onboarding/create-family",
+  "/(onboarding)/create-family",
+]) {
+  equal(getOnboardingRedirect(path, "/(onboarding)/family-start"), null);
+  equal(getOnboardingRedirect(path, "/(onboarding)/profile"), "/(onboarding)/profile");
+  equal(getOnboardingRedirect(path, "/(app)/(tabs)"), "/(app)/(tabs)");
+}
+for (const path of [
+  "/join-family",
+  "/onboarding/join-family",
+  "/(onboarding)/join-family",
+]) {
+  equal(getOnboardingRedirect(path, "/(onboarding)/family-start"), null);
+  equal(getOnboardingRedirect(path, "/(onboarding)/pending-approval"), "/(onboarding)/pending-approval");
+}
+equal(getOnboardingRedirect("/(onboarding)/profile", "/(onboarding)/family-start"), "/(onboarding)/family-start");
+equal(getOnboardingRedirect("/(onboarding)/invite-members", "/(onboarding)/invite-members"), null);
+
 // Profile route aliases must not redirect to themselves when Expo Router hides route groups.
 equal(getOnboardingRedirect("/profile", "/(onboarding)/profile"), null);
 equal(getOnboardingRedirect("/onboarding/profile", "/(onboarding)/profile"), null);
