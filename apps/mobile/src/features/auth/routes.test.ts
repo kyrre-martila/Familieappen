@@ -37,6 +37,7 @@ const completeUser: AuthUser = {
 };
 const completeUserWithoutPhone: AuthUser = { ...completeUser, phone: null };
 const incompleteUser: AuthUser = { ...completeUser, firstName: "", phone: null };
+const newlyRegisteredUser: AuthUser = { ...completeUser, name: "", firstName: "", middleName: null, lastName: "", displayName: "", phone: null };
 const pendingAccess: CurrentUserPendingFamilyAccess = {
   hasPendingAccess: true,
   status: "pending",
@@ -99,6 +100,7 @@ equal(
 );
 equal(isProfileComplete(completeUserWithoutPhone), true);
 equal(isProfileComplete(incompleteUser), false);
+equal(isProfileComplete(newlyRegisteredUser), false);
 equal(resolveFamilyStatus([], null, completeUser), "no-family");
 equal(resolveFamilyStatus([], pendingAccess, completeUser), "pending");
 equal(resolveFamilyStatus([family], pendingAccess, completeUser), "ready");

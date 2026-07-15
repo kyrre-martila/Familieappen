@@ -30,6 +30,7 @@ import {
 } from "./dto/admin-api.dto";
 
 type Meta = { ipAddress?: string | null; userAgent?: string | null };
+const TECHNICAL_REGISTRATION_NAMES = new Set(["Ny bruker"]);
 const AD_STATUSES = ["DRAFT", "SCHEDULED", "ACTIVE", "PAUSED", "ENDED"];
 const AD_PLACEMENTS = ["HOME", "CALENDAR", "MENU", "WISHLIST", "SHOPPING"];
 const ADMIN_ROLES = ["SUPER_ADMIN", "SUPPORT", "ANALYST", "AD_MANAGER"];
@@ -49,6 +50,11 @@ export class AdminApiService {
     private readonly prisma: PrismaService,
     private readonly auth: AuthService,
   ) {}
+
+  private visibleProfileName(name: string | null | undefined): string {
+    const trimmed = (name ?? "").trim();
+    return TECHNICAL_REGISTRATION_NAMES.has(trimmed) ? "" : trimmed;
+  }
   private get db(): any {
     return this.prisma.client as any;
   }
@@ -531,7 +537,7 @@ export class AdminApiService {
       });
       return {
         id: user.id,
-        name: user.name,
+        name: this.visibleProfileName(user.name),
         email: user.email,
         active: !user.deactivatedAt,
         updatedAt: user.updatedAt.toISOString(),
@@ -769,7 +775,7 @@ export class AdminApiService {
             data: {
               userId,
               familyId: targetFamilyId,
-              displayName: user.name,
+              displayName: this.visibleProfileName(user.name),
               role,
               includeInSchoolWeek: role === "CHILD",
             },
@@ -870,7 +876,7 @@ export class AdminApiService {
         const family = await this.createFamilyWithCode(tx, {
           name,
           members: {
-            create: { userId: user.id, displayName: user.name, role: "OWNER" },
+            create: { userId: user.id, displayName: this.visibleProfileName(user.name), role: "OWNER" },
           },
           shoppingLists: { create: { name: "Family Shopping" } },
         });

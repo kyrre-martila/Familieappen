@@ -28,7 +28,6 @@ type FormValues = {
   confirmPassword: string;
   terms: boolean;
 };
-const TECHNICAL_REGISTRATION_NAME = "Ny bruker";
 export default function RegisterScreen() {
   const { register } = useAuth();
   const [showPassword, setShowPassword] = useState(false);
@@ -53,7 +52,7 @@ export default function RegisterScreen() {
     setServerError(null);
     try {
       await register({
-        name: TECHNICAL_REGISTRATION_NAME,
+        name: "",
         email: values.email.trim(),
         password: values.password,
       });

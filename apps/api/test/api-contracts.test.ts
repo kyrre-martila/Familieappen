@@ -487,16 +487,29 @@ async function run(): Promise<void> {
     assertErrorEnvelope(await request("GET", "/me"), 401, API_ERROR_CODES.AUTH_REQUIRES_AUTH);
 
     const betaProfile = (assertSuccessEnvelope(await request("POST", "/auth/register", {
-      body: { name: "Beta", email: "beta-contract@example.com", password: "correct-password" }
+      body: { name: "", email: "beta-contract@example.com", password: "correct-password" }
     }), 201) as { user: UserRecord }).user;
+    assert.equal(betaProfile.name, "");
     assert.equal(betaProfile.firstName, "");
     assert.equal(betaProfile.lastName, "");
+    assert.equal(betaProfile.displayName, "");
+
+    const technicalFallbackProfile = (assertSuccessEnvelope(await request("POST", "/auth/register", {
+      body: { name: "Ny bruker", email: "technical-fallback@example.com", password: "correct-password" }
+    }), 201) as { user: UserRecord }).user;
+    assert.equal(technicalFallbackProfile.name, "");
+    assert.equal(technicalFallbackProfile.firstName, "");
+    assert.equal(technicalFallbackProfile.lastName, "");
+    assert.equal(technicalFallbackProfile.displayName, "");
 
     const updatedProfile = assertSuccessEnvelope(await request("PATCH", "/me", {
       token: alpha.token,
       body: { name: "Alpha Oppdatert", email: "alpha-new@example.com", phone: "+47 123 45 678", birthDate: "1985-01-05" }
     }), 200);
     assert.equal(updatedProfile.name, "Alpha Oppdatert");
+    assert.equal(updatedProfile.firstName, "Alpha");
+    assert.equal(updatedProfile.lastName, "Oppdatert");
+    assert.equal(updatedProfile.displayName, "Alpha Oppdatert");
     assert.equal(updatedProfile.email, "alpha-new@example.com");
     assert.equal(updatedProfile.phone, "+47 123 45 678");
     assert.equal(updatedProfile.birthDate, "1985-01-05");

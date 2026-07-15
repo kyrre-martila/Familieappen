@@ -23,6 +23,7 @@ import {
 } from "./dto/family.dto";
 import { FamilyAuthorizationService } from "./family-authorization.service";
 
+const TECHNICAL_REGISTRATION_NAMES = new Set(["Ny bruker"]);
 const FAMILY_MANAGER_ROLES: FamilyMemberRoleDto[] = ["OWNER", "PARENT"];
 const MANUAL_MEMBER_ROLES: AddFamilyMemberRoleDto[] = ["PARENT", "CHILD", "GUEST"];
 const FAMILY_CODE_ALPHABET = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
@@ -156,6 +157,11 @@ type PrismaClientWithFamilyInvitations = typeof PrismaService.prototype.client &
 
 @Injectable()
 export class FamiliesService {
+  private visibleProfileName(name: string | null | undefined): string {
+    const trimmed = (name ?? "").trim();
+    return TECHNICAL_REGISTRATION_NAMES.has(trimmed) ? "" : trimmed;
+  }
+
   private readonly logger = new Logger(FamiliesService.name);
 
   constructor(
@@ -174,7 +180,7 @@ export class FamiliesService {
       const existingOwnedFamily = await this.findExistingOwnedFamily(tx, user.id);
 
       if (existingOwnedFamily) {
-        return this.ensureOwnerDisplayName(tx, existingOwnedFamily, user.id, user.name);
+        return this.ensureOwnerDisplayName(tx, existingOwnedFamily, user.id, this.visibleProfileName(user.name));
       }
 
       return this.createFamilyWithUniqueCode(tx, {
@@ -182,7 +188,7 @@ export class FamiliesService {
         members: {
           create: {
             userId: user.id,
-            displayName: user.name,
+            displayName: this.visibleProfileName(user.name),
             role: "OWNER"
           }
         },
@@ -402,7 +408,7 @@ export class FamiliesService {
       }
     });
 
-    void this.notifyFamilyAccessRequested(user.id, family.id, invitation.id, user.name);
+    void this.notifyFamilyAccessRequested(user.id, family.id, invitation.id, this.visibleProfileName(user.name));
     return this.toFamilyInvitationDto(invitation);
   }
 
