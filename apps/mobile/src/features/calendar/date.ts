@@ -54,3 +54,7 @@ export function formatMonthTitle(date: string) {
 export function formatWeekday(date: string) {
   return shortWeekdayFormatter.format(parseDateString(date)).replace(".", "").toUpperCase();
 }
+
+export function getCalendarDayRange(date: string) {
+  return { from: `${date}T00:00:00.000Z`, to: `${date}T23:59:59.999Z` };
+}
