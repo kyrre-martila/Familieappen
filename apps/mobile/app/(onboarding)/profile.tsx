@@ -71,7 +71,14 @@ const ALLOWED_AVATAR_TYPES = new Set([
 ]);
 
 export default function ProfileScreen() {
-  const { accessToken, user, setCurrentUser, logout, isLoggingOut } = useAuth();
+  const {
+    accessToken,
+    user,
+    setCurrentUser,
+    completeProfileOnboarding,
+    logout,
+    isLoggingOut,
+  } = useAuth();
   const [serverError, setServerError] = useState<string | null>(null);
   const [serverAvatarUri, setServerAvatarUri] = useState<string | null>(
     user?.avatarUrl ?? null,
@@ -251,9 +258,10 @@ export default function ProfileScreen() {
           return;
         }
       }
-      if (finalUser) setCurrentUser(finalUser);
-      await onboardingStorage.clearProfileDraft();
-      router.push("/(onboarding)/family-start");
+      if (finalUser) {
+        await completeProfileOnboarding(finalUser);
+        await onboardingStorage.clearProfileDraft();
+      }
     } catch (e) {
       setServerError(
         e instanceof ApiError

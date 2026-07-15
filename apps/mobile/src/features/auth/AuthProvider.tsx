@@ -59,6 +59,7 @@ type AuthContextValue = {
     password: string;
   }) => Promise<void>;
   refreshFamilyStatus: () => Promise<void>;
+  completeProfileOnboarding: (updatedUser: AuthUser) => Promise<void>;
   startInviteMembersTransition: (familyId: string) => Promise<void>;
   completeInviteMembersTransition: () => Promise<void>;
   setCurrentUser: (user: AuthUser) => void;
@@ -179,6 +180,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       await queryClient.clear();
       queryClient.setQueryData(["auth", "me"], validatedUser);
       queryClient.setQueryData(["auth", "families"], families);
+      queryClient.setQueryData(["auth", "pendingFamilyAccess"], pendingAccess);
       setAccessToken(auth.tokens.accessToken);
       setUser(validatedUser);
       const transition = parseInviteMembersTransition(await onboardingStorage.getInviteMembersTransitionRaw());
@@ -201,6 +203,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         getCurrentUser(token),
       ]);
       queryClient.setQueryData(["auth", "families"], families);
+      queryClient.setQueryData(["auth", "pendingFamilyAccess"], pendingAccess);
       queryClient.setQueryData(["auth", "me"], currentUser);
       setUser(currentUser);
       const transition = parseInviteMembersTransition(await onboardingStorage.getInviteMembersTransitionRaw());
@@ -232,6 +235,43 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     setUser(nextUser);
     queryClient.setQueryData(["auth", "me"], nextUser);
   }, [queryClient]);
+
+  const completeProfileOnboarding = useCallback(
+    async (updatedUser: AuthUser) => {
+      const token = accessToken;
+      if (!token) return;
+      try {
+        const [families, pendingAccess] = await Promise.all([
+          listFamilies(token),
+          getMyPendingFamilyAccess(token),
+        ]);
+        queryClient.setQueryData(["auth", "me"], updatedUser);
+        queryClient.setQueryData(["auth", "families"], families);
+        queryClient.setQueryData(["auth", "pendingFamilyAccess"], pendingAccess);
+        setUser(updatedUser);
+        const transition = parseInviteMembersTransition(
+          await onboardingStorage.getInviteMembersTransitionRaw(),
+        );
+        const validTransition = getValidInviteMembersTransition(
+          transition,
+          updatedUser,
+          families,
+        );
+        if (transition && !validTransition) {
+          await onboardingStorage.clearInviteMembersTransition();
+        }
+        setActiveInviteTransition(Boolean(validTransition));
+        setFamilyStatus(resolveFamilyStatus(families, pendingAccess, updatedUser));
+      } catch (error) {
+        if (isUnauthorizedApiError(error)) {
+          await clearLocalSession();
+          router.replace("/(auth)/login");
+        }
+        throw error;
+      }
+    },
+    [accessToken, clearLocalSession, queryClient],
+  );
 
   const login = useCallback(
     async (input: { email: string; password: string }) => {
@@ -317,6 +357,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       completeAuthentication,
       register,
       refreshFamilyStatus,
+      completeProfileOnboarding,
       startInviteMembersTransition,
       completeInviteMembersTransition,
       setCurrentUser,
@@ -327,6 +368,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       accessToken,
       authDestination,
       completeAuthentication,
+      completeProfileOnboarding,
       familyStatus,
       isLoggingIn,
       isLoggingOut,

@@ -106,6 +106,39 @@ equal(resolveFamilyStatus([], pendingAccess, completeUser), "pending");
 equal(resolveFamilyStatus([family], pendingAccess, completeUser), "ready");
 equal(resolveFamilyStatus([], pendingAccess, incompleteUser), "profile-incomplete");
 
+// Completing profile must move the central destination to the next route implied by families/pending-access.
+equal(
+  getPostAuthDestination({
+    auth: "authenticated",
+    familyStatus: resolveFamilyStatus([], null, completeUser),
+  }),
+  "/(onboarding)/family-start",
+);
+equal(
+  getPostAuthDestination({
+    auth: "authenticated",
+    familyStatus: resolveFamilyStatus([], pendingAccess, completeUser),
+  }),
+  "/(onboarding)/pending-approval",
+);
+equal(
+  getPostAuthDestination({
+    auth: "authenticated",
+    familyStatus: resolveFamilyStatus([family], null, completeUser),
+  }),
+  "/(app)/(tabs)",
+);
+equal(
+  getOnboardingRedirect(
+    "/(onboarding)/profile",
+    getPostAuthDestination({
+      auth: "authenticated",
+      familyStatus: resolveFamilyStatus([], null, completeUser),
+    }),
+  ),
+  "/(onboarding)/family-start",
+);
+
 // Profile route aliases must not redirect to themselves when Expo Router hides route groups.
 equal(getOnboardingRedirect("/profile", "/(onboarding)/profile"), null);
 equal(getOnboardingRedirect("/onboarding/profile", "/(onboarding)/profile"), null);
