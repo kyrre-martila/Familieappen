@@ -14,7 +14,8 @@
     "test:urls": "tsx src/lib/api/url.test.ts",
     "test:auth": "tsx src/features/auth/routes.test.ts && tsx src/features/auth/errors.test.ts && tsx src/features/auth/onboardingNavigation.test.ts && tsx src/features/auth/AuthProvider.test.ts",
     "test:assets": "tsx src/theme/assets.test.ts",
-    "test:profile": "tsx src/features/auth/profile/profileValidation.test.ts && tsx src/features/auth/profile/profileSubmitNavigation.test.ts"
+    "test:profile": "tsx src/features/auth/profile/profileValidation.test.ts && tsx src/features/auth/profile/profileSubmitNavigation.test.ts",
+    "test:calendar": "tsx src/features/calendar/date.test.ts"
   },
   "dependencies": {
     "@expo/vector-icons": "^15.1.1",
