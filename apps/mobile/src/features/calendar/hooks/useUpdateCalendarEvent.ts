@@ -8,7 +8,7 @@ import { updateCalendarEvent, updateCalendarEventOccurrence } from "../api";
 import { updateCalendarEventPayload, type CalendarEventForm } from "../eventForm";
 import { calendarEventsInvalidationKey, moveCalendarEventBetweenDays, replaceCalendarEventInDay, replaceCalendarEventOccurrenceInDay } from "../cache";
 import { calendarQueryKeys } from "../queryKeys";
-import { buildUpdatedCalendarEventDetailPath, type CalendarEventEditScope } from "../events";
+import { buildUpdatedCalendarEventDetailPath, validateCalendarEventUpdateScope, type CalendarEventEditScope } from "../events";
 
 export function getUpdateEventErrorMessage(error: unknown) { if (error instanceof ApiError) return error.message; return "Kunne ikke oppdatere hendelsen akkurat nå. Prøv igjen."; }
 
@@ -18,9 +18,13 @@ export function useUpdateCalendarEvent(input: { eventId: string; previousEvent: 
   const familiesQuery = useQuery({ queryKey: calendarQueryKeys.families, queryFn: () => listFamilies(accessToken!), enabled: Boolean(accessToken) });
   const familyId = familiesQuery.data?.[0]?.family.id ?? null;
   const mutation = useMutation({
-    mutationFn: (form: CalendarEventForm) => input.scope === "occurrence"
-      ? updateCalendarEventOccurrence(accessToken!, familyId!, input.eventId, input.occurrenceDate!, updateCalendarEventPayload(form))
-      : updateCalendarEvent(accessToken!, familyId!, input.eventId, updateCalendarEventPayload(form)),
+    mutationFn: (form: CalendarEventForm) => {
+      const scopeError = validateCalendarEventUpdateScope({ previousEvent: input.previousEvent, scope: input.scope, occurrenceDate: input.occurrenceDate });
+      if (scopeError) throw new Error(scopeError);
+      return input.scope === "occurrence"
+        ? updateCalendarEventOccurrence(accessToken!, familyId!, input.eventId, input.occurrenceDate!, updateCalendarEventPayload(form))
+        : updateCalendarEvent(accessToken!, familyId!, input.eventId, updateCalendarEventPayload(form));
+    },
     onSuccess: (event) => {
       if (familyId) {
         if (input.scope === "occurrence" && input.occurrenceDate && input.previousEvent?.date) {
