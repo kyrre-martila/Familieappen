@@ -36,6 +36,7 @@ type DatabaseUser = {
   avatarUrl?: string | null;
   email: string;
   phone?: string | null;
+  birthDate?: Date | null;
   passwordHash: string;
   createdAt: Date;
   updatedAt: Date;
@@ -412,6 +413,7 @@ export class AuthService {
       avatarUrl: user.avatarUrl ?? null,
       email: user.email,
       phone: user.phone ?? null,
+      birthDate: user.birthDate ? user.birthDate.toISOString().slice(0, 10) : null,
       createdAt: user.createdAt.toISOString(),
       updatedAt: user.updatedAt.toISOString()
     };

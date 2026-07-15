@@ -31,6 +31,7 @@ const completeUser: AuthUser = {
   avatarUrl: null,
   email: "test@example.com",
   phone: "+47 12345678",
+  birthDate: null,
   createdAt: "2026-01-01T00:00:00.000Z",
   updatedAt: "2026-01-01T00:00:00.000Z",
 };

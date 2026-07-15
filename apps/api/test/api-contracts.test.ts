@@ -472,6 +472,7 @@ async function run(): Promise<void> {
     assert.equal(profile.name, "Alpha");
     assert.equal(profile.email, "alpha-contract@example.com");
     assert.equal(profile.phone, null);
+    assert.equal(profile.birthDate, null);
 
     assertErrorEnvelope(await request("GET", "/me"), 401, API_ERROR_CODES.AUTH_REQUIRES_AUTH);
 
@@ -482,11 +483,14 @@ async function run(): Promise<void> {
 
     const updatedProfile = assertSuccessEnvelope(await request("PATCH", "/me", {
       token: alpha.token,
-      body: { name: "Alpha Oppdatert", email: "alpha-new@example.com", phone: "+47 123 45 678" }
+      body: { name: "Alpha Oppdatert", email: "alpha-new@example.com", phone: "+47 123 45 678", birthDate: "1985-01-05" }
     }), 200);
     assert.equal(updatedProfile.name, "Alpha Oppdatert");
     assert.equal(updatedProfile.email, "alpha-new@example.com");
     assert.equal(updatedProfile.phone, "+47 123 45 678");
+    assert.equal(updatedProfile.birthDate, "1985-01-05");
+    assertErrorEnvelope(await request("PATCH", "/me", { token: alpha.token, body: { birthDate: "1985-02-30" } }), 400, API_ERROR_CODES.VALIDATION_INVALID_INPUT);
+    assertErrorEnvelope(await request("PATCH", "/me", { token: alpha.token, body: { birthDate: "2999-01-01" } }), 400, API_ERROR_CODES.VALIDATION_INVALID_INPUT);
     assertSuccessEnvelope(await request("POST", "/auth/login", {
       body: { email: "alpha-new@example.com", password: "correct-password" }
     }), 201);

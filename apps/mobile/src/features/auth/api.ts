@@ -65,7 +65,7 @@ export function registerAccount(input: {
 export function updateCurrentUserProfile(
   accessToken: string,
   input: Partial<
-    Pick<AuthUser, "firstName" | "middleName" | "lastName" | "phone">
+    Pick<AuthUser, "firstName" | "middleName" | "lastName" | "phone" | "birthDate">
   >,
 ) {
   return apiRequest<AuthUser>("/me", {
