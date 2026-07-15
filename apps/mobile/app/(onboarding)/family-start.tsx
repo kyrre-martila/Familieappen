@@ -7,6 +7,7 @@ import {
   Card,
   TextButton,
 } from "../../src/components";
+import { useAuth } from "../../src/features/auth/AuthProvider";
 import { theme } from "../../src/theme/tokens";
 const choices = [
   {
@@ -25,6 +26,7 @@ const choices = [
   },
 ];
 export default function FamilyStartScreen() {
+  const { logout, isLoggingOut } = useAuth();
   return (
     <AuthScreenShell
       title="Hvordan vil du komme i gang?"
@@ -73,8 +75,9 @@ export default function FamilyStartScreen() {
           </AppText>
         </Card>
         <TextButton
-          title="Tilbake"
-          onPress={() => router.push("/(onboarding)/profile")}
+          title={isLoggingOut ? "Logger ut…" : "Logg ut"}
+          disabled={isLoggingOut}
+          onPress={() => void logout()}
         />
       </View>
     </AuthScreenShell>

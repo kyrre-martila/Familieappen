@@ -55,7 +55,7 @@ export function getOnboardingRedirect(
   currentPath: string,
   authDestination: AuthDestination,
 ): AuthDestination | null {
-  if (pathsMatchDestination(currentPath, authDestination)) return null;
+  if (isPathAllowedForDestination(currentPath, authDestination)) return null;
   return authDestination;
 }
 
@@ -63,6 +63,8 @@ type RouteKey =
   | "login"
   | "profile"
   | "family-start"
+  | "create-family"
+  | "join-family"
   | "pending-approval"
   | "invite-members"
   | "app-tabs";
@@ -86,6 +88,12 @@ const PATH_ROUTE_KEYS: Record<string, RouteKey> = {
   "/(onboarding)/family-start": "family-start",
   "/onboarding/family-start": "family-start",
   "/family-start": "family-start",
+  "/(onboarding)/create-family": "create-family",
+  "/onboarding/create-family": "create-family",
+  "/create-family": "create-family",
+  "/(onboarding)/join-family": "join-family",
+  "/onboarding/join-family": "join-family",
+  "/join-family": "join-family",
   "/(onboarding)/pending-approval": "pending-approval",
   "/onboarding/pending-approval": "pending-approval",
   "/pending-approval": "pending-approval",
@@ -97,6 +105,25 @@ const PATH_ROUTE_KEYS: Record<string, RouteKey> = {
   "/tabs": "app-tabs",
   "/": "app-tabs",
 };
+
+const DESTINATION_ALLOWED_ROUTE_KEYS: Record<AuthDestination, readonly RouteKey[]> = {
+  "/(auth)/login": ["login"],
+  "/(onboarding)/profile": ["profile"],
+  "/(onboarding)/family-start": ["family-start", "create-family", "join-family"],
+  "/(onboarding)/pending-approval": ["pending-approval"],
+  "/(onboarding)/invite-members": ["invite-members"],
+  "/(app)/(tabs)": ["app-tabs"],
+};
+
+export function isPathAllowedForDestination(
+  currentPath: string,
+  authDestination: AuthDestination,
+): boolean {
+  const currentRoute = PATH_ROUTE_KEYS[normalizeRouterPath(currentPath)];
+  return Boolean(
+    currentRoute && DESTINATION_ALLOWED_ROUTE_KEYS[authDestination].includes(currentRoute),
+  );
+}
 
 export function pathsMatchDestination(
   currentPath: string,
