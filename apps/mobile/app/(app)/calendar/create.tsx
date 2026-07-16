@@ -17,13 +17,13 @@ import { theme } from "../../../src/theme/tokens";
 function backToCalendar() { if (getCalendarEventBackAction(router.canGoBack()) === "back") router.back(); else router.replace("/(app)/(tabs)/calendar"); }
 
 export default function CreateCalendarEventScreen() {
-  const params = useLocalSearchParams<{ duplicateEventId?: string; occurrenceDate?: string }>();
+  const params = useLocalSearchParams<{ duplicateEventId?: string; sourceDate?: string; occurrenceDate?: string }>();
   const duplicateParams = parseCalendarEventDuplicateParams(params);
   const [form, setForm] = useState<Form>(() => defaultCalendarEventForm(formatDateString(new Date())));
   const [hydratedDuplicateKey, setHydratedDuplicateKey] = useState<string | null>(null);
   const create = useCreateCalendarEvent();
-  const duplicate = useDuplicateCalendarEventSource(duplicateParams.error ? null : duplicateParams.duplicateEventId, duplicateParams.occurrenceDate);
-  const duplicateKey = duplicateParams.duplicateEventId ? `${duplicateParams.duplicateEventId}:${duplicateParams.occurrenceDate ?? "event"}` : null;
+  const duplicate = useDuplicateCalendarEventSource(duplicateParams.error ? null : duplicateParams.duplicateEventId, duplicateParams.sourceDate, duplicateParams.occurrenceDate);
+  const duplicateKey = duplicateParams.duplicateEventId ? `${duplicateParams.duplicateEventId}:${duplicateParams.occurrenceDate ?? duplicateParams.sourceDate ?? "event"}` : null;
   useEffect(() => {
     if (!duplicate.rawEvent || !duplicateKey || hydratedDuplicateKey === duplicateKey) return;
     setForm(calendarEventToDuplicateCreateForm(duplicate.rawEvent));
@@ -33,7 +33,7 @@ export default function CreateCalendarEventScreen() {
   if (duplicateParams.error) return <Screen bottomInset="screen"><ErrorState title="Kan ikke duplisere hendelse" description={duplicateParams.error} onRetry={backToCalendar} /></Screen>;
   if (create.familiesLoading || (duplicateParams.duplicateEventId && duplicate.loading)) return <Screen bottomInset="screen"><LoadingState title={duplicateParams.duplicateEventId ? "Henter hendelse" : "Klargjør kalender"} description={duplicateParams.duplicateEventId ? "Henter hendelsen som skal dupliseres." : "Henter familien før hendelsen kan lagres."} /></Screen>;
   if (create.missingContext || duplicate.missingContext) return <Screen bottomInset="screen"><ErrorState title="Mangler familietilgang" description="Vi finner ikke en aktiv familie for kalenderen akkurat nå." onRetry={() => router.replace("/(app)/(tabs)/calendar")} /></Screen>;
-  if (duplicateParams.duplicateEventId && duplicate.error) return <Screen bottomInset="screen"><ErrorState title="Kunne ikke hente hendelse" description="Prøv igjen, eller gå tilbake til kalenderen." onRetry={() => void duplicate.refetch()} /></Screen>;
+  if (duplicateParams.duplicateEventId && duplicate.error) return <Screen bottomInset="screen"><ErrorState title="Kunne ikke hente hendelse" description={duplicate.error instanceof Error ? duplicate.error.message : "Prøv igjen, eller gå tilbake til kalenderen."} onRetry={() => void duplicate.refetch()} /></Screen>;
   if (duplicateParams.duplicateEventId && duplicate.notFound) return <Screen bottomInset="screen"><ErrorState title="Hendelsen finnes ikke" description="Vi fant ikke hendelsen som skulle dupliseres." onRetry={backToCalendar} /></Screen>;
   return <View style={styles.root}><View style={styles.topbar}><Button title="Tilbake" variant="secondary" onPress={backToCalendar} disabled={create.saving} /><AppText variant="label">Kalender</AppText></View><CalendarEventForm title="Ny hendelse" description="Opprett en kalenderhendelse for familien." form={form} onChange={update} onSubmit={() => create.createEvent(form)} onCancel={backToCalendar} submitting={create.saving} submitTitle="Lagre hendelse" submittingTitle="Lagrer …" error={create.error} footer="Støttede backend-felter brukt nå: tittel, dato, heldag, starttid, sluttid, lokasjon og beskrivelse. Øvrige støttede felt sendes med standardverdier." /></View>;
 }
