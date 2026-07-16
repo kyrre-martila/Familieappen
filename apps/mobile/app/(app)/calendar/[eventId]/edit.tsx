@@ -10,6 +10,7 @@ import { calendarEventToForm, type CalendarEventForm as Form } from "../../../..
 import { buildCalendarEventDetailPath, getCalendarEventEditRestriction, getCalendarEventSeriesHydrationError, parseCalendarEventEditScope, validateCalendarEventEditRoute } from "../../../../src/features/calendar/events";
 import { useCalendarEventDetails } from "../../../../src/features/calendar/hooks/useCalendarEventDetails";
 import { useUpdateCalendarEvent } from "../../../../src/features/calendar/hooks/useUpdateCalendarEvent";
+import { useCalendarFamilyMembers } from "../../../../src/features/calendar/hooks/useCalendarFamilyMembers";
 import { getCalendarEventBackAction } from "../../../../src/features/calendar/navigation";
 import { theme } from "../../../../src/theme/tokens";
 
@@ -23,6 +24,7 @@ export default function EditCalendarEventScreen() {
   const routeError = params.scope && !scope ? "Ugyldig redigeringsvalg. Gå tilbake og velg hva du vil redigere." : validateCalendarEventEditRoute({ scope, occurrenceDate });
   const details = useCalendarEventDetails(eventId, occurrenceDate, scope);
   const rawEvent = details.rawEvent;
+  const familyMembers = useCalendarFamilyMembers();
   const updateMutation = useUpdateCalendarEvent({ eventId: eventId ?? "", previousEvent: rawEvent, occurrenceDate, scope });
   const [form, setForm] = useState<Form | null>(rawEvent ? calendarEventToForm(rawEvent) : null);
   useEffect(() => { if (rawEvent && !updateMutation.saving) setForm(calendarEventToForm(rawEvent)); }, [rawEvent, updateMutation.saving]);
@@ -39,6 +41,6 @@ export default function EditCalendarEventScreen() {
   const seriesHydrationError = getCalendarEventSeriesHydrationError(rawEvent, eventId, scope);
   if (seriesHydrationError) return <Screen bottomInset="screen"><View style={styles.topbar}><Button title="Tilbake" variant="secondary" onPress={() => safeBack(eventId, occurrenceDate)} /></View><ErrorState title="Kan ikke redigere hele serien" description={seriesHydrationError} onRetry={() => safeBack(eventId, occurrenceDate)} /></Screen>;
   if (restriction) return <Screen bottomInset="screen"><View style={styles.topbar}><Button title="Tilbake" variant="secondary" onPress={() => safeBack(eventId, occurrenceDate)} /></View><ErrorState title="Kan ikke redigeres" description={restriction} onRetry={() => safeBack(eventId, occurrenceDate)} /></Screen>;
-  return <View style={styles.root}><View style={styles.topbar}><Button title="Tilbake" variant="secondary" onPress={() => safeBack(eventId, occurrenceDate)} disabled={updateMutation.saving} /><AppText variant="label">Kalender</AppText></View><CalendarEventForm title="Rediger hendelse" description={scope === "occurrence" ? "Oppdater bare denne forekomsten." : scope === "series" ? "Oppdater hele serien og gjentakelsesregelen." : "Oppdater denne kalenderhendelsen for familien."} form={form} onChange={update} onSubmit={() => updateMutation.updateEvent(form)} onCancel={() => safeBack(eventId, occurrenceDate)} submitting={updateMutation.saving} submitTitle="Lagre endringer" submittingTitle="Lagrer …" error={updateMutation.error} footer={scope === "occurrence" ? "Endringen gjelder kun valgt dato. Gjentakelsesregelen kan bare endres for hele serien." : undefined} recurrenceMode={scope === "occurrence" ? "hidden" : "editable"} /></View>;
+  return <View style={styles.root}><View style={styles.topbar}><Button title="Tilbake" variant="secondary" onPress={() => safeBack(eventId, occurrenceDate)} disabled={updateMutation.saving} /><AppText variant="label">Kalender</AppText></View><CalendarEventForm title="Rediger hendelse" description={scope === "occurrence" ? "Oppdater bare denne forekomsten." : scope === "series" ? "Oppdater hele serien og gjentakelsesregelen." : "Oppdater denne kalenderhendelsen for familien."} form={form} onChange={update} onSubmit={() => updateMutation.updateEvent(form)} onCancel={() => safeBack(eventId, occurrenceDate)} submitting={updateMutation.saving} submitTitle="Lagre endringer" submittingTitle="Lagrer …" error={updateMutation.error} familyMembers={familyMembers.familyMembers} familyMembersLoading={familyMembers.loading} footer={scope === "occurrence" ? "Endringen gjelder kun valgt dato. Gjentakelsesregelen kan bare endres for hele serien." : undefined} recurrenceMode={scope === "occurrence" ? "hidden" : "editable"} /></View>;
 }
 const styles = StyleSheet.create({ root: { flex: 1, backgroundColor: theme.colors.background }, topbar: { flexDirection: "row", alignItems: "center", justifyContent: "space-between", gap: theme.spacing.md, paddingHorizontal: theme.spacing.lg, paddingTop: theme.spacing.lg } });

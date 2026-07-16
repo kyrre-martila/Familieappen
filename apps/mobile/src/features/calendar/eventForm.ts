@@ -1,4 +1,5 @@
 import type { CalendarEvent, CalendarEventRecurrenceFrequency } from "@familieappen/shared";
+import { getCalendarEventParticipantIds, omitEmptyParticipantIds } from "./participants";
 
 export type CalendarEventForm = {
   title: string;
@@ -26,7 +27,7 @@ export type CreateCalendarEventPayload = {
   allDay: boolean;
   recurrenceFrequency: CalendarEventRecurrenceFrequency;
   recurrenceUntil: string | null;
-  participantFamilyMemberIds: string[];
+  participantFamilyMemberIds?: string[];
 };
 
 export type SeriesUpdateCalendarEventPayload = {
@@ -36,6 +37,7 @@ export type SeriesUpdateCalendarEventPayload = {
   startsAt: string;
   endsAt: string | null;
   allDay: boolean;
+  participantFamilyMemberIds?: string[];
   recurrenceFrequency?: CalendarEventRecurrenceFrequency;
   recurrenceUntil?: string | null;
 };
@@ -104,14 +106,10 @@ function normalizeTime(time: string | null | undefined, fallback: string) {
 
 type CalendarEventFormSource = Pick<CalendarEvent, "title" | "date" | "allDay" | "startTime" | "endTime" | "location" | "description" | "recurrence" | "recurrenceFrequency" | "recurrenceUntil" | "icon" | "reminderMinutesBefore" | "participants"> & { participantIds?: string[] };
 
-function getParticipantIds(event: CalendarEventFormSource): string[] {
-  if (Array.isArray(event.participantIds)) return [...event.participantIds];
-  return event.participants.map((participant) => participant.familyMember.id);
-}
 
 export function calendarEventToForm(event: CalendarEventFormSource): CalendarEventForm {
   const frequency = event.recurrence?.frequency ?? event.recurrenceFrequency ?? "never";
-  return { title: event.title, date: event.date, allDay: event.allDay, startTime: normalizeTime(event.startTime, "09:00"), endTime: normalizeTime(event.endTime, "10:00"), location: event.location ?? "", description: event.description ?? "", recurrenceFrequency: isCalendarRecurrenceFrequency(frequency) ? frequency : "never", recurrenceUntil: apiDateTimeToLocalDate(event.recurrenceUntil ?? event.recurrence?.until), icon: event.icon, reminderMinutesBefore: event.reminderMinutesBefore, participantFamilyMemberIds: getParticipantIds(event) };
+  return { title: event.title, date: event.date, allDay: event.allDay, startTime: normalizeTime(event.startTime, "09:00"), endTime: normalizeTime(event.endTime, "10:00"), location: event.location ?? "", description: event.description ?? "", recurrenceFrequency: isCalendarRecurrenceFrequency(frequency) ? frequency : "never", recurrenceUntil: apiDateTimeToLocalDate(event.recurrenceUntil ?? event.recurrence?.until), icon: event.icon, reminderMinutesBefore: event.reminderMinutesBefore, participantFamilyMemberIds: getCalendarEventParticipantIds(event) };
 }
 
 export function calendarEventToDuplicateCreateForm(event: Parameters<typeof calendarEventToForm>[0]): CalendarEventForm {
@@ -122,12 +120,12 @@ export function createCalendarEventPayload(form: CalendarEventForm): CreateCalen
   return {
     title: form.title.trim(), description: form.description.trim() || null, location: form.location.trim() || null, icon: form.icon, reminderMinutesBefore: form.reminderMinutesBefore,
     startsAt: toLocalDateTimeString(form.date, form.startTime, form.allDay), endsAt: form.allDay ? toLocalDateTimeString(form.date, null, true) : toLocalDateTimeString(form.date, form.endTime, false),
-    allDay: form.allDay, recurrenceFrequency: form.recurrenceFrequency, recurrenceUntil: form.recurrenceFrequency === "never" ? null : recurrenceUntilToApiDateTime(form.recurrenceUntil), participantFamilyMemberIds: form.participantFamilyMemberIds,
+    allDay: form.allDay, recurrenceFrequency: form.recurrenceFrequency, recurrenceUntil: form.recurrenceFrequency === "never" ? null : recurrenceUntilToApiDateTime(form.recurrenceUntil), ...(omitEmptyParticipantIds(form.participantFamilyMemberIds) ? { participantFamilyMemberIds: omitEmptyParticipantIds(form.participantFamilyMemberIds) } : {}),
   };
 }
 
 export function updateCalendarEventPayload(form: CalendarEventForm, options: { includeRecurrence?: boolean } = {}): SeriesUpdateCalendarEventPayload | OccurrenceUpdateCalendarEventPayload {
-  const payload: SeriesUpdateCalendarEventPayload = { title: form.title.trim(), description: form.description.trim() || null, location: form.location.trim() || null, startsAt: toLocalDateTimeString(form.date, form.startTime, form.allDay), endsAt: form.allDay ? toLocalDateTimeString(form.date, null, true) : toLocalDateTimeString(form.date, form.endTime, false), allDay: form.allDay };
+  const payload: SeriesUpdateCalendarEventPayload = { title: form.title.trim(), description: form.description.trim() || null, location: form.location.trim() || null, startsAt: toLocalDateTimeString(form.date, form.startTime, form.allDay), endsAt: form.allDay ? toLocalDateTimeString(form.date, null, true) : toLocalDateTimeString(form.date, form.endTime, false), allDay: form.allDay, participantFamilyMemberIds: form.participantFamilyMemberIds };
   if (options.includeRecurrence) { payload.recurrenceFrequency = form.recurrenceFrequency; payload.recurrenceUntil = form.recurrenceFrequency === "never" ? null : recurrenceUntilToApiDateTime(form.recurrenceUntil); }
   return payload;
 }

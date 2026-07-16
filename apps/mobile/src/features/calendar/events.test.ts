@@ -1,6 +1,6 @@
 import type { CalendarEvent } from "@familieappen/shared";
 import { calendarQueryKeys } from "./queryKeys";
-import { buildCalendarEventDeletePath, buildCalendarEventDetailPath, buildCalendarEventEditPath, buildUpdatedCalendarEventDetailPath, canDeleteCalendarEvent, canEditCalendarEvent, findCalendarEventOccurrence, formatCalendarEventDate, formatEventTimeLabel, getCalendarEventDeleteRestriction, getCalendarEventDeleteScopeDescription, getCalendarEventDeleteScopeLabel, getCalendarEventEditRestriction, getCalendarEventEditScopeDescription, getCalendarEventEditScopeLabel, getCalendarEventIdentity, getCalendarEventEditScopes, getCalendarEventDeleteScopes, getCalendarEventSeriesHydrationError, isValidCalendarOccurrenceDate, mapCalendarEventToViewModel, parseCalendarEventEditScope, requiresCalendarEventDeleteScope, requiresCalendarEventEditScope, sortCalendarEvents, validateCalendarEventDeleteScope, validateCalendarEventEditRoute, validateCalendarEventUpdateScope } from "./events";
+import { buildCalendarEventDeletePath, buildCalendarEventDetailPath, buildCalendarEventEditPath, buildUpdatedCalendarEventDetailPath, canDeleteCalendarEvent, canEditCalendarEvent, findCalendarEventOccurrence, formatCalendarEventDate, formatEventTimeLabel, getCalendarEventDeleteRestriction, getCalendarEventDeleteScopeDescription, getCalendarEventDeleteScopeLabel, getCalendarEventEditRestriction, getCalendarEventEditScopeDescription, getCalendarEventEditScopeLabel, getCalendarEventIdentity, getCalendarEventEditScopes, getCalendarEventDeleteScopes, getCalendarEventSeriesHydrationError, isValidCalendarOccurrenceDate, mapCalendarEventToViewModel, shouldShowCalendarEventParticipants, parseCalendarEventEditScope, requiresCalendarEventDeleteScope, requiresCalendarEventEditScope, sortCalendarEvents, validateCalendarEventDeleteScope, validateCalendarEventEditRoute, validateCalendarEventUpdateScope } from "./events";
 import { getCalendarEventBackAction } from "./navigation";
 import { getCalendarDayRange, parseDateString, formatDateString } from "./date";
 
@@ -132,3 +132,7 @@ assertEqual(buildCalendarEventDeletePath({ eventId: "event/a", scope: null }), "
 assertEqual(buildCalendarEventDeletePath({ eventId: "series/a", scope: "series" }), "/calendar/events/series%2Fa", "series delete endpoint uses event endpoint");
 assertEqual(buildCalendarEventDeletePath({ eventId: "series/a", scope: "occurrence", occurrenceDate: "2026-07-15" }), "/calendar/events/series%2Fa/occurrences/2026-07-15", "occurrence delete endpoint includes encoded date");
 assertEqual(buildCalendarEventDeletePath({ eventId: "series-a", scope: "occurrence" }), null, "endpoint cannot be selected for invalid occurrence input");
+
+const emptyParticipants = mapCalendarEventToViewModel(event({ participants: [] }));
+assertEqual(shouldShowCalendarEventParticipants(emptyParticipants), false, "detail view helper hides empty participants section");
+assertEqual(shouldShowCalendarEventParticipants(imported), true, "detail view helper shows participants section when members exist");
