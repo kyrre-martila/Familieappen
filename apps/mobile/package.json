@@ -15,7 +15,7 @@
     "test:auth": "tsx src/features/auth/routes.test.ts && tsx src/features/auth/errors.test.ts && tsx src/features/auth/onboardingNavigation.test.ts && tsx src/features/auth/AuthProvider.test.ts",
     "test:assets": "tsx src/theme/assets.test.ts",
     "test:profile": "tsx src/features/auth/profile/profileValidation.test.ts && tsx src/features/auth/profile/profileSubmitNavigation.test.ts",
-    "test:calendar": "tsx src/features/calendar/date.test.ts && tsx src/features/calendar/events.test.ts && tsx src/features/calendar/createEventForm.test.ts && tsx src/features/calendar/createEventMutation.test.ts && tsx src/features/calendar/editEventForm.test.ts && tsx src/features/calendar/editEventCache.test.ts"
+    "test:calendar": "tsx src/features/calendar/date.test.ts && tsx src/features/calendar/events.test.ts && tsx src/features/calendar/duplicateEvent.test.ts && tsx src/features/calendar/createEventForm.test.ts && tsx src/features/calendar/createEventMutation.test.ts && tsx src/features/calendar/editEventForm.test.ts && tsx src/features/calendar/editEventCache.test.ts"
   },
   "dependencies": {
     "@expo/vector-icons": "^15.1.1",

@@ -9,7 +9,7 @@ import { useCalendarEventDetails } from "../../../src/features/calendar/hooks/us
 import { useDeleteCalendarEvent } from "../../../src/features/calendar/hooks/useDeleteCalendarEvent";
 import { theme } from "../../../src/theme/tokens";
 import { getCalendarEventBackAction } from "../../../src/features/calendar/navigation";
-import { calendarEventToDuplicateCreateForm, encodeCalendarEventInitialValues } from "../../../src/features/calendar/eventForm";
+import { buildCalendarEventDuplicatePath } from "../../../src/features/calendar/duplicateEventModel";
 
 export function goBackToCalendar() {
   if (getCalendarEventBackAction(router.canGoBack()) === "back") {
@@ -21,7 +21,9 @@ export function goBackToCalendar() {
 }
 
 function duplicateEvent(rawEvent: NonNullable<ReturnType<typeof useCalendarEventDetails>["rawEvent"]>) {
-  router.push({ pathname: "/(app)/calendar/create", params: { initialValues: encodeCalendarEventInitialValues(calendarEventToDuplicateCreateForm(rawEvent)) } });
+  const duplicateId = rawEvent.isRecurringOccurrence && rawEvent.recurringEventId && rawEvent.occurrenceDate ? rawEvent.recurringEventId : rawEvent.id;
+  const occurrenceDate = rawEvent.isRecurringOccurrence && rawEvent.recurringEventId ? rawEvent.occurrenceDate : undefined;
+  router.push(buildCalendarEventDuplicatePath({ eventId: duplicateId, occurrenceDate }));
 }
 
 export default function CalendarEventDetailScreen() {

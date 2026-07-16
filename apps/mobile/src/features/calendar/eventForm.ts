@@ -118,21 +118,6 @@ export function calendarEventToDuplicateCreateForm(event: Parameters<typeof cale
   return calendarEventToForm(event);
 }
 
-export function encodeCalendarEventInitialValues(form: CalendarEventForm): string {
-  return encodeURIComponent(JSON.stringify(form));
-}
-
-export function decodeCalendarEventInitialValues(value: string | string[] | null | undefined, fallback: CalendarEventForm): CalendarEventForm {
-  const raw = Array.isArray(value) ? value[0] : value;
-  if (!raw) return fallback;
-  try {
-    const parsed = JSON.parse(decodeURIComponent(raw)) as Partial<CalendarEventForm>;
-    return { ...fallback, ...parsed, participantFamilyMemberIds: Array.isArray(parsed.participantFamilyMemberIds) ? parsed.participantFamilyMemberIds : fallback.participantFamilyMemberIds };
-  } catch {
-    return fallback;
-  }
-}
-
 export function createCalendarEventPayload(form: CalendarEventForm): CreateCalendarEventPayload {
   return {
     title: form.title.trim(), description: form.description.trim() || null, location: form.location.trim() || null, icon: form.icon, reminderMinutesBefore: form.reminderMinutesBefore,
