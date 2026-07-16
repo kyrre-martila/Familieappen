@@ -1,4 +1,5 @@
 import type { CalendarEvent } from "@familieappen/shared";
+import { getCalendarEventParticipantSummaries, type CalendarParticipantSummary } from "./participants";
 
 export type CalendarEventViewModel = {
   id: string;
@@ -13,6 +14,7 @@ export type CalendarEventViewModel = {
   description: string | null;
   icon: string;
   participantNames: string[];
+  participants: CalendarParticipantSummary[];
   isImported: boolean;
   isRecurringOccurrence: boolean;
   occurrenceDate?: string;
@@ -219,8 +221,13 @@ export function formatEventTimeLabel(event: Pick<CalendarEvent, "allDay" | "star
   return endTime ? `${startTime}–${endTime}` : startTime;
 }
 
+export function shouldShowCalendarEventParticipants(event: Pick<CalendarEventViewModel, "participants">): boolean {
+  return event.participants.length > 0;
+}
+
 export function mapCalendarEventToViewModel(event: CalendarEvent): CalendarEventViewModel {
-  const participantNames = event.participants.map((participant) => participant.familyMember.displayName).filter(Boolean);
+  const participants = getCalendarEventParticipantSummaries(event);
+  const participantNames = participants.map((participant) => participant.displayName).filter(Boolean);
   return {
     id: event.id,
     title: event.title,
@@ -234,6 +241,7 @@ export function mapCalendarEventToViewModel(event: CalendarEvent): CalendarEvent
     description: event.description,
     icon: event.icon,
     participantNames,
+    participants,
     isImported: event.source === "ics" || event.icsSourceId !== null,
     isRecurringOccurrence: Boolean(event.isRecurringOccurrence),
     occurrenceDate: event.occurrenceDate,

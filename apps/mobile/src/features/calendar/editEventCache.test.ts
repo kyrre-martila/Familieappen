@@ -14,3 +14,7 @@ assertEqual(removeCalendarEventByIdFromDay([event("a"), event("ab")], "a")?.map(
 assertEqual(removeCalendarEventOccurrenceFromDay([occurrence("series-a", "2026-07-15"), occurrence("series-a", "2026-07-22"), occurrence("series-b", "2026-07-15")], { eventId: "series-a", occurrenceDate: "2026-07-15" })?.map((item) => item.occurrenceDate), ["2026-07-22", "2026-07-15"], "occurrence delete removes only selected series date");
 assertEqual(removeCalendarEventSeriesFromDay([occurrence("series-a", "2026-07-15"), occurrence("series-a", "2026-07-22"), event("single")], "series-a")?.map((item) => item.id), ["single"], "series delete removes known cached occurrences for series");
 assertEqual(removeCalendarEventOccurrenceFromDay(undefined, { eventId: "series-a", occurrenceDate: "2026-07-15" }), undefined, "occurrence delete preserves undefined cache safely");
+
+const participantUpdated = event("a", "2026-07-15", "Med deltaker") as CalendarEvent;
+participantUpdated.participants = [{ id: "p1", eventId: "a", familyMemberId: "m1", createdAt: "2026-01-01T00:00:00.000Z", familyMember: { id: "m1", userId: null, familyId: "family-1", displayName: "Even", avatarUrl: null, role: "CHILD", includeInSchoolWeek: true, createdAt: "2026-01-01T00:00:00.000Z", updatedAt: "2026-01-01T00:00:00.000Z" } }];
+assertEqual(replaceCalendarEventInDay([event("a")], participantUpdated)?.[0]?.participants.map((participant) => participant.familyMember.displayName), ["Even"], "cache update keeps participants returned by mutation");

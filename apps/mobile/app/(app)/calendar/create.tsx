@@ -9,6 +9,7 @@ import { CalendarEventForm } from "../../../src/features/calendar/components/Cal
 import { formatDateString } from "../../../src/features/calendar/date";
 import { calendarEventToDuplicateCreateForm, defaultCalendarEventForm, type CalendarEventForm as Form } from "../../../src/features/calendar/eventForm";
 import { useCreateCalendarEvent } from "../../../src/features/calendar/hooks/useCreateCalendarEvent";
+import { useCalendarFamilyMembers } from "../../../src/features/calendar/hooks/useCalendarFamilyMembers";
 import { getCalendarEventBackAction } from "../../../src/features/calendar/navigation";
 import { parseCalendarEventDuplicateParams } from "../../../src/features/calendar/duplicateEventModel";
 import { useDuplicateCalendarEventSource } from "../../../src/features/calendar/duplicateEvent";
@@ -22,6 +23,7 @@ export default function CreateCalendarEventScreen() {
   const [form, setForm] = useState<Form>(() => defaultCalendarEventForm(formatDateString(new Date())));
   const [hydratedDuplicateKey, setHydratedDuplicateKey] = useState<string | null>(null);
   const create = useCreateCalendarEvent();
+  const familyMembers = useCalendarFamilyMembers();
   const duplicate = useDuplicateCalendarEventSource(duplicateParams.error ? null : duplicateParams.duplicateEventId, duplicateParams.sourceDate, duplicateParams.occurrenceDate);
   const duplicateKey = duplicateParams.duplicateEventId ? `${duplicateParams.duplicateEventId}:${duplicateParams.occurrenceDate ?? duplicateParams.sourceDate ?? "event"}` : null;
   useEffect(() => {
@@ -35,6 +37,6 @@ export default function CreateCalendarEventScreen() {
   if (create.missingContext || duplicate.missingContext) return <Screen bottomInset="screen"><ErrorState title="Mangler familietilgang" description="Vi finner ikke en aktiv familie for kalenderen akkurat nå." onRetry={() => router.replace("/(app)/(tabs)/calendar")} /></Screen>;
   if (duplicateParams.duplicateEventId && duplicate.error) return <Screen bottomInset="screen"><ErrorState title="Kunne ikke hente hendelse" description={duplicate.error instanceof Error ? duplicate.error.message : "Prøv igjen, eller gå tilbake til kalenderen."} onRetry={() => void duplicate.refetch()} /></Screen>;
   if (duplicateParams.duplicateEventId && duplicate.notFound) return <Screen bottomInset="screen"><ErrorState title="Hendelsen finnes ikke" description="Vi fant ikke hendelsen som skulle dupliseres." onRetry={backToCalendar} /></Screen>;
-  return <View style={styles.root}><View style={styles.topbar}><Button title="Tilbake" variant="secondary" onPress={backToCalendar} disabled={create.saving} /><AppText variant="label">Kalender</AppText></View><CalendarEventForm title="Ny hendelse" description="Opprett en kalenderhendelse for familien." form={form} onChange={update} onSubmit={() => create.createEvent(form)} onCancel={backToCalendar} submitting={create.saving} submitTitle="Lagre hendelse" submittingTitle="Lagrer …" error={create.error} footer="Støttede backend-felter brukt nå: tittel, dato, heldag, starttid, sluttid, lokasjon og beskrivelse. Øvrige støttede felt sendes med standardverdier." /></View>;
+  return <View style={styles.root}><View style={styles.topbar}><Button title="Tilbake" variant="secondary" onPress={backToCalendar} disabled={create.saving} /><AppText variant="label">Kalender</AppText></View><CalendarEventForm title="Ny hendelse" description="Opprett en kalenderhendelse for familien." form={form} onChange={update} onSubmit={() => create.createEvent(form)} onCancel={backToCalendar} submitting={create.saving} submitTitle="Lagre hendelse" submittingTitle="Lagrer …" error={create.error} familyMembers={familyMembers.familyMembers} familyMembersLoading={familyMembers.loading} footer="Støttede backend-felter brukt nå: tittel, dato, heldag, starttid, sluttid, lokasjon og beskrivelse. Øvrige støttede felt sendes med standardverdier." /></View>;
 }
 const styles = StyleSheet.create({ root: { flex: 1, backgroundColor: theme.colors.background }, topbar: { flexDirection: "row", alignItems: "center", justifyContent: "space-between", gap: theme.spacing.md, paddingHorizontal: theme.spacing.lg, paddingTop: theme.spacing.lg } });
