@@ -23,7 +23,7 @@ export function goBackToCalendar() {
 function duplicateEvent(rawEvent: NonNullable<ReturnType<typeof useCalendarEventDetails>["rawEvent"]>) {
   const duplicateId = rawEvent.isRecurringOccurrence && rawEvent.recurringEventId && rawEvent.occurrenceDate ? rawEvent.recurringEventId : rawEvent.id;
   const occurrenceDate = rawEvent.isRecurringOccurrence && rawEvent.recurringEventId ? rawEvent.occurrenceDate : undefined;
-  router.push(buildCalendarEventDuplicatePath({ eventId: duplicateId, occurrenceDate }));
+  router.push(buildCalendarEventDuplicatePath({ eventId: duplicateId, sourceDate: rawEvent.date, occurrenceDate }));
 }
 
 export default function CalendarEventDetailScreen() {
