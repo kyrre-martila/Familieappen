@@ -93,6 +93,7 @@ export type Reminder = {
   recurrence?: CalendarRecurrence | null;
   createdAt?: string;
   updatedAt?: string;
+  archivedAt?: string | null;
   pending?: boolean;
 };
 

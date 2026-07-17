@@ -55,10 +55,10 @@ export function HuskRemindersSection({
   }, [detailId, loading, reminders]);
   const today = new Date().toISOString().slice(0, 10);
   const activeReminders = reminders.filter(
-    (reminder) => !reminder.dueDate || reminder.dueDate >= today,
+    (reminder) => !reminder.archivedAt && (!reminder.dueDate || reminder.dueDate >= today),
   );
   const previousReminders = reminders.filter(
-    (reminder) => reminder.dueDate && reminder.dueDate < today,
+    (reminder) => !reminder.archivedAt && reminder.dueDate && reminder.dueDate < today,
   );
   const filteredReminders = activeReminders.filter((reminder) => {
     if (

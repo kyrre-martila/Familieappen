@@ -1,5 +1,6 @@
 import { addDays, formatDateString, parseDateString } from "../calendar/date";
-import { formatReminderDate, getReminderStatus, isActiveReminder, mapHuskListToViewModel, mapReminderToViewModel, sortReminders } from "./models";
+import { formatReminderDate, getReminderStatus, mapHuskListToViewModel, mapReminderToViewModel, sortReminders } from "./models";
+import { isActiveReminder } from "./reminderHistory";
 
 const assert = {
   equal(actual: unknown, expected: unknown) { if (actual !== expected) throw new Error(`Expected ${String(expected)}, received ${String(actual)}`); },
