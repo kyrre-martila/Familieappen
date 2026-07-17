@@ -20,5 +20,5 @@ assert.equal(mapReminderToViewModel({ ...base, date: "2026-07-16", dueDate: "202
 assert.equal(isActiveReminder({ archivedAt: null }), true);
 assert.equal(isActiveReminder({ archivedAt: "2026-07-17T12:00:00.000Z" }), false);
 assert.deepEqual(sortReminders([{ id: "later", title: "Z", status: "upcoming", date: "2026-07-19" }, { id: "today", title: "A", status: "today", date: "2026-07-17" }] as any).map((item) => item.id), ["today", "later"]);
-assert.deepEqual(mapHuskListToViewModel({ id: "l", title: "Pakking", icon: "home", completedCount: 2, totalCount: 4, items: [] } as any), { id: "l", title: "Pakking", icon: "home", completedCount: 2, totalCount: 4, progressPercent: 50, progressLabel: "2 av 4 fullført" });
+assert.deepEqual(mapHuskListToViewModel({ id: "l", title: "Pakking", icon: "home", completedCount: 2, totalCount: 4, items: [], scope: "family", memberIds: [] } as any), { id: "l", title: "Pakking", icon: "home", completedCount: 2, totalCount: 4, progressPercent: 50, progressLabel: "2 av 4 fullført", audienceLabel: "Hele familien" });
 console.log("Husk view model tests passed");

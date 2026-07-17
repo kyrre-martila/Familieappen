@@ -23,6 +23,15 @@ export type HuskListViewModel = {
   totalCount: number;
   progressPercent: number;
   progressLabel: string;
+  audienceLabel: string;
+};
+
+export type HuskListItemViewModel = {
+  id: string;
+  title: string;
+  description: string | null;
+  completed: boolean;
+  sortOrder: number;
 };
 
 const dateFormatter = new Intl.DateTimeFormat("nb-NO", { day: "numeric", month: "long" });
@@ -74,5 +83,35 @@ export function mapHuskListToViewModel(list: HuskList): HuskListViewModel {
   const totalCount = list.totalCount ?? list.items.length;
   const completedCount = list.completedCount ?? list.items.filter((item) => item.completed).length;
   const progressPercent = totalCount ? Math.round((completedCount / totalCount) * 100) : 0;
-  return { id: list.id, title: list.title, icon: list.icon, completedCount, totalCount, progressPercent, progressLabel: `${completedCount} av ${totalCount} fullført` };
+  const audienceLabel = list.scope === "family" || list.memberIds.length === 0
+    ? "Hele familien"
+    : list.audienceMembers.length === 1
+      ? list.audienceMembers[0].familyMember.displayName
+      : `${list.memberIds.length} personer`;
+  return { id: list.id, title: list.title, icon: list.icon, completedCount, totalCount, progressPercent, progressLabel: `${completedCount} av ${totalCount} fullført`, audienceLabel };
+}
+
+export function sortHuskLists(lists: HuskList[]) {
+  return [...lists].filter((list) => !list.archived).sort((a, b) =>
+    a.title.localeCompare(b.title, "nb-NO"),
+  );
+}
+
+export function mapHuskListItems(list: HuskList): HuskListItemViewModel[] {
+  return list.items.map((item) => ({
+    id: item.id,
+    title: item.title,
+    description: item.description,
+    completed: item.completed,
+    sortOrder: item.sortOrder,
+  })).sort((a, b) => a.sortOrder - b.sortOrder || a.title.localeCompare(b.title, "nb-NO"));
+}
+
+export function groupHuskListItems(list: HuskList) {
+  const items = mapHuskListItems(list);
+  return { active: items.filter((item) => !item.completed), completed: items.filter((item) => item.completed) };
+}
+
+export function huskListCardAccessibilityLabel(list: HuskListViewModel) {
+  return `${list.title}. ${list.progressLabel} elementer.`;
 }
