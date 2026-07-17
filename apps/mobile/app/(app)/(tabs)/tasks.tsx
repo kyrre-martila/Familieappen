@@ -1,2 +1,2 @@
-import { PlaceholderScreen } from "../../../src/components/PlaceholderScreen";
-export default function TasksScreen() { return <PlaceholderScreen title="Husk" description="Oppgaver, påminnelser og lister kommer senere."  inTab />; }
+import { HuskShell } from "../../../src/features/husk/components/HuskShell";
+export default function TasksScreen() { return <HuskShell />; }
