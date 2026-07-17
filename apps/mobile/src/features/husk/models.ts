@@ -49,10 +49,6 @@ export function formatReminderTime(dueDate: string | null) {
   return timeFormatter.format(new Date(dueDate));
 }
 
-export function isActiveReminder(reminder: Pick<Reminder, "archivedAt">) {
-  return !reminder.archivedAt;
-}
-
 export function mapReminderToViewModel(reminder: Reminder, today = getTodayString()): ReminderViewModel {
   const status = getReminderStatus(reminder.date, today);
   const statusLabel = { overdue: "Forfalt", today: "I dag", upcoming: "Kommende", unscheduled: "Uten dato" }[status];

@@ -286,6 +286,7 @@ function toHuskReminder(reminder: BackendReminder, familyMembers: HuskFamilyMemb
     isPrivate: reminder.isPrivate,
     createdAt: reminder.createdAt,
     updatedAt: reminder.updatedAt,
+    archivedAt: reminder.archivedAt,
   };
 }
 

@@ -119,9 +119,9 @@ export class HuskService {
     await this.familyAuthorization.requireFamilyMember(userId, familyId);
 
     const reminders = await this.prisma.client.reminder.findMany({
-      where: { familyId, archivedAt: null, OR: [{ isPrivate: false }, { createdByUserId: userId }] },
+      where: { familyId, OR: [{ isPrivate: false }, { createdByUserId: userId }] },
       include: this.reminderInclude,
-      orderBy: [{ dueDate: "asc" }, { createdAt: "desc" }]
+      orderBy: [{ archivedAt: "asc" }, { dueDate: "asc" }, { createdAt: "desc" }]
     });
 
     return reminders.map((reminder) => this.toReminderDto(reminder));

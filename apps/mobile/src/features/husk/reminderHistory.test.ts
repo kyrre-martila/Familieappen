@@ -1,0 +1,13 @@
+import { completeReminderPayload, undoCompleteReminderPayload } from "./api";
+import { emptyReminderState, filterRemindersByStatus, reminderActionFor } from "./reminderHistory";
+const assert = { equal(actual: unknown, expected: unknown, message: string) { if (actual !== expected) throw new Error(message); }, deepEqual(actual: unknown, expected: unknown, message: string) { if (JSON.stringify(actual) !== JSON.stringify(expected)) throw new Error(message); } };
+const active = { id: "active", archivedAt: null } as any; const history = { id: "history", archivedAt: "2026-07-17T12:00:00.000Z" } as any;
+assert.deepEqual(filterRemindersByStatus([active, history], "active").map((r) => r.id), ["active"], "active filter excludes archived reminders");
+assert.deepEqual(filterRemindersByStatus([active, history], "history").map((r) => r.id), ["history"], "history filter includes archived reminders");
+assert.equal(reminderActionFor(active), "complete", "active reminder maps to complete action");
+assert.equal(reminderActionFor(history), "undo", "archived reminder maps to undo action");
+assert.equal(emptyReminderState("active").title, "Ingen aktive påminnelser", "active empty state");
+assert.equal(emptyReminderState("history").title, "Ingen historikk", "history empty state");
+assert.deepEqual(completeReminderPayload("2026-07-17T12:00:00.000Z"), { archivedAt: "2026-07-17T12:00:00.000Z" }, "complete uses archivedAt payload");
+assert.deepEqual(undoCompleteReminderPayload(), { archivedAt: null }, "undo uses archivedAt null payload");
+console.log("Reminder history tests passed");
