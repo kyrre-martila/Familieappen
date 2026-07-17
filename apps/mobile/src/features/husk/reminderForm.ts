@@ -1,0 +1,15 @@
+import type { Reminder } from "@familieappen/shared";
+import { formatDateString } from "../calendar/date";
+
+export type ReminderForm = { title: string; note: string; icon: string; date: string; time: string; reminderEnabled: boolean; reminderMinutesBefore: number; scope: "family" | "members"; memberIds: string[]; isPrivate: boolean };
+export type ReminderFormErrors = Partial<Record<"title" | "date" | "memberIds", string>>;
+export type ReminderPayload = { title: string; icon: string; dueDate: string; reminderMinutesBefore: number | null; note: string | null; scope: "family" | "members"; memberIds: string[]; isPrivate: boolean };
+export const reminderIcons = ["backpack", "book", "cake", "car", "gift", "grill", "passport", "shirt", "summer", "tooth"];
+export const reminderMinuteOptions = [{ value: 0, label: "På dagen" }, { value: 60, label: "1 t før" }, { value: 1440, label: "Dagen før" }, { value: 10080, label: "Uken før" }] as const;
+export function getDefaultReminderDate(now = new Date()) { return formatDateString(now); }
+export function defaultReminderForm(date = getDefaultReminderDate()): ReminderForm { return { title: "", note: "", icon: "backpack", date, time: "00:00", reminderEnabled: true, reminderMinutesBefore: 1440, scope: "family", memberIds: [], isPrivate: false }; }
+export function reminderPickerDateToString(date: Date) { return formatDateString(date); }
+function dueParts(value: string | null, date: string | null) { if (!value) return { date: date ?? getDefaultReminderDate(), time: "00:00" }; return { date: date ?? value.slice(0, 10), time: /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}/.test(value) ? value.slice(11, 16) : "00:00" }; }
+export function reminderToForm(reminder: Reminder): ReminderForm { const due = dueParts(reminder.dueDate, reminder.date); return { title: reminder.title, note: reminder.note ?? "", icon: reminder.icon, date: due.date, time: due.time, reminderEnabled: reminder.reminderMinutesBefore != null, reminderMinutesBefore: reminder.reminderMinutesBefore ?? 1440, scope: reminder.scope, memberIds: reminder.memberIds, isPrivate: reminder.isPrivate }; }
+export function validateReminderForm(form: ReminderForm): ReminderFormErrors { const errors: ReminderFormErrors = {}; if (!form.title.trim()) errors.title = "Skriv inn hva som skal huskes."; if (!/^\d{4}-\d{2}-\d{2}$/.test(form.date)) errors.date = "Velg en gyldig dato."; if (form.scope === "members" && !form.memberIds.length) errors.memberIds = "Velg minst én person, eller velg hele familien."; return errors; }
+export function reminderFormToPayload(form: ReminderForm): ReminderPayload { return { title: form.title.trim(), icon: form.icon, dueDate: `${form.date}T${form.time}:00.000Z`, reminderMinutesBefore: form.reminderEnabled ? form.reminderMinutesBefore : null, note: form.note.trim() || null, scope: form.scope, memberIds: form.scope === "family" ? [] : form.memberIds, isPrivate: form.isPrivate }; }
