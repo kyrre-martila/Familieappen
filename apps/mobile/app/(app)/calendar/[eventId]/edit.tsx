@@ -26,10 +26,17 @@ export default function EditCalendarEventScreen() {
   const rawEvent = details.rawEvent;
   const familyMembers = useCalendarFamilyMembers();
   const updateMutation = useUpdateCalendarEvent({ eventId: eventId ?? "", previousEvent: rawEvent, occurrenceDate, scope });
+  const eventHydrationKey = rawEvent ? `${rawEvent.id}:${rawEvent.date}:${rawEvent.updatedAt ?? ""}:${scope ?? "event"}:${occurrenceDate ?? ""}` : null;
   const [form, setForm] = useState<Form | null>(rawEvent ? calendarEventToForm(rawEvent) : null);
-  useEffect(() => { if (rawEvent && !updateMutation.saving) setForm(calendarEventToForm(rawEvent)); }, [rawEvent, updateMutation.saving]);
+  const [hydratedEventKey, setHydratedEventKey] = useState<string | null>(() => eventHydrationKey);
+  const [dirty, setDirty] = useState(false);
+  useEffect(() => {
+    if (!rawEvent || !eventHydrationKey || hydratedEventKey === eventHydrationKey || dirty || updateMutation.saving) return;
+    setForm(calendarEventToForm(rawEvent));
+    setHydratedEventKey(eventHydrationKey);
+  }, [dirty, eventHydrationKey, hydratedEventKey, rawEvent, updateMutation.saving]);
   const restriction = getCalendarEventEditRestriction(details.event);
-  const update = <K extends keyof Form>(key: K, value: Form[K]) => { updateMutation.resetError(); setForm((current) => current ? { ...current, [key]: value } : current); };
+  const update = <K extends keyof Form>(key: K, value: Form[K]) => { updateMutation.resetError(); setDirty(true); setForm((current) => current ? { ...current, [key]: value } : current); };
   if (!eventId) return <Screen bottomInset="screen"><ErrorState title="Ugyldig hendelse" description="Vi mangler en gyldig hendelses-id." onRetry={() => router.replace("/(app)/(tabs)/calendar")} /></Screen>;
   if (routeError) return <Screen bottomInset="screen"><View style={styles.topbar}><Button title="Tilbake" variant="secondary" onPress={() => safeBack(eventId, occurrenceDate)} /></View><ErrorState title="Kan ikke åpne redigering" description={routeError} onRetry={() => safeBack(eventId, occurrenceDate)} /></Screen>;
   if (details.loading || updateMutation.familiesLoading || !form) return <Screen bottomInset="screen"><LoadingState title="Laster hendelse" description="Henter hendelsen før den kan redigeres." /></Screen>;
