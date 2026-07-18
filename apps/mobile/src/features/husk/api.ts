@@ -55,6 +55,24 @@ export function buildDeleteHuskListItemRequest(
     method: "DELETE",
   };
 }
+export function buildCompleteHuskListItemRequest(
+  listId: string,
+  itemId: string,
+): HuskRequest {
+  return {
+    path: `/husk/lists/${encodeURIComponent(listId)}/items/${encodeURIComponent(itemId)}/complete`,
+    method: "PATCH",
+  };
+}
+export function buildUncompleteHuskListItemRequest(
+  listId: string,
+  itemId: string,
+): HuskRequest {
+  return {
+    path: `/husk/lists/${encodeURIComponent(listId)}/items/${encodeURIComponent(itemId)}/uncomplete`,
+    method: "PATCH",
+  };
+}
 export function getHuskReminders(accessToken: string, familyId: string) {
   return apiRequest<Reminder[]>("/husk/reminders", {
     accessToken,
@@ -196,6 +214,33 @@ export function deleteHuskListItem(
   itemId: string,
 ) {
   const request = buildDeleteHuskListItemRequest(listId, itemId);
+  return apiRequest<HuskListItem>(request.path, {
+    method: request.method,
+    accessToken,
+    headers: familyHeaders(familyId),
+  });
+}
+
+export function completeHuskListItem(
+  accessToken: string,
+  familyId: string,
+  listId: string,
+  itemId: string,
+) {
+  const request = buildCompleteHuskListItemRequest(listId, itemId);
+  return apiRequest<HuskListItem>(request.path, {
+    method: request.method,
+    accessToken,
+    headers: familyHeaders(familyId),
+  });
+}
+export function uncompleteHuskListItem(
+  accessToken: string,
+  familyId: string,
+  listId: string,
+  itemId: string,
+) {
+  const request = buildUncompleteHuskListItemRequest(listId, itemId);
   return apiRequest<HuskListItem>(request.path, {
     method: request.method,
     accessToken,

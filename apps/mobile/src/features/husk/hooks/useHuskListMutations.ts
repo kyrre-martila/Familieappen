@@ -3,9 +3,11 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { listFamilies } from "../../auth/api";
 import { useAuth } from "../../auth/AuthProvider";
 import {
+  completeHuskListItem,
   createHuskList,
   createHuskListItem,
   deleteHuskListItem,
+  uncompleteHuskListItem,
   updateHuskList,
   updateHuskListItem,
 } from "../api";
@@ -134,17 +136,45 @@ export function useHuskListItemMutations(listId: string) {
     onSuccess: (item, itemId) =>
       set((c) => removeHuskListItem(c, listId, item?.id ?? itemId)),
   });
-  const error = create.error || update.error || remove.error;
+  const complete = useMutation({
+    mutationFn: (itemId: string) =>
+      completeHuskListItem(accessToken!, familyId!, listId, itemId),
+    onSuccess: (item) => set((c) => replaceHuskListItem(c, listId, item)),
+  });
+  const uncomplete = useMutation({
+    mutationFn: (itemId: string) =>
+      uncompleteHuskListItem(accessToken!, familyId!, listId, itemId),
+    onSuccess: (item) => set((c) => replaceHuskListItem(c, listId, item)),
+  });
+  const error =
+    create.error ||
+    update.error ||
+    remove.error ||
+    complete.error ||
+    uncomplete.error;
   return {
     createItem: create.mutateAsync,
     updateItem: update.mutateAsync,
     deleteItem: remove.mutateAsync,
-    saving: create.isPending || update.isPending || remove.isPending,
+    completeItem: complete.mutateAsync,
+    uncompleteItem: uncomplete.mutateAsync,
+    completingItemId: complete.isPending ? (complete.variables ?? null) : null,
+    uncompletingItemId: uncomplete.isPending
+      ? (uncomplete.variables ?? null)
+      : null,
+    saving:
+      create.isPending ||
+      update.isPending ||
+      remove.isPending ||
+      complete.isPending ||
+      uncomplete.isPending,
     error: error ? message(error) : null,
     resetError: () => {
       create.reset();
       update.reset();
       remove.reset();
+      complete.reset();
+      uncomplete.reset();
     },
   };
 }

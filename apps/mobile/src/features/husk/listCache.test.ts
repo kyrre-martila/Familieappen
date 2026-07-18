@@ -80,3 +80,86 @@ assert.deepEqual(
 );
 assert.equal(afterRemove[0]!.totalCount, 1);
 console.log("Husk list cache tests passed");
+const completedResponse = { ...item("i1", true, 7), title: "done" };
+const completedOnce = replaceHuskListItem([l1, l2], "l1", completedResponse)!;
+assert.equal(
+  completedOnce[0]!.completedCount,
+  1,
+  "completedCount increases when an active item is completed",
+);
+assert.equal(
+  completedOnce[0]!.totalCount,
+  1,
+  "totalCount is unchanged when an item is completed",
+);
+assert.equal(
+  completedOnce[0]!.items[0]!.completed,
+  true,
+  "active item is replaced by completed server response",
+);
+assert.equal(
+  completedOnce[0]!.items[0]!.sortOrder,
+  7,
+  "sortOrder from server response is preserved",
+);
+assert.equal(completedOnce[1]!, l2, "other lists are preserved by reference");
+const completedAgain = replaceHuskListItem(
+  completedOnce,
+  "l1",
+  completedResponse,
+)!;
+assert.equal(
+  completedAgain[0]!.items.length,
+  1,
+  "completing an already completed response does not duplicate items",
+);
+const withTwoCompleted = {
+  ...l1,
+  items: [item("i1", true, 1), item("i2", true, 2)],
+  totalCount: 2,
+  completedCount: 2,
+} as any;
+const undone = replaceHuskListItem([withTwoCompleted, l2], "l1", {
+  ...item("i2", false, 2),
+  title: "active again",
+})!;
+assert.equal(
+  undone[0]!.completedCount,
+  1,
+  "completedCount decreases when completion is undone",
+);
+assert.equal(
+  undone[0]!.totalCount,
+  2,
+  "totalCount is unchanged when completion is undone",
+);
+assert.deepEqual(
+  undone[0]!.items.map((i) => i.id),
+  ["i1", "i2"],
+  "other items are preserved and sortOrder order remains stable",
+);
+assert.equal(
+  undone[0]!.items[0]!.completed,
+  true,
+  "other elements keep their status",
+);
+const undoneAgain = replaceHuskListItem(undone, "l1", {
+  ...item("i2", false, 2),
+  title: "still active",
+})!;
+assert.equal(
+  undoneAgain[0]!.items.length,
+  2,
+  "undoing an already active response does not duplicate items",
+);
+const removeCompleted = removeHuskListItem([withTwoCompleted], "l1", "i1")!;
+assert.equal(
+  removeCompleted[0]!.totalCount,
+  1,
+  "deleting a completed item still recalculates totalCount",
+);
+assert.equal(
+  removeCompleted[0]!.completedCount,
+  1,
+  "deleting a completed item still recalculates completedCount",
+);
