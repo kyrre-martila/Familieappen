@@ -16,7 +16,7 @@
     "test:assets": "tsx src/theme/assets.test.ts",
     "test:profile": "tsx src/features/auth/profile/profileValidation.test.ts && tsx src/features/auth/profile/profileSubmitNavigation.test.ts",
     "test:calendar": "tsx src/features/calendar/date.test.ts && tsx src/features/calendar/participants.test.ts && tsx src/features/calendar/events.test.ts && tsx src/features/calendar/duplicateEvent.test.ts && tsx src/features/calendar/createEventForm.test.ts && tsx src/features/calendar/createEventMutation.test.ts && tsx src/features/calendar/editEventForm.test.ts && tsx src/features/calendar/editEventCache.test.ts",
-    "test:husk": "tsx src/features/husk/models.test.ts && tsx src/features/husk/reminderForm.test.ts && tsx src/features/husk/cache.test.ts && tsx src/features/husk/reminderHistory.test.ts && tsx src/features/husk/editReminderState.test.ts"
+    "test:husk": "tsx src/features/husk/models.test.ts && tsx src/features/husk/listViews.test.ts && tsx src/features/husk/queryState.test.ts && tsx src/features/husk/reminderForm.test.ts && tsx src/features/husk/cache.test.ts && tsx src/features/husk/reminderHistory.test.ts && tsx src/features/husk/editReminderState.test.ts"
   },
   "dependencies": {
     "@expo/vector-icons": "^15.1.1",
