@@ -1,2 +1,78 @@
-import { Modal, Pressable, StyleSheet } from "react-native"; import { router } from "expo-router"; import { AppText, Button, Card } from "../../components"; import { theme } from "../../theme/tokens";
-const actions=["Kalenderhendelse","Oppgave","Handlelistevare","Middag","Ønskeliste"];export function CreateActionSheet({visible,onClose}:{visible:boolean;onClose:()=>void}){const createReminder=()=>{onClose();router.push("/(app)/husk/create");};return <Modal animationType="slide" transparent visible={visible} onRequestClose={onClose}><Pressable accessibilityRole="button" accessibilityLabel="Lukk opprett meny" style={styles.backdrop} onPress={onClose}><Pressable style={styles.sheet} onPress={(e)=>e.stopPropagation()}><Card><AppText variant="label">Opprett</AppText><AppText variant="heading">Ny Husk</AppText><Button title="Påminnelse" onPress={createReminder} accessibilityLabel="Opprett ny påminnelse"/>{actions.map(a=><Button key={a} title={a} variant="secondary" accessibilityLabel={`${a} kommer senere`} disabled/>)}<Button title="Lukk" variant="ghost" onPress={onClose}/></Card></Pressable></Pressable></Modal>};const styles=StyleSheet.create({backdrop:{flex:1,justifyContent:"flex-end",backgroundColor:"rgba(34,34,34,0.24)"},sheet:{padding:theme.spacing.lg,paddingBottom:theme.spacing.xl}});
+import { Modal, Pressable, StyleSheet } from "react-native";
+import { router } from "expo-router";
+import { AppText, Button, Card } from "../../components";
+import { theme } from "../../theme/tokens";
+const actions = [
+  "Kalenderhendelse",
+  "Oppgave",
+  "Handlelistevare",
+  "Middag",
+  "Ønskeliste",
+];
+export function CreateActionSheet({
+  visible,
+  onClose,
+}: {
+  visible: boolean;
+  onClose: () => void;
+}) {
+  const createReminder = () => {
+    onClose();
+    router.push("/(app)/husk/create");
+  };
+  const createList = () => {
+    onClose();
+    router.push("/(app)/husk/lists/create");
+  };
+  return (
+    <Modal
+      animationType="slide"
+      transparent
+      visible={visible}
+      onRequestClose={onClose}
+    >
+      <Pressable
+        accessibilityRole="button"
+        accessibilityLabel="Lukk opprett meny"
+        style={styles.backdrop}
+        onPress={onClose}
+      >
+        <Pressable style={styles.sheet} onPress={(e) => e.stopPropagation()}>
+          <Card>
+            <AppText variant="label">Opprett</AppText>
+            <AppText variant="heading">Ny Husk</AppText>
+            <Button
+              title="Påminnelse"
+              onPress={createReminder}
+              accessibilityLabel="Opprett ny påminnelse"
+            />
+            <Button
+              title="Liste"
+              onPress={createList}
+              accessibilityLabel="Opprett ny liste"
+              accessibilityHint="Åpner skjema for å opprette en Husk-liste."
+            />
+            {actions.map((a) => (
+              <Button
+                key={a}
+                title={a}
+                variant="secondary"
+                accessibilityLabel={`${a} kommer senere`}
+                disabled
+              />
+            ))}
+            <Button title="Lukk" variant="ghost" onPress={onClose} />
+          </Card>
+        </Pressable>
+      </Pressable>
+    </Modal>
+  );
+}
+const styles = StyleSheet.create({
+  backdrop: {
+    flex: 1,
+    justifyContent: "flex-end",
+    backgroundColor: "rgba(34,34,34,0.24)",
+  },
+  sheet: { padding: theme.spacing.lg, paddingBottom: theme.spacing.xl },
+});
