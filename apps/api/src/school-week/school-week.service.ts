@@ -122,7 +122,7 @@ export class SchoolWeekService {
     const existing = await this.getFamilyReminderOrThrow(familyId, reminderId);
     const scope = this.validateScope(input.scope, existing.isRecurring ? "occurrence" : "series");
     const occurrenceDate = this.validateOptionalDate(input.occurrenceDate, "Occurrence date") ?? existing.date;
-    const updateData = await this.buildUpdateData(familyId, input);
+    const updateData = await this.buildUpdateData(familyId, input, existing);
 
     if (Object.keys(updateData).length === 0) throw new BadRequestException("At least one school week field is required");
 
@@ -177,7 +177,7 @@ export class SchoolWeekService {
     })();
   }
 
-  private async buildUpdateData(familyId: string, input: UpdateSchoolWeekReminderRequestDto): Promise<SchoolWeekReminderUpdateData> {
+  private async buildUpdateData(familyId: string, input: UpdateSchoolWeekReminderRequestDto, existing?: SchoolWeekReminderRecord): Promise<SchoolWeekReminderUpdateData> {
     const updateData: SchoolWeekReminderUpdateData = {};
     if (input.childFamilyMemberId !== undefined || (input as any).childId !== undefined) updateData.childFamilyMemberId = await this.validateChildFamilyMemberId(familyId, input.childFamilyMemberId ?? (input as any).childId);
     if (input.title !== undefined) updateData.title = this.validateRequiredText(input.title, "Title", 120);
@@ -188,7 +188,10 @@ export class SchoolWeekService {
     if (input.recurrenceFrequency !== undefined) updateData.recurrenceFrequency = this.validateRecurrenceFrequency(input.recurrenceFrequency);
     if (input.recurrenceEndDate !== undefined) updateData.recurrenceEndDate = this.validateOptionalDate(input.recurrenceEndDate, "Recurrence end date");
     if (input.note !== undefined) updateData.note = this.validateOptionalText(input.note, "Note", 500);
-    if (updateData.date && updateData.weekday && this.weekdayForDate(updateData.date) !== updateData.weekday) throw new BadRequestException("Weekday must match date");
+    const nextDate = updateData.date ?? existing?.date ?? null;
+    const nextWeekday = updateData.weekday ?? (existing?.weekday as SchoolWeekdayDto | undefined);
+    if (nextDate && nextWeekday && this.weekdayForDate(nextDate) !== nextWeekday) throw new BadRequestException("Weekday must match date");
+    if (updateData.isRecurring === false) updateData.recurrenceEndDate = null;
     return updateData;
   }
 

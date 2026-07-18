@@ -11,6 +11,7 @@ import {
   type SchoolWeekReminder as BackendSchoolWeekReminder,
 } from "../../../lib/api";
 import { getUserFacingApiMessage } from "../../../lib/auth-family";
+import { notifySchoolWeekChanged } from "./schoolWeekCache";
 import { useFamilyMembers } from "../../family/hooks/useFamilyMembers";
 import type {
   HuskFamilyMember,
@@ -114,13 +115,14 @@ export function useSchoolWeek(selectedWeek: Date) {
         note: input.note ?? null,
       });
       setBackendItems((current) => current.map((item) => item.id === optimisticItem.id ? saved : item));
+      notifySchoolWeekChanged({ familyId: family.id, weekStart: selectedWeekKey });
       return toHuskSchoolItem(saved);
     } catch (error) {
       setBackendItems(previousItems);
       setItemsError(getUserFacingApiMessage(error, "Skolehusk ble ikke lagret"));
       throw error;
     }
-  }, [backendItems, family?.id]);
+  }, [backendItems, family?.id, selectedWeekKey]);
 
   const updateSchoolReminder = useCallback(async (itemId: string, update: SchoolReminderUpdate) => {
     if (!family?.id) throw new Error("Family is not ready");
@@ -131,13 +133,14 @@ export function useSchoolWeek(selectedWeek: Date) {
       const saved = await updateBackendSchoolWeekReminder(family.id, itemId, update);
       setBackendItems((current) => current.map((item) => item.id === itemId ? saved : item));
       await refreshItems();
+      notifySchoolWeekChanged({ familyId: family.id, weekStart: selectedWeekKey });
       return toHuskSchoolItem(saved);
     } catch (error) {
       setBackendItems(previousItems);
       setItemsError(getUserFacingApiMessage(error, "Endringen ble ikke lagret"));
       throw error;
     }
-  }, [backendItems, family?.id, refreshItems]);
+  }, [backendItems, family?.id, refreshItems, selectedWeekKey]);
 
   const deleteSchoolReminder = useCallback(async (itemId: string, input: { scope?: SchoolWeekMutationScope; occurrenceDate?: string } = {}) => {
     if (!family?.id) throw new Error("Family is not ready");
@@ -147,13 +150,14 @@ export function useSchoolWeek(selectedWeek: Date) {
     try {
       const deleted = await deleteBackendSchoolWeekReminder(family.id, itemId, input);
       await refreshItems();
+      notifySchoolWeekChanged({ familyId: family.id, weekStart: selectedWeekKey });
       return toHuskSchoolItem(deleted);
     } catch (error) {
       setBackendItems(previousItems);
       setItemsError(getUserFacingApiMessage(error, "Skolehusk ble ikke slettet"));
       throw error;
     }
-  }, [backendItems, family?.id, refreshItems]);
+  }, [backendItems, family?.id, refreshItems, selectedWeekKey]);
 
   return {
     children,

@@ -31,6 +31,7 @@ import {
   type Task,
 } from "../../../lib/api";
 import { getUserFacingApiMessage } from "../../../lib/auth-family";
+import { schoolWeekChangedEvent, type SchoolWeekChangedDetail } from "../../husk/hooks/schoolWeekCache";
 import { mockToday } from "../../../app/calendar/mockCalendarData";
 import { remapLegacyMemberIds } from "../../family/familyMemberAdapters";
 import { useFamilyMembers } from "../../family/hooks/useFamilyMembers";
@@ -527,6 +528,24 @@ function useCalendarContractValue(): CalendarContract {
       formatLocalDateString(addLocalDays(parseLocalDateString(today), 34)),
     );
   }, [ensureSchoolWeeksForRange, today]);
+
+  useEffect(() => {
+    if (typeof window === "undefined") return undefined;
+
+    function handleSchoolWeekChanged(event: Event) {
+      const detail = (event as CustomEvent<SchoolWeekChangedDetail>).detail;
+      if (detail?.familyId && detail.familyId !== activeFamilyId) return;
+      setBackendSchoolWeekItems([]);
+      setFetchedSchoolWeeks(new Set());
+      void ensureSchoolWeeksForRange(
+        getWeekStartString(today),
+        formatLocalDateString(addLocalDays(parseLocalDateString(today), 34)),
+      );
+    }
+
+    window.addEventListener(schoolWeekChangedEvent, handleSchoolWeekChanged);
+    return () => window.removeEventListener(schoolWeekChangedEvent, handleSchoolWeekChanged);
+  }, [activeFamilyId, ensureSchoolWeeksForRange, today]);
 
   useEffect(() => {
     void refresh();

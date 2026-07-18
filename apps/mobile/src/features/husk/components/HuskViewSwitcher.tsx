@@ -7,6 +7,7 @@ export function HuskViewSwitcher({ view, onChange }: { view: HuskView; onChange:
   return <View style={styles.control} accessibilityRole="tablist" accessibilityLabel="Velg Husk-visning">
     <Option selected={view === "reminders"} title="Påminnelser" onPress={() => onChange("reminders")} />
     <Option selected={view === "lists"} title="Lister" onPress={() => onChange("lists")} />
+    <Option selected={view === "school-week"} title="Skoleuka" onPress={() => onChange("school-week")} />
   </View>;
 }
 function Option({ title, selected, onPress }: { title: string; selected: boolean; onPress: () => void }) {

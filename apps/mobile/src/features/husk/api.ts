@@ -1,4 +1,4 @@
-import type { HuskList, HuskListItem, Reminder } from "@familieappen/shared";
+import type { HuskList, HuskListItem, Reminder, SchoolWeekReminder } from "@familieappen/shared";
 import { apiRequest } from "../../lib/api/client";
 import type { ReminderPayload } from "./reminderForm";
 import type { HuskListItemPayload, HuskListPayload } from "./huskListForm";
@@ -243,6 +243,19 @@ export function uncompleteHuskListItem(
   const request = buildUncompleteHuskListItemRequest(listId, itemId);
   return apiRequest<HuskListItem>(request.path, {
     method: request.method,
+    accessToken,
+    headers: familyHeaders(familyId),
+  });
+}
+
+export function buildSchoolWeekRemindersRequest(weekStart: string): HuskRequest {
+  const params = new URLSearchParams({ weekStart });
+  return { path: `/school-week?${params.toString()}` };
+}
+
+export function getSchoolWeekReminders(accessToken: string, familyId: string, weekStart: string) {
+  const request = buildSchoolWeekRemindersRequest(weekStart);
+  return apiRequest<SchoolWeekReminder[]>(request.path, {
     accessToken,
     headers: familyHeaders(familyId),
   });
