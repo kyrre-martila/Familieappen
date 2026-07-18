@@ -13,6 +13,7 @@ import { ReminderList } from "./ReminderList";
 import { ReminderSkeleton } from "./ReminderSkeleton";
 import { HuskListCard } from "./HuskListCard";
 import { HuskViewSwitcher } from "./HuskViewSwitcher";
+import { selectHuskView } from "../viewState";
 
 export function HuskShell() {
   const [filter, setFilter] = useState<ReminderFilter>("active");
@@ -23,7 +24,7 @@ export function HuskShell() {
   const action = filter === "active" ? "complete" : "undo";
   return <Screen bottomInset="tab" refreshControl={<RefreshControl refreshing={husk.refreshing} onRefresh={() => void husk.refresh()} tintColor={theme.colors.primary} />}>
     <View style={styles.header}><AppText variant="title">Husk</AppText><AppText style={styles.description}>Påminnelser og lister for familien.</AppText></View>
-    <HuskViewSwitcher view={view} onChange={setView} />
+    <HuskViewSwitcher view={view} onChange={(nextView) => setView(selectHuskView({ view, reminderFilter: filter }, nextView).view)} />
     {view === "reminders" ? <><View style={styles.filter} accessibilityRole="tablist" accessibilityLabel="Filter påminnelser"><FilterButton selected={filter === "active"} title="Aktive" onPress={() => setFilter("active")} /><FilterButton selected={filter === "history"} title="Historikk" onPress={() => setFilter("history")} /></View>
       {husk.loading ? <ReminderSkeleton /> : husk.missingContext ? <ErrorState title="Mangler familietilgang" description="Vi finner ikke en aktiv familie for Husk akkurat nå." onRetry={() => void husk.refresh()} /> : husk.error ? <ErrorState description="Kunne ikke hente Husk akkurat nå." onRetry={() => void husk.refresh()} /> : <HuskSection title={filter === "active" ? "Aktive" : "Historikk"}>{husk.reminders.length ? <ReminderList reminders={husk.reminders} action={action} actionBusy={completion.saving ? "pending" : null} onAction={(id) => void (action === "complete" ? completion.complete(id) : completion.undo(id))} /> : <EmptyState {...empty} />}{completion.error ? <AppText style={styles.error}>{completion.error}</AppText> : null}</HuskSection>}</> :
       husk.loading ? <ReminderSkeleton /> : husk.missingContext ? <ErrorState title="Mangler familietilgang" description="Vi finner ikke en aktiv familie for Husk akkurat nå." onRetry={() => void husk.refresh()} /> : husk.error ? <ErrorState description="Kunne ikke hente listene akkurat nå." onRetry={() => void husk.refresh()} /> : <HuskSection title="Aktive lister">{husk.lists.length ? husk.lists.map((list) => <HuskListCard key={list.id} list={list} onPress={() => router.push(`/(app)/husk/lists/${list.id}`)} />) : <EmptyState title="Ingen lister ennå" description="Det er ingen aktive lister for familien." />}</HuskSection>}
