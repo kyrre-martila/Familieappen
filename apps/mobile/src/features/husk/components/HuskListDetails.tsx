@@ -13,13 +13,7 @@ import {
 } from "../huskListForm";
 import { useHuskListItemMutations } from "../hooks/useHuskListMutations";
 import type { HuskList, HuskListItem } from "@familieappen/shared";
-import {
-  huskListItemCompletionAccessibilityHint,
-  huskListItemCompletionAccessibilityLabel,
-  huskListItemCompletionActionFor,
-  huskListItemCompletionTitle,
-  shouldShowHuskListItemCompletionAction,
-} from "../listItemActions";
+import { huskListItemCompletionStateFor } from "../listItemActions";
 
 type Props = { list: HuskList; onEditList?: () => void };
 export function HuskListDetails({ list, onEditList }: Props) {
@@ -180,6 +174,7 @@ export function HuskListDetails({ list, onEditList }: Props) {
               onUncomplete={uncompleteItem}
               completingItemId={mutations.completingItemId}
               uncompletingItemId={mutations.uncompletingItemId}
+              completionBusy={mutations.completionSaving}
             />
           ) : completed.length ? (
             <EmptyState
@@ -205,6 +200,7 @@ export function HuskListDetails({ list, onEditList }: Props) {
               onUncomplete={uncompleteItem}
               completingItemId={mutations.completingItemId}
               uncompletingItemId={mutations.uncompletingItemId}
+              completionBusy={mutations.completionSaving}
             />
           ) : null}
         </>
@@ -276,6 +272,7 @@ function Section({
   onUncomplete,
   completingItemId,
   uncompletingItemId,
+  completionBusy,
 }: {
   title: string;
   items: ReturnType<typeof groupHuskListItems>["active"];
@@ -293,6 +290,7 @@ function Section({
   onUncomplete: (i: HuskListItem) => void;
   completingItemId: string | null;
   uncompletingItemId: string | null;
+  completionBusy: boolean;
 }) {
   return (
     <View style={styles.section}>
@@ -369,15 +367,15 @@ function Section({
                 Status: {item.completed ? "fullført" : "aktiv"}
               </AppText>
               <View style={styles.row}>
-                {shouldShowHuskListItemCompletionAction(item.id, editing) ? (
-                  <CompletionButton
-                    item={item as HuskListItem}
-                    completingItemId={completingItemId}
-                    uncompletingItemId={uncompletingItemId}
-                    onComplete={onComplete}
-                    onUncomplete={onUncomplete}
-                  />
-                ) : null}
+                <CompletionButton
+                  item={item as HuskListItem}
+                  editingItemId={editing}
+                  completingItemId={completingItemId}
+                  uncompletingItemId={uncompletingItemId}
+                  completionBusy={completionBusy}
+                  onComplete={onComplete}
+                  onUncomplete={onUncomplete}
+                />
                 <Button
                   title="Rediger"
                   variant="secondary"
@@ -402,35 +400,39 @@ function Section({
 }
 function CompletionButton({
   item,
+  editingItemId,
   completingItemId,
   uncompletingItemId,
+  completionBusy,
   onComplete,
   onUncomplete,
 }: {
   item: HuskListItem;
+  editingItemId: string | null;
   completingItemId: string | null;
   uncompletingItemId: string | null;
+  completionBusy: boolean;
   onComplete: (item: HuskListItem) => void;
   onUncomplete: (item: HuskListItem) => void;
 }) {
-  const action = huskListItemCompletionActionFor(item);
-  const busy =
-    action === "complete"
-      ? completingItemId === item.id
-      : uncompletingItemId === item.id;
+  const state = huskListItemCompletionStateFor({
+    item,
+    editingItemId,
+    completingItemId,
+    uncompletingItemId,
+    completionBusy,
+  });
+  if (state.hidden) return null;
   return (
     <Button
-      title={huskListItemCompletionTitle(action, busy)}
-      variant={action === "complete" ? "primary" : "secondary"}
-      disabled={busy}
-      accessibilityLabel={huskListItemCompletionAccessibilityLabel(
-        action,
-        item.title,
-      )}
-      accessibilityHint={huskListItemCompletionAccessibilityHint(action)}
-      accessibilityState={{ busy, disabled: busy }}
+      title={state.title}
+      variant={state.action === "complete" ? "primary" : "secondary"}
+      disabled={state.disabled}
+      accessibilityLabel={state.accessibilityLabel}
+      accessibilityHint={state.accessibilityHint}
+      accessibilityState={{ busy: state.busy, disabled: state.disabled }}
       onPress={() =>
-        action === "complete" ? onComplete(item) : onUncomplete(item)
+        state.action === "complete" ? onComplete(item) : onUncomplete(item)
       }
     />
   );

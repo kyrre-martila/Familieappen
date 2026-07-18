@@ -163,3 +163,20 @@ assert.equal(
   1,
   "deleting a completed item still recalculates completedCount",
 );
+const cacheBeforeFailedCompletion = [l1, l2];
+const cacheAfterFailedCompletion = cacheBeforeFailedCompletion;
+assert.equal(
+  cacheAfterFailedCompletion,
+  cacheBeforeFailedCompletion,
+  "failed completion keeps canonical cache unchanged because success replacement is not called",
+);
+assert.equal(
+  cacheAfterFailedCompletion[0]!.completedCount,
+  0,
+  "failed completion keeps completedCount unchanged",
+);
+assert.equal(
+  cacheAfterFailedCompletion[0]!.items[0]!.completed,
+  false,
+  "failed completion keeps item status unchanged",
+);

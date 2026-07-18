@@ -1,3 +1,4 @@
+import { useRef } from "react";
 import { router } from "expo-router";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { listFamilies } from "../../auth/api";
@@ -100,6 +101,7 @@ export function useUpdateHuskList(listId: string) {
 export function useHuskListItemMutations(listId: string) {
   const { accessToken, familyId } = useFamily();
   const client = useQueryClient();
+  const completionInFlightRef = useRef(false);
   const set = (fn: (c: any) => any) => {
     if (familyId) client.setQueryData(huskQueryKeys.lists(familyId), fn);
   };
@@ -146,6 +148,25 @@ export function useHuskListItemMutations(listId: string) {
       uncompleteHuskListItem(accessToken!, familyId!, listId, itemId),
     onSuccess: (item) => set((c) => replaceHuskListItem(c, listId, item)),
   });
+  const completionSaving = complete.isPending || uncomplete.isPending;
+  const runCompletion = async (
+    action: "complete" | "uncomplete",
+    itemId: string,
+  ) => {
+    if (completionInFlightRef.current) return;
+    completionInFlightRef.current = true;
+    complete.reset();
+    uncomplete.reset();
+    try {
+      if (action === "complete") {
+        await complete.mutateAsync(itemId);
+      } else {
+        await uncomplete.mutateAsync(itemId);
+      }
+    } finally {
+      completionInFlightRef.current = false;
+    }
+  };
   const error =
     create.error ||
     update.error ||
@@ -156,18 +177,18 @@ export function useHuskListItemMutations(listId: string) {
     createItem: create.mutateAsync,
     updateItem: update.mutateAsync,
     deleteItem: remove.mutateAsync,
-    completeItem: complete.mutateAsync,
-    uncompleteItem: uncomplete.mutateAsync,
+    completeItem: (itemId: string) => runCompletion("complete", itemId),
+    uncompleteItem: (itemId: string) => runCompletion("uncomplete", itemId),
     completingItemId: complete.isPending ? (complete.variables ?? null) : null,
     uncompletingItemId: uncomplete.isPending
       ? (uncomplete.variables ?? null)
       : null,
+    completionSaving,
     saving:
       create.isPending ||
       update.isPending ||
       remove.isPending ||
-      complete.isPending ||
-      uncomplete.isPending,
+      completionSaving,
     error: error ? message(error) : null,
     resetError: () => {
       create.reset();
