@@ -1,7 +1,9 @@
 import {
+  buildCompleteHuskListItemRequest,
   buildCreateHuskListItemRequest,
   buildCreateHuskListRequest,
   buildDeleteHuskListItemRequest,
+  buildUncompleteHuskListItemRequest,
   buildUpdateHuskListItemRequest,
   buildUpdateHuskListRequest,
 } from "./api";
@@ -59,6 +61,24 @@ assert.deepEqual(buildDeleteHuskListItemRequest("list/id", "item/id"), {
   path: "/husk/lists/list%2Fid/items/item%2Fid",
   method: "DELETE",
 });
+assert.deepEqual(buildCompleteHuskListItemRequest("list/id", "item/id"), {
+  path: "/husk/lists/list%2Fid/items/item%2Fid/complete",
+  method: "PATCH",
+});
+assert.equal(
+  "body" in buildCompleteHuskListItemRequest("list/id", "item/id"),
+  false,
+  "complete endpoint does not send a body",
+);
+assert.deepEqual(buildUncompleteHuskListItemRequest("list/id", "item/id"), {
+  path: "/husk/lists/list%2Fid/items/item%2Fid/uncomplete",
+  method: "PATCH",
+});
+assert.equal(
+  "body" in buildUncompleteHuskListItemRequest("list/id", "item/id"),
+  false,
+  "uncomplete endpoint does not send a body",
+);
 const updatePayload = huskListItemFormToUpdatePayload({
   title: "Pass",
   description: "",

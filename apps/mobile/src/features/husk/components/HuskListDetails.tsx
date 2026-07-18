@@ -13,6 +13,7 @@ import {
 } from "../huskListForm";
 import { useHuskListItemMutations } from "../hooks/useHuskListMutations";
 import type { HuskList, HuskListItem } from "@familieappen/shared";
+import { huskListItemCompletionStateFor } from "../listItemActions";
 
 type Props = { list: HuskList; onEditList?: () => void };
 export function HuskListDetails({ list, onEditList }: Props) {
@@ -57,6 +58,20 @@ export function HuskListDetails({ list, onEditList }: Props) {
       setEditing(null);
     } catch {
       // Mutation error state is rendered below; keep edit mode open.
+    }
+  };
+  const completeItem = async (item: HuskListItem) => {
+    try {
+      await mutations.completeItem(item.id);
+    } catch {
+      // Mutation error state is rendered below; cache is updated only on success.
+    }
+  };
+  const uncompleteItem = async (item: HuskListItem) => {
+    try {
+      await mutations.uncompleteItem(item.id);
+    } catch {
+      // Mutation error state is rendered below; cache is updated only on success.
     }
   };
   const confirmDelete = (item: HuskListItem) =>
@@ -155,6 +170,11 @@ export function HuskListDetails({ list, onEditList }: Props) {
               onCancel={() => setEditing(null)}
               onSave={() => void saveEdit()}
               onDelete={confirmDelete}
+              onComplete={completeItem}
+              onUncomplete={uncompleteItem}
+              completingItemId={mutations.completingItemId}
+              uncompletingItemId={mutations.uncompletingItemId}
+              completionBusy={mutations.completionSaving}
             />
           ) : completed.length ? (
             <EmptyState
@@ -176,6 +196,11 @@ export function HuskListDetails({ list, onEditList }: Props) {
               onCancel={() => setEditing(null)}
               onSave={() => void saveEdit()}
               onDelete={confirmDelete}
+              onComplete={completeItem}
+              onUncomplete={uncompleteItem}
+              completingItemId={mutations.completingItemId}
+              uncompletingItemId={mutations.uncompletingItemId}
+              completionBusy={mutations.completionSaving}
             />
           ) : null}
         </>
@@ -243,6 +268,11 @@ function Section({
   onCancel,
   onSave,
   onDelete,
+  onComplete,
+  onUncomplete,
+  completingItemId,
+  uncompletingItemId,
+  completionBusy,
 }: {
   title: string;
   items: ReturnType<typeof groupHuskListItems>["active"];
@@ -256,6 +286,11 @@ function Section({
   onCancel: () => void;
   onSave: () => void;
   onDelete: (i: HuskListItem) => void;
+  onComplete: (i: HuskListItem) => void;
+  onUncomplete: (i: HuskListItem) => void;
+  completingItemId: string | null;
+  uncompletingItemId: string | null;
+  completionBusy: boolean;
 }) {
   return (
     <View style={styles.section}>
@@ -328,7 +363,19 @@ function Section({
                   )}
                 </AppText>
               ) : null}
+              <AppText style={styles.muted}>
+                Status: {item.completed ? "fullført" : "aktiv"}
+              </AppText>
               <View style={styles.row}>
+                <CompletionButton
+                  item={item as HuskListItem}
+                  editingItemId={editing}
+                  completingItemId={completingItemId}
+                  uncompletingItemId={uncompletingItemId}
+                  completionBusy={completionBusy}
+                  onComplete={onComplete}
+                  onUncomplete={onUncomplete}
+                />
                 <Button
                   title="Rediger"
                   variant="secondary"
@@ -351,6 +398,46 @@ function Section({
     </View>
   );
 }
+function CompletionButton({
+  item,
+  editingItemId,
+  completingItemId,
+  uncompletingItemId,
+  completionBusy,
+  onComplete,
+  onUncomplete,
+}: {
+  item: HuskListItem;
+  editingItemId: string | null;
+  completingItemId: string | null;
+  uncompletingItemId: string | null;
+  completionBusy: boolean;
+  onComplete: (item: HuskListItem) => void;
+  onUncomplete: (item: HuskListItem) => void;
+}) {
+  const state = huskListItemCompletionStateFor({
+    item,
+    editingItemId,
+    completingItemId,
+    uncompletingItemId,
+    completionBusy,
+  });
+  if (state.hidden) return null;
+  return (
+    <Button
+      title={state.title}
+      variant={state.action === "complete" ? "primary" : "secondary"}
+      disabled={state.disabled}
+      accessibilityLabel={state.accessibilityLabel}
+      accessibilityHint={state.accessibilityHint}
+      accessibilityState={{ busy: state.busy, disabled: state.disabled }}
+      onPress={() =>
+        state.action === "complete" ? onComplete(item) : onUncomplete(item)
+      }
+    />
+  );
+}
+
 const styles = StyleSheet.create({
   content: { gap: theme.spacing.lg },
   progress: { gap: theme.spacing.sm },
