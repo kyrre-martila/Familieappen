@@ -22,7 +22,7 @@ export function CalendarShell() {
       <Button title="Ny hendelse" onPress={() => router.push("/(app)/calendar/create")} accessibilityLabel="Opprett ny kalenderhendelse" />
     </View>
     <CalendarWeekNav selectedDate={calendar.selectedDate} onSelectDate={calendar.setSelectedDate} eventDates={eventDates} />
-    {calendar.loading ? <LoadingState title="Laster kalender" description="Henter hendelser for familien." /> : calendar.error ? <ErrorState description="Kunne ikke hente kalenderen akkurat nå." onRetry={() => void calendar.refresh()} /> : <View style={styles.daySection}>
+    {calendar.loading ? <LoadingState title="Laster kalender" description="Henter hendelser for familien." /> : calendar.error ? <ErrorState description="Kunne ikke hente kalenderen akkurat nå." onRetry={() => void calendar.refresh()} /> : calendar.missingContext ? <ErrorState description="Fant ingen godkjent familie for denne brukeren." onRetry={() => void calendar.refresh()} /> : <View style={styles.daySection}>
       <AppText variant="heading">{formatSelectedDate(calendar.selectedDate)}</AppText>
       {calendar.eventsForSelectedDate.length === 0 ? <EmptyState title="Ingen hendelser" description="Denne dagen er rolig foreløpig. Nye hendelser fra web dukker opp her." /> : <View style={styles.eventList} accessibilityLabel="Hendelser for valgt dato">{calendar.eventsForSelectedDate.map((event) => <CalendarEventCard key={`${event.id}:${event.occurrenceDate ?? event.date}`} event={event} onPress={() => router.push(buildCalendarEventDetailPath(getCalendarEventIdentity(event)))} />)}</View>}
     </View>}

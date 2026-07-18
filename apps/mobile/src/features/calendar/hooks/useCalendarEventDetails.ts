@@ -1,8 +1,7 @@
 import { useMemo } from "react";
 import type { CalendarEvent } from "@familieappen/shared";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { listFamilies } from "../../auth/api";
-import { useAuth } from "../../auth/AuthProvider";
+import { useActiveFamily } from "../../family/useActiveFamily";
 import { getCalendarEvents } from "../api";
 import { getCalendarDayRange, getCalendarRange, getTodayString } from "../date";
 import { findCalendarEventOccurrence, findCalendarEventSeries, mapCalendarEventToViewModel, type CalendarEventEditScope } from "../events";
@@ -18,10 +17,8 @@ function getCachedCalendarEvent(queryClient: ReturnType<typeof useQueryClient>, 
 }
 
 export function useCalendarEventDetails(eventId: string | null, occurrenceDate?: string, scope?: CalendarEventEditScope | null) {
-  const { accessToken } = useAuth();
+  const { accessToken, familiesQuery, familyId } = useActiveFamily();
   const queryClient = useQueryClient();
-  const familiesQuery = useQuery({ queryKey: calendarQueryKeys.families, queryFn: () => listFamilies(accessToken!), enabled: Boolean(accessToken) });
-  const familyId = familiesQuery.data?.[0]?.family.id ?? null;
   const today = getTodayString();
   const lookupDate = occurrenceDate ?? today;
   const range = useMemo(() => occurrenceDate ? getCalendarDayRange(occurrenceDate) : getCalendarRange(today), [occurrenceDate, today]);

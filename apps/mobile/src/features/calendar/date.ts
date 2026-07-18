@@ -58,3 +58,26 @@ export function formatWeekday(date: string) {
 export function getCalendarDayRange(date: string) {
   return { from: `${date}T00:00:00.000Z`, to: `${date}T23:59:59.999Z` };
 }
+
+function getTimeZoneOffsetMs(date: Date, timeZone: string) {
+  const parts = new Intl.DateTimeFormat("en-CA", { timeZone, year: "numeric", month: "2-digit", day: "2-digit", hour: "2-digit", minute: "2-digit", second: "2-digit", hourCycle: "h23" }).formatToParts(date);
+  const values = Object.fromEntries(parts.map((part) => [part.type, part.value]));
+  const asUtc = Date.UTC(Number(values.year), Number(values.month) - 1, Number(values.day), Number(values.hour), Number(values.minute), Number(values.second));
+  return asUtc - date.getTime();
+}
+
+function zonedLocalTimeToUtcIso(input: { date: string; hour: number; minute: number; second: number; millisecond: number; timeZone: string }) {
+  const [year, month, day] = input.date.split("-").map(Number);
+  const utcGuess = Date.UTC(year, month - 1, day, input.hour, input.minute, input.second, input.millisecond);
+  const firstOffset = getTimeZoneOffsetMs(new Date(utcGuess), input.timeZone);
+  const firstUtc = utcGuess - firstOffset;
+  const secondOffset = getTimeZoneOffsetMs(new Date(firstUtc), input.timeZone);
+  return new Date(utcGuess - secondOffset).toISOString();
+}
+
+export function getCalendarDayRangeForTimeZone(date: string, timeZone = "Europe/Oslo") {
+  const nextDate = formatDateString(addDays(parseDateString(date), 1));
+  const from = zonedLocalTimeToUtcIso({ date, hour: 0, minute: 0, second: 0, millisecond: 0, timeZone });
+  const nextMidnight = zonedLocalTimeToUtcIso({ date: nextDate, hour: 0, minute: 0, second: 0, millisecond: 0, timeZone });
+  return { from, to: new Date(Date.parse(nextMidnight) - 1).toISOString() };
+}

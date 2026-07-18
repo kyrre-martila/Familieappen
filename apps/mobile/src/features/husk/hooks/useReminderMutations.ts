@@ -1,8 +1,7 @@
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { router } from "expo-router";
 import type { Reminder } from "@familieappen/shared";
-import { listFamilies } from "../../auth/api";
-import { useAuth } from "../../auth/AuthProvider";
+import { useActiveFamily } from "../../family/useActiveFamily";
 import { ApiError } from "../../../lib/api/client";
 import {
   completeHuskReminder,
@@ -18,18 +17,8 @@ const message = (error: unknown) =>
     ? error.message
     : "Kunne ikke lagre påminnelsen akkurat nå. Prøv igjen.";
 function useFamily() {
-  const { accessToken } = useAuth();
-  const families = useQuery({
-    queryKey: huskQueryKeys.families,
-    queryFn: () => listFamilies(accessToken!),
-    enabled: Boolean(accessToken),
-    staleTime: 60_000,
-  });
-  return {
-    accessToken,
-    families,
-    familyId: families.data?.[0]?.family.id ?? null,
-  };
+  const { accessToken, familiesQuery: families, familyId } = useActiveFamily();
+  return { accessToken, families, familyId };
 }
 export function useCreateReminder() {
   const { accessToken, families, familyId } = useFamily();

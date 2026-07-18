@@ -1,8 +1,7 @@
 import type { CalendarEvent } from "@familieappen/shared";
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { router } from "expo-router";
-import { listFamilies } from "../../auth/api";
-import { useAuth } from "../../auth/AuthProvider";
+import { useActiveFamily } from "../../family/useActiveFamily";
 import { ApiError } from "../../../lib/api/client";
 import { deleteCalendarEvent } from "../api";
 import { calendarEventsInvalidationKey, removeCalendarEventByIdFromDay, removeCalendarEventOccurrenceFromDay, removeCalendarEventSeriesFromDay } from "../cache";
@@ -23,10 +22,8 @@ export function getDeleteEventErrorMessage(error: unknown): string {
 }
 
 export function useDeleteCalendarEvent(input: DeleteCalendarEventInput) {
-  const { accessToken } = useAuth();
+  const { accessToken, familiesQuery, familyId } = useActiveFamily();
   const queryClient = useQueryClient();
-  const familiesQuery = useQuery({ queryKey: calendarQueryKeys.families, queryFn: () => listFamilies(accessToken!), enabled: Boolean(accessToken) });
-  const familyId = familiesQuery.data?.[0]?.family.id ?? null;
   const mutation = useMutation({
     mutationFn: async (scope?: CalendarEventDeleteScope | null) => {
       const scopeError = validateCalendarEventDeleteScope({ previousEvent: input.previousEvent, scope, occurrenceDate: input.occurrenceDate });
