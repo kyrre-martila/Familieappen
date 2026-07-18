@@ -1,8 +1,7 @@
 import type { CalendarEvent } from "@familieappen/shared";
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { router } from "expo-router";
-import { listFamilies } from "../../auth/api";
-import { useAuth } from "../../auth/AuthProvider";
+import { useActiveFamily } from "../../family/useActiveFamily";
 import { ApiError } from "../../../lib/api/client";
 import { updateCalendarEvent, updateCalendarEventOccurrence } from "../api";
 import { occurrenceUpdateCalendarEventPayload, updateCalendarEventPayload, type CalendarEventForm } from "../eventForm";
@@ -13,10 +12,8 @@ import { buildUpdatedCalendarEventDetailPath, validateCalendarEventUpdateScope, 
 export function getUpdateEventErrorMessage(error: unknown) { if (error instanceof ApiError) return error.message; return "Kunne ikke oppdatere hendelsen akkurat nå. Prøv igjen."; }
 
 export function useUpdateCalendarEvent(input: { eventId: string; previousEvent: CalendarEvent | null; occurrenceDate?: string; scope?: CalendarEventEditScope | null }) {
-  const { accessToken } = useAuth();
+  const { accessToken, familiesQuery, familyId } = useActiveFamily();
   const queryClient = useQueryClient();
-  const familiesQuery = useQuery({ queryKey: calendarQueryKeys.families, queryFn: () => listFamilies(accessToken!), enabled: Boolean(accessToken) });
-  const familyId = familiesQuery.data?.[0]?.family.id ?? null;
   const mutation = useMutation({
     mutationFn: (form: CalendarEventForm) => {
       const scopeError = validateCalendarEventUpdateScope({ previousEvent: input.previousEvent, scope: input.scope, occurrenceDate: input.occurrenceDate });

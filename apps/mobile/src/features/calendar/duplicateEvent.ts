@@ -1,8 +1,7 @@
 import { useMemo } from "react";
 import type { CalendarEvent } from "@familieappen/shared";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { listFamilies } from "../auth/api";
-import { useAuth } from "../auth/AuthProvider";
+import { useActiveFamily } from "../family/useActiveFamily";
 import { getCalendarEvents } from "./api";
 import { calendarQueryKeys } from "./queryKeys";
 import { duplicateLookupRange, findCalendarEventDuplicateSource, missingDuplicateDateError, shouldFetchDuplicateFallback } from "./duplicateEventModel";
@@ -17,10 +16,8 @@ function getCachedDuplicateSource(queryClient: ReturnType<typeof useQueryClient>
 }
 
 export function useDuplicateCalendarEventSource(eventId: string | null, sourceDate?: string, occurrenceDate?: string) {
-  const { accessToken } = useAuth();
+  const { accessToken, familiesQuery, familyId } = useActiveFamily();
   const queryClient = useQueryClient();
-  const familiesQuery = useQuery({ queryKey: calendarQueryKeys.families, queryFn: () => listFamilies(accessToken!), enabled: Boolean(accessToken) });
-  const familyId = familiesQuery.data?.[0]?.family.id ?? null;
   const cachedEvent = useMemo(() => eventId ? getCachedDuplicateSource(queryClient, eventId, occurrenceDate) : null, [eventId, occurrenceDate, queryClient]);
   const range = useMemo(() => duplicateLookupRange({ sourceDate, occurrenceDate }), [sourceDate, occurrenceDate]);
   const eventsQuery = useQuery({

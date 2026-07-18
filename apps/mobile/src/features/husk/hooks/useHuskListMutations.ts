@@ -1,8 +1,7 @@
 import { useRef } from "react";
 import { router } from "expo-router";
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { listFamilies } from "../../auth/api";
-import { useAuth } from "../../auth/AuthProvider";
+import { useMutation, useQueryClient } from "@tanstack/react-query";
+import { useActiveFamily } from "../../family/useActiveFamily";
 import {
   completeHuskListItem,
   createHuskList,
@@ -31,18 +30,8 @@ import { huskQueryKeys } from "../queryKeys";
 const message = (e: unknown) =>
   e instanceof Error ? e.message : "Kunne ikke lagre akkurat nå.";
 function useFamily() {
-  const { accessToken } = useAuth();
-  const families = useQuery({
-    queryKey: huskQueryKeys.families,
-    queryFn: () => listFamilies(accessToken!),
-    enabled: Boolean(accessToken),
-    staleTime: 60_000,
-  });
-  return {
-    accessToken,
-    families,
-    familyId: families.data?.[0]?.family.id ?? null,
-  };
+  const { accessToken, familiesQuery: families, familyId } = useActiveFamily();
+  return { accessToken, families, familyId };
 }
 export function useCreateHuskList() {
   const { accessToken, families, familyId } = useFamily();
