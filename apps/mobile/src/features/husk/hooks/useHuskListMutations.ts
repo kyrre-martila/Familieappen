@@ -12,7 +12,8 @@ import {
 import {
   huskListFormToCreatePayload,
   huskListFormToUpdatePayload,
-  huskListItemFormToPayload,
+  huskListItemFormToCreatePayload,
+  huskListItemFormToUpdatePayload,
   type HuskListForm,
   type HuskListItemForm,
 } from "../huskListForm";
@@ -106,7 +107,7 @@ export function useHuskListItemMutations(listId: string) {
         accessToken!,
         familyId!,
         listId,
-        huskListItemFormToPayload(form),
+        huskListItemFormToCreatePayload(form),
       ),
     onSuccess: (item) => set((c) => appendHuskListItem(c, listId, item)),
   });
@@ -123,7 +124,7 @@ export function useHuskListItemMutations(listId: string) {
         familyId!,
         listId,
         itemId,
-        huskListItemFormToPayload(form),
+        huskListItemFormToUpdatePayload(form),
       ),
     onSuccess: (item) => set((c) => replaceHuskListItem(c, listId, item)),
   });

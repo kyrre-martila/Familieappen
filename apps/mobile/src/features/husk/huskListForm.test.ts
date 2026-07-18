@@ -2,7 +2,8 @@ import {
   defaultHuskListForm,
   huskListFormToCreatePayload,
   huskListFormToUpdatePayload,
-  huskListItemFormToPayload,
+  huskListItemFormToCreatePayload,
+  huskListItemFormToUpdatePayload,
   huskListToForm,
   validateHuskListForm,
   validateHuskListItemForm,
@@ -93,16 +94,28 @@ assert.equal(
   validateHuskListItemForm({
     title: " ",
     description: "",
-    assignedMemberIds: [],
+    assignedFamilyMemberId: null,
   }).title,
   "Skriv inn element.",
 );
 assert.deepEqual(
-  huskListItemFormToPayload({
+  huskListItemFormToCreatePayload({
     title: " Pass ",
     description: " ",
-    assignedMemberIds: ["m1", "m1"],
+    assignedFamilyMemberId: "m1",
   }),
-  { title: "Pass", description: null, assignedMemberIds: ["m1"] },
+  { title: "Pass", description: null, assignedFamilyMemberId: "m1" },
+);
+assert.deepEqual(
+  huskListItemFormToUpdatePayload({
+    title: " Pass ",
+    description: "Husk gyldighet",
+    assignedFamilyMemberId: null,
+  }),
+  {
+    title: "Pass",
+    description: "Husk gyldighet",
+    assignedFamilyMemberId: null,
+  },
 );
 console.log("Husk list form tests passed");

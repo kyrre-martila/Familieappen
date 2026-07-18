@@ -3,6 +3,7 @@ import { Alert, StyleSheet, TextInput, View } from "react-native";
 import { AppText, Button } from "../../../components";
 import { EmptyState } from "../../../components/States";
 import { theme } from "../../../theme/tokens";
+import { useCalendarFamilyMembers } from "../../calendar/hooks/useCalendarFamilyMembers";
 import { groupHuskListItems, mapHuskListToViewModel } from "../models";
 import {
   defaultHuskListItemForm,
@@ -18,6 +19,7 @@ export function HuskListDetails({ list, onEditList }: Props) {
   const progress = mapHuskListToViewModel(list);
   const { active, completed } = groupHuskListItems(list);
   const mutations = useHuskListItemMutations(list.id);
+  const members = useCalendarFamilyMembers().familyMembers;
   const [newForm, setNewForm] = useState(() => defaultHuskListItemForm());
   const [editing, setEditing] = useState<string | null>(null);
   const [editForm, setEditForm] = useState<HuskListItemForm>(() =>
@@ -31,8 +33,12 @@ export function HuskListDetails({ list, onEditList }: Props) {
       return;
     }
     setFormError(null);
-    await mutations.createItem(newForm);
-    setNewForm(defaultHuskListItemForm());
+    try {
+      await mutations.createItem(newForm);
+      setNewForm(defaultHuskListItemForm());
+    } catch {
+      // Mutation error state is rendered below; keep the user's input intact.
+    }
   };
   const startEdit = (item: HuskListItem) => {
     setEditing(item.id);
@@ -46,8 +52,12 @@ export function HuskListDetails({ list, onEditList }: Props) {
       setFormError(errors.title);
       return;
     }
-    await mutations.updateItem({ itemId: editing, form: editForm });
-    setEditing(null);
+    try {
+      await mutations.updateItem({ itemId: editing, form: editForm });
+      setEditing(null);
+    } catch {
+      // Mutation error state is rendered below; keep edit mode open.
+    }
   };
   const confirmDelete = (item: HuskListItem) =>
     Alert.alert("Slett element", `Vil du slette ${item.title}?`, [
@@ -55,7 +65,11 @@ export function HuskListDetails({ list, onEditList }: Props) {
       {
         text: "Slett",
         style: "destructive",
-        onPress: () => void mutations.deleteItem(item.id),
+        onPress: () => {
+          void mutations.deleteItem(item.id).catch(() => {
+            // Mutation error state is rendered below; cache is updated only on success.
+          });
+        },
       },
     ]);
   return (
@@ -96,6 +110,14 @@ export function HuskListDetails({ list, onEditList }: Props) {
           placeholderTextColor={theme.colors.placeholder}
           style={styles.input}
         />
+        <AssigneePicker
+          value={newForm.assignedFamilyMemberId}
+          members={members}
+          disabled={mutations.saving}
+          onChange={(assignedFamilyMemberId) =>
+            setNewForm((f) => ({ ...f, assignedFamilyMemberId }))
+          }
+        />
         <Button
           title={mutations.saving ? "Lagrer …" : "Legg til"}
           disabled={mutations.saving}
@@ -127,6 +149,7 @@ export function HuskListDetails({ list, onEditList }: Props) {
               editing={editing}
               form={editForm}
               setForm={setEditForm}
+              members={members}
               saving={mutations.saving}
               onEdit={startEdit}
               onCancel={() => setEditing(null)}
@@ -147,6 +170,7 @@ export function HuskListDetails({ list, onEditList }: Props) {
               editing={editing}
               form={editForm}
               setForm={setEditForm}
+              members={members}
               saving={mutations.saving}
               onEdit={startEdit}
               onCancel={() => setEditing(null)}
@@ -159,6 +183,53 @@ export function HuskListDetails({ list, onEditList }: Props) {
     </View>
   );
 }
+function memberName(
+  members: ReturnType<typeof useCalendarFamilyMembers>["familyMembers"],
+  memberId: string,
+) {
+  return (
+    members.find((member) => member.id === memberId)?.displayName ??
+    "Ukjent person"
+  );
+}
+function AssigneePicker({
+  value,
+  members,
+  disabled,
+  onChange,
+}: {
+  value: string | null;
+  members: ReturnType<typeof useCalendarFamilyMembers>["familyMembers"];
+  disabled: boolean;
+  onChange: (value: string | null) => void;
+}) {
+  return (
+    <View style={styles.field}>
+      <AppText variant="label">Ansvarlig</AppText>
+      <View style={styles.row}>
+        <Button
+          title="Ingen"
+          variant={value === null ? "primary" : "secondary"}
+          disabled={disabled}
+          accessibilityLabel="Ingen ansvarlig"
+          accessibilityHint="Fjerner ansvarlig person fra elementet."
+          onPress={() => onChange(null)}
+        />
+        {members.map((member) => (
+          <Button
+            key={member.id}
+            title={member.displayName}
+            variant={value === member.id ? "primary" : "secondary"}
+            disabled={disabled}
+            accessibilityLabel={`Sett ${member.displayName} som ansvarlig`}
+            accessibilityHint="Velger ansvarlig person for listeelementet."
+            onPress={() => onChange(member.id)}
+          />
+        ))}
+      </View>
+    </View>
+  );
+}
 function Section({
   title,
   items,
@@ -166,6 +237,7 @@ function Section({
   editing,
   form,
   setForm,
+  members,
   saving,
   onEdit,
   onCancel,
@@ -178,6 +250,7 @@ function Section({
   editing: string | null;
   form: HuskListItemForm;
   setForm: (f: HuskListItemForm) => void;
+  members: ReturnType<typeof useCalendarFamilyMembers>["familyMembers"];
   saving: boolean;
   onEdit: (i: HuskListItem) => void;
   onCancel: () => void;
@@ -210,6 +283,14 @@ function Section({
                 accessibilityHint="Valgfri beskrivelse."
                 style={[styles.input, styles.note]}
               />
+              <AssigneePicker
+                value={form.assignedFamilyMemberId}
+                members={members}
+                disabled={saving}
+                onChange={(assignedFamilyMemberId) =>
+                  setForm({ ...form, assignedFamilyMemberId })
+                }
+              />
               <View style={styles.row}>
                 <Button
                   title="Lagre"
@@ -236,6 +317,15 @@ function Section({
               {item.description ? (
                 <AppText style={[styles.muted, completed && styles.completed]}>
                   {item.description}
+                </AppText>
+              ) : null}
+              {(item as HuskListItem).assignedFamilyMemberId ? (
+                <AppText style={styles.muted}>
+                  Ansvarlig:{" "}
+                  {memberName(
+                    members,
+                    (item as HuskListItem).assignedFamilyMemberId!,
+                  )}
                 </AppText>
               ) : null}
               <View style={styles.row}>
@@ -288,6 +378,7 @@ const styles = StyleSheet.create({
     textDecorationLine: "line-through",
   },
   addBox: { gap: theme.spacing.sm },
+  field: { gap: theme.spacing.xs },
   input: {
     borderWidth: 1,
     borderColor: theme.colors.border,

@@ -17,12 +17,12 @@ export type HuskListPayload = {
 export type HuskListItemForm = {
   title: string;
   description: string;
-  assignedMemberIds: string[];
+  assignedFamilyMemberId: string | null;
 };
 export type HuskListItemPayload = {
-  title: string;
+  title?: string;
   description?: string | null;
-  assignedMemberIds?: string[];
+  assignedFamilyMemberId?: string | null;
 };
 export type FormErrors = Partial<Record<"title" | "memberIds", string>>;
 
@@ -78,21 +78,19 @@ export function huskListFormToUpdatePayload(
 }
 
 export function defaultHuskListItemForm(): HuskListItemForm {
-  return { title: "", description: "", assignedMemberIds: [] };
+  return { title: "", description: "", assignedFamilyMemberId: null };
 }
 export function huskListItemToForm(item: HuskListItem): HuskListItemForm {
   return {
     title: item.title,
     description: item.description ?? "",
-    assignedMemberIds: item.assignedFamilyMemberId
-      ? [item.assignedFamilyMemberId]
-      : [],
+    assignedFamilyMemberId: item.assignedFamilyMemberId,
   };
 }
 export function validateHuskListItemForm(form: HuskListItemForm): FormErrors {
   return form.title.trim() ? {} : { title: "Skriv inn element." };
 }
-export function huskListItemFormToPayload(
+export function huskListItemFormToCreatePayload(
   form: HuskListItemForm,
 ): HuskListItemPayload {
   const title = form.title.trim();
@@ -100,6 +98,11 @@ export function huskListItemFormToPayload(
   return {
     title,
     description: description || null,
-    assignedMemberIds: Array.from(new Set(form.assignedMemberIds)),
+    assignedFamilyMemberId: form.assignedFamilyMemberId,
   };
+}
+export function huskListItemFormToUpdatePayload(
+  form: HuskListItemForm,
+): HuskListItemPayload {
+  return huskListItemFormToCreatePayload(form);
 }

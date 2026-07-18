@@ -1,9 +1,60 @@
-import type { HuskList, Reminder } from "@familieappen/shared";
+import type { HuskList, HuskListItem, Reminder } from "@familieappen/shared";
 import { apiRequest } from "../../lib/api/client";
 import type { ReminderPayload } from "./reminderForm";
 import type { HuskListItemPayload, HuskListPayload } from "./huskListForm";
 
 const familyHeaders = (familyId: string) => ({ "x-family-id": familyId });
+
+type HuskRequest = {
+  path: string;
+  method?: "POST" | "PATCH" | "DELETE";
+  body?: unknown;
+};
+export function buildCreateHuskListRequest(
+  input: HuskListPayload,
+): HuskRequest {
+  return { path: "/husk/lists", method: "POST", body: input };
+}
+export function buildUpdateHuskListRequest(
+  listId: string,
+  input: Partial<HuskListPayload>,
+): HuskRequest {
+  return {
+    path: `/husk/lists/${encodeURIComponent(listId)}`,
+    method: "PATCH",
+    body: input,
+  };
+}
+export function buildCreateHuskListItemRequest(
+  listId: string,
+  input: HuskListItemPayload,
+): HuskRequest {
+  return {
+    path: `/husk/lists/${encodeURIComponent(listId)}/items`,
+    method: "POST",
+    body: input,
+  };
+}
+export function buildUpdateHuskListItemRequest(
+  listId: string,
+  itemId: string,
+  input: Partial<HuskListItemPayload>,
+): HuskRequest {
+  return {
+    path: `/husk/lists/${encodeURIComponent(listId)}/items/${encodeURIComponent(itemId)}`,
+    method: "PATCH",
+    body: input,
+  };
+}
+export function buildDeleteHuskListItemRequest(
+  listId: string,
+  itemId: string,
+): HuskRequest {
+  return {
+    path: `/husk/lists/${encodeURIComponent(listId)}/items/${encodeURIComponent(itemId)}`,
+    method: "DELETE",
+  };
+}
 export function getHuskReminders(accessToken: string, familyId: string) {
   return apiRequest<Reminder[]>("/husk/reminders", {
     accessToken,
@@ -82,17 +133,17 @@ export function undoCompleteHuskReminder(
     },
   );
 }
-
 export function createHuskList(
   accessToken: string,
   familyId: string,
   input: HuskListPayload,
 ) {
-  return apiRequest<HuskList>("/husk/lists", {
-    method: "POST",
+  const request = buildCreateHuskListRequest(input);
+  return apiRequest<HuskList>(request.path, {
+    method: request.method,
     accessToken,
     headers: familyHeaders(familyId),
-    body: input,
+    body: request.body,
   });
 }
 export function updateHuskList(
@@ -101,11 +152,12 @@ export function updateHuskList(
   listId: string,
   input: Partial<HuskListPayload>,
 ) {
-  return apiRequest<HuskList>(`/husk/lists/${encodeURIComponent(listId)}`, {
-    method: "PATCH",
+  const request = buildUpdateHuskListRequest(listId, input);
+  return apiRequest<HuskList>(request.path, {
+    method: request.method,
     accessToken,
     headers: familyHeaders(familyId),
-    body: input,
+    body: request.body,
   });
 }
 export function createHuskListItem(
@@ -114,15 +166,13 @@ export function createHuskListItem(
   listId: string,
   input: HuskListItemPayload,
 ) {
-  return apiRequest<import("@familieappen/shared").HuskListItem>(
-    `/husk/lists/${encodeURIComponent(listId)}/items`,
-    {
-      method: "POST",
-      accessToken,
-      headers: familyHeaders(familyId),
-      body: input,
-    },
-  );
+  const request = buildCreateHuskListItemRequest(listId, input);
+  return apiRequest<HuskListItem>(request.path, {
+    method: request.method,
+    accessToken,
+    headers: familyHeaders(familyId),
+    body: request.body,
+  });
 }
 export function updateHuskListItem(
   accessToken: string,
@@ -131,15 +181,13 @@ export function updateHuskListItem(
   itemId: string,
   input: Partial<HuskListItemPayload>,
 ) {
-  return apiRequest<import("@familieappen/shared").HuskListItem>(
-    `/husk/lists/${encodeURIComponent(listId)}/items/${encodeURIComponent(itemId)}`,
-    {
-      method: "PATCH",
-      accessToken,
-      headers: familyHeaders(familyId),
-      body: input,
-    },
-  );
+  const request = buildUpdateHuskListItemRequest(listId, itemId, input);
+  return apiRequest<HuskListItem>(request.path, {
+    method: request.method,
+    accessToken,
+    headers: familyHeaders(familyId),
+    body: request.body,
+  });
 }
 export function deleteHuskListItem(
   accessToken: string,
@@ -147,8 +195,10 @@ export function deleteHuskListItem(
   listId: string,
   itemId: string,
 ) {
-  return apiRequest<import("@familieappen/shared").HuskListItem>(
-    `/husk/lists/${encodeURIComponent(listId)}/items/${encodeURIComponent(itemId)}`,
-    { method: "DELETE", accessToken, headers: familyHeaders(familyId) },
-  );
+  const request = buildDeleteHuskListItemRequest(listId, itemId);
+  return apiRequest<HuskListItem>(request.path, {
+    method: request.method,
+    accessToken,
+    headers: familyHeaders(familyId),
+  });
 }
