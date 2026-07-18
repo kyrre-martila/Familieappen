@@ -4,7 +4,9 @@ import {
   getReminderStatus,
   mapHuskListToViewModel,
   mapReminderToViewModel,
+  mapSchoolWeekReminderToViewModel,
   sortReminders,
+  sortSchoolWeekReminders,
 } from "./models";
 import { isActiveReminder } from "./reminderHistory";
 
@@ -129,4 +131,16 @@ const inconsistentList = {
 assert.deepEqual(
   mapHuskListToViewModel(inconsistentList).progressLabel,
   "2 av 3 fullført",
+);
+
+assert.deepEqual(
+  mapSchoolWeekReminderToViewModel({ id: "s", title: "Gymtøy", icon: "backpack", childFamilyMemberId: "child-1", weekday: "monday", note: "Ta med sko" } as any, { "child-1": "Fiona" }),
+  { id: "s", title: "Gymtøy", icon: "backpack", childLabel: "Fiona", dayLabel: "Mandag", note: "Ta med sko" },
+);
+assert.deepEqual(
+  sortSchoolWeekReminders([
+    { id: "b", title: "Bok", icon: "book", childLabel: "Alma", dayLabel: "Onsdag", note: null },
+    { id: "a", title: "Gym", icon: "backpack", childLabel: "Fiona", dayLabel: "Mandag", note: null },
+  ]).map((item) => item.id),
+  ["a", "b"],
 );

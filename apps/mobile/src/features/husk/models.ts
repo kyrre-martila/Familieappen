@@ -177,3 +177,39 @@ export function groupHuskListItems(list: HuskList) {
 export function huskListCardAccessibilityLabel(list: HuskListViewModel) {
   return `${list.title}. ${list.progressLabel} elementer.`;
 }
+
+export type SchoolWeekReminderViewModel = {
+  id: string;
+  title: string;
+  icon: string;
+  childLabel: string;
+  dayLabel: string;
+  note: string | null;
+};
+
+const schoolWeekdayLabels: Record<string, string> = {
+  monday: "Mandag",
+  tuesday: "Tirsdag",
+  wednesday: "Onsdag",
+  thursday: "Torsdag",
+  friday: "Fredag",
+};
+
+export function mapSchoolWeekReminderToViewModel(
+  reminder: import("@familieappen/shared").SchoolWeekReminder,
+  childNameById: Record<string, string> = {},
+): SchoolWeekReminderViewModel {
+  return {
+    id: reminder.id,
+    title: reminder.title,
+    icon: reminder.icon,
+    childLabel: childNameById[reminder.childFamilyMemberId ?? ""] ?? "Barn",
+    dayLabel: schoolWeekdayLabels[reminder.weekday ?? ""] ?? "Skoleuka",
+    note: reminder.note ?? null,
+  };
+}
+
+export function sortSchoolWeekReminders(reminders: SchoolWeekReminderViewModel[]) {
+  const rank: Record<string, number> = { Mandag: 0, Tirsdag: 1, Onsdag: 2, Torsdag: 3, Fredag: 4 };
+  return [...reminders].sort((a, b) => (rank[a.dayLabel] ?? 99) - (rank[b.dayLabel] ?? 99) || a.childLabel.localeCompare(b.childLabel, "nb-NO") || a.title.localeCompare(b.title, "nb-NO"));
+}

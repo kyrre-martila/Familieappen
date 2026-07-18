@@ -4,6 +4,7 @@ import {
   buildCreateHuskListRequest,
   buildDeleteHuskListItemRequest,
   buildUncompleteHuskListItemRequest,
+  buildSchoolWeekRemindersRequest,
   buildUpdateHuskListItemRequest,
   buildUpdateHuskListRequest,
 } from "./api";
@@ -100,3 +101,7 @@ assert.equal(
   "item updates omit dueDate while native due date editing is not implemented",
 );
 console.log("Husk API contract tests passed");
+
+assert.deepEqual(buildSchoolWeekRemindersRequest("2026-07-13"), {
+  path: "/school-week?weekStart=2026-07-13",
+});
