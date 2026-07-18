@@ -36,6 +36,7 @@ function useFamily() {
     queryKey: huskQueryKeys.families,
     queryFn: () => listFamilies(accessToken!),
     enabled: Boolean(accessToken),
+    staleTime: 60_000,
   });
   return {
     accessToken,

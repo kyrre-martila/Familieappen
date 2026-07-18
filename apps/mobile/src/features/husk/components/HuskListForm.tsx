@@ -43,17 +43,24 @@ export function HuskListForm({
   const [errors, setErrors] = useState<ReturnType<typeof validateHuskListForm>>(
     {},
   );
+  const [localSubmitting, setLocalSubmitting] = useState(false);
+  const isSubmitting = submitting || localSubmitting;
   const update = <K extends keyof Form>(key: K, value: Form[K]) => {
     setErrors((e) => ({ ...e, [key]: undefined }));
     onChange(key, value);
   };
   const submit = async () => {
+    if (isSubmitting) return;
     const next = validateHuskListForm(form);
     setErrors(next);
     if (Object.keys(next).length) return;
+    setLocalSubmitting(true);
     try {
       await onSubmit();
-    } catch {}
+    } catch {
+    } finally {
+      setLocalSubmitting(false);
+    }
   };
   return (
     <KeyboardAvoidingView
@@ -68,7 +75,7 @@ export function HuskListForm({
             <TextInput
               value={form.title}
               onChangeText={(v) => update("title", v)}
-              editable={!submitting}
+              editable={!isSubmitting}
               accessibilityLabel="Listenavn"
               accessibilityHint="Skriv navnet på listen."
               placeholder="For eksempel Pakkeliste"
@@ -80,7 +87,7 @@ export function HuskListForm({
             <TextInput
               value={form.description}
               onChangeText={(v) => update("description", v)}
-              editable={!submitting}
+              editable={!isSubmitting}
               multiline
               accessibilityLabel="Beskrivelse"
               accessibilityHint="Valgfri beskrivelse for listen."
@@ -96,7 +103,7 @@ export function HuskListForm({
                   key={icon}
                   label={icon}
                   selected={form.icon === icon}
-                  disabled={submitting}
+                  disabled={isSubmitting}
                   onPress={() => update("icon", icon)}
                 />
               ))}
@@ -107,7 +114,7 @@ export function HuskListForm({
               <Pick
                 label="Hele familien"
                 selected={form.scope === "family"}
-                disabled={submitting}
+                disabled={isSubmitting}
                 onPress={() => {
                   update("scope", "family");
                   update("memberIds", []);
@@ -118,7 +125,7 @@ export function HuskListForm({
                   key={m.id}
                   label={m.displayName}
                   selected={form.memberIds.includes(m.id)}
-                  disabled={submitting}
+                  disabled={isSubmitting}
                   onPress={() => {
                     const ids = form.memberIds.includes(m.id)
                       ? form.memberIds.filter((id) => id !== m.id)
@@ -136,8 +143,8 @@ export function HuskListForm({
             </AppText>
           ) : null}
           <Button
-            title={submitting ? "Lagrer …" : submitTitle}
-            disabled={submitting}
+            title={isSubmitting ? "Lagrer …" : submitTitle}
+            disabled={isSubmitting}
             accessibilityLabel={submitTitle}
             accessibilityHint="Lagrer listen."
             onPress={() => void submit()}
@@ -145,7 +152,7 @@ export function HuskListForm({
           <Button
             title="Avbryt"
             variant="ghost"
-            disabled={submitting}
+            disabled={isSubmitting}
             accessibilityLabel="Avbryt"
             accessibilityHint="Går tilbake uten å lagre."
             onPress={onCancel}
