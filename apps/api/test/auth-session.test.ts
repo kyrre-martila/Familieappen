@@ -1,6 +1,6 @@
 import "reflect-metadata";
 import { strict as assert } from "node:assert";
-import { ExecutionContext, UnauthorizedException } from "@nestjs/common";
+import { BadRequestException, ExecutionContext, UnauthorizedException } from "@nestjs/common";
 import { AuthController } from "../src/auth/auth.controller";
 import { AuthService } from "../src/auth/auth.service";
 import { AuthGuard } from "../src/auth/guards/auth.guard";
@@ -232,6 +232,26 @@ async function assertRejectsUnauthorized(action: () => Promise<unknown> | unknow
   await assert.rejects(async () => action(), (error: unknown) => error instanceof UnauthorizedException);
 }
 
+async function createLegacyUser(authService: AuthService, prisma: InMemoryPrismaService, email: string, password: string): Promise<UserRecord> {
+  const now = new Date();
+  const user: UserRecord = {
+    id: `legacy-user-${prisma.users.size + 1}`,
+    name: "Legacy User",
+    email,
+    phone: null,
+    passwordHash: await authService.hashPassword(password),
+    createdAt: now,
+    updatedAt: now
+  };
+
+  prisma.users.set(user.id, user);
+  return user;
+}
+
+async function assertRejectsBadRequest(action: () => Promise<unknown> | unknown): Promise<void> {
+  await assert.rejects(async () => action(), (error: unknown) => error instanceof BadRequestException);
+}
+
 async function registerUser(authService: AuthService, email: string) {
   return authService.register({ name: "Session User", email, password: PASSWORD }, { userAgent: "test-agent", ipAddress: "127.0.0.1" });
 }
@@ -256,6 +276,44 @@ async function main() {
     assert.ok(auth.data.tokens.accessToken, "controller register returns access token");
     assert.equal("refreshToken" in auth.data.tokens, false, "controller register JSON does not include refresh token");
     assert.ok(getRefreshCookieToken(response), "controller register sets refresh cookie");
+  }
+
+  {
+    const { prisma, authService } = createServices();
+    const legacyPassword = "LegacyPassword1";
+    await createLegacyUser(authService, prisma, "legacy-no-special@example.com", legacyPassword);
+    const auth = await authService.login({ email: "legacy-no-special@example.com", password: legacyPassword });
+
+    assert.ok(auth.tokens.accessToken, "legacy password without a special character can log in when the stored hash matches");
+  }
+  {
+    const { prisma, authService } = createServices();
+    const legacyPassword = "legacyonly";
+    await createLegacyUser(authService, prisma, "legacy-no-uppercase-digit@example.com", legacyPassword);
+    const auth = await authService.login({ email: "legacy-no-uppercase-digit@example.com", password: legacyPassword });
+
+    assert.ok(auth.tokens.accessToken, "legacy password without uppercase letters or digits can log in when the stored hash matches");
+  }
+
+  {
+    const { prisma, authService } = createServices();
+    await createLegacyUser(authService, prisma, "legacy-wrong-password@example.com", "legacyonly");
+
+    await assertRejectsUnauthorized(() => authService.login({ email: "legacy-wrong-password@example.com", password: "wrong-password" }));
+  }
+
+  {
+    const { authService } = createServices();
+
+    await assertRejectsBadRequest(() => authService.login({ email: "empty-login-password@example.com", password: "" }));
+    await assertRejectsBadRequest(() => authService.login({ email: "non-string-login-password@example.com", password: 123 as never }));
+  }
+
+  {
+    const { authService } = createServices();
+
+    await assertRejectsBadRequest(() => authService.register({ name: "Weak Register", email: "weak-register@example.com", password: "legacyonly" }));
+    await assertRejectsBadRequest(() => authService.resetPassword({ token: "abcdefghijklmnopqrstuvwxyzABCDEF", password: "legacyonly" }));
   }
 
   {

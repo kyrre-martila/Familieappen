@@ -53,7 +53,7 @@ export class ProfileService {
     this.rejectUnknownPasswordFields(input);
 
     const currentPassword = this.validateRequiredPassword(input.currentPassword, "Current password is required");
-    const newPassword = this.authService.validatePassword(input.newPassword);
+    const newPassword = this.authService.validateNewPassword(input.newPassword);
     const confirmPassword = this.validateRequiredPassword(input.confirmPassword, "Confirm password is required");
 
     if (newPassword !== confirmPassword) {
