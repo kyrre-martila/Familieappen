@@ -416,8 +416,10 @@ export default function ProfileScreen() {
                 </Pressable>
                 <TextInput
                   accessibilityLabel="Telefonnummer"
-                  autoComplete="tel-national"
-                  keyboardType="number-pad"
+                  autoComplete="tel"
+                  autoCorrect={false}
+                  keyboardType="phone-pad"
+                  textContentType="telephoneNumber"
                   onBlur={onBlur}
                   onChangeText={(t) => {
                     setServerError(null);
