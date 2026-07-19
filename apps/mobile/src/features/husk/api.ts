@@ -1,7 +1,8 @@
-import type { HuskList, HuskListItem, Reminder, SchoolWeekReminder } from "@familieappen/shared";
+import type { HuskList, HuskListItem, Reminder, SchoolWeekReminder, Task } from "@familieappen/shared";
 import { apiRequest } from "../../lib/api/client";
 import type { ReminderPayload } from "./reminderForm";
 import type { HuskListItemPayload, HuskListPayload } from "./huskListForm";
+import type { TaskPayload } from "./taskModel";
 
 const familyHeaders = (familyId: string) => ({ "x-family-id": familyId });
 
@@ -73,6 +74,23 @@ export function buildUncompleteHuskListItemRequest(
     method: "PATCH",
   };
 }
+
+export function getTasks(accessToken: string, familyId: string) {
+  return apiRequest<Task[]>("/tasks", { accessToken, headers: familyHeaders(familyId) });
+}
+export function createTask(accessToken: string, familyId: string, input: TaskPayload) {
+  return apiRequest<Task>("/tasks", { method: "POST", accessToken, headers: familyHeaders(familyId), body: input });
+}
+export function updateTask(accessToken: string, familyId: string, taskId: string, input: TaskPayload) {
+  return apiRequest<Task>(`/tasks/${encodeURIComponent(taskId)}`, { method: "PATCH", accessToken, headers: familyHeaders(familyId), body: input });
+}
+export function toggleTask(accessToken: string, familyId: string, taskId: string) {
+  return apiRequest<Task>(`/tasks/${encodeURIComponent(taskId)}/toggle`, { method: "PATCH", accessToken, headers: familyHeaders(familyId) });
+}
+export function deleteTask(accessToken: string, familyId: string, taskId: string) {
+  return apiRequest<Task>(`/tasks/${encodeURIComponent(taskId)}`, { method: "DELETE", accessToken, headers: familyHeaders(familyId) });
+}
+
 export function getHuskReminders(accessToken: string, familyId: string) {
   return apiRequest<Reminder[]>("/husk/reminders", {
     accessToken,
