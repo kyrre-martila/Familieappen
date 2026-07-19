@@ -185,6 +185,12 @@ export type SchoolWeekReminderViewModel = {
   childLabel: string;
   dayLabel: string;
   note: string | null;
+  childFamilyMemberId?: string;
+  weekday?: string;
+  date?: string | null;
+  occurrenceDate?: string;
+  isRecurring?: boolean;
+  recurrenceEndDate?: string | null;
 };
 
 const schoolWeekdayLabels: Record<string, string> = {
@@ -206,6 +212,12 @@ export function mapSchoolWeekReminderToViewModel(
     childLabel: childNameById[reminder.childFamilyMemberId ?? ""] ?? "Barn",
     dayLabel: schoolWeekdayLabels[reminder.weekday ?? ""] ?? "Skoleuka",
     note: reminder.note ?? null,
+    childFamilyMemberId: reminder.childFamilyMemberId,
+    weekday: reminder.weekday,
+    date: reminder.date,
+    occurrenceDate: reminder.occurrenceDate,
+    isRecurring: reminder.isRecurring,
+    recurrenceEndDate: reminder.recurrenceEndDate,
   };
 }
 

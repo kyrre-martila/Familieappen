@@ -1,5 +1,7 @@
 import {
   buildCompleteHuskListItemRequest,
+  buildCreateSchoolWeekReminderRequest,
+  buildDeleteSchoolWeekReminderRequest,
   buildCreateHuskListItemRequest,
   buildCreateHuskListRequest,
   buildDeleteHuskListItemRequest,
@@ -7,6 +9,7 @@ import {
   buildSchoolWeekRemindersRequest,
   buildUpdateHuskListItemRequest,
   buildUpdateHuskListRequest,
+  buildUpdateSchoolWeekReminderRequest,
 } from "./api";
 import { huskListItemFormToUpdatePayload } from "./huskListForm";
 
@@ -100,8 +103,12 @@ assert.equal(
   false,
   "item updates omit dueDate while native due date editing is not implemented",
 );
-console.log("Husk API contract tests passed");
-
 assert.deepEqual(buildSchoolWeekRemindersRequest("2026-07-13"), {
   path: "/school-week?weekStart=2026-07-13",
 });
+
+const schoolPayload = { childFamilyMemberId: "child/1", title: "Gym", icon: "backpack", weekday: "monday" as const, date: "2026-07-13", isRecurring: true, recurrenceFrequency: "weekly" as const, recurrenceEndDate: null, note: "Sko" };
+assert.deepEqual(buildCreateSchoolWeekReminderRequest(schoolPayload), { path: "/school-week", method: "POST", body: schoolPayload });
+assert.deepEqual(buildUpdateSchoolWeekReminderRequest("school/id", { title: "Svøm", scope: "series" }), { path: "/school-week/school%2Fid", method: "PATCH", body: { title: "Svøm", scope: "series" } });
+assert.deepEqual(buildDeleteSchoolWeekReminderRequest("school/id", { scope: "occurrence", occurrenceDate: "2026-07-13" }), { path: "/school-week/school%2Fid?scope=occurrence&occurrenceDate=2026-07-13", method: "DELETE" });
+console.log("Husk API contract tests passed");
