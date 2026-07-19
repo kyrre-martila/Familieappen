@@ -1,5 +1,6 @@
 "use client";
 
+import { PASSWORD_POLICY, getPasswordValidationMessage } from "@familieappen/shared/auth/password-policy";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import type { FormEvent } from "react";
@@ -33,6 +34,12 @@ export function RegisterForm({ initialEmail = "" }: { initialEmail?: string } = 
 
     if (!password) {
       setError("Lag et passord.");
+      return;
+    }
+
+    const passwordPolicyError = getPasswordValidationMessage(password);
+    if (passwordPolicyError) {
+      setError(passwordPolicyError);
       return;
     }
 
@@ -84,7 +91,7 @@ export function RegisterForm({ initialEmail = "" }: { initialEmail?: string } = 
 
       <PasswordField
         autoComplete="new-password"
-        helperText="Minst 8 tegn, med store og små bokstaver, tall og spesialtegn."
+        helperText={PASSWORD_POLICY.helperText}
         id="register-password"
         label="Passord"
         name="password"

@@ -1,3 +1,4 @@
+import { PASSWORD_POLICY, getPasswordValidationMessage } from "@familieappen/shared/auth/password-policy";
 import {
   BadRequestException,
   ConflictException,
@@ -354,8 +355,10 @@ export class AuthService {
       throw new BadRequestException("Password is required");
     }
 
-    if (value.length < 8 || value.length > 1024) {
-      throw new BadRequestException("Password must be between 8 and 1024 characters");
+    const policyError = getPasswordValidationMessage(value);
+
+    if (policyError) {
+      throw new BadRequestException(PASSWORD_POLICY.validationMessage);
     }
 
     return value;

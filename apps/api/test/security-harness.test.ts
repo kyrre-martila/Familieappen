@@ -369,7 +369,7 @@ function getData(body: Record<string, unknown>): Record<string, unknown> {
 
 async function register(request: Awaited<ReturnType<typeof createSecurityHarness>>["request"], email: string) {
   const response = await request("POST", "/auth/register", {
-    body: { name: email.split("@")[0], email, password: "correct-password" }
+    body: { name: email.split("@")[0], email, password: "Correct-password1!" }
   });
 
   assertStatus(response, 201, `register ${email}`);
@@ -400,17 +400,17 @@ async function run(): Promise<void> {
     fixtures.grant(beta.userId, "family-beta");
 
     const duplicateRegister = await request("POST", "/auth/register", {
-      body: { name: "Alpha Again", email: "alpha@example.com", password: "correct-password" }
+      body: { name: "Alpha Again", email: "alpha@example.com", password: "Correct-password1!" }
     });
     assertStatus(duplicateRegister, 409, "duplicate email is rejected");
 
     const login = await request("POST", "/auth/login", {
-      body: { email: "alpha@example.com", password: "correct-password" }
+      body: { email: "alpha@example.com", password: "Correct-password1!" }
     });
     assertStatus(login, 201, "login succeeds");
 
     const invalidPassword = await request("POST", "/auth/login", {
-      body: { email: "alpha@example.com", password: "incorrect-password" }
+      body: { email: "alpha@example.com", password: "inCorrect-password1!" }
     });
     assertStatus(invalidPassword, 401, "invalid password is rejected");
 

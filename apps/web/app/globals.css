@@ -12573,6 +12573,13 @@ button.calendar-chip {
     color-mix(in srgb, var(--color-primary-soft) 72%, transparent);
 }
 
+.profile-edit-sheet__hint {
+  margin: calc(-1 * var(--space-xs)) 0 0;
+  color: var(--color-muted);
+  font-size: var(--text-small);
+  line-height: 1.45;
+}
+
 .profile-edit-sheet__error {
   margin: 0;
   color: #c9231f;

@@ -10,5 +10,8 @@
     "sourceMap": false,
     "noEmit": false
   },
-  "include": ["src/shopping/shopping-catalog.ts"]
+  "include": [
+    "src/shopping/shopping-catalog.ts",
+    "src/auth/password-policy.ts"
+  ]
 }
