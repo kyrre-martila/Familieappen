@@ -12,12 +12,12 @@ import { huskListsQueryKey, huskQueryEnabled } from "../queryState";
 
 export type HuskView = "reminders" | "lists" | "tasks" | "school-week";
 
-export function useHusk(filter: ReminderFilter = "active", view: HuskView = "reminders") {
+export function useHusk(filter: ReminderFilter = "active", view: HuskView = "reminders", selectedWeekStart?: string) {
   const { accessToken, familiesQuery, familyId } = useActiveFamily();
   const remindersQuery = useQuery({ queryKey: familyId ? huskQueryKeys.reminders(familyId) : ["husk", "reminders", "missing-family"], queryFn: () => getHuskReminders(accessToken!, familyId!), enabled: huskQueryEnabled({ accessToken, familyId: familyId ?? null, view, dataset: "reminders" }), staleTime: 60_000 });
   const listsQuery = useQuery({ queryKey: huskListsQueryKey(familyId ?? null), queryFn: () => getHuskLists(accessToken!, familyId!), enabled: huskQueryEnabled({ accessToken, familyId: familyId ?? null, view, dataset: "lists" }), staleTime: 60_000 });
   const tasksQuery = useQuery({ queryKey: familyId ? huskQueryKeys.tasks(familyId) : ["husk", "tasks", "missing-family"], queryFn: () => getTasks(accessToken!, familyId!), enabled: Boolean(accessToken && familyId && view === "tasks"), staleTime: 60_000 });
-  const weekStart = getCurrentWeekStart();
+  const weekStart = selectedWeekStart ?? getCurrentWeekStart();
   const familyMembersQuery = useQuery({ queryKey: familyId ? calendarQueryKeys.familyMembers(familyId) : ["husk", "familyMembers", "missing"], queryFn: () => getFamily(accessToken!, familyId!), enabled: Boolean(accessToken && familyId && (view === "school-week" || view === "tasks")), staleTime: 60_000 });
   const schoolWeekQuery = useQuery({ queryKey: familyId ? huskQueryKeys.schoolWeek(familyId, weekStart) : ["husk", "school-week", "missing-family", weekStart], queryFn: () => getSchoolWeekReminders(accessToken!, familyId!, weekStart), enabled: Boolean(accessToken && familyId && view === "school-week"), staleTime: 60_000 });
   const reminders = useMemo(() => sortReminders(filterRemindersByStatus(remindersQuery.data ?? [], filter).map((item) => mapReminderToViewModel(item))), [filter, remindersQuery.data]);
