@@ -6,10 +6,11 @@ import { ApiError } from "../../../lib/api/client";
 import {
   completeHuskReminder,
   createHuskReminder,
+  deleteHuskReminder,
   undoCompleteHuskReminder,
   updateHuskReminder,
 } from "../api";
-import { mergeCreatedReminder, replaceReminder } from "../cache";
+import { mergeCreatedReminder, removeReminder, replaceReminder } from "../cache";
 import { reminderFormToPayload, type ReminderForm } from "../reminderForm";
 import { huskQueryKeys } from "../queryKeys";
 const message = (error: unknown) =>
@@ -68,6 +69,31 @@ export function useUpdateReminder(reminderId: string) {
   });
   return {
     update: mutation.mutateAsync,
+    saving: mutation.isPending,
+    error: mutation.error ? message(mutation.error) : null,
+    resetError: mutation.reset,
+    familiesLoading: families.isLoading,
+    missingContext: Boolean(accessToken && families.isSuccess && !familyId),
+  };
+}
+
+export function useDeleteReminder() {
+  const { accessToken, families, familyId } = useFamily();
+  const client = useQueryClient();
+  const mutation = useMutation({
+    mutationFn: (reminderId: string) =>
+      deleteHuskReminder(accessToken!, familyId!, reminderId),
+    onSuccess: (_reminder, reminderId) => {
+      if (familyId)
+        client.setQueryData(
+          huskQueryKeys.reminders(familyId),
+          (current: Reminder[] | undefined) => removeReminder(current, reminderId),
+        );
+      router.replace("/(app)/(tabs)/tasks");
+    },
+  });
+  return {
+    remove: mutation.mutateAsync,
     saving: mutation.isPending,
     error: mutation.error ? message(mutation.error) : null,
     resetError: mutation.reset,

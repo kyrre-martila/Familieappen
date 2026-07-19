@@ -81,3 +81,19 @@ export function getCalendarDayRangeForTimeZone(date: string, timeZone = "Europe/
   const nextMidnight = zonedLocalTimeToUtcIso({ date: nextDate, hour: 0, minute: 0, second: 0, millisecond: 0, timeZone });
   return { from, to: new Date(Date.parse(nextMidnight) - 1).toISOString() };
 }
+
+
+export function getCalendarMonthRangeForTimeZone(date: string, timeZone = "Europe/Oslo") {
+  const value = parseDateString(date);
+  const first = formatDateString(new Date(value.getFullYear(), value.getMonth(), 1));
+  const afterLast = formatDateString(new Date(value.getFullYear(), value.getMonth() + 1, 1));
+  const from = zonedLocalTimeToUtcIso({ date: first, hour: 0, minute: 0, second: 0, millisecond: 0, timeZone });
+  const nextMidnight = zonedLocalTimeToUtcIso({ date: afterLast, hour: 0, minute: 0, second: 0, millisecond: 0, timeZone });
+  return { from, to: new Date(Date.parse(nextMidnight) - 1).toISOString() };
+}
+
+export function buildMonthDates(date: string) {
+  const value = parseDateString(date);
+  const days = new Date(value.getFullYear(), value.getMonth() + 1, 0).getDate();
+  return Array.from({ length: days }, (_, index) => formatDateString(new Date(value.getFullYear(), value.getMonth(), index + 1)));
+}
