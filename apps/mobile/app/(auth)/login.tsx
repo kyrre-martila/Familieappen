@@ -107,10 +107,6 @@ export default function LoginScreen() {
             name="password"
             rules={{
               required: "Passord er påkrevd.",
-              minLength: {
-                value: 8,
-                message: "Passordet må være minst 8 tegn.",
-              },
             }}
             render={({ field: { onChange, onBlur, value } }) => (
               <PasswordField
@@ -129,7 +125,7 @@ export default function LoginScreen() {
                 inputProps={{
                   accessibilityLabel: "Passord",
                   autoCapitalize: "none",
-                  autoComplete: "password",
+                  autoComplete: "current-password",
                   onBlur,
                   onChangeText: (text) => {
                     setServerError(null);

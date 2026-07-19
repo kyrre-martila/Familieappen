@@ -88,7 +88,7 @@ export class AuthService {
   async register(input: RegisterRequestDto = {}, metadata: SessionMetadata = {}): Promise<AuthSessionResponse> {
     const name = this.validateRegistrationName(input.name);
     const email = this.validateEmail(input.email);
-    const password = this.validatePassword(input.password);
+    const password = this.validateNewPassword(input.password);
 
     const existingUser = await this.prisma.client.user.findUnique({
       where: { email }
@@ -125,7 +125,7 @@ export class AuthService {
 
   async login(input: LoginRequestDto = {}, metadata: SessionMetadata = {}): Promise<AuthSessionResponse> {
     const email = this.validateEmail(input.email);
-    const password = this.validatePassword(input.password);
+    const password = this.validateLoginPassword(input.password);
 
     const user = await this.prisma.client.user.findUnique({
       where: { email }
@@ -204,7 +204,7 @@ export class AuthService {
 
   async resetPassword(input: ResetPasswordRequestDto = {}): Promise<PasswordResetMessageDto> {
     const token = this.validatePasswordResetToken(input.token);
-    const password = this.validatePassword(input.password);
+    const password = this.validateNewPassword(input.password);
     const tokenHash = this.hashPasswordResetToken(token);
     const resetRecord = await (this.prisma.client as any).passwordResetToken.findUnique({
       where: { tokenHash },
@@ -350,7 +350,23 @@ export class AuthService {
     return email;
   }
 
-  validatePassword(value: unknown): string {
+  validateLoginPassword(value: unknown): string {
+    if (typeof value !== "string") {
+      throw new BadRequestException("Password is required");
+    }
+
+    if (value.length === 0) {
+      throw new BadRequestException("Password is required");
+    }
+
+    if (value.length > PASSWORD_POLICY.maxLength) {
+      throw new BadRequestException(`Password must be at most ${PASSWORD_POLICY.maxLength} characters`);
+    }
+
+    return value;
+  }
+
+  validateNewPassword(value: unknown): string {
     if (typeof value !== "string") {
       throw new BadRequestException("Password is required");
     }
