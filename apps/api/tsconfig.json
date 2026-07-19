@@ -10,7 +10,19 @@
     "strictPropertyInitialization": false,
     "types": [
       "node"
-    ]
+    ],
+    "rootDir": "src",
+    "paths": {
+      "@familieappen/shared": [
+        "packages/shared/dist/index.d.ts"
+      ],
+      "@familieappen/shared/shopping-catalog": [
+        "packages/shared/dist/shopping/shopping-catalog.d.ts"
+      ],
+      "@familieappen/shared/auth/password-policy": [
+        "packages/shared/dist/auth/password-policy.d.ts"
+      ]
+    }
   },
   "include": [
     "src/**/*.ts"

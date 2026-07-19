@@ -21,7 +21,8 @@
     "admin:create": "ts-node --project tsconfig.test.json src/admin/admin-create.ts",
     "test:admin-create": "ts-node --project tsconfig.test.json test/admin-create.test.ts",
     "test:admin-auth": "ts-node --project tsconfig.test.json test/admin-auth.test.ts",
-    "test:admin-api": "ts-node --project tsconfig.test.json test/admin-api.test.ts"
+    "test:admin-api": "ts-node --project tsconfig.test.json test/admin-api.test.ts",
+    "test:prod-entrypoint": "node scripts/verify-production-entrypoint.cjs"
   },
   "dependencies": {
     "@nestjs/common": "^11.1.6",

@@ -16,7 +16,7 @@ RUN pnpm install --frozen-lockfile
 
 FROM deps AS build
 COPY . .
-RUN pnpm --filter @familieappen/shared build && pnpm --filter @familieappen/ui build && pnpm --filter @familieappen/api prisma:generate && pnpm --filter @familieappen/api build
+RUN pnpm --filter @familieappen/shared build && pnpm --filter @familieappen/ui build && pnpm --filter @familieappen/api prisma:generate && pnpm --filter @familieappen/api build && pnpm --filter @familieappen/api test:prod-entrypoint
 
 FROM base AS runner
 ENV NODE_ENV=production
