@@ -286,33 +286,48 @@ export default function ProfileScreen() {
     <AuthScreenShell title="Fortell litt om deg selv" lead="">
       <AuthFormStack accessibilityLabel="Profilskjema">
         <View accessible={false} style={styles.avatar}>
-          {avatarUri ? (
-            <Image
-              source={{ uri: avatarUri }}
-              style={styles.avatarImage}
-              contentFit="cover"
-              onError={() => {
-                if (shouldShowLocalAvatarError(avatarSource, avatarUri))
-                  setServerError(
-                    "Kunne ikke vise bildet lokalt. Prøv et annet bilde.",
-                  );
-              }}
-            />
-          ) : (
-            <Ionicons
-              name="person-outline"
-              size={48}
-              color={theme.colors.primaryStrong}
-            />
-          )}
           <Pressable
             accessibilityRole="button"
+            accessibilityLabel={
+              avatarUri
+                ? "Bytt profilbilde"
+                : "Legg til profilbilde, anbefalt men valgfritt"
+            }
+            accessibilityHint="Åpner valg for å ta et nytt bilde eller velge et fra galleriet."
             onPress={pickAvatar}
             disabled={isSubmitting}
-            style={styles.photoButton}
+            style={({ pressed }) => [
+              styles.avatarPicker,
+              pressed && !isSubmitting ? styles.avatarPickerPressed : null,
+              isSubmitting ? styles.avatarPickerDisabled : null,
+            ]}
           >
+            {avatarUri ? (
+              <Image
+                source={{ uri: avatarUri }}
+                style={styles.avatarImage}
+                contentFit="cover"
+                onError={() => {
+                  if (shouldShowLocalAvatarError(avatarSource, avatarUri))
+                    setServerError(
+                      "Kunne ikke vise bildet lokalt. Prøv et annet bilde.",
+                    );
+                }}
+              />
+            ) : (
+              <View style={styles.avatarPlaceholder}>
+                <Ionicons
+                  name="person-outline"
+                  size={48}
+                  color={theme.colors.primaryStrong}
+                />
+              </View>
+            )}
             <AppText style={styles.photo}>
               {avatarUri ? "Bytt bilde" : "Legg til bilde (anbefalt)"}
+            </AppText>
+            <AppText style={styles.photoHelper}>
+              Trykk for å velge bilde fra galleriet eller ta et nytt bilde.
             </AppText>
           </Pressable>
           {avatarUri ? (
@@ -621,6 +636,31 @@ function CountryPickerModal({
 }
 const styles = StyleSheet.create({
   avatar: { alignItems: "center", gap: theme.spacing.sm },
+  avatarPicker: {
+    width: "100%",
+    alignItems: "center",
+    gap: theme.spacing.sm,
+    borderRadius: theme.radius.lg,
+    borderWidth: 1.5,
+    borderStyle: "dashed",
+    borderColor: theme.colors.primary,
+    backgroundColor: theme.colors.surface,
+    paddingHorizontal: theme.spacing.lg,
+    paddingVertical: theme.spacing.lg,
+  },
+  avatarPickerPressed: {
+    opacity: 0.78,
+    backgroundColor: theme.colors.primarySoft,
+  },
+  avatarPickerDisabled: { opacity: 0.6 },
+  avatarPlaceholder: {
+    width: 96,
+    height: 96,
+    borderRadius: 48,
+    alignItems: "center",
+    justifyContent: "center",
+    backgroundColor: theme.colors.primarySoft,
+  },
   avatarImage: {
     width: 96,
     height: 96,
@@ -628,8 +668,16 @@ const styles = StyleSheet.create({
     backgroundColor: theme.colors.inputBackground,
     overflow: "hidden",
   },
-  photoButton: { minHeight: 44, justifyContent: "center" },
-  photo: { color: theme.colors.primaryStrong, fontWeight: "800" },
+  photo: {
+    color: theme.colors.primaryStrong,
+    fontWeight: "800",
+    textAlign: "center",
+  },
+  photoHelper: {
+    color: theme.colors.textMuted,
+    textAlign: "center",
+    lineHeight: 20,
+  },
   field: { gap: theme.spacing.sm, width: "100%" },
   fieldLabel: { color: theme.colors.heading, fontWeight: "800" },
   phoneShell: {
