@@ -226,6 +226,9 @@ export class WishlistsService {
 
   async getInvitePreview(token: string): Promise<WishlistInvitePreviewDto> {
     const invitation = await this.getInvitationByTokenOrThrow(token);
+
+    this.assertInviteCanBePreviewed(invitation);
+
     const ownerName = invitation.wishlistOwnerFamilyMember?.displayName ?? "Eier";
     const inviterName = invitation.createdByUser?.name ?? ownerName;
 
@@ -771,7 +774,7 @@ export class WishlistsService {
 
   private async getInvitationByTokenOrThrow(token: string): Promise<WishlistShareInvitationRecord> {
     if (typeof token !== "string" || token.trim().length < 32) {
-      throw new NotFoundException("Invitation was not found");
+      throw new NotFoundException("Shared wishlist invitation was not found");
     }
 
     const invitation = await (this.prisma.client as PrismaClientWithWishlistReservations).wishlistShareInvitation.findFirst({
@@ -780,10 +783,20 @@ export class WishlistsService {
     }) as WishlistShareInvitationRecord | null;
 
     if (!invitation) {
-      throw new NotFoundException("Invitation was not found");
+      throw new NotFoundException("Shared wishlist invitation was not found");
     }
 
     return invitation;
+  }
+
+  private assertInviteCanBePreviewed(invitation: WishlistShareInvitationRecord): void {
+    if (invitation.status !== "pending") {
+      throw new ForbiddenException("Invitasjonen er ikke lenger tilgjengelig");
+    }
+
+    if (invitation.expiresAt && invitation.expiresAt.getTime() < Date.now()) {
+      throw new ForbiddenException("Invitasjonen er utløpt");
+    }
   }
 
   private assertInviteCanBeChanged(invitation: WishlistShareInvitationRecord): void {

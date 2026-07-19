@@ -1,7 +1,7 @@
 import "reflect-metadata";
 import { strict as assert } from "node:assert";
 import { createHmac } from "node:crypto";
-import { HttpStatus, INestApplication, NotFoundException } from "@nestjs/common";
+import { ForbiddenException, HttpStatus, INestApplication, NotFoundException } from "@nestjs/common";
 import { Test } from "@nestjs/testing";
 import { AuthController } from "../src/auth/auth.controller";
 import { AuthService } from "../src/auth/auth.service";
@@ -163,6 +163,12 @@ class IsolationFixtures {
     ["share-alpha-token", { wishlistId: "wishlist-alpha", familyId: "family-alpha" }],
     ["share-beta-token", { wishlistId: "wishlist-beta", familyId: "family-beta" }]
   ]);
+  readonly wishlistInvitePreviews = new Map([
+    ["share-alpha-token", { id: "share-alpha-invite", invitedEmail: "guest@example.com", ownerName: "Alpha", inviterName: "Alpha", status: "pending", expiresAt: null, requiresAuth: true }],
+    ["expired-share-token", { id: "share-expired-invite", invitedEmail: "guest@example.com", ownerName: "Alpha", inviterName: "Alpha", status: "pending", expiresAt: "2026-05-29T00:00:00.000Z", requiresAuth: true }],
+    ["revoked-share-token", { id: "share-revoked-invite", invitedEmail: "guest@example.com", ownerName: "Alpha", inviterName: "Alpha", status: "revoked", expiresAt: null, requiresAuth: true }],
+    ["missing-owner-share-token", { id: "share-missing-owner-invite", invitedEmail: "guest@example.com", ownerName: "Eier", inviterName: "Eier", status: "pending", expiresAt: null, requiresAuth: true }]
+  ]);
 
   grant(userId: string, familyId: string): void {
     const familyIds = this.familiesByUser.get(userId) ?? new Set<string>();
@@ -248,6 +254,19 @@ function createIsolationServices(fixtures: IsolationFixtures) {
       deleteItem: async (userId: string, familyId: string, itemId: string) => {
         const item = fixtures.requireOwnedItem(fixtures.wishlistItems, userId, familyId, itemId);
         return { id: itemId, title: item.title };
+      },
+      getInvitePreview: async (token: string) => {
+        const preview = fixtures.wishlistInvitePreviews.get(token);
+
+        if (!preview) {
+          throw new NotFoundException("Shared wishlist invitation was not found");
+        }
+
+        if (preview.status !== "pending" || (preview.expiresAt && new Date(preview.expiresAt).getTime() < NOW.getTime())) {
+          throw new ForbiddenException("Wishlist invitation is no longer available");
+        }
+
+        return preview;
       },
       getPublicWishlist: async (token: string) => {
         const share = fixtures.wishlistShares.get(token);
@@ -438,8 +457,13 @@ async function run(): Promise<void> {
     assertStatus(await request("GET", "/tasks", { token: alpha.token, familyId: "family-beta" }), 404, "user cannot read another family's tasks");
     assertStatus(await request("PATCH", "/calendar/events/calendar-beta-event", { token: alpha.token, familyId: "family-alpha", body: { title: "Nope" } }), 404, "foreign calendar event cannot be mutated");
 
-    assertStatus(await request("GET", "/wishlist/invites/share-alpha-token"), 200, "valid public wishlist invite token returns wishlist preview");
+    const validWishlistInvitePreview = await request("GET", "/wishlist/invites/share-alpha-token");
+    assertStatus(validWishlistInvitePreview, 200, "valid public wishlist invite token returns wishlist preview");
+    assert.deepEqual(Object.keys(getData(validWishlistInvitePreview.body)).sort(), ["expiresAt", "id", "invitedEmail", "inviterName", "ownerName", "requiresAuth", "status"], "wishlist invite preview exposes only safe public fields");
     assertErrorCode(await request("GET", "/wishlist/invites/invalid-share-token"), 404, API_ERROR_CODES.WISHLIST_INVALID_SHARE_TOKEN, "invalid public wishlist invite token is rejected");
+    assertStatus(await request("GET", "/wishlist/invites/expired-share-token"), 403, "expired public wishlist invite token is rejected");
+    assertStatus(await request("GET", "/wishlist/invites/revoked-share-token"), 403, "revoked public wishlist invite token is rejected");
+    assertStatus(await request("GET", "/wishlist/invites/missing-owner-share-token"), 200, "wishlist invite preview tolerates missing related owner data");
   } finally {
     await app.close();
   }
