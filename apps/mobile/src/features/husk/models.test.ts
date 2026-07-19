@@ -135,7 +135,7 @@ assert.deepEqual(
 
 assert.deepEqual(
   mapSchoolWeekReminderToViewModel({ id: "s", title: "Gymtøy", icon: "backpack", childFamilyMemberId: "child-1", weekday: "monday", note: "Ta med sko" } as any, { "child-1": "Fiona" }),
-  { id: "s", title: "Gymtøy", icon: "backpack", childLabel: "Fiona", dayLabel: "Mandag", note: "Ta med sko" },
+  { id: "s", title: "Gymtøy", icon: "backpack", childLabel: "Fiona", dayLabel: "Mandag", note: "Ta med sko", childFamilyMemberId: "child-1", weekday: "monday", date: undefined, occurrenceDate: undefined, isRecurring: undefined, recurrenceEndDate: undefined },
 );
 assert.deepEqual(
   sortSchoolWeekReminders([

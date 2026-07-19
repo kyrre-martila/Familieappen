@@ -260,3 +260,45 @@ export function getSchoolWeekReminders(accessToken: string, familyId: string, we
     headers: familyHeaders(familyId),
   });
 }
+
+
+export type SchoolWeekPayload = {
+  childFamilyMemberId: string;
+  title: string;
+  icon: string;
+  weekday: "monday" | "tuesday" | "wednesday" | "thursday" | "friday";
+  date: string;
+  isRecurring?: boolean;
+  recurrenceFrequency?: "weekly";
+  recurrenceEndDate?: string | null;
+  note?: string | null;
+};
+
+export function buildCreateSchoolWeekReminderRequest(input: SchoolWeekPayload): HuskRequest {
+  return { path: "/school-week", method: "POST", body: input };
+}
+export function buildUpdateSchoolWeekReminderRequest(reminderId: string, input: Partial<SchoolWeekPayload> & { scope?: "occurrence" | "series"; occurrenceDate?: string }): HuskRequest {
+  return { path: `/school-week/${encodeURIComponent(reminderId)}`, method: "PATCH", body: input };
+}
+export function buildDeleteSchoolWeekReminderRequest(reminderId: string, input: { scope?: "occurrence" | "series"; occurrenceDate?: string } = {}): HuskRequest {
+  const params = new URLSearchParams();
+  if (input.scope) params.set("scope", input.scope);
+  if (input.occurrenceDate) params.set("occurrenceDate", input.occurrenceDate);
+  const query = params.toString();
+  return { path: `/school-week/${encodeURIComponent(reminderId)}${query ? `?${query}` : ""}`, method: "DELETE" };
+}
+
+export function createSchoolWeekReminder(accessToken: string, familyId: string, input: SchoolWeekPayload) {
+  const request = buildCreateSchoolWeekReminderRequest(input);
+  return apiRequest<SchoolWeekReminder>(request.path, { method: request.method, accessToken, headers: familyHeaders(familyId), body: request.body });
+}
+
+export function updateSchoolWeekReminder(accessToken: string, familyId: string, reminderId: string, input: Partial<SchoolWeekPayload> & { scope?: "occurrence" | "series"; occurrenceDate?: string }) {
+  const request = buildUpdateSchoolWeekReminderRequest(reminderId, input);
+  return apiRequest<SchoolWeekReminder>(request.path, { method: request.method, accessToken, headers: familyHeaders(familyId), body: request.body });
+}
+
+export function deleteSchoolWeekReminder(accessToken: string, familyId: string, reminderId: string, input: { scope?: "occurrence" | "series"; occurrenceDate?: string } = {}) {
+  const request = buildDeleteSchoolWeekReminderRequest(reminderId, input);
+  return apiRequest<SchoolWeekReminder>(request.path, { method: request.method, accessToken, headers: familyHeaders(familyId) });
+}
