@@ -103,6 +103,22 @@ export function getHuskLists(accessToken: string, familyId: string) {
     headers: familyHeaders(familyId),
   });
 }
+
+export function deleteHuskReminder(
+  accessToken: string,
+  familyId: string,
+  reminderId: string,
+) {
+  return apiRequest<Reminder>(
+    `/husk/reminders/${encodeURIComponent(reminderId)}`,
+    {
+      method: "DELETE",
+      accessToken,
+      headers: familyHeaders(familyId),
+    },
+  );
+}
+
 export function createHuskReminder(
   accessToken: string,
   familyId: string,
