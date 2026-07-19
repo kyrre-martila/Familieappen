@@ -2,7 +2,7 @@ import type { CalendarEvent } from "@familieappen/shared";
 import { calendarQueryKeys } from "./queryKeys";
 import { getCalendarDayRangeForTimeZone } from "./date";
 import { mapCalendarEventToViewModel } from "./events";
-import { getCalendarEvents } from "./api";
+import { createCalendarIcsSource, getCalendarEvents, getCalendarExportFeedSettings, getCalendarIcsSources, updateCalendarExportFeedSettings } from "./api";
 
 function assertEqual<T>(actual: T, expected: T, message: string) { if (actual !== expected) throw new Error(`${message}: expected ${String(expected)}, got ${String(actual)}`); }
 function assertDeepEqual(actual: unknown, expected: unknown, message: string) { if (JSON.stringify(actual) !== JSON.stringify(expected)) throw new Error(`${message}: expected ${JSON.stringify(expected)}, got ${JSON.stringify(actual)}`); }
@@ -19,12 +19,20 @@ console.log("Canonical calendar data tests passed");
 
 const originalFetch = globalThis.fetch;
 let capturedFamilyId: string | null = null;
+const capturedPaths: string[] = [];
 globalThis.fetch = (async (_input: RequestInfo | URL, init?: RequestInit) => {
   capturedFamilyId = new Headers(init?.headers).get("x-family-id");
-  return new Response(JSON.stringify({ data: [] }), { status: 200, headers: { "Content-Type": "application/json" } });
+  capturedPaths.push(String(_input));
+  return new Response(JSON.stringify({ data: String(_input).includes("feed-settings") ? { id: "feed", familyId: "resolved-family", enabled: false, privateUrl: "", includeEvents: true, includeMeals: true, includeReminders: true, includeSchoolWeekReminders: true, scope: "family", selectedFamilyMemberId: null, createdAt: "", updatedAt: "" } : [] }), { status: 200, headers: { "Content-Type": "application/json" } });
 }) as typeof fetch;
 void (async () => {
   await getCalendarEvents("token", "resolved-family", { from: "2026-07-17T22:00:00.000Z", to: "2026-07-18T21:59:59.999Z" });
+  await getCalendarIcsSources("token", "resolved-family");
+  await createCalendarIcsSource("token", "resolved-family", { name: "Skole", url: "https://example.test/skole.ics", active: true });
+  await getCalendarExportFeedSettings("token", "resolved-family");
+  await updateCalendarExportFeedSettings("token", "resolved-family", { enabled: true });
   assertEqual(capturedFamilyId, "resolved-family", "calendar request sends resolved family ID in x-family-id");
+  assertEqual(capturedPaths.some((path) => path.includes("/calendar/ics-sources")), true, "calendar settings can access import endpoints");
+  assertEqual(capturedPaths.some((path) => path.includes("/calendar/feed-settings")), true, "calendar settings can access export endpoints");
   globalThis.fetch = originalFetch;
 })().then(() => console.log("Calendar request header tests passed"));
