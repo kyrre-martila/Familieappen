@@ -67,11 +67,12 @@ export default function FamilyStartScreen() {
           </Pressable>
         ))}
         <Card style={styles.note}>
-          <AppText style={styles.noteText}>
-            Har du fått invitasjonslenke?
+          <AppText variant="heading" style={styles.noteTitle}>
+            Har du fått en invitasjonslenke?
           </AppText>
           <AppText style={styles.noteText}>
-            Åpne linken du fikk tilsendt.
+            Åpne lenken du har fått på e-post eller SMS. FamilieAppen åpnes
+            automatisk og guider deg videre.
           </AppText>
         </Card>
         <TextButton
@@ -109,6 +110,17 @@ const styles = StyleSheet.create({
   choiceTitle: { color: theme.colors.heading },
   desc: { color: theme.colors.textMuted },
   cta: { color: theme.colors.primaryStrong, fontWeight: "900" },
-  note: { alignItems: "center", padding: theme.spacing.md },
-  noteText: { color: theme.colors.textMuted, textAlign: "center" },
+  note: { alignItems: "center", gap: theme.spacing.sm, padding: theme.spacing.lg },
+  noteTitle: {
+    color: theme.colors.heading,
+    fontSize: theme.typography.heading + 1,
+    fontWeight: "900",
+    textAlign: "center",
+  },
+  noteText: {
+    color: theme.colors.textMuted,
+    fontSize: theme.typography.small,
+    lineHeight: 20,
+    textAlign: "center",
+  },
 });
