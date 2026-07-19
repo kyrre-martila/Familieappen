@@ -39,7 +39,9 @@ export function AuthScreenShell({ title, lead, children }: { title: string; lead
   );
 }
 
-export const FormCard = Card;
+export function FormCard({ children, style, ...props }: ViewProps & { children: ReactNode; style?: StyleProp<ViewStyle> }) {
+  return <Card {...props} style={[styles.formCard, style]}>{children}</Card>;
+}
 
 export function AuthFormStack({ children, style, ...props }: ViewProps & { children: ReactNode; style?: StyleProp<ViewStyle> }) {
   return <View {...props} style={[styles.formStack, style]}>{children}</View>;
@@ -99,6 +101,7 @@ const styles = StyleSheet.create({
   title: { color: theme.colors.heading, textAlign: "center", letterSpacing: -1.2 },
   lead: { color: theme.colors.textMuted, textAlign: "center", maxWidth: 520, fontWeight: "500" },
   formStack: { width: "100%", maxWidth: 540, gap: theme.spacing.md },
+  formCard: { width: "100%", maxWidth: 540 },
   field: { gap: theme.spacing.sm, width: "100%" },
   fieldLabel: { color: theme.colors.heading, fontWeight: "800" },
   inputShell: { minHeight: 56, flexDirection: "row", alignItems: "center", gap: theme.spacing.sm, borderRadius: theme.radius.md, borderWidth: 1.5, borderColor: theme.colors.inputBorder, backgroundColor: theme.colors.inputBackground, paddingHorizontal: theme.spacing.md },

@@ -22,6 +22,6 @@ export function BackgroundDecoration() {
 const styles = StyleSheet.create({
   logo: { width: 216, height: 72, maxWidth: "72%" },
   icon: { width: 72, height: 72 },
-  light: { position: "absolute", top: -86, right: -104, width: 330, height: 330, opacity: 0.38 },
+  light: { position: "absolute", top: -90, right: -110, width: 360, height: 360, opacity: 0.54 },
   plants: { position: "absolute", bottom: -68, left: -72, width: 270, height: 270, opacity: 0.76 }
 });
