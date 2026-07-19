@@ -1,5 +1,7 @@
 "use client";
 
+import { PASSWORD_POLICY, getPasswordValidationMessage } from "@familieappen/shared/auth/password-policy";
+
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useCallback, useEffect, useRef, useState, type ChangeEvent, type ReactNode } from "react";
@@ -223,6 +225,12 @@ function PasswordChangeSheet({
       return;
     }
 
+    const passwordPolicyError = getPasswordValidationMessage(newPassword);
+    if (passwordPolicyError) {
+      setLocalError(passwordPolicyError);
+      return;
+    }
+
     if (newPassword !== confirmPassword) {
       setLocalError("Passordene er ikke like.");
       return;
@@ -264,6 +272,7 @@ function PasswordChangeSheet({
             disabled={isSaving}
           />
         </label>
+        <p className="profile-edit-sheet__hint">{PASSWORD_POLICY.helperText}</p>
         <label className="profile-edit-sheet__field">
           <span>Gjenta nytt passord</span>
           <input

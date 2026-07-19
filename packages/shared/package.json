@@ -14,6 +14,11 @@
       "types": "./src/shopping/shopping-catalog.ts",
       "import": "./src/shopping/shopping-catalog.ts",
       "require": "./dist-cjs/shopping/shopping-catalog.js"
+    },
+    "./auth/password-policy": {
+      "types": "./src/auth/password-policy.ts",
+      "import": "./src/auth/password-policy.ts",
+      "require": "./dist-cjs/auth/password-policy.js"
     }
   },
   "scripts": {

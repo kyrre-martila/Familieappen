@@ -1,3 +1,4 @@
+import { PASSWORD_POLICY, getPasswordValidationMessage } from "@familieappen/shared/auth/password-policy";
 import { useState } from "react";
 import { Controller, useForm } from "react-hook-form";
 import {
@@ -111,7 +112,7 @@ export default function RegisterScreen() {
           name="password"
           rules={{
             required: "Lag et passord.",
-            minLength: { value: 8, message: "Passordet må være minst 8 tegn." },
+            validate: (value) => getPasswordValidationMessage(value) || true,
           }}
           render={({ field: { onChange, onBlur, value } }) => (
             <PasswordField
@@ -144,7 +145,7 @@ export default function RegisterScreen() {
           )}
         />
         <AppText variant="small" style={styles.helper}>
-          Minst 8 tegn, med store og små bokstaver, tall og spesialtegn.
+          {PASSWORD_POLICY.helperText}
         </AppText>
         <Controller
           control={control}

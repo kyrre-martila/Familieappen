@@ -1,5 +1,6 @@
 "use client";
 
+import { PASSWORD_POLICY, getPasswordValidationMessage } from "@familieappen/shared/auth/password-policy";
 import Image from "next/image";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
@@ -33,6 +34,12 @@ function ResetPasswordForm() {
     const formData = new FormData(event.currentTarget);
     const password = String(formData.get("password") || "");
     const confirmPassword = String(formData.get("confirmPassword") || "");
+
+    const passwordPolicyError = getPasswordValidationMessage(password);
+    if (passwordPolicyError) {
+      setError(passwordPolicyError);
+      return;
+    }
 
     if (password !== confirmPassword) {
       setError("Passordene er ikke like.");
@@ -72,7 +79,7 @@ function ResetPasswordForm() {
             <label className="login-field__label" htmlFor="reset-password-password">Nytt passord</label>
             <div className="login-field__control">
               <LockIcon />
-              <input autoComplete="new-password" className="login-field__input" disabled={!token || isSubmitting || Boolean(message)} id="reset-password-password" minLength={8} name="password" placeholder="Minst 8 tegn" required type="password" />
+              <input autoComplete="new-password" className="login-field__input" disabled={!token || isSubmitting || Boolean(message)} id="reset-password-password" minLength={PASSWORD_POLICY.minLength} name="password" placeholder={PASSWORD_POLICY.helperText} required type="password" />
             </div>
           </div>
 
@@ -80,7 +87,7 @@ function ResetPasswordForm() {
             <label className="login-field__label" htmlFor="reset-password-confirm">Gjenta nytt passord</label>
             <div className="login-field__control">
               <LockIcon />
-              <input autoComplete="new-password" className="login-field__input" disabled={!token || isSubmitting || Boolean(message)} id="reset-password-confirm" minLength={8} name="confirmPassword" placeholder="Gjenta passordet" required type="password" />
+              <input autoComplete="new-password" className="login-field__input" disabled={!token || isSubmitting || Boolean(message)} id="reset-password-confirm" minLength={PASSWORD_POLICY.minLength} name="confirmPassword" placeholder="Gjenta passordet" required type="password" />
             </div>
           </div>
 

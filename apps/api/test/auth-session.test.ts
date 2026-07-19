@@ -7,7 +7,7 @@ import { AuthGuard } from "../src/auth/guards/auth.guard";
 import { ProfileService } from "../src/auth/profile.service";
 
 const AUTH_SECRET = "familieappen-test-auth-secret-for-session-tests";
-const PASSWORD = "correct-password";
+const PASSWORD = "Correct-password1!";
 
 type UserRecord = {
   id: string;

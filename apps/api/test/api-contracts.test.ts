@@ -445,7 +445,7 @@ async function register(
 ): Promise<{ userId: string; token: string; email: string; password: string }> {
   const name = input.name ?? "Alpha";
   const email = input.email ?? "alpha-contract@example.com";
-  const password = input.password ?? "correct-password";
+  const password = input.password ?? "Correct-password1!";
   const response = await request("POST", "/auth/register", {
     body: { name, email, password }
   });
@@ -471,6 +471,21 @@ async function run(): Promise<void> {
     const health = await request("GET", "/health");
     assertSuccessEnvelope(health, 200);
 
+    assertSuccessEnvelope(await request("POST", "/auth/register", {
+      body: { name: "Policy Valid", email: "policy-valid@example.com", password: "Valid-passord1!" }
+    }), 201);
+    for (const [email, password] of [
+      ["policy-short@example.com", "Aa1!aaa"],
+      ["policy-uppercase@example.com", "valid-passord1!"],
+      ["policy-lowercase@example.com", "VALID-PASSORD1!"],
+      ["policy-digit@example.com", "Valid-passord!"],
+      ["policy-special@example.com", "Validpassord1"]
+    ] as const) {
+      assertErrorEnvelope(await request("POST", "/auth/register", {
+        body: { name: "Policy Invalid", email, password }
+      }), 400, API_ERROR_CODES.VALIDATION_INVALID_INPUT);
+    }
+
     const alpha = await register(request);
     services.grant(alpha.userId, "family-alpha");
     prisma.createFamily("family-alpha", [{ userId: alpha.userId, role: "OWNER", displayName: "Alpha" }]);
@@ -487,7 +502,7 @@ async function run(): Promise<void> {
     assertErrorEnvelope(await request("GET", "/me"), 401, API_ERROR_CODES.AUTH_REQUIRES_AUTH);
 
     const betaProfile = (assertSuccessEnvelope(await request("POST", "/auth/register", {
-      body: { name: "", email: "beta-contract@example.com", password: "correct-password" }
+      body: { name: "", email: "beta-contract@example.com", password: "Correct-password1!" }
     }), 201) as { user: UserRecord }).user;
     assert.equal(betaProfile.name, "");
     assert.equal(betaProfile.firstName, "");
@@ -495,7 +510,7 @@ async function run(): Promise<void> {
     assert.equal(betaProfile.displayName, "");
 
     const technicalFallbackProfile = (assertSuccessEnvelope(await request("POST", "/auth/register", {
-      body: { name: "Ny bruker", email: "technical-fallback@example.com", password: "correct-password" }
+      body: { name: "Ny bruker", email: "technical-fallback@example.com", password: "Correct-password1!" }
     }), 201) as { user: UserRecord }).user;
     assert.equal(technicalFallbackProfile.name, "");
     assert.equal(technicalFallbackProfile.firstName, "");
@@ -516,10 +531,10 @@ async function run(): Promise<void> {
     assertErrorEnvelope(await request("PATCH", "/me", { token: alpha.token, body: { birthDate: "1985-02-30" } }), 400, API_ERROR_CODES.VALIDATION_INVALID_INPUT);
     assertErrorEnvelope(await request("PATCH", "/me", { token: alpha.token, body: { birthDate: "2999-01-01" } }), 400, API_ERROR_CODES.VALIDATION_INVALID_INPUT);
     assertSuccessEnvelope(await request("POST", "/auth/login", {
-      body: { email: "alpha-new@example.com", password: "correct-password" }
+      body: { email: "alpha-new@example.com", password: "Correct-password1!" }
     }), 201);
     assertErrorEnvelope(await request("POST", "/auth/login", {
-      body: { email: "alpha-contract@example.com", password: "correct-password" }
+      body: { email: "alpha-contract@example.com", password: "Correct-password1!" }
     }), 401, API_ERROR_CODES.AUTH_INVALID_CREDENTIALS);
 
     assertErrorEnvelope(await request("PATCH", "/me", { token: alpha.token, body: { email: "not-an-email" } }), 400, API_ERROR_CODES.VALIDATION_INVALID_INPUT);
@@ -535,47 +550,47 @@ async function run(): Promise<void> {
     assertErrorEnvelope(await request("POST", "/me/change-password"), 401, API_ERROR_CODES.AUTH_REQUIRES_AUTH);
     assertErrorEnvelope(await request("POST", "/me/change-password", {
       token: alpha.token,
-      body: { newPassword: "new-password", confirmPassword: "new-password" }
+      body: { newPassword: "New-password1!", confirmPassword: "New-password1!" }
     }), 400, API_ERROR_CODES.VALIDATION_MISSING_FIELD);
     assertErrorEnvelope(await request("POST", "/me/change-password", {
       token: alpha.token,
-      body: { currentPassword: "correct-password", confirmPassword: "new-password" }
+      body: { currentPassword: "Correct-password1!", confirmPassword: "New-password1!" }
     }), 400, API_ERROR_CODES.VALIDATION_MISSING_FIELD);
     assertErrorEnvelope(await request("POST", "/me/change-password", {
       token: alpha.token,
-      body: { currentPassword: "correct-password", newPassword: "new-password" }
+      body: { currentPassword: "Correct-password1!", newPassword: "New-password1!" }
     }), 400, API_ERROR_CODES.VALIDATION_MISSING_FIELD);
     assertErrorEnvelope(await request("POST", "/me/change-password", {
       token: alpha.token,
-      body: { currentPassword: "wrong-password", newPassword: "new-password", confirmPassword: "new-password" }
+      body: { currentPassword: "Wrong-password1!", newPassword: "New-password1!", confirmPassword: "New-password1!" }
     }), 401, API_ERROR_CODES.AUTH_INVALID_CREDENTIALS);
     assertErrorEnvelope(await request("POST", "/me/change-password", {
       token: alpha.token,
-      body: { currentPassword: "correct-password", newPassword: "new-password", confirmPassword: "other-password" }
+      body: { currentPassword: "Correct-password1!", newPassword: "New-password1!", confirmPassword: "other-password" }
     }), 400, API_ERROR_CODES.VALIDATION_INVALID_INPUT);
     assertErrorEnvelope(await request("POST", "/me/change-password", {
       token: alpha.token,
-      body: { currentPassword: "correct-password", newPassword: "short", confirmPassword: "short" }
+      body: { currentPassword: "Correct-password1!", newPassword: "short", confirmPassword: "short" }
     }), 400, API_ERROR_CODES.VALIDATION_INVALID_INPUT);
     assertErrorEnvelope(await request("POST", "/me/change-password", {
       token: alpha.token,
-      body: { currentPassword: "correct-password", newPassword: "correct-password", confirmPassword: "correct-password" }
+      body: { currentPassword: "Correct-password1!", newPassword: "Correct-password1!", confirmPassword: "Correct-password1!" }
     }), 400, API_ERROR_CODES.VALIDATION_INVALID_INPUT);
     assertErrorEnvelope(await request("POST", "/me/change-password", {
       token: alpha.token,
-      body: { currentPassword: "correct-password", newPassword: "new-password", confirmPassword: "new-password", unexpected: true }
+      body: { currentPassword: "Correct-password1!", newPassword: "New-password1!", confirmPassword: "New-password1!", unexpected: true }
     }), 400, API_ERROR_CODES.VALIDATION_INVALID_INPUT);
 
     const changedPassword = assertSuccessEnvelope(await request("POST", "/me/change-password", {
       token: alpha.token,
-      body: { currentPassword: "correct-password", newPassword: "new-password", confirmPassword: "new-password" }
+      body: { currentPassword: "Correct-password1!", newPassword: "New-password1!", confirmPassword: "New-password1!" }
     }), 201);
     assert.equal(changedPassword.message, "Passordet ble oppdatert");
     assertErrorEnvelope(await request("POST", "/auth/login", {
-      body: { email: "alpha-new@example.com", password: "correct-password" }
+      body: { email: "alpha-new@example.com", password: "Correct-password1!" }
     }), 401, API_ERROR_CODES.AUTH_INVALID_CREDENTIALS);
     assertSuccessEnvelope(await request("POST", "/auth/login", {
-      body: { email: "alpha-new@example.com", password: "new-password" }
+      body: { email: "alpha-new@example.com", password: "New-password1!" }
     }), 201);
 
     assertErrorEnvelope(await request("DELETE", "/me"), 401, API_ERROR_CODES.AUTH_REQUIRES_AUTH);
@@ -585,15 +600,15 @@ async function run(): Promise<void> {
     }), 400, API_ERROR_CODES.VALIDATION_MISSING_FIELD);
     assertErrorEnvelope(await request("DELETE", "/me", {
       token: alpha.token,
-      body: { password: "wrong-password", confirmationText: "SLETT" }
+      body: { password: "Wrong-password1!", confirmationText: "SLETT" }
     }), 401, API_ERROR_CODES.AUTH_INVALID_CREDENTIALS);
     assertErrorEnvelope(await request("DELETE", "/me", {
       token: alpha.token,
-      body: { password: "new-password", confirmationText: "slett" }
+      body: { password: "New-password1!", confirmationText: "slett" }
     }), 400, API_ERROR_CODES.VALIDATION_INVALID_INPUT);
     assertErrorEnvelope(await request("DELETE", "/me", {
       token: alpha.token,
-      body: { password: "new-password", confirmationText: "SLETT", keepData: true }
+      body: { password: "New-password1!", confirmationText: "SLETT", keepData: true }
     }), 400, API_ERROR_CODES.VALIDATION_INVALID_INPUT);
 
     assertErrorEnvelope(await request("POST", "/feedback", {
@@ -641,7 +656,7 @@ async function run(): Promise<void> {
       body: { type: "feedback", message: "Denne har et ukjent felt", unexpected: true }
     }), 400, API_ERROR_CODES.VALIDATION_INVALID_INPUT);
 
-    const limited = await register(request, { name: "Limited", email: "limited-feedback@example.com", password: "limited-password" });
+    const limited = await register(request, { name: "Limited", email: "limited-feedback@example.com", password: "Limited-password1!" });
     for (let index = 0; index < 5; index += 1) {
       assertSuccessEnvelope(await request("POST", "/feedback", {
         token: limited.token,
@@ -655,8 +670,8 @@ async function run(): Promise<void> {
     assertErrorEnvelope(rateLimited, 429, API_ERROR_CODES.RATE_LIMITED);
     assert.equal((rateLimited.body.error as Record<string, unknown>).message, "Du har sendt flere meldinger på kort tid. Prøv igjen litt senere.");
 
-    const memberUser = await register(request, { name: "Member", email: "member-delete@example.com", password: "member-password" });
-    const memberAdmin = await register(request, { name: "Member Admin", email: "member-admin@example.com", password: "member-admin-password" });
+    const memberUser = await register(request, { name: "Member", email: "member-delete@example.com", password: "Member-password1!" });
+    const memberAdmin = await register(request, { name: "Member Admin", email: "member-admin@example.com", password: "Member-admin-password1!" });
     prisma.createFamily("family-member-delete", [
       { userId: memberAdmin.userId, role: "OWNER" },
       { userId: memberUser.userId, role: "CHILD" }
@@ -670,8 +685,8 @@ async function run(): Promise<void> {
     assert.equal(prisma.memberCount("family-member-delete"), 1);
     assert.equal(prisma.pendingInvitesBy(memberUser.userId), 0);
 
-    const coAdmin = await register(request, { name: "Co Admin", email: "co-admin-delete@example.com", password: "co-admin-password" });
-    const otherAdmin = await register(request, { name: "Other Admin", email: "other-admin-delete@example.com", password: "other-admin-password" });
+    const coAdmin = await register(request, { name: "Co Admin", email: "co-admin-delete@example.com", password: "Co-admin-password1!" });
+    const otherAdmin = await register(request, { name: "Other Admin", email: "other-admin-delete@example.com", password: "Other-admin-password1!" });
     prisma.createFamily("family-admin-delete", [
       { userId: coAdmin.userId, role: "OWNER" },
       { userId: otherAdmin.userId, role: "PARENT" }
@@ -684,8 +699,8 @@ async function run(): Promise<void> {
     assert.equal(prisma.hasFamily("family-admin-delete"), true);
     assert.equal(prisma.memberCount("family-admin-delete"), 1);
 
-    const lastAdmin = await register(request, { name: "Last Admin", email: "last-admin-delete@example.com", password: "last-admin-password" });
-    const child = await register(request, { name: "Child", email: "child-delete@example.com", password: "child-password" });
+    const lastAdmin = await register(request, { name: "Last Admin", email: "last-admin-delete@example.com", password: "Last-admin-password1!" });
+    const child = await register(request, { name: "Child", email: "child-delete@example.com", password: "Child-password1!" });
     prisma.createFamily("family-last-admin", [
       { userId: lastAdmin.userId, role: "OWNER" },
       { userId: child.userId, role: "CHILD" }
@@ -697,7 +712,7 @@ async function run(): Promise<void> {
     assert.equal(prisma.hasUser(lastAdmin.userId), true);
     assert.equal(prisma.memberCount("family-last-admin"), 2);
 
-    const solo = await register(request, { name: "Solo", email: "solo-delete@example.com", password: "solo-password" });
+    const solo = await register(request, { name: "Solo", email: "solo-delete@example.com", password: "Solo-password1!" });
     prisma.createFamily("family-solo-delete", [{ userId: solo.userId, role: "OWNER" }]);
     assertSuccessEnvelope(await request("DELETE", "/me", {
       token: solo.token,
@@ -720,7 +735,7 @@ async function run(): Promise<void> {
     assertErrorEnvelope(await request("GET", "/shopping", { token: alpha.token }), 400, API_ERROR_CODES.FAMILY_MISSING_CONTEXT);
     assertErrorEnvelope(await request("GET", "/shopping", { token: alpha.token, familyId: "family-beta" }), 404, API_ERROR_CODES.FAMILY_NOT_FOUND);
     assertErrorEnvelope(await request("POST", "/auth/login", {
-      body: { email: "alpha-contract@example.com", password: "wrong-password" }
+      body: { email: "alpha-contract@example.com", password: "Wrong-password1!" }
     }), 401, API_ERROR_CODES.AUTH_INVALID_CREDENTIALS);
     assertErrorEnvelope(await request("GET", "/wishlist/invites/invalid-share-token"), 404, API_ERROR_CODES.WISHLIST_INVALID_SHARE_TOKEN);
   } finally {

@@ -20,6 +20,9 @@
       ],
       "@familieappen/shared/shopping-catalog": [
         "packages/shared/src/shopping/shopping-catalog.ts"
+      ],
+      "@familieappen/shared/auth/password-policy": [
+        "packages/shared/src/auth/password-policy.ts"
       ]
     }
   }
