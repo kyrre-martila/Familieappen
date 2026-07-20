@@ -1,7 +1,7 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { Ionicons } from "@expo/vector-icons";
 import { router } from "expo-router";
-import { Pressable, RefreshControl, StyleSheet, View } from "react-native";
+import { Pressable, RefreshControl, ScrollView, StyleSheet, View } from "react-native";
 import { Screen } from "../../../components/Screen";
 import { AppText } from "../../../components/AppText";
 import {
@@ -44,20 +44,32 @@ export function CalendarShell({
     [calendar.selectedDate],
   );
   const activeMonth = parseDateString(calendar.selectedDate).getMonth();
-  const groupedMonthEvents = useMemo(
+  const groupedAgendaEvents = useMemo(
     () =>
-      calendar.eventsForMonth
+      calendar.eventsForAgenda
         .map((event) => event.date)
         .filter((date, index, dates) => dates.indexOf(date) === index)
         .sort()
         .map((date) => ({
           date,
-          events: calendar.eventsForMonth.filter(
+          events: calendar.eventsForAgenda.filter(
             (event) => event.date === date,
           ),
         })),
-    [calendar.eventsForMonth],
+    [calendar.eventsForAgenda],
   );
+  const agendaStartDate = useMemo(() => groupedAgendaEvents.find((group) => group.date >= calendar.today)?.date ?? groupedAgendaEvents.at(-1)?.date ?? null, [calendar.today, groupedAgendaEvents]);
+  const scrollRef = useRef<ScrollView>(null);
+  const agendaLayouts = useRef<Record<string, number>>({});
+  const didPositionAgenda = useRef(false);
+  useEffect(() => {
+    if (view !== "list") { didPositionAgenda.current = false; return; }
+    if (!agendaStartDate || didPositionAgenda.current) return;
+    const y = agendaLayouts.current[agendaStartDate];
+    if (typeof y !== "number") return;
+    didPositionAgenda.current = true;
+    requestAnimationFrame(() => scrollRef.current?.scrollTo({ y: Math.max(0, y - theme.spacing.md), animated: false }));
+  }, [agendaStartDate, groupedAgendaEvents, view]);
   const navigateDateStrip = (direction: "back" | "forward") =>
     calendar.setSelectedDate(
       formatDateString(
@@ -77,6 +89,7 @@ export function CalendarShell({
       bottomInset="tab"
       topInset={topInset}
       style={styles.screen}
+      scrollRef={scrollRef}
       refreshControl={
         <RefreshControl
           refreshing={calendar.refreshing}
@@ -120,20 +133,6 @@ export function CalendarShell({
             onPress={() => setView("list")}
           />
         </View>
-      </View>
-      <View style={styles.utilityRow}>
-        <Pressable
-          accessibilityRole="button"
-          accessibilityLabel="Åpne kalenderinnstillinger"
-          onPress={() => router.push("/(app)/calendar/settings")}
-          style={styles.iconButton}
-        >
-          <Ionicons
-            name="settings-outline"
-            size={18}
-            color={theme.colors.primaryStrong}
-          />
-        </Pressable>
       </View>
       {view === "day" ? (
         <>
@@ -235,18 +234,14 @@ export function CalendarShell({
         </View>
       ) : view === "list" ? (
         <View style={styles.daySection}>
-          <MonthToolbar
-            title={formatMonthTitle(calendar.selectedDate)}
-            onNavigate={navigateMonth}
-          />
-          {groupedMonthEvents.length === 0 ? (
+          {groupedAgendaEvents.length === 0 ? (
             <EmptyState
-              title="Ingen hendelser i denne perioden"
+              title="Ingen hendelser"
               description=""
             />
           ) : (
-            groupedMonthEvents.map((group) => (
-              <View key={group.date} style={styles.eventList}>
+            groupedAgendaEvents.map((group) => (
+              <View key={group.date} style={styles.eventList} onLayout={(event) => { agendaLayouts.current[group.date] = event.nativeEvent.layout.y; }}>
                 <AppText variant="label">
                   {formatSelectedDate(group.date)}
                 </AppText>
@@ -407,21 +402,6 @@ const styles = StyleSheet.create({
     fontSize: 13,
   },
   viewButtonTextSelected: { color: theme.colors.primaryStrong },
-  utilityRow: {
-    flexDirection: "row",
-    justifyContent: "flex-end",
-    alignItems: "center",
-  },
-  iconButton: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
-    alignItems: "center",
-    justifyContent: "center",
-    backgroundColor: theme.colors.surface,
-    borderWidth: 1,
-    borderColor: theme.colors.border,
-  },
   selectedDateBlock: { alignItems: "center", marginTop: -theme.spacing.xs },
   selectedDate: {
     fontSize: 17,
