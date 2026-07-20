@@ -1,6 +1,18 @@
-const selectedDateFormatter = new Intl.DateTimeFormat("nb-NO", { day: "numeric", month: "long", weekday: "long", year: "numeric" });
-const monthTitleFormatter = new Intl.DateTimeFormat("nb-NO", { month: "long", year: "numeric" });
-const shortWeekdayFormatter = new Intl.DateTimeFormat("nb-NO", { weekday: "short" });
+const selectedDateFormatter = new Intl.DateTimeFormat("nb-NO", {
+  day: "numeric",
+  month: "long",
+  weekday: "long",
+  year: "numeric",
+});
+const monthTitleFormatter = new Intl.DateTimeFormat("nb-NO", {
+  month: "long",
+  year: "numeric",
+});
+const shortWeekdayFormatter = new Intl.DateTimeFormat("nb-NO", {
+  weekday: "short",
+});
+
+export const weekDayLabels = ["MAN", "TIR", "ONS", "TOR", "FRE", "LØR", "SØN"];
 
 export function parseDateString(date: string) {
   const [year, month, day] = date.split("-").map(Number);
@@ -27,12 +39,17 @@ export function startOfMondayWeek(date: Date) {
 
 export function buildWeekDates(selectedDate: string) {
   const weekStart = startOfMondayWeek(parseDateString(selectedDate));
-  return Array.from({ length: 7 }, (_, index) => formatDateString(addDays(weekStart, index)));
+  return Array.from({ length: 7 }, (_, index) =>
+    formatDateString(addDays(weekStart, index)),
+  );
 }
 
 export function getCalendarRange(today: string) {
   const [year] = today.split("-").map(Number);
-  return { from: `${year - 1}-01-01T00:00:00.000Z`, to: `${year + 1}-12-31T23:59:59.999Z` };
+  return {
+    from: `${year - 1}-01-01T00:00:00.000Z`,
+    to: `${year + 1}-12-31T23:59:59.999Z`,
+  };
 }
 
 export function getTodayString() {
@@ -44,7 +61,9 @@ export function capitalizeDateLabel(label: string) {
 }
 
 export function formatSelectedDate(date: string) {
-  return capitalizeDateLabel(selectedDateFormatter.format(parseDateString(date)));
+  return capitalizeDateLabel(
+    selectedDateFormatter.format(parseDateString(date)),
+  );
 }
 
 export function formatMonthTitle(date: string) {
@@ -52,7 +71,10 @@ export function formatMonthTitle(date: string) {
 }
 
 export function formatWeekday(date: string) {
-  return shortWeekdayFormatter.format(parseDateString(date)).replace(".", "").toUpperCase();
+  return shortWeekdayFormatter
+    .format(parseDateString(date))
+    .replace(".", "")
+    .toUpperCase();
 }
 
 export function getCalendarDayRange(date: string) {
@@ -60,40 +82,154 @@ export function getCalendarDayRange(date: string) {
 }
 
 function getTimeZoneOffsetMs(date: Date, timeZone: string) {
-  const parts = new Intl.DateTimeFormat("en-CA", { timeZone, year: "numeric", month: "2-digit", day: "2-digit", hour: "2-digit", minute: "2-digit", second: "2-digit", hourCycle: "h23" }).formatToParts(date);
-  const values = Object.fromEntries(parts.map((part) => [part.type, part.value]));
-  const asUtc = Date.UTC(Number(values.year), Number(values.month) - 1, Number(values.day), Number(values.hour), Number(values.minute), Number(values.second));
+  const parts = new Intl.DateTimeFormat("en-CA", {
+    timeZone,
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+    hour: "2-digit",
+    minute: "2-digit",
+    second: "2-digit",
+    hourCycle: "h23",
+  }).formatToParts(date);
+  const values = Object.fromEntries(
+    parts.map((part) => [part.type, part.value]),
+  );
+  const asUtc = Date.UTC(
+    Number(values.year),
+    Number(values.month) - 1,
+    Number(values.day),
+    Number(values.hour),
+    Number(values.minute),
+    Number(values.second),
+  );
   return asUtc - date.getTime();
 }
 
-function zonedLocalTimeToUtcIso(input: { date: string; hour: number; minute: number; second: number; millisecond: number; timeZone: string }) {
+function zonedLocalTimeToUtcIso(input: {
+  date: string;
+  hour: number;
+  minute: number;
+  second: number;
+  millisecond: number;
+  timeZone: string;
+}) {
   const [year, month, day] = input.date.split("-").map(Number);
-  const utcGuess = Date.UTC(year, month - 1, day, input.hour, input.minute, input.second, input.millisecond);
+  const utcGuess = Date.UTC(
+    year,
+    month - 1,
+    day,
+    input.hour,
+    input.minute,
+    input.second,
+    input.millisecond,
+  );
   const firstOffset = getTimeZoneOffsetMs(new Date(utcGuess), input.timeZone);
   const firstUtc = utcGuess - firstOffset;
   const secondOffset = getTimeZoneOffsetMs(new Date(firstUtc), input.timeZone);
   return new Date(utcGuess - secondOffset).toISOString();
 }
 
-export function getCalendarDayRangeForTimeZone(date: string, timeZone = "Europe/Oslo") {
+export function getCalendarDayRangeForTimeZone(
+  date: string,
+  timeZone = "Europe/Oslo",
+) {
   const nextDate = formatDateString(addDays(parseDateString(date), 1));
-  const from = zonedLocalTimeToUtcIso({ date, hour: 0, minute: 0, second: 0, millisecond: 0, timeZone });
-  const nextMidnight = zonedLocalTimeToUtcIso({ date: nextDate, hour: 0, minute: 0, second: 0, millisecond: 0, timeZone });
+  const from = zonedLocalTimeToUtcIso({
+    date,
+    hour: 0,
+    minute: 0,
+    second: 0,
+    millisecond: 0,
+    timeZone,
+  });
+  const nextMidnight = zonedLocalTimeToUtcIso({
+    date: nextDate,
+    hour: 0,
+    minute: 0,
+    second: 0,
+    millisecond: 0,
+    timeZone,
+  });
   return { from, to: new Date(Date.parse(nextMidnight) - 1).toISOString() };
 }
 
-
-export function getCalendarMonthRangeForTimeZone(date: string, timeZone = "Europe/Oslo") {
+export function addMonthsClamped(date: string, amount: number) {
   const value = parseDateString(date);
-  const first = formatDateString(new Date(value.getFullYear(), value.getMonth(), 1));
-  const afterLast = formatDateString(new Date(value.getFullYear(), value.getMonth() + 1, 1));
-  const from = zonedLocalTimeToUtcIso({ date: first, hour: 0, minute: 0, second: 0, millisecond: 0, timeZone });
-  const nextMidnight = zonedLocalTimeToUtcIso({ date: afterLast, hour: 0, minute: 0, second: 0, millisecond: 0, timeZone });
+  const targetYear = value.getFullYear();
+  const targetMonth = value.getMonth() + amount;
+  const lastDayInTargetMonth = new Date(
+    targetYear,
+    targetMonth + 1,
+    0,
+  ).getDate();
+  const nextDay = Math.min(value.getDate(), lastDayInTargetMonth);
+  return formatDateString(new Date(targetYear, targetMonth, nextDay));
+}
+
+export function getIsoWeekNumber(date: Date) {
+  const weekDate = new Date(
+    Date.UTC(date.getFullYear(), date.getMonth(), date.getDate()),
+  );
+  const dayNumber = weekDate.getUTCDay() || 7;
+  weekDate.setUTCDate(weekDate.getUTCDate() + 4 - dayNumber);
+  const yearStart = new Date(Date.UTC(weekDate.getUTCFullYear(), 0, 1));
+  return Math.ceil(
+    ((weekDate.getTime() - yearStart.getTime()) / 86400000 + 1) / 7,
+  );
+}
+
+export function buildMonthWeeks(date: string) {
+  const value = parseDateString(date);
+  const firstOfMonth = new Date(value.getFullYear(), value.getMonth(), 1);
+  const startDate = startOfMondayWeek(firstOfMonth);
+  return Array.from({ length: 6 }, (_, weekIndex) => {
+    const weekStart = addDays(startDate, weekIndex * 7);
+    return {
+      weekNumber: getIsoWeekNumber(weekStart),
+      days: Array.from({ length: 7 }, (_, dayIndex) =>
+        formatDateString(addDays(weekStart, dayIndex)),
+      ),
+    };
+  });
+}
+
+export function getCalendarMonthRangeForTimeZone(
+  date: string,
+  timeZone = "Europe/Oslo",
+) {
+  const value = parseDateString(date);
+  const first = formatDateString(
+    new Date(value.getFullYear(), value.getMonth(), 1),
+  );
+  const afterLast = formatDateString(
+    new Date(value.getFullYear(), value.getMonth() + 1, 1),
+  );
+  const from = zonedLocalTimeToUtcIso({
+    date: first,
+    hour: 0,
+    minute: 0,
+    second: 0,
+    millisecond: 0,
+    timeZone,
+  });
+  const nextMidnight = zonedLocalTimeToUtcIso({
+    date: afterLast,
+    hour: 0,
+    minute: 0,
+    second: 0,
+    millisecond: 0,
+    timeZone,
+  });
   return { from, to: new Date(Date.parse(nextMidnight) - 1).toISOString() };
 }
 
 export function buildMonthDates(date: string) {
   const value = parseDateString(date);
   const days = new Date(value.getFullYear(), value.getMonth() + 1, 0).getDate();
-  return Array.from({ length: days }, (_, index) => formatDateString(new Date(value.getFullYear(), value.getMonth(), index + 1)));
+  return Array.from({ length: days }, (_, index) =>
+    formatDateString(
+      new Date(value.getFullYear(), value.getMonth(), index + 1),
+    ),
+  );
 }
