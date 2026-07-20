@@ -1,10 +1,11 @@
 import { Ionicons } from "@expo/vector-icons";
 import { Image } from "expo-image";
 import { router } from "expo-router";
-import { createContext, useCallback, useContext, useMemo, useState, type ReactNode } from "react";
+import { createContext, useCallback, useContext, useEffect, useMemo, useState, type ReactNode } from "react";
 import { Modal, Pressable, StyleSheet, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useAuth } from "../features/auth/AuthProvider";
+import { resolveApiAssetUrl } from "../lib/api/assets";
 import { appAssets } from "../theme/assets";
 import { theme } from "../theme/tokens";
 import { AppText } from "./AppText";
@@ -32,6 +33,7 @@ export function AppHeader({ title, notificationCount = 0 }: { title: string; not
   const { user, isRestoring, logout, isLoggingOut } = useAuth();
   const { activeOverlay, openOverlay, closeOverlay } = useAppHeaderOverlay();
   const initials = getInitials(user?.displayName || user?.name || user?.email || "");
+  const avatarUrl = resolveApiAssetUrl(user?.avatarUrl);
   const badgeLabel = getBadgeLabel(notificationCount);
   return <>
     <View style={[styles.header, { paddingTop: insets.top + theme.spacing.xs }]}>
@@ -45,7 +47,7 @@ export function AppHeader({ title, notificationCount = 0 }: { title: string; not
           {badgeLabel ? <View style={styles.badge}><AppText style={styles.badgeText}>{badgeLabel}</AppText></View> : null}
         </Pressable>
         <Pressable accessibilityRole="button" accessibilityLabel="Åpne profilmeny" accessibilityHint="Viser profilvalg og utlogging" onPress={() => openOverlay("profile")} style={({ pressed }) => [styles.actionButton, pressed && styles.pressed]}>
-          <Avatar initials={initials} avatarUrl={user?.avatarUrl ?? null} loading={isRestoring} />
+          <Avatar initials={initials} avatarUrl={avatarUrl} loading={isRestoring} />
         </Pressable>
       </View>
     </View>
@@ -54,7 +56,7 @@ export function AppHeader({ title, notificationCount = 0 }: { title: string; not
       <AppText style={styles.popoverMuted}>Varsler kommer snart.</AppText>
     </HeaderPopover>
     <HeaderPopover visible={activeOverlay === "profile"} onClose={closeOverlay} accessibilityLabel="Profilmeny">
-      <View style={styles.profileHeader}><Avatar initials={initials} avatarUrl={user?.avatarUrl ?? null} loading={isRestoring} /><View style={styles.profileText}><AppText style={styles.popoverTitle} numberOfLines={1}>{user?.displayName || user?.name || "FamilieAppen"}</AppText><AppText variant="small" style={styles.popoverMuted} numberOfLines={1}>{user?.email ?? "Laster bruker …"}</AppText></View></View>
+      <View style={styles.profileHeader}><Avatar initials={initials} avatarUrl={avatarUrl} loading={isRestoring} /><View style={styles.profileText}><AppText style={styles.popoverTitle} numberOfLines={1}>{user?.displayName || user?.name || "FamilieAppen"}</AppText><AppText variant="small" style={styles.popoverMuted} numberOfLines={1}>{user?.email ?? "Laster bruker …"}</AppText></View></View>
       <Pressable disabled accessibilityRole="menuitem" accessibilityState={{ disabled: true }} accessibilityLabel="Profil, ikke tilgjengelig ennå" style={[styles.menuItem, styles.disabled]}><AppText style={styles.menuItemText}>Profil</AppText><AppText variant="small" style={styles.popoverMuted}>Kommer når profilrute finnes i appen.</AppText></Pressable>
       <Pressable disabled={isLoggingOut} accessibilityRole="menuitem" accessibilityLabel="Logg ut" onPress={() => { closeOverlay(); void logout(); }} style={({ pressed }) => [styles.menuItem, pressed && styles.pressed]}><AppText style={[styles.menuItemText, styles.logout]}>{isLoggingOut ? "Logger ut…" : "Logg ut"}</AppText></Pressable>
     </HeaderPopover>
@@ -66,6 +68,7 @@ function HeaderPopover({ visible, onClose, accessibilityLabel, children }: { vis
 }
 function Avatar({ initials, avatarUrl, loading }: { initials: string; avatarUrl: string | null; loading: boolean }) {
   const [failed, setFailed] = useState(false);
+  useEffect(() => setFailed(false), [avatarUrl]);
   if (avatarUrl && !failed) return <Image source={{ uri: avatarUrl }} contentFit="cover" onError={() => setFailed(true)} style={styles.avatar} />;
   return <View style={[styles.avatar, loading && styles.avatarLoading]}><AppText style={styles.initials}>{loading ? "" : initials}</AppText></View>;
 }
