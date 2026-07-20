@@ -4,6 +4,7 @@ import { PanResponder, Pressable, StyleSheet, View } from "react-native";
 import { AppText } from "../../../components/AppText";
 import { theme } from "../../../theme/tokens";
 import { addDays, formatDateString, formatSelectedDate, formatWeekday, parseDateString } from "../date";
+import { getDateStripSwipeDirection, shouldActivateDateStripSwipe } from "../dateStripSwipe";
 
 export function buildCompactDateStrip(selectedDate: string) {
   const selected = parseDateString(selectedDate);
@@ -21,10 +22,12 @@ export function CalendarDateStrip({ selectedDate, today, onSelectDate, onNavigat
     releaseLock();
   }, [onNavigate]);
   const panResponder = useMemo(() => PanResponder.create({
-    onMoveShouldSetPanResponder: (_, gesture) => Math.abs(gesture.dx) > 18 && Math.abs(gesture.dx) > Math.abs(gesture.dy) * 1.4,
+    onMoveShouldSetPanResponder: (_, gesture) => shouldActivateDateStripSwipe(gesture.dx, gesture.dy),
+    onMoveShouldSetPanResponderCapture: (_, gesture) => shouldActivateDateStripSwipe(gesture.dx, gesture.dy),
+    onPanResponderTerminationRequest: () => false,
     onPanResponderRelease: (_, gesture) => {
-      if (Math.abs(gesture.dx) < 48 || Math.abs(gesture.dx) < Math.abs(gesture.dy) * 1.2) return;
-      navigate(gesture.dx < 0 ? "forward" : "back");
+      const direction = getDateStripSwipeDirection(gesture.dx, gesture.dy, gesture.vx);
+      if (direction) navigate(direction);
     },
     onPanResponderTerminate: () => undefined,
   }), [navigate]);
