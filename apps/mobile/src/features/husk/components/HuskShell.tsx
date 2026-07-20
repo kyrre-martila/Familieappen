@@ -19,7 +19,7 @@ import { useTaskMutations } from "../hooks/useTaskMutations";
 import type { SchoolWeekReminderViewModel } from "../models";
 import type { TaskViewModel } from "../taskModel";
 
-export function HuskShell() {
+export function HuskShell({ topInset = "safe" }: { topInset?: "safe" | "none" } = {}) {
   const [filter, setFilter] = useState<ReminderFilter>("active");
   const [query, setQuery] = useState("");
   const [view, setView] = useState<HuskView>("reminders");
@@ -54,7 +54,7 @@ export function HuskShell() {
   const visibleSchoolWeek = useMemo(() => selectedChildId ? husk.schoolWeek.filter((item) => item.childFamilyMemberId === selectedChildId) : husk.schoolWeek, [husk.schoolWeek, selectedChildId]);
   const groupedSchoolWeek = useMemo(() => groupSchoolWeekByDay(visibleSchoolWeek), [visibleSchoolWeek]);
   const action = filter === "active" ? "complete" : "undo";
-  return <Screen bottomInset="tab" refreshControl={<RefreshControl refreshing={husk.refreshing} onRefresh={() => void husk.refresh()} tintColor={theme.colors.primary} />}>
+  return <Screen bottomInset="tab" topInset={topInset} refreshControl={<RefreshControl refreshing={husk.refreshing} onRefresh={() => void husk.refresh()} tintColor={theme.colors.primary} />}>
     <View style={styles.header}><AppText variant="title">Husk</AppText><AppText style={styles.description}>Påminnelser og lister for familien.</AppText></View>
     <HuskViewSwitcher view={view} onChange={(nextView) => setView(selectHuskView({ view, reminderFilter: filter }, nextView).view)} />
     {view === "tasks" ? <Pressable accessibilityRole="button" accessibilityLabel="Legg til oppgave" onPress={() => { setEditingTask(null); setTaskFormOpen(true); }} style={styles.addButton}><AppText style={styles.addButtonText}>+ Ny oppgave</AppText></Pressable> : null}

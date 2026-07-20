@@ -14,7 +14,7 @@ import { CalendarEventCard } from "./CalendarEventCard";
 
 type CalendarView = "day" | "month" | "list";
 
-export function CalendarShell() {
+export function CalendarShell({ topInset = "safe" }: { topInset?: "safe" | "none" } = {}) {
   const [view, setView] = useState<CalendarView>("day");
   const calendar = useCalendar();
   const eventDates = new Set(calendar.events.map((event) => event.date));
@@ -23,7 +23,7 @@ export function CalendarShell() {
   const filteredMonthEvents = useMemo(() => calendar.eventsForMonth.filter((event) => sourceFilter === "all" || event.source === sourceFilter), [calendar.eventsForMonth, sourceFilter]);
   const filteredSelectedEvents = useMemo(() => calendar.eventsForSelectedDate.filter((event) => sourceFilter === "all" || event.source === sourceFilter), [calendar.eventsForSelectedDate, sourceFilter]);
   const groupedMonthEvents = useMemo(() => monthDates.map((date) => ({ date, events: filteredMonthEvents.filter((event) => event.date === date) })).filter((group) => group.events.length), [filteredMonthEvents, monthDates]);
-  return <Screen bottomInset="tab" refreshControl={<RefreshControl refreshing={calendar.refreshing} onRefresh={calendar.refresh} tintColor={theme.colors.primary} />}>
+  return <Screen bottomInset="tab" topInset={topInset} refreshControl={<RefreshControl refreshing={calendar.refreshing} onRefresh={calendar.refresh} tintColor={theme.colors.primary} />}>
     <View style={styles.header}>
       <AppText variant="label">Kalender</AppText>
       <AppText variant="title">{formatMonthTitle(calendar.selectedDate)}</AppText>
