@@ -14,3 +14,8 @@ export function getAgendaStartDate<T extends AgendaEventLike>(events: T[], today
   const index = getAgendaStartIndex(sorted, today);
   return index >= 0 ? sorted[index]?.date ?? null : null;
 }
+
+
+export function shouldRunInitialAgendaScroll({ view, targetDate, didScroll, hasMeasuredTarget }: { view: "day" | "month" | "list"; targetDate: string | null; didScroll: boolean; hasMeasuredTarget: boolean }) {
+  return view === "list" && Boolean(targetDate) && !didScroll && hasMeasuredTarget;
+}
