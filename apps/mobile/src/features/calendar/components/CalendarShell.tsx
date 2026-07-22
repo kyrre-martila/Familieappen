@@ -27,7 +27,7 @@ import {
 import { useCalendar } from "../hooks/useCalendar";
 import { CalendarDateStrip } from "./CalendarDateStrip";
 import { CalendarEventCard } from "./CalendarEventCard";
-import { getAgendaStartDate } from "../agendaStart";
+import { getAgendaStartDate, shouldRunInitialAgendaScroll } from "../agendaStart";
 
 type CalendarView = "day" | "month" | "list";
 
@@ -62,15 +62,15 @@ export function CalendarShell({
   const agendaStartDate = useMemo(() => getAgendaStartDate(calendar.eventsForAgenda, calendar.today), [calendar.eventsForAgenda, calendar.today]);
   const scrollRef = useRef<ScrollView>(null);
   const agendaLayouts = useRef<Record<string, number>>({});
+  const [agendaLayoutVersion, setAgendaLayoutVersion] = useState(0);
   const didPositionAgenda = useRef(false);
   useEffect(() => {
-    if (view !== "list") { didPositionAgenda.current = false; return; }
-    if (!agendaStartDate || didPositionAgenda.current) return;
-    const y = agendaLayouts.current[agendaStartDate];
-    if (typeof y !== "number") return;
+    if (view !== "list") return;
+    const y = agendaStartDate ? agendaLayouts.current[agendaStartDate] : undefined;
+    if (!shouldRunInitialAgendaScroll({ view, targetDate: agendaStartDate, didScroll: didPositionAgenda.current, hasMeasuredTarget: typeof y === "number" })) return;
     didPositionAgenda.current = true;
-    requestAnimationFrame(() => scrollRef.current?.scrollTo({ y: Math.max(0, y - theme.spacing.md), animated: false }));
-  }, [agendaStartDate, groupedAgendaEvents, view]);
+    requestAnimationFrame(() => scrollRef.current?.scrollTo({ y: Math.max(0, y ?? 0), animated: false }));
+  }, [agendaStartDate, agendaLayoutVersion, view]);
   const navigateDateStrip = (direction: "back" | "forward", days = 1) =>
     calendar.setSelectedDate(
       formatDateString(
@@ -242,7 +242,17 @@ export function CalendarShell({
             />
           ) : (
             groupedAgendaEvents.map((group) => (
-              <View key={group.date} style={styles.eventList} onLayout={(event) => { agendaLayouts.current[group.date] = event.nativeEvent.layout.y; }}>
+              <View
+                key={group.date}
+                style={styles.eventList}
+                onLayout={(layoutEvent) => {
+                  const nextY = layoutEvent.nativeEvent.layout.y + 28;
+                  if (agendaLayouts.current[group.date] !== nextY) {
+                    agendaLayouts.current[group.date] = nextY;
+                    setAgendaLayoutVersion((version) => version + 1);
+                  }
+                }}
+              >
                 <AppText variant="label">
                   {formatSelectedDate(group.date)}
                 </AppText>
