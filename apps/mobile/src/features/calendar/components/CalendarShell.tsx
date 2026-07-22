@@ -27,6 +27,7 @@ import {
 import { useCalendar } from "../hooks/useCalendar";
 import { CalendarDateStrip } from "./CalendarDateStrip";
 import { CalendarEventCard } from "./CalendarEventCard";
+import { getAgendaStartDate } from "../agendaStart";
 
 type CalendarView = "day" | "month" | "list";
 
@@ -58,7 +59,7 @@ export function CalendarShell({
         })),
     [calendar.eventsForAgenda],
   );
-  const agendaStartDate = useMemo(() => groupedAgendaEvents.find((group) => group.date >= calendar.today)?.date ?? groupedAgendaEvents.at(-1)?.date ?? null, [calendar.today, groupedAgendaEvents]);
+  const agendaStartDate = useMemo(() => getAgendaStartDate(calendar.eventsForAgenda, calendar.today), [calendar.eventsForAgenda, calendar.today]);
   const scrollRef = useRef<ScrollView>(null);
   const agendaLayouts = useRef<Record<string, number>>({});
   const didPositionAgenda = useRef(false);
@@ -70,12 +71,12 @@ export function CalendarShell({
     didPositionAgenda.current = true;
     requestAnimationFrame(() => scrollRef.current?.scrollTo({ y: Math.max(0, y - theme.spacing.md), animated: false }));
   }, [agendaStartDate, groupedAgendaEvents, view]);
-  const navigateDateStrip = (direction: "back" | "forward") =>
+  const navigateDateStrip = (direction: "back" | "forward", days = 1) =>
     calendar.setSelectedDate(
       formatDateString(
         addDays(
           parseDateString(calendar.selectedDate),
-          direction === "forward" ? 5 : -5,
+          direction === "forward" ? days : -days,
         ),
       ),
     );
@@ -202,7 +203,7 @@ export function CalendarShell({
                       key={date}
                       accessibilityRole="button"
                       accessibilityLabel={`${formatSelectedDate(date)}${isSelected ? ", valgt" : ""}${isToday ? ", i dag" : ""}${hasEvent ? ", har hendelser" : ""}`}
-                      onPress={() => calendar.setSelectedDate(date)}
+                      onPress={() => { calendar.setSelectedDate(date); setView("day"); }}
                       style={[
                         styles.monthDay,
                         outsideMonth && styles.monthDayOutside,

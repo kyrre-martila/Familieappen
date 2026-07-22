@@ -74,6 +74,13 @@ export function toLocalDateTimeString(date: string, time: string | null | undefi
   return `${date}T${allDay || !time ? "00:00" : time}:00.000Z`;
 }
 
+export function toAllDayEndDateTimeString(date: string): string {
+  const [year, month, day] = date.split("-").map(Number);
+  const next = new Date(year, month - 1, day);
+  next.setDate(next.getDate() + 1);
+  return `${next.getFullYear()}-${String(next.getMonth() + 1).padStart(2, "0")}-${String(next.getDate()).padStart(2, "0")}T00:00:00.000Z`;
+}
+
 export function recurrenceUntilToApiDateTime(date: string): string { return `${date}T23:59:59.999Z`; }
 export function apiDateTimeToLocalDate(value: string | null | undefined): string { return typeof value === "string" && datePattern.test(value.slice(0, 10)) ? value.slice(0, 10) : ""; }
 export function validateCalendarRecurrence(form: Pick<CalendarEventForm, "date" | "recurrenceFrequency" | "recurrenceUntil">): CalendarEventFormErrors {
@@ -119,13 +126,13 @@ export function calendarEventToDuplicateCreateForm(event: Parameters<typeof cale
 export function createCalendarEventPayload(form: CalendarEventForm): CreateCalendarEventPayload {
   return {
     title: form.title.trim(), description: form.description.trim() || null, location: form.location.trim() || null, icon: form.icon, reminderMinutesBefore: form.reminderMinutesBefore,
-    startsAt: toLocalDateTimeString(form.date, form.startTime, form.allDay), endsAt: form.allDay ? toLocalDateTimeString(form.date, null, true) : toLocalDateTimeString(form.date, form.endTime, false),
+    startsAt: toLocalDateTimeString(form.date, form.startTime, form.allDay), endsAt: form.allDay ? toAllDayEndDateTimeString(form.date) : toLocalDateTimeString(form.date, form.endTime, false),
     allDay: form.allDay, recurrenceFrequency: form.recurrenceFrequency, recurrenceUntil: form.recurrenceFrequency === "never" ? null : recurrenceUntilToApiDateTime(form.recurrenceUntil), ...(omitEmptyParticipantIds(form.participantFamilyMemberIds) ? { participantFamilyMemberIds: omitEmptyParticipantIds(form.participantFamilyMemberIds) } : {}),
   };
 }
 
 export function updateCalendarEventPayload(form: CalendarEventForm, options: { includeRecurrence?: boolean } = {}): SeriesUpdateCalendarEventPayload | OccurrenceUpdateCalendarEventPayload {
-  const payload: SeriesUpdateCalendarEventPayload = { title: form.title.trim(), description: form.description.trim() || null, location: form.location.trim() || null, startsAt: toLocalDateTimeString(form.date, form.startTime, form.allDay), endsAt: form.allDay ? toLocalDateTimeString(form.date, null, true) : toLocalDateTimeString(form.date, form.endTime, false), allDay: form.allDay, participantFamilyMemberIds: form.participantFamilyMemberIds };
+  const payload: SeriesUpdateCalendarEventPayload = { title: form.title.trim(), description: form.description.trim() || null, location: form.location.trim() || null, startsAt: toLocalDateTimeString(form.date, form.startTime, form.allDay), endsAt: form.allDay ? toAllDayEndDateTimeString(form.date) : toLocalDateTimeString(form.date, form.endTime, false), allDay: form.allDay, participantFamilyMemberIds: form.participantFamilyMemberIds };
   if (options.includeRecurrence) { payload.recurrenceFrequency = form.recurrenceFrequency; payload.recurrenceUntil = form.recurrenceFrequency === "never" ? null : recurrenceUntilToApiDateTime(form.recurrenceUntil); }
   return payload;
 }

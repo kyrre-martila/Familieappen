@@ -14,6 +14,7 @@ assertEqual(validateCreateCalendarEventForm(form({ recurrenceFrequency: "monthly
 assertEqual(validateCreateCalendarEventForm(form({ recurrenceFrequency: "yearly", recurrenceUntil: "2026-10-25" })), {}, "Norwegian DST date stays valid");
 assertEqual(isValidDateString("2026-10-25"), true, "DST date validates without UTC parsing");
 assertEqual(toLocalDateTimeString("2026-10-25", "09:30", false), "2026-10-25T09:30:00.000Z", "local date/time string is built without toISOString UTC shift");
+assertEqual(createCalendarEventPayload(form({ allDay: true })), { title: "Trening", description: "Ta med sko", location: "Hallen", icon: "family", reminderMinutesBefore: null, startsAt: "2026-03-29T00:00:00.000Z", endsAt: "2026-03-30T00:00:00.000Z", allDay: true, recurrenceFrequency: "never", recurrenceUntil: null }, "heldagshendelse sender sluttdato etter startdato");
 assertEqual(createCalendarEventPayload(form()), { title: "Trening", description: "Ta med sko", location: "Hallen", icon: "family", reminderMinutesBefore: null, startsAt: "2026-03-29T09:00:00.000Z", endsAt: "2026-03-29T10:00:00.000Z", allDay: false, recurrenceFrequency: "never", recurrenceUntil: null }, "payload omits empty participant ids for create contract");
 assertEqual(createCalendarEventPayload(form({ recurrenceFrequency: "weekly", recurrenceUntil: "2026-04-30" })).recurrenceUntil, "2026-04-30T23:59:59.999Z", "recurrence until is sent as backend end-of-day string without toISOString");
 
