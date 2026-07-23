@@ -2,7 +2,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { Ionicons } from "@expo/vector-icons";
 import { router } from "expo-router";
 import { Pressable, RefreshControl, ScrollView, StyleSheet, View } from "react-native";
-import { Screen } from "../../../components/Screen";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { AppText } from "../../../components/AppText";
 import {
   EmptyState,
@@ -35,6 +35,7 @@ export function CalendarShell({
   topInset = "safe",
 }: { topInset?: "safe" | "none" } = {}) {
   const [view, setView] = useState<CalendarView>("day");
+  const insets = useSafeAreaInsets();
   const calendar = useCalendar();
   const eventDates = useMemo(
     () => new Set(calendar.eventsForMonth.map((event) => event.date)),
@@ -86,18 +87,11 @@ export function CalendarShell({
     );
 
   return (
-    <Screen
-      bottomInset="tab"
-      topInset={topInset}
-      style={styles.screen}
-      scrollRef={scrollRef}
-      refreshControl={
-        <RefreshControl
-          refreshing={calendar.refreshing}
-          onRefresh={calendar.refresh}
-          tintColor={theme.colors.primary}
-        />
-      }
+    <View
+      style={[
+        styles.root,
+        { paddingTop: topInset === "safe" ? insets.top + theme.spacing.lg : theme.spacing.lg },
+      ]}
     >
       <View style={styles.toolbar} accessibilityLabel="Kalenderhandlinger">
         <Pressable
@@ -135,6 +129,18 @@ export function CalendarShell({
           />
         </View>
       </View>
+      <ScrollView
+        ref={scrollRef}
+        style={styles.contentScroll}
+        contentContainerStyle={styles.content}
+        refreshControl={
+          <RefreshControl
+            refreshing={calendar.refreshing}
+            onRefresh={calendar.refresh}
+            tintColor={theme.colors.primary}
+          />
+        }
+      >
       {view === "day" ? (
         <>
           <CalendarDateStrip
@@ -301,7 +307,8 @@ export function CalendarShell({
           )}
         </View>
       )}
-    </Screen>
+      </ScrollView>
+    </View>
   );
 }
 function MonthToolbar({
@@ -370,7 +377,9 @@ function ViewButton({
   );
 }
 const styles = StyleSheet.create({
-  screen: { paddingTop: theme.spacing.sm, gap: theme.spacing.md },
+  root: { flex: 1, paddingHorizontal: theme.spacing.lg, gap: theme.spacing.md, backgroundColor: theme.colors.background },
+  contentScroll: { flex: 1, marginHorizontal: -theme.spacing.lg },
+  content: { gap: theme.spacing.md, paddingHorizontal: theme.spacing.lg, paddingBottom: theme.spacing.xxl },
   toolbar: {
     flexDirection: "row",
     alignItems: "center",

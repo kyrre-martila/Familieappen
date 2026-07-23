@@ -15,8 +15,17 @@ export function toggleCalendarParticipantId(selectedIds: string[], memberId: str
   return selectedIds.includes(memberId) ? selectedIds.filter((id) => id !== memberId) : [...selectedIds, memberId];
 }
 
+export function getSelectableCalendarParticipantIds(members: (Pick<FamilyMember, "id"> & Partial<Pick<FamilyMember, "displayName">>)[]): string[] {
+  const ids: string[] = [];
+  for (const member of members) {
+    if (!member?.id || ("displayName" in member && !member.displayName?.trim()) || ids.includes(member.id)) continue;
+    ids.push(member.id);
+  }
+  return ids;
+}
+
 export function toggleAllCalendarParticipantIds(selectedIds: string[], members: Pick<FamilyMember, "id">[]): string[] {
-  const allIds = members.map((member) => member.id);
+  const allIds = getSelectableCalendarParticipantIds(members);
   if (allIds.length === 0) return [];
   return allIds.every((id) => selectedIds.includes(id)) ? [] : allIds;
 }

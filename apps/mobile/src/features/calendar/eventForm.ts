@@ -55,7 +55,26 @@ export function isCalendarRecurrenceFrequency(value: unknown): value is Calendar
 export function getCalendarRecurrenceLabel(frequency: CalendarEventRecurrenceFrequency): string { return ({ never: "Aldri", daily: "Daglig", weekly: "Ukentlig", monthly: "Månedlig", yearly: "Årlig" } as const)[frequency]; }
 export function getCalendarRecurrenceDescription(frequency: CalendarEventRecurrenceFrequency): string { return ({ never: "Hendelsen skjer bare én gang.", daily: "Hendelsen gjentas hver dag.", weekly: "Hendelsen gjentas hver uke.", monthly: "Hendelsen gjentas hver måned.", yearly: "Hendelsen gjentas hvert år." } as const)[frequency]; }
 export function shouldShowCalendarRecurrenceUntil(frequency: CalendarEventRecurrenceFrequency): boolean { return frequency !== "never"; }
-export const defaultCalendarEventForm = (date: string): CalendarEventForm => ({ title: "", date, allDay: true, startTime: "09:00", endTime: "10:00", location: "", description: "", recurrenceFrequency: "never", recurrenceUntil: "", icon: "family", reminderMinutesBefore: null, participantFamilyMemberIds: [] });
+function toFormDateTimeParts(date: Date): { date: string; time: string } {
+  return {
+    date: `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, "0")}-${String(date.getDate()).padStart(2, "0")}`,
+    time: `${String(date.getHours()).padStart(2, "0")}:${String(date.getMinutes()).padStart(2, "0")}`,
+  };
+}
+
+export function getNextWholeHourEventWindow(now: Date = new Date()): { date: string; startTime: string; endTime: string } {
+  const start = new Date(now.getTime());
+  start.setHours(start.getHours() + 1, 0, 0, 0);
+  const end = new Date(start.getTime());
+  end.setMinutes(end.getMinutes() + 60);
+  const startParts = toFormDateTimeParts(start);
+  return { date: startParts.date, startTime: startParts.time, endTime: toFormDateTimeParts(end).time };
+}
+
+export const defaultCalendarEventForm = (date?: string, now: Date = new Date()): CalendarEventForm => {
+  const defaults = getNextWholeHourEventWindow(now);
+  return { title: "", date: date ?? defaults.date, allDay: false, startTime: defaults.startTime, endTime: defaults.endTime, location: "", description: "", recurrenceFrequency: "never", recurrenceUntil: "", icon: "family", reminderMinutesBefore: null, participantFamilyMemberIds: [] };
+};
 
 export function isValidDateString(date: string): boolean {
   if (!datePattern.test(date)) return false;

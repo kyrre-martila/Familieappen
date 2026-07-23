@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { Pressable, View, StyleSheet } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { Ionicons } from "@expo/vector-icons";
@@ -6,13 +6,13 @@ import { router, useLocalSearchParams } from "expo-router";
 import { AppText } from "../../../src/components/AppText";
 import { ErrorState, LoadingState } from "../../../src/components/States";
 import { CalendarEventForm } from "../../../src/features/calendar/components/CalendarEventForm";
-import { formatDateString } from "../../../src/features/calendar/date";
 import { calendarEventToDuplicateCreateForm, defaultCalendarEventForm, type CalendarEventForm as Form } from "../../../src/features/calendar/eventForm";
 import { useCreateCalendarEvent } from "../../../src/features/calendar/hooks/useCreateCalendarEvent";
 import { useCalendarFamilyMembers } from "../../../src/features/calendar/hooks/useCalendarFamilyMembers";
 import { getCalendarEventBackAction } from "../../../src/features/calendar/navigation";
 import { parseCalendarEventDuplicateParams } from "../../../src/features/calendar/duplicateEventModel";
 import { useDuplicateCalendarEventSource } from "../../../src/features/calendar/duplicateEvent";
+import { getSelectableCalendarParticipantIds } from "../../../src/features/calendar/participants";
 import { theme } from "../../../src/theme/tokens";
 
 function backToCalendar() { if (getCalendarEventBackAction(router.canGoBack()) === "back") router.back(); else router.replace("/(app)/(tabs)/calendar"); }
@@ -20,8 +20,10 @@ function backToCalendar() { if (getCalendarEventBackAction(router.canGoBack()) =
 export default function CreateCalendarEventScreen() {
   const params = useLocalSearchParams<{ duplicateEventId?: string; sourceDate?: string; occurrenceDate?: string }>();
   const duplicateParams = parseCalendarEventDuplicateParams(params);
-  const [form, setForm] = useState<Form>(() => defaultCalendarEventForm(formatDateString(new Date())));
+  const [form, setForm] = useState<Form>(() => defaultCalendarEventForm());
   const [hydratedDuplicateKey, setHydratedDuplicateKey] = useState<string | null>(null);
+  const participantsInitializedRef = useRef(false);
+  const participantsDirtyRef = useRef(false);
   const create = useCreateCalendarEvent();
   const familyMembers = useCalendarFamilyMembers();
   const duplicate = useDuplicateCalendarEventSource(duplicateParams.error ? null : duplicateParams.duplicateEventId, duplicateParams.sourceDate, duplicateParams.occurrenceDate);
@@ -30,8 +32,17 @@ export default function CreateCalendarEventScreen() {
     if (!duplicate.rawEvent || !duplicateKey || hydratedDuplicateKey === duplicateKey) return;
     setForm(calendarEventToDuplicateCreateForm(duplicate.rawEvent));
     setHydratedDuplicateKey(duplicateKey);
+    participantsInitializedRef.current = true;
   }, [duplicate.rawEvent, duplicateKey, hydratedDuplicateKey]);
-  const update = <K extends keyof Form>(key: K, value: Form[K]) => { create.resetError(); setForm((current) => ({ ...current, [key]: value })); };
+
+  useEffect(() => {
+    if (duplicateKey || participantsInitializedRef.current || participantsDirtyRef.current || familyMembers.loading) return;
+    const participantIds = getSelectableCalendarParticipantIds(familyMembers.familyMembers);
+    if (!participantIds.length) return;
+    participantsInitializedRef.current = true;
+    setForm((current) => current.participantFamilyMemberIds.length ? current : { ...current, participantFamilyMemberIds: participantIds });
+  }, [duplicateKey, familyMembers.familyMembers, familyMembers.loading]);
+  const update = <K extends keyof Form>(key: K, value: Form[K]) => { if (key === "participantFamilyMemberIds") participantsDirtyRef.current = true; create.resetError(); setForm((current) => ({ ...current, [key]: value })); };
   if (duplicateParams.error) return <SafeAreaView style={styles.root}><ErrorState title="Kan ikke duplisere hendelse" description={duplicateParams.error} onRetry={backToCalendar} /></SafeAreaView>;
   if (create.familiesLoading || (duplicateParams.duplicateEventId && duplicate.loading)) return <SafeAreaView style={styles.root}><LoadingState title={duplicateParams.duplicateEventId ? "Henter hendelse" : "Klargjør kalender"} description={duplicateParams.duplicateEventId ? "Henter hendelsen som skal dupliseres." : "Henter familien før hendelsen kan lagres."} /></SafeAreaView>;
   if (create.missingContext || duplicate.missingContext) return <SafeAreaView style={styles.root}><ErrorState title="Mangler familietilgang" description="Vi finner ikke en aktiv familie for kalenderen akkurat nå." onRetry={() => router.replace("/(app)/(tabs)/calendar")} /></SafeAreaView>;
