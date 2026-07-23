@@ -1,5 +1,5 @@
 import type { CalendarEvent } from "@familieappen/shared";
-import { calendarEventToDuplicateCreateForm, calendarRecurrenceOptions, createCalendarEventPayload, getCalendarRecurrenceLabel, isValidDateString, toLocalDateTimeString, validateCreateCalendarEventForm, type CreateCalendarEventForm } from "./createEventForm";
+import { calendarEventToDuplicateCreateForm, calendarRecurrenceOptions, createCalendarEventPayload, defaultCalendarEventForm, getNextWholeHourEventWindow, getCalendarRecurrenceLabel, isValidDateString, toLocalDateTimeString, validateCreateCalendarEventForm, type CreateCalendarEventForm } from "./createEventForm";
 function assertEqual<T>(actual: T, expected: T, description: string): void { if (JSON.stringify(actual) !== JSON.stringify(expected)) throw new Error(`${description}: expected ${JSON.stringify(expected)}, got ${JSON.stringify(actual)}`); }
 function form(overrides: Partial<CreateCalendarEventForm> = {}): CreateCalendarEventForm { return { title: " Trening ", date: "2026-03-29", allDay: false, startTime: "09:00", endTime: "10:00", location: " Hallen ", description: " Ta med sko ", recurrenceFrequency: "never", recurrenceUntil: "", icon: "family", reminderMinutesBefore: null, participantFamilyMemberIds: [], ...overrides }; }
 assertEqual(calendarRecurrenceOptions.map(getCalendarRecurrenceLabel), ["Aldri", "Daglig", "Ukentlig", "Månedlig", "Årlig"], "all supported frequencies have Norwegian labels");
@@ -24,3 +24,14 @@ assertEqual(duplicate, { title: "Bursdag", date: "2026-07-15", allDay: false, st
 assertEqual(createCalendarEventPayload(duplicate), { title: "Bursdag", description: "Kake", location: "Hjemme", icon: "birthday", reminderMinutesBefore: 30, startsAt: "2026-07-15T17:00:00.000Z", endsAt: "2026-07-15T19:00:00.000Z", allDay: false, recurrenceFrequency: "weekly", recurrenceUntil: "2026-08-15T23:59:59.999Z", participantFamilyMemberIds: ["member-1", "member-2"] }, "duplicate create payload creates a manual event without id/import/occurrence metadata");
 assertEqual(calendarEventToDuplicateCreateForm(event({ source: "ics", icsSourceId: "ics-1", externalUid: "external-1" })).participantFamilyMemberIds, ["member-1", "member-2"], "imported events can be mapped to a new manual create form");
 assertEqual(calendarEventToDuplicateCreateForm(event({ id: "occ-1", isRecurringOccurrence: true, recurringEventId: "series-1", occurrenceDate: "2026-07-22", date: "2026-07-22" })).recurrenceFrequency, "weekly", "occurrence duplicate follows hydrated occurrence recurrence data");
+
+const window1512 = getNextWholeHourEventWindow(new Date(2026, 6, 22, 15, 12, 34, 567));
+assertEqual(window1512, { date: "2026-07-22", startTime: "16:00", endTime: "17:00" }, "15:12 rounds to 16:00-17:00 and clears smaller units");
+assertEqual(getNextWholeHourEventWindow(new Date(2026, 6, 22, 15, 59)), { date: "2026-07-22", startTime: "16:00", endTime: "17:00" }, "15:59 rounds to 16:00-17:00");
+assertEqual(getNextWholeHourEventWindow(new Date(2026, 6, 22, 15, 0)), { date: "2026-07-22", startTime: "16:00", endTime: "17:00" }, "exact hour uses the next whole hour");
+assertEqual(getNextWholeHourEventWindow(new Date(2026, 6, 22, 23, 20)), { date: "2026-07-23", startTime: "00:00", endTime: "01:00" }, "late evening defaults cross to the next local date");
+const unchangedInput = new Date(2026, 6, 22, 15, 12, 34, 567);
+getNextWholeHourEventWindow(unchangedInput);
+assertEqual(unchangedInput.getTime(), new Date(2026, 6, 22, 15, 12, 34, 567).getTime(), "next whole hour helper does not mutate input Date");
+assertEqual(defaultCalendarEventForm("2026-07-22", new Date(2026, 6, 22, 15, 12)).allDay, false, "new empty event is not all-day by default");
+assertEqual(defaultCalendarEventForm(undefined, new Date(2026, 6, 22, 23, 20)).date, "2026-07-23", "default form date follows start date when next hour crosses midnight");

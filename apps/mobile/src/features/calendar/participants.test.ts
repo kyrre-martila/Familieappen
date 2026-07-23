@@ -1,5 +1,5 @@
 import type { FamilyMember } from "@familieappen/shared";
-import { getCalendarEventParticipantIds, omitEmptyParticipantIds, toggleAllCalendarParticipantIds, toggleCalendarParticipantId } from "./participants";
+import { getCalendarEventParticipantIds, getSelectableCalendarParticipantIds, omitEmptyParticipantIds, toggleAllCalendarParticipantIds, toggleCalendarParticipantId } from "./participants";
 
 function assertEqual<T>(actual: T, expected: T, description: string): void { if (JSON.stringify(actual) !== JSON.stringify(expected)) throw new Error(`${description}: expected ${JSON.stringify(expected)}, got ${JSON.stringify(actual)}`); }
 const members = [{ id: "even" }, { id: "fiona" }, { id: "ada" }] as FamilyMember[];
@@ -13,3 +13,5 @@ assertEqual(toggleAllCalendarParticipantIds(["even"], members), ["even", "fiona"
 assertEqual(toggleAllCalendarParticipantIds([], []), [], "empty family member list remains empty");
 assertEqual(omitEmptyParticipantIds([]), undefined, "form to payload omits empty participant array for create");
 assertEqual(omitEmptyParticipantIds(["even"]), ["even"], "form to payload keeps selected participant ids");
+
+assertEqual(getSelectableCalendarParticipantIds([{ id: "even", displayName: "Even" }, { id: "pending", displayName: "" }, { id: "even", displayName: "Even duplicate" }, { id: "ada", displayName: "Ada" }] as FamilyMember[]), ["even", "ada"], "default participant selection keeps valid active-looking members and removes blank/duplicate ids");
