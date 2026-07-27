@@ -18,9 +18,13 @@ export function RequireAuth({ children }: { children: ReactNode }) {
 
 export function RequireFamily({ children }: { children: ReactNode }) {
   const { state, retry } = useFamily();
+  const router = useRouter();
+  useEffect(() => { if (state.status === "no-family") router.replace("/onboarding/family-start"); }, [router, state.status]);
   if (state.status === "ready") return <>{children}</>;
   if (state.status === "pending") return <LockedFeatureState />;
   if (state.status === "error") return <RetryState title="Kunne ikke sjekke familietilgang" message={state.error.message} retry={async () => retry()} />;
+  if (state.status === "no-family") return <LoadingState title="Sender deg til familieoppsett" />;
+  if (state.status === "idle") return <LoadingState title="Venter på innlogging" />;
   return <LoadingState title="Sjekker familietilgang" />;
 }
 

@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import { beforeEach, test } from "node:test";
 import type { FamilyWithMembership } from "./api";
-import { chooseActiveFamily, clearFamilyCache, loadAvailableFamilies } from "./auth-family";
+import { chooseActiveFamily, clearFamilyCache, forceFamilyBootstrapRestart, loadAvailableFamilies } from "./auth-family";
 import { clearAuthSession, saveAccessToken } from "./session";
 
 class MemoryStorage implements Storage {
@@ -99,12 +99,39 @@ test("chooseActiveFamily clears the bootstrap cache", async () => {
   assert.equal(calls, 2);
 });
 
+test("a retry can abort the old family request and starts a fresh request", async () => {
+  let calls = 0;
+  let firstAborted = false;
+  globalThis.fetch = (_input, init) => {
+    calls += 1;
+    if (calls === 2) return Promise.resolve(response([familyWithMembership("new-family")]));
+    return new Promise<Response>((_resolve, reject) => {
+      init?.signal?.addEventListener("abort", () => {
+        firstAborted = true;
+        reject(new DOMException("Aborted", "AbortError"));
+      }, { once: true });
+    });
+  };
+
+  const oldController = new AbortController();
+  const oldRequest = loadAvailableFamilies(undefined, oldController.signal);
+  oldController.abort();
+  forceFamilyBootstrapRestart();
+  const freshResult = await loadAvailableFamilies(undefined, new AbortController().signal);
+
+  await assert.rejects(oldRequest, (error: unknown) => error instanceof Error && "code" in error && error.code === "request.aborted");
+  assert.equal(firstAborted, true);
+  assert.equal(calls, 2);
+  assert.equal(freshResult.status, "ready");
+  assert.equal(freshResult.activeFamilyId, "new-family");
+});
+
 function mockListFamilies(handler: () => Promise<FamilyWithMembership[]>): void {
-  globalThis.fetch = async () => ({
-    ok: true,
-    status: 200,
-    json: async () => ({ data: await handler() })
-  }) as Response;
+  globalThis.fetch = async () => response(await handler());
+}
+
+function response(families: FamilyWithMembership[]): Response {
+  return { ok: true, status: 200, json: async () => ({ data: families }) } as Response;
 }
 
 function familyWithMembership(familyId: string): FamilyWithMembership {

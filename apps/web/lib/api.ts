@@ -391,13 +391,21 @@ export async function resetPassword(input: { token: string; password: string }):
   });
 }
 
-export async function refreshAuthSession(): Promise<RefreshResponse> {
-  if (refreshPromise) return refreshPromise;
-  refreshPromise = apiRequest<RefreshResponse>("/auth/refresh", {
+export async function refreshAuthSession(signal?: AbortSignal): Promise<RefreshResponse> {
+  // A cancellable restore owns its refresh. Sharing it would let an aborted
+  // restore either cancel, or block, the operation that superseded it.
+  if (!signal && refreshPromise) return refreshPromise;
+  const operation = apiRequest<RefreshResponse>("/auth/refresh", {
     method: "POST",
     includeAuth: false,
-    retryOnUnauthorized: false
+    retryOnUnauthorized: false,
+    signal
   }).then((response) => {
+    if (!signal?.aborted) saveAccessToken(response.tokens.accessToken);
+    return response;
+  });
+  if (signal) return operation;
+  refreshPromise = operation.then((response) => {
     saveAccessToken(response.tokens.accessToken);
     return response;
   }).finally(() => {
@@ -431,8 +439,8 @@ export async function recordAdvertisementClick(advertisementId: string, placemen
   return apiRequest<{ recorded: true }>(`/advertisements/${encodeURIComponent(advertisementId)}/click`, { method: "POST", body: { placement } });
 }
 
-export async function getCurrentUserProfile(): Promise<UserProfile> {
-  return apiRequest<UserProfile>("/me");
+export async function getCurrentUserProfile(signal?: AbortSignal): Promise<UserProfile> {
+  return apiRequest<UserProfile>("/me", { signal });
 }
 
 export async function updateCurrentUserProfile(input: UserProfileUpdate): Promise<UserProfile> {
@@ -477,8 +485,8 @@ export async function createFamily(input: { name: string }): Promise<FamilyDetai
   }));
 }
 
-export async function listFamilies(): Promise<FamilyWithMembership[]> {
-  return apiRequest<FamilyWithMembership[]>("/families");
+export async function listFamilies(signal?: AbortSignal): Promise<FamilyWithMembership[]> {
+  return apiRequest<FamilyWithMembership[]>("/families", { signal });
 }
 
 export async function joinFamilyByCode(code: string): Promise<FamilyInvitation> {
@@ -1320,9 +1328,10 @@ export async function apiRequest<TData>(
   if (!response.ok) {
     if (response.status === 401 && includeAuth && (options.retryOnUnauthorized ?? true)) {
       try {
-        await refreshAuthSession();
+        await refreshAuthSession(options.signal);
         return apiRequest<TData>(path, { ...options, retryOnUnauthorized: false });
-      } catch {
+      } catch (error) {
+        if (options.signal?.aborted || (error instanceof ApiError && error.code === "request.aborted")) throw error;
         clearAuthSession();
         unauthorizedListener?.();
         throw new ApiError("Your session has expired. Please sign in again.", 401, "auth.expired_token");

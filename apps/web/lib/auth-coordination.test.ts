@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import { OperationEpoch, parseAuthSyncEvent, ResumeGate } from "./auth-coordination";
+import { OperationEpoch, parseAuthSyncEvent, parseAuthSyncMessage, ResumeGate } from "./auth-coordination";
 
 test("a stale or aborted operation cannot overwrite newer auth state", () => {
   const epoch = new OperationEpoch();
@@ -23,4 +23,10 @@ test("cross-tab messages accept logout without transporting token data", () => {
   assert.equal(parseAuthSyncEvent({ event: "logout" }), "logout");
   assert.equal(parseAuthSyncEvent({ event: "login", token: "must-be-ignored" }), "login");
   assert.equal(parseAuthSyncEvent({ event: "access-token" }), null);
+});
+
+test("cross-tab messages require an id so dual transports can be deduplicated", () => {
+  assert.deepEqual(parseAuthSyncMessage({ event: "logout", id: "event-1" }), { event: "logout", id: "event-1" });
+  assert.equal(parseAuthSyncMessage({ event: "logout" }), null);
+  assert.equal(parseAuthSyncMessage({ event: "logout", id: "event-1", token: "not-forwarded" })?.event, "logout");
 });
