@@ -392,26 +392,28 @@ export async function resetPassword(input: { token: string; password: string }):
 }
 
 export async function refreshAuthSession(signal?: AbortSignal): Promise<RefreshResponse> {
-  // A cancellable restore owns its refresh. Sharing it would let an aborted
-  // restore either cancel, or block, the operation that superseded it.
-  if (!signal && refreshPromise) return refreshPromise;
-  const operation = apiRequest<RefreshResponse>("/auth/refresh", {
-    method: "POST",
-    includeAuth: false,
-    retryOnUnauthorized: false,
-    signal
-  }).then((response) => {
-    if (!signal?.aborted) saveAccessToken(response.tokens.accessToken);
-    return response;
-  });
-  if (signal) return operation;
-  refreshPromise = operation.then((response) => {
-    saveAccessToken(response.tokens.accessToken);
-    return response;
-  }).finally(() => {
-    refreshPromise = null;
-  });
-  return refreshPromise;
+  if (!refreshPromise) {
+    let operation: Promise<RefreshResponse>;
+    operation = apiRequest<RefreshResponse>("/auth/refresh", {
+      method: "POST",
+      includeAuth: false,
+      retryOnUnauthorized: false
+    }).then((response) => {
+      saveAccessToken(response.tokens.accessToken);
+      return response;
+    }).catch((error) => {
+      // The shared refresh failed, rather than one caller merely giving up its
+      // wait. Consequently this transition is performed exactly once.
+      clearAuthSession();
+      unauthorizedListener?.();
+      throw error;
+    }).finally(() => {
+      if (refreshPromise === operation) refreshPromise = null;
+    });
+    refreshPromise = operation;
+  }
+
+  return waitForPromiseWithAbortSignal(refreshPromise, signal);
 }
 
 export async function logout(): Promise<LogoutResponse> {
@@ -1275,6 +1277,7 @@ export async function apiRequest<TData>(
   path: string,
   options: { method?: string; body?: unknown; includeAuth?: boolean; familyId?: string; retryOnUnauthorized?: boolean; signal?: AbortSignal } = {}
 ): Promise<TData> {
+  if (options.signal?.aborted) throw requestAbortedError();
   const headers = new Headers({ Accept: "application/json" });
   const includeAuth = options.includeAuth ?? true;
 
@@ -1329,11 +1332,10 @@ export async function apiRequest<TData>(
     if (response.status === 401 && includeAuth && (options.retryOnUnauthorized ?? true)) {
       try {
         await refreshAuthSession(options.signal);
+        if (options.signal?.aborted) throw requestAbortedError();
         return apiRequest<TData>(path, { ...options, retryOnUnauthorized: false });
       } catch (error) {
         if (options.signal?.aborted || (error instanceof ApiError && error.code === "request.aborted")) throw error;
-        clearAuthSession();
-        unauthorizedListener?.();
         throw new ApiError("Your session has expired. Please sign in again.", 401, "auth.expired_token");
       }
     }
@@ -1355,6 +1357,28 @@ export async function apiRequest<TData>(
   const envelope = (await response.json()) as ApiEnvelope<TData>;
 
   return envelope.data;
+}
+
+/** Races only this caller's wait; it never forwards cancellation to operation. */
+function waitForPromiseWithAbortSignal<T>(operation: Promise<T>, signal?: AbortSignal): Promise<T> {
+  if (!signal) return operation;
+  if (signal.aborted) return Promise.reject(requestAbortedError());
+
+  return new Promise<T>((resolve, reject) => {
+    const abort = () => {
+      signal.removeEventListener("abort", abort);
+      reject(requestAbortedError());
+    };
+    signal.addEventListener("abort", abort, { once: true });
+    operation.then(
+      (value) => { signal.removeEventListener("abort", abort); resolve(value); },
+      (error) => { signal.removeEventListener("abort", abort); reject(error); }
+    );
+  });
+}
+
+function requestAbortedError(): ApiError {
+  return new ApiError("The request was cancelled.", 0, "request.aborted");
 }
 
 async function getErrorDetails(response: Response): Promise<[message: string, status: number, code?: string]> {
