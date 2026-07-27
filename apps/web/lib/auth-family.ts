@@ -98,6 +98,7 @@ export function requireAuth(
 
 export async function loadAvailableFamilies(
   preferredFamilyId?: string | null,
+  signal?: AbortSignal,
 ): Promise<FamilyBootstrapResult> {
   if (!getAccessToken()) {
     recordFamilyBootstrapFinish();
@@ -124,7 +125,7 @@ export async function loadAvailableFamilies(
       return cachedResult;
     }
 
-    if (familyBootstrapPromise) {
+    if (familyBootstrapPromise && !signal) {
       logFamilyBootstrap("bootstrap:retry", { reason: "reuse-in-flight" });
       return familyBootstrapPromise;
     }
@@ -137,7 +138,7 @@ export async function loadAvailableFamilies(
     cacheEnabled: canUseCache,
   });
 
-  const bootstrapPromise = fetchAvailableFamilies(preferredFamilyId);
+  const bootstrapPromise = fetchAvailableFamilies(preferredFamilyId, signal);
 
   if (!canUseCache) {
     try {
@@ -155,7 +156,9 @@ export async function loadAvailableFamilies(
     }
   }
 
-  familyBootstrapPromise = bootstrapPromise;
+  // Signal-owned provider attempts must never enter the shared in-flight slot:
+  // a retry needs a fresh request rather than an aborted predecessor.
+  if (!signal) familyBootstrapPromise = bootstrapPromise;
 
   try {
     const result = await bootstrapPromise;
@@ -291,8 +294,9 @@ export function getUserFacingApiMessage(
 
 async function fetchAvailableFamilies(
   preferredFamilyId?: string | null,
+  signal?: AbortSignal,
 ): Promise<FamilyBootstrapResult> {
-  const families = sortFamilies(await listFamilies());
+  const families = sortFamilies(await listFamilies(signal));
   const pendingRequest = getPendingFamilyRequest();
 
   if (families.length === 0) {

@@ -391,19 +391,29 @@ export async function resetPassword(input: { token: string; password: string }):
   });
 }
 
-export async function refreshAuthSession(): Promise<RefreshResponse> {
-  if (refreshPromise) return refreshPromise;
-  refreshPromise = apiRequest<RefreshResponse>("/auth/refresh", {
-    method: "POST",
-    includeAuth: false,
-    retryOnUnauthorized: false
-  }).then((response) => {
-    saveAccessToken(response.tokens.accessToken);
-    return response;
-  }).finally(() => {
-    refreshPromise = null;
-  });
-  return refreshPromise;
+export async function refreshAuthSession(signal?: AbortSignal): Promise<RefreshResponse> {
+  if (!refreshPromise) {
+    let operation: Promise<RefreshResponse>;
+    operation = apiRequest<RefreshResponse>("/auth/refresh", {
+      method: "POST",
+      includeAuth: false,
+      retryOnUnauthorized: false
+    }).then((response) => {
+      saveAccessToken(response.tokens.accessToken);
+      return response;
+    }).catch((error) => {
+      // The shared refresh failed, rather than one caller merely giving up its
+      // wait. Consequently this transition is performed exactly once.
+      clearAuthSession();
+      unauthorizedListener?.();
+      throw error;
+    }).finally(() => {
+      if (refreshPromise === operation) refreshPromise = null;
+    });
+    refreshPromise = operation;
+  }
+
+  return waitForPromiseWithAbortSignal(refreshPromise, signal);
 }
 
 export async function logout(): Promise<LogoutResponse> {
@@ -431,8 +441,8 @@ export async function recordAdvertisementClick(advertisementId: string, placemen
   return apiRequest<{ recorded: true }>(`/advertisements/${encodeURIComponent(advertisementId)}/click`, { method: "POST", body: { placement } });
 }
 
-export async function getCurrentUserProfile(): Promise<UserProfile> {
-  return apiRequest<UserProfile>("/me");
+export async function getCurrentUserProfile(signal?: AbortSignal): Promise<UserProfile> {
+  return apiRequest<UserProfile>("/me", { signal });
 }
 
 export async function updateCurrentUserProfile(input: UserProfileUpdate): Promise<UserProfile> {
@@ -477,8 +487,8 @@ export async function createFamily(input: { name: string }): Promise<FamilyDetai
   }));
 }
 
-export async function listFamilies(): Promise<FamilyWithMembership[]> {
-  return apiRequest<FamilyWithMembership[]>("/families");
+export async function listFamilies(signal?: AbortSignal): Promise<FamilyWithMembership[]> {
+  return apiRequest<FamilyWithMembership[]>("/families", { signal });
 }
 
 export async function joinFamilyByCode(code: string): Promise<FamilyInvitation> {
@@ -1267,6 +1277,7 @@ export async function apiRequest<TData>(
   path: string,
   options: { method?: string; body?: unknown; includeAuth?: boolean; familyId?: string; retryOnUnauthorized?: boolean; signal?: AbortSignal } = {}
 ): Promise<TData> {
+  if (options.signal?.aborted) throw requestAbortedError();
   const headers = new Headers({ Accept: "application/json" });
   const includeAuth = options.includeAuth ?? true;
 
@@ -1320,11 +1331,11 @@ export async function apiRequest<TData>(
   if (!response.ok) {
     if (response.status === 401 && includeAuth && (options.retryOnUnauthorized ?? true)) {
       try {
-        await refreshAuthSession();
+        await refreshAuthSession(options.signal);
+        if (options.signal?.aborted) throw requestAbortedError();
         return apiRequest<TData>(path, { ...options, retryOnUnauthorized: false });
-      } catch {
-        clearAuthSession();
-        unauthorizedListener?.();
+      } catch (error) {
+        if (options.signal?.aborted || (error instanceof ApiError && error.code === "request.aborted")) throw error;
         throw new ApiError("Your session has expired. Please sign in again.", 401, "auth.expired_token");
       }
     }
@@ -1346,6 +1357,28 @@ export async function apiRequest<TData>(
   const envelope = (await response.json()) as ApiEnvelope<TData>;
 
   return envelope.data;
+}
+
+/** Races only this caller's wait; it never forwards cancellation to operation. */
+function waitForPromiseWithAbortSignal<T>(operation: Promise<T>, signal?: AbortSignal): Promise<T> {
+  if (!signal) return operation;
+  if (signal.aborted) return Promise.reject(requestAbortedError());
+
+  return new Promise<T>((resolve, reject) => {
+    const abort = () => {
+      signal.removeEventListener("abort", abort);
+      reject(requestAbortedError());
+    };
+    signal.addEventListener("abort", abort, { once: true });
+    operation.then(
+      (value) => { signal.removeEventListener("abort", abort); resolve(value); },
+      (error) => { signal.removeEventListener("abort", abort); reject(error); }
+    );
+  });
+}
+
+function requestAbortedError(): ApiError {
+  return new ApiError("The request was cancelled.", 0, "request.aborted");
 }
 
 async function getErrorDetails(response: Response): Promise<[message: string, status: number, code?: string]> {

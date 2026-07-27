@@ -1,4 +1,5 @@
 export type AuthSyncEvent = "login" | "logout";
+export interface AuthSyncMessage { event: AuthSyncEvent; id: string; }
 
 export class ResumeGate {
   private lastAcceptedAt = Number.NEGATIVE_INFINITY;
@@ -21,4 +22,14 @@ export function parseAuthSyncEvent(value: unknown): AuthSyncEvent | null {
   if (!value || typeof value !== "object") return null;
   const event = (value as { event?: unknown }).event;
   return event === "login" || event === "logout" ? event : null;
+}
+
+export function createAuthSyncEvent(event: AuthSyncEvent): AuthSyncMessage {
+  return { event, id: globalThis.crypto?.randomUUID?.() ?? `${Date.now()}-${Math.random()}` };
+}
+
+export function parseAuthSyncMessage(value: unknown): AuthSyncMessage | null {
+  const event = parseAuthSyncEvent(value);
+  const id = value && typeof value === "object" ? (value as { id?: unknown }).id : null;
+  return event && typeof id === "string" && id.length > 0 ? { event, id } : null;
 }
