@@ -347,6 +347,18 @@ export class ApiError extends Error {
   }
 }
 
+type UnauthorizedListener = () => void;
+let unauthorizedListener: UnauthorizedListener | null = null;
+let refreshPromise: Promise<RefreshResponse> | null = null;
+
+/** AuthProvider installs this hook so API-level 401 handling has one owner. */
+export function setUnauthorizedListener(listener: UnauthorizedListener | null): () => void {
+  unauthorizedListener = listener;
+  return () => {
+    if (unauthorizedListener === listener) unauthorizedListener = null;
+  };
+}
+
 export async function register(input: { name: string; email: string; password: string }): Promise<AuthResponse> {
   return apiRequest<AuthResponse>("/auth/register", {
     method: "POST",
@@ -380,15 +392,18 @@ export async function resetPassword(input: { token: string; password: string }):
 }
 
 export async function refreshAuthSession(): Promise<RefreshResponse> {
-  const response = await apiRequest<RefreshResponse>("/auth/refresh", {
+  if (refreshPromise) return refreshPromise;
+  refreshPromise = apiRequest<RefreshResponse>("/auth/refresh", {
     method: "POST",
     includeAuth: false,
     retryOnUnauthorized: false
+  }).then((response) => {
+    saveAccessToken(response.tokens.accessToken);
+    return response;
+  }).finally(() => {
+    refreshPromise = null;
   });
-
-  saveAccessToken(response.tokens.accessToken);
-
-  return response;
+  return refreshPromise;
 }
 
 export async function logout(): Promise<LogoutResponse> {
@@ -1248,9 +1263,9 @@ async function withFamilyCacheInvalidation<TData>(operation: Promise<TData>): Pr
   return result;
 }
 
-async function apiRequest<TData>(
+export async function apiRequest<TData>(
   path: string,
-  options: { method?: string; body?: unknown; includeAuth?: boolean; familyId?: string; retryOnUnauthorized?: boolean } = {}
+  options: { method?: string; body?: unknown; includeAuth?: boolean; familyId?: string; retryOnUnauthorized?: boolean; signal?: AbortSignal } = {}
 ): Promise<TData> {
   const headers = new Headers({ Accept: "application/json" });
   const includeAuth = options.includeAuth ?? true;
@@ -1274,6 +1289,8 @@ async function apiRequest<TData>(
   }
 
   const controller = new AbortController();
+  const abortFromCaller = () => controller.abort(options.signal?.reason);
+  options.signal?.addEventListener("abort", abortFromCaller, { once: true });
   const timeoutId = globalThis.setTimeout(() => controller.abort(), API_REQUEST_TIMEOUT_MS);
 
   let response: Response;
@@ -1287,6 +1304,9 @@ async function apiRequest<TData>(
       signal: controller.signal
     });
   } catch (error) {
+    if (options.signal?.aborted) {
+      throw new ApiError("The request was cancelled.", 0, "request.aborted");
+    }
     if (error instanceof DOMException && error.name === "AbortError") {
       throw new ApiError("The request timed out. Please try again.", 408, "network.timeout");
     }
@@ -1294,6 +1314,7 @@ async function apiRequest<TData>(
     throw new ApiError("Could not reach the server. Please check your connection and try again.", 0, "network.unavailable");
   } finally {
     globalThis.clearTimeout(timeoutId);
+    options.signal?.removeEventListener("abort", abortFromCaller);
   }
 
   if (!response.ok) {
@@ -1303,14 +1324,16 @@ async function apiRequest<TData>(
         return apiRequest<TData>(path, { ...options, retryOnUnauthorized: false });
       } catch {
         clearAuthSession();
+        unauthorizedListener?.();
         throw new ApiError("Your session has expired. Please sign in again.", 401, "auth.expired_token");
       }
     }
 
     const errorDetails = await getErrorDetails(response);
 
-    if (response.status === 401) {
+    if (response.status === 401 && includeAuth) {
       clearAuthSession();
+      unauthorizedListener?.();
     }
 
     if (response.status === 403) {

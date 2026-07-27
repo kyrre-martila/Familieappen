@@ -23,6 +23,7 @@ import {
   type FamilyBootstrapResult,
 } from "../lib/auth-family";
 import { clearAuthSession, getAccessToken } from "../lib/session";
+import { RequireAuth, RequireFamily } from "./AuthGuards";
 
 const FAMILY_ACCESS_LOADING_TIMEOUT_MS = 20_000;
 const FAMILY_ACCESS_DEBUG_AUTO_SHOW_MS = 3_000;
@@ -288,57 +289,7 @@ function useShowTemporaryFamilyAccessDebugPanel(
 }
 
 export function ProtectedFamilyRoute({ children }: { children: ReactNode }) {
-  const access = useFamilyAccess();
-  const pathname = usePathname();
-  const showDebugPanel = useShowTemporaryFamilyAccessDebugPanel(access);
-
-  if (access.status === "approved") {
-    return <>{children}</>;
-  }
-
-  if (access.status === "pending") {
-    return <LockedFeatureState />;
-  }
-
-  if (access.status === "error") {
-    return (
-      <PageContainer>
-        <Card tone="default">
-          <EmptyState
-            title="Kunne ikke sjekke familietilgang"
-            description="Sjekken tok for lang tid eller feilet. Prøv igjen, eller logg inn på nytt hvis problemet fortsetter."
-          />
-          <Button variant="primary" onClick={access.retry}>
-            Prøv igjen
-          </Button>
-          {showDebugPanel ? (
-            <TemporaryFamilyAccessDebugPanel
-              pathname={pathname}
-              access={access}
-            />
-          ) : null}
-        </Card>
-      </PageContainer>
-    );
-  }
-
-  return (
-    <PageContainer>
-      <Card tone="default">
-        <EmptyState
-          title="Sjekker familietilgang"
-          description="Vent litt mens vi bekrefter familietilknytningen din."
-        />
-        <Button onClick={access.retry}>Prøv igjen</Button>
-        {showDebugPanel ? (
-          <TemporaryFamilyAccessDebugPanel
-            pathname={pathname}
-            access={access}
-          />
-        ) : null}
-      </Card>
-    </PageContainer>
-  );
+  return <RequireAuth><RequireFamily>{children}</RequireFamily></RequireAuth>;
 }
 
 function TemporaryFamilyAccessDebugPanel({

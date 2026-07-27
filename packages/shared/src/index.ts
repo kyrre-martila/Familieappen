@@ -453,6 +453,7 @@ export type {
 } from "./calendar-mvp.js";
 
 export * from "./shopping/shopping-catalog";
+export * from "./auth/lifecycle";
 
 
 export const NOTIFICATION_TYPES = [
