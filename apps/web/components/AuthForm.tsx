@@ -3,10 +3,10 @@
 import type { FormEvent, ReactNode } from "react";
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import { login, register } from "../lib/api";
+import { register } from "../lib/api";
 import { getUserFacingApiMessage } from "../lib/auth-family";
 import { routeAfterAuthentication } from "../lib/onboarding-access";
-import { saveAuthSession } from "../lib/session";
+import { useAuth } from "./AuthProvider";
 import { Button } from "./ui";
 
 interface AuthFormProps {
@@ -19,6 +19,7 @@ interface AuthFormProps {
 
 export function AuthForm({ children, mode, submitLabel, submitTo, submittingLabel = "Please wait…" }: AuthFormProps) {
   const router = useRouter();
+  const authProvider = useAuth();
   const [error, setError] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
@@ -48,13 +49,12 @@ export function AuthForm({ children, mode, submitLabel, submitTo, submittingLabe
           email: getFormString(formData, "email"),
           password
         });
-        saveAuthSession(auth);
+        await authProvider.establishSession(auth);
       } else {
-        const auth = await login({
+        await authProvider.login({
           email: getFormString(formData, "email"),
           password: getFormString(formData, "password")
         });
-        saveAuthSession(auth);
       }
 
       await routeAfterAuthentication(router, submitTo);

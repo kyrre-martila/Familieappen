@@ -3,6 +3,8 @@ import { tokens } from "@familieappen/ui";
 import "@familieappen/ui/tokens.css";
 import "./globals.css";
 import { RootAppFrame } from "../components/AppShell";
+import { AuthProvider } from "../components/AuthProvider";
+import { FamilyProvider } from "../components/FamilyProvider";
 
 export const metadata: Metadata = {
   title: "FamilieAppen",
@@ -19,7 +21,7 @@ export default function RootLayout({ children }: Readonly<{ children: React.Reac
   return (
     <html lang="en">
       <body>
-        <RootAppFrame>{children}</RootAppFrame>
+        <AuthProvider><FamilyProvider><RootAppFrame>{children}</RootAppFrame></FamilyProvider></AuthProvider>
       </body>
     </html>
   );

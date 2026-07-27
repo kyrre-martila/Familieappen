@@ -10,10 +10,11 @@ import { Button } from "../../components/ui";
 import { register } from "../../lib/api";
 import { getUserFacingApiMessage } from "../../lib/auth-family";
 import { routeAfterAuthentication } from "../../lib/onboarding-access";
-import { saveAuthSession } from "../../lib/session";
+import { useAuth } from "../../components/AuthProvider";
 
 export function RegisterForm({ initialEmail = "" }: { initialEmail?: string } = {}) {
   const router = useRouter();
+  const authProvider = useAuth();
   const [error, setError] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
@@ -62,7 +63,7 @@ export function RegisterForm({ initialEmail = "" }: { initialEmail?: string } = 
         email,
         password,
       });
-      saveAuthSession(auth);
+      await authProvider.establishSession(auth);
       await routeAfterAuthentication(router, "/onboarding/profile");
     } catch (submitError) {
       setError(getUserFacingApiMessage(submitError, "Noe gikk galt. Prøv igjen."));
