@@ -9,7 +9,7 @@ type ExportFeedRecord = {
   id: string; familyId: string; name: string; token: string; enabled: boolean;
   includeEvents: boolean; includeMeals: boolean; includeReminders: boolean;
   includeSchoolWeekReminders: boolean; scope: string; selectedFamilyMemberId: string | null;
-  createdByFamilyMemberId: string | null; createdAt: Date; updatedAt: Date;
+  createdByFamilyMemberId: string | null; mineFamilyMemberId: string | null; createdAt: Date; updatedAt: Date;
   selectedMembers?: Array<{ familyMemberId: string }>;
 };
 type IcsItem = { uid: string; title: string; description: string | null; location?: string | null; startsAt: Date; endsAt?: Date | null; allDay: boolean; updatedAt: Date };
@@ -40,7 +40,7 @@ export class CalendarIcsFeedService {
     const member = await this.requireUserFamilyMember(userId, familyId);
     const data = await this.validateInput(familyId, input, true);
     const selectedMemberIds = data.selectedMemberIds as string[]; delete data.selectedMemberIds;
-    const created = await (this.prisma.client as any).calendarExportFeed.create({ data: { ...data, familyId, token: createFeedToken(), enabled: input.enabled === undefined ? true : data.enabled, createdByFamilyMemberId: member?.id ?? null, selectedMembers: { create: selectedMemberIds.map(familyMemberId => ({ familyMemberId })) } }, include: FEED_INCLUDE }) as ExportFeedRecord;
+    const created = await (this.prisma.client as any).calendarExportFeed.create({ data: { ...data, familyId, token: createFeedToken(), enabled: input.enabled === undefined ? true : data.enabled, createdByFamilyMemberId: member.id, mineFamilyMemberId: data.scope === "mine" ? member.id : null, selectedMembers: { create: selectedMemberIds.map(familyMemberId => ({ familyMemberId })) } }, include: FEED_INCLUDE }) as ExportFeedRecord;
     return toFeedDto(created);
   }
 
@@ -49,9 +49,8 @@ export class CalendarIcsFeedService {
     const feed = await this.requireFeed(familyId, feedId);
     const data = await this.validateInput(familyId, input, false);
     const ids = data.selectedMemberIds as string[] | undefined; delete data.selectedMemberIds;
-    if (data.scope === "mine" && !feed.createdByFamilyMemberId) {
-      data.createdByFamilyMemberId = (await this.requireUserFamilyMember(userId, familyId)).id;
-    }
+    if (data.scope === "mine" && feed.scope !== "mine") data.mineFamilyMemberId = (await this.requireUserFamilyMember(userId, familyId)).id;
+    else if (data.scope !== undefined && data.scope !== "mine") data.mineFamilyMemberId = null;
     const merged = { ...feed, ...data, selectedMemberIds: ids ?? feed.selectedMembers?.map(row => row.familyMemberId) ?? [] };
     validateConfiguration(merged);
     const updated = await (this.prisma.client as any).calendarExportFeed.update({ where: { id: feed.id }, data: { ...data, ...(ids ? { selectedMembers: { deleteMany: {}, create: ids.map(familyMemberId => ({ familyMemberId })) } } : {}) }, include: FEED_INCLUDE }) as ExportFeedRecord;
@@ -102,10 +101,10 @@ export class CalendarIcsFeedService {
     const items: IcsItem[] = []; const now = new Date();
     const from = new Date(Date.UTC(now.getUTCFullYear() - 1, 0, 1));
     const to = new Date(Date.UTC(now.getUTCFullYear() + 1, 11, 31, 23, 59, 59));
-    if (feed.scope === "mine" && !feed.createdByFamilyMemberId) {
+    if (feed.scope === "mine" && (!feed.mineFamilyMemberId || !(await this.isFamilyMember(feed.familyId, feed.mineFamilyMemberId)))) {
       throw new NotFoundException("Calendar feed was not found");
     }
-    const selectedIds = feed.scope === "selectedParticipant" ? feed.selectedMembers?.map(row => row.familyMemberId) ?? [] : feed.scope === "mine" ? [feed.createdByFamilyMemberId as string] : [];
+    const selectedIds = feed.scope === "selectedParticipant" ? feed.selectedMembers?.map(row => row.familyMemberId) ?? [] : feed.scope === "mine" ? [feed.mineFamilyMemberId as string] : [];
     if (feed.includeEvents) {
       const events = await (this.prisma.client as any).calendarEvent.findMany({ where: { familyId: feed.familyId, startsAt: { lte: to }, OR: [{ endsAt: { gte: from } }, { endsAt: null, startsAt: { gte: from } }], ...(selectedIds.length ? { participants: { some: { familyMemberId: { in: selectedIds } } } } : {}) }, include: { participants: { include: { familyMember: true } } } }) as any[];
       items.push(...events.map(event => ({ uid: `event-${event.id}@familieappen`, title: event.title, description: withParticipants(event.description, event.participants), location: event.location, startsAt: event.startsAt, endsAt: event.endsAt, allDay: event.allDay, updatedAt: event.updatedAt })));
@@ -134,6 +133,9 @@ export class CalendarIcsFeedService {
     if (!member) throw new BadRequestException("The current user must have a family member profile");
     return member;
   }
+  private async isFamilyMember(familyId: string, familyMemberId: string): Promise<boolean> {
+    return Boolean(await this.prisma.client.familyMember.findFirst({ where: { id: familyMemberId, familyId }, select: { id: true } }));
+  }
   private async validateInput(familyId: string, input: UpdateCalendarExportFeedRequestDto, creating: boolean): Promise<Record<string, any>> {
     const data: Record<string, any> = {};
     if (input.name !== undefined || creating) data.name = validateName(input.name);
@@ -152,7 +154,7 @@ export class CalendarIcsFeedService {
   }
 }
 function createFeedToken() { return randomBytes(32).toString("base64url"); }
-function toFeedDto(feed: ExportFeedRecord): CalendarExportFeedDto { return { id: feed.id, familyId: feed.familyId, name: feed.name, enabled: feed.enabled, privateUrl: `${PUBLIC_API_URL}/calendar/feed/${feed.token}.ics`, includeEvents: feed.includeEvents, includeMeals: feed.includeMeals, includeReminders: feed.includeReminders, includeSchoolWeekReminders: feed.includeSchoolWeekReminders, scope: feed.scope as any, selectedMemberIds: feed.selectedMembers?.map(row => row.familyMemberId) ?? (feed.selectedFamilyMemberId ? [feed.selectedFamilyMemberId] : []), mineFamilyMemberId: feed.createdByFamilyMemberId, createdAt: feed.createdAt.toISOString(), updatedAt: feed.updatedAt.toISOString() }; }
+function toFeedDto(feed: ExportFeedRecord): CalendarExportFeedDto { return { id: feed.id, familyId: feed.familyId, name: feed.name, enabled: feed.enabled, privateUrl: `${PUBLIC_API_URL}/calendar/feed/${feed.token}.ics`, includeEvents: feed.includeEvents, includeMeals: feed.includeMeals, includeReminders: feed.includeReminders, includeSchoolWeekReminders: feed.includeSchoolWeekReminders, scope: feed.scope as any, selectedMemberIds: feed.selectedMembers?.map(row => row.familyMemberId) ?? (feed.selectedFamilyMemberId ? [feed.selectedFamilyMemberId] : []), mineFamilyMemberId: feed.mineFamilyMemberId, createdAt: feed.createdAt.toISOString(), updatedAt: feed.updatedAt.toISOString() }; }
 function toLegacyFeedDto(feed: ExportFeedRecord): LegacyCalendarExportFeedDto { return toLegacyDto(toFeedDto(feed)); }
 function toLegacyDto(current: CalendarExportFeedDto): LegacyCalendarExportFeedDto { const { selectedMemberIds, mineFamilyMemberId: _mineFamilyMemberId, ...legacy } = current; return { ...legacy, selectedFamilyMemberId: selectedMemberIds[0] ?? null }; }
 function validateName(value: unknown) { if (typeof value !== "string" || !value.trim()) throw new BadRequestException("Calendar feed name is required"); const name=value.trim(); if(name.length>80) throw new BadRequestException("Calendar feed name must be 80 characters or fewer"); return name; }

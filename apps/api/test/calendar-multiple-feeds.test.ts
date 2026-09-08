@@ -29,7 +29,7 @@ const db: any = {
     findFirst: async ({ where }: any) => includeSelected(feeds.find(feed => (where.id === undefined || feed.id === where.id) && feed.familyId === where.familyId)),
     findUnique: async ({ where }: any) => includeSelected(feeds.find(feed => feed.token === where.token)),
     create: async ({ data }: any) => {
-      const feed = { id: `feed-${++sequence}`, name: data.name, familyId: data.familyId, token: data.token, enabled: data.enabled ?? false, includeEvents: data.includeEvents ?? true, includeMeals: data.includeMeals ?? true, includeReminders: data.includeReminders ?? true, includeSchoolWeekReminders: data.includeSchoolWeekReminders ?? true, scope: data.scope ?? "family", selectedFamilyMemberId: null, createdByFamilyMemberId: data.createdByFamilyMemberId ?? null, selectedMembers: (data.selectedMembers?.create ?? []).map(({ familyMemberId }: any) => ({ familyMemberId })), createdAt: now, updatedAt: now };
+      const feed = { id: `feed-${++sequence}`, name: data.name, familyId: data.familyId, token: data.token, enabled: data.enabled ?? false, includeEvents: data.includeEvents ?? true, includeMeals: data.includeMeals ?? true, includeReminders: data.includeReminders ?? true, includeSchoolWeekReminders: data.includeSchoolWeekReminders ?? true, scope: data.scope ?? "family", selectedFamilyMemberId: null, createdByFamilyMemberId: data.createdByFamilyMemberId ?? null, mineFamilyMemberId: data.mineFamilyMemberId ?? null, selectedMembers: (data.selectedMembers?.create ?? []).map(({ familyMemberId }: any) => ({ familyMemberId })), createdAt: now, updatedAt: now };
       feeds.push(feed); return includeSelected(feed);
     },
     update: async ({ where, data }: any) => {
@@ -53,6 +53,7 @@ const create = (userId: string, input: any) => service.createFeed(userId, "famil
 
 async function run() {
   const normal = await create("user-1", { name: "Familiekalender" });
+  assert.equal(normal.mineFamilyMemberId, null, "a family feed has no mine audience despite recording its creator");
   const mealsOnly = await create("user-1", { name: "Middager", includeEvents: false, includeMeals: true });
   assert.equal((await service.listFeeds("user-1", "family-1")).length, 2, "multiple feeds can coexist");
   const mealsIcs = await service.renderFeed(tokenFromUrl(mealsOnly.privateUrl));
@@ -68,17 +69,26 @@ async function run() {
   assert.equal(mine.mineFamilyMemberId, "member-1");
   const mineIcs = await service.renderFeed(tokenFromUrl(mine.privateUrl));
   assert.match(mineIcs, /SUMMARY:Barn 1/); assert.doesNotMatch(mineIcs, /SUMMARY:Barn 2|SUMMARY:Annen/);
+  await service.updateFeed("user-2", "family-1", mine.id, { name: "Fortsatt medlem 1" });
+  assert.equal((await service.getFeed("user-2", "family-1", mine.id)).mineFamilyMemberId, "member-1", "unrelated edits preserve the existing mine audience");
 
   const migratedToken = "M".repeat(43);
-  feeds.push({ ...feeds[0], id: "migrated", name: "Migrert", token: migratedToken, scope: "family", createdByFamilyMemberId: null, selectedMembers: [] });
+  feeds.push({ ...feeds[0], id: "migrated", name: "Migrert", token: migratedToken, scope: "family", createdByFamilyMemberId: "member-1", mineFamilyMemberId: null, selectedMembers: [] });
   const claimed = await service.updateFeed("user-2", "family-1", "migrated", { scope: "mine" });
-  assert.equal(claimed.mineFamilyMemberId, "member-2", "editor claims an unowned feed only when changing it to mine");
-  assert.equal(tokenFromUrl(claimed.privateUrl), migratedToken, "claiming a migrated mine feed preserves its existing token");
+  assert.equal(claimed.mineFamilyMemberId, "member-2", "the editor becomes the audience when changing a family feed to mine");
+  assert.equal(feeds.find(feed => feed.id === "migrated").createdByFamilyMemberId, "member-1", "changing audience does not rewrite creator metadata");
+  assert.equal(tokenFromUrl(claimed.privateUrl), migratedToken, "changing scope preserves the existing token");
   await service.updateFeed("user-1", "family-1", "migrated", { name: "Fortsatt medlem 2" });
   assert.equal((await service.getFeed("user-1", "family-1", "migrated")).mineFamilyMemberId, "member-2", "later viewers/editors cannot change mine ownership");
   const claimedIcs = await service.renderFeed(migratedToken); assert.match(claimedIcs, /SUMMARY:Barn 2/); assert.doesNotMatch(claimedIcs, /SUMMARY:Barn 1|SUMMARY:Annen/);
-  feeds.push({ ...feeds[0], id: "invalid-mine", token: "I".repeat(43), scope: "mine", createdByFamilyMemberId: null, selectedMembers: [] });
+  await service.updateFeed("user-1", "family-1", "migrated", { scope: "family" });
+  assert.equal((await service.getFeed("user-1", "family-1", "migrated")).mineFamilyMemberId, null, "leaving mine clears its audience");
+  const familyIcs = await service.renderFeed(migratedToken); assert.match(familyIcs, /SUMMARY:Barn 1/); assert.match(familyIcs, /SUMMARY:Barn 2/); assert.match(familyIcs, /SUMMARY:Annen/);
+
+  feeds.push({ ...feeds[0], id: "invalid-mine", token: "I".repeat(43), scope: "mine", createdByFamilyMemberId: "member-1", mineFamilyMemberId: null, selectedMembers: [] });
   await assert.rejects(() => service.renderFeed("I".repeat(43)), /not found/i, "invalid mine state must fail closed");
+  feeds.push({ ...feeds[0], id: "foreign-mine", token: "F".repeat(43), scope: "mine", mineFamilyMemberId: "other-member", selectedMembers: [] });
+  await assert.rejects(() => service.renderFeed("F".repeat(43)), /not found/i, "a mine member outside the family must fail closed");
 
   const normalToken = tokenFromUrl(normal.privateUrl), mealsToken = tokenFromUrl(mealsOnly.privateUrl);
   const regenerated = await service.regenerateFeedToken("user-1", "family-1", normal.id);
