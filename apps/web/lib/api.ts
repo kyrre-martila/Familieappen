@@ -310,6 +310,7 @@ export type CalendarExportScope = "family" | "mine" | "selectedParticipant";
 export interface CalendarExportFeedSettings {
   id: string;
   familyId: string;
+  name: string;
   enabled: boolean;
   privateUrl: string;
   includeEvents: boolean;
@@ -317,7 +318,7 @@ export interface CalendarExportFeedSettings {
   includeReminders: boolean;
   includeSchoolWeekReminders: boolean;
   scope: CalendarExportScope;
-  selectedFamilyMemberId: string | null;
+  selectedMemberIds: string[];
   createdAt: string;
   updatedAt: string;
 }
@@ -957,13 +958,32 @@ export async function getCalendarExportFeedSettings(familyId: string): Promise<C
 
 export async function updateCalendarExportFeedSettings(
   familyId: string,
-  input: Partial<Pick<CalendarExportFeedSettings, "enabled" | "includeEvents" | "includeMeals" | "includeReminders" | "includeSchoolWeekReminders" | "scope" | "selectedFamilyMemberId">>
+  input: Partial<Pick<CalendarExportFeedSettings, "enabled" | "includeEvents" | "includeMeals" | "includeReminders" | "includeSchoolWeekReminders" | "scope" | "selectedMemberIds">>
 ): Promise<CalendarExportFeedSettings> {
   return apiRequest<CalendarExportFeedSettings>("/calendar/feed-settings", { method: "PATCH", body: input, familyId });
 }
 
 export async function regenerateCalendarExportFeed(familyId: string): Promise<CalendarExportFeedSettings> {
   return apiRequest<CalendarExportFeedSettings>("/calendar/feed-settings/regenerate", { method: "POST", familyId });
+}
+
+export async function listCalendarExportFeeds(familyId: string): Promise<CalendarExportFeedSettings[]> {
+  return apiRequest<CalendarExportFeedSettings[]>("/calendar/feeds", { familyId });
+}
+export async function createCalendarExportFeed(familyId: string, input: Partial<CalendarExportFeedSettings> & { name: string }): Promise<CalendarExportFeedSettings> {
+  return apiRequest<CalendarExportFeedSettings>("/calendar/feeds", { method: "POST", body: input, familyId });
+}
+export async function getCalendarExportFeed(familyId: string, feedId: string): Promise<CalendarExportFeedSettings> {
+  return apiRequest<CalendarExportFeedSettings>(`/calendar/feeds/${encodeURIComponent(feedId)}`, { familyId });
+}
+export async function updateCalendarExportFeed(familyId: string, feedId: string, input: Partial<CalendarExportFeedSettings>): Promise<CalendarExportFeedSettings> {
+  return apiRequest<CalendarExportFeedSettings>(`/calendar/feeds/${encodeURIComponent(feedId)}`, { method: "PATCH", body: input, familyId });
+}
+export async function deleteCalendarExportFeed(familyId: string, feedId: string): Promise<CalendarExportFeedSettings> {
+  return apiRequest<CalendarExportFeedSettings>(`/calendar/feeds/${encodeURIComponent(feedId)}`, { method: "DELETE", familyId });
+}
+export async function regenerateCalendarExportFeedToken(familyId: string, feedId: string): Promise<CalendarExportFeedSettings> {
+  return apiRequest<CalendarExportFeedSettings>(`/calendar/feeds/${encodeURIComponent(feedId)}/regenerate`, { method: "POST", familyId });
 }
 
 export async function getCalendarEvents(
