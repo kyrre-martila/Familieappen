@@ -393,6 +393,7 @@ model FamilyMember {
   schoolWeekReminders SchoolWeekReminder[]
   createdMealPlanDays MealPlanDay[]
   ownedCalendarExportFeeds CalendarExportFeed[] @relation("CalendarExportFeedOwner")
+  mineCalendarExportFeeds  CalendarExportFeed[] @relation("CalendarExportFeedMineMember")
   calendarExportFeedSelections CalendarExportFeedMember[]
 
   @@index([familyId])
@@ -710,14 +711,17 @@ model CalendarExportFeed {
   scope                      String   @default("family")
   selectedFamilyMemberId     String?
   createdByFamilyMemberId    String?
+  mineFamilyMemberId         String?
   createdAt                  DateTime @default(now())
   updatedAt                  DateTime @updatedAt
   family                     Family   @relation(fields: [familyId], references: [id], onDelete: Cascade)
   createdByFamilyMember      FamilyMember? @relation("CalendarExportFeedOwner", fields: [createdByFamilyMemberId], references: [id], onDelete: SetNull)
+  mineFamilyMember           FamilyMember? @relation("CalendarExportFeedMineMember", fields: [mineFamilyMemberId], references: [id], onDelete: SetNull)
   selectedMembers            CalendarExportFeedMember[]
 
   @@index([familyId])
   @@index([createdByFamilyMemberId])
+  @@index([mineFamilyMemberId])
   @@index([token])
   @@map("calendar_export_feeds")
 }
