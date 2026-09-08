@@ -48,6 +48,7 @@ export interface CalendarIcsSyncResultDto {
 export interface CalendarExportFeedDto {
   id: string;
   familyId: string;
+  name: string;
   enabled: boolean;
   privateUrl: string;
   includeEvents: boolean;
@@ -55,17 +56,29 @@ export interface CalendarExportFeedDto {
   includeReminders: boolean;
   includeSchoolWeekReminders: boolean;
   scope: CalendarExportScopeDto;
-  selectedFamilyMemberId: string | null;
+  selectedMemberIds: string[];
+  mineFamilyMemberId: string | null;
   createdAt: string;
   updatedAt: string;
 }
 
+export interface LegacyCalendarExportFeedDto extends Omit<CalendarExportFeedDto, "selectedMemberIds" | "mineFamilyMemberId"> {
+  selectedFamilyMemberId: string | null;
+}
+
 export interface UpdateCalendarExportFeedRequestDto {
+  name?: unknown;
   enabled?: unknown;
   includeEvents?: unknown;
   includeMeals?: unknown;
   includeReminders?: unknown;
   includeSchoolWeekReminders?: unknown;
   scope?: unknown;
+  selectedMemberIds?: unknown;
+  /** @deprecated Use selectedMemberIds. Kept for older deployed web clients. */
   selectedFamilyMemberId?: unknown;
+}
+
+export interface CreateCalendarExportFeedRequestDto extends UpdateCalendarExportFeedRequestDto {
+  name?: unknown;
 }

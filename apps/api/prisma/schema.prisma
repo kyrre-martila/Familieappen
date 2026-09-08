@@ -357,7 +357,7 @@ model Family {
   tasks     Task[]
   calendarEvents CalendarEvent[]
   calendarIcsSources CalendarIcsSource[]
-  calendarExportFeed CalendarExportFeed?
+  calendarExportFeeds CalendarExportFeed[]
   reminders Reminder[]
   lists     List[]
   wishlistItems WishlistItem[]
@@ -392,6 +392,8 @@ model FamilyMember {
   wishlistShareInvitations WishlistShareInvitation[]
   schoolWeekReminders SchoolWeekReminder[]
   createdMealPlanDays MealPlanDay[]
+  ownedCalendarExportFeeds CalendarExportFeed[] @relation("CalendarExportFeedOwner")
+  calendarExportFeedSelections CalendarExportFeedMember[]
 
   @@index([familyId])
   @@index([userId])
@@ -697,7 +699,8 @@ model CalendarIcsSource {
 
 model CalendarExportFeed {
   id                         String   @id @default(cuid())
-  familyId                   String   @unique
+  familyId                   String
+  name                       String   @default("Familiekalender")
   token                      String   @unique
   enabled                    Boolean  @default(false)
   includeEvents              Boolean  @default(true)
@@ -706,12 +709,29 @@ model CalendarExportFeed {
   includeSchoolWeekReminders Boolean  @default(true)
   scope                      String   @default("family")
   selectedFamilyMemberId     String?
+  createdByFamilyMemberId    String?
   createdAt                  DateTime @default(now())
   updatedAt                  DateTime @updatedAt
   family                     Family   @relation(fields: [familyId], references: [id], onDelete: Cascade)
+  createdByFamilyMember      FamilyMember? @relation("CalendarExportFeedOwner", fields: [createdByFamilyMemberId], references: [id], onDelete: SetNull)
+  selectedMembers            CalendarExportFeedMember[]
 
+  @@index([familyId])
+  @@index([createdByFamilyMemberId])
   @@index([token])
   @@map("calendar_export_feeds")
+}
+
+model CalendarExportFeedMember {
+  feedId         String
+  familyMemberId String
+  createdAt      DateTime           @default(now())
+  feed           CalendarExportFeed @relation(fields: [feedId], references: [id], onDelete: Cascade)
+  familyMember   FamilyMember       @relation(fields: [familyMemberId], references: [id], onDelete: Cascade)
+
+  @@id([feedId, familyMemberId])
+  @@index([familyMemberId])
+  @@map("calendar_export_feed_members")
 }
 
 model CalendarEventParticipant {
