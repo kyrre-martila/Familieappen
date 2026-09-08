@@ -8,10 +8,10 @@ import { useFamilyMembers } from "../../../../features/family/hooks/useFamilyMem
 
 const contents = (f: CalendarExportFeedSettings) => [f.includeEvents&&"Kalender",f.includeMeals&&"Middager",f.includeReminders&&"Husk",f.includeSchoolWeekReminders&&"Skoleuka"].filter(Boolean).join(" · ");
 export function CalendarExportSettingsClient() {
- const {family,familyMembers,currentUserMember}=useFamilyMembers(); const [feeds,setFeeds]=useState<CalendarExportFeedSettings[]>([]); const [error,setError]=useState<string|null>(null);
+ const {family,familyMembers}=useFamilyMembers(); const [feeds,setFeeds]=useState<CalendarExportFeedSettings[]>([]); const [error,setError]=useState<string|null>(null);
  const load=useCallback(async()=>{if(!family?.id)return; try{setFeeds(await listCalendarExportFeeds(family.id));setError(null)}catch(e){setError(e instanceof ApiError?e.message:"Kunne ikke hente kalenderfeedene")}},[family?.id]);
  useEffect(()=>{void load()},[load]);
- const audience=(f:CalendarExportFeedSettings)=>f.scope==="family"?"Hele familien":f.scope==="mine"?`Kun mine hendelser${currentUserMember?` (${currentUserMember.name})`:""}`:f.selectedMemberIds.map(id=>familyMembers.find(m=>m.id===id)?.name).filter(Boolean).join(", ")||"Valgte familiemedlemmer";
+ const audience=(f:CalendarExportFeedSettings)=>f.scope==="family"?"Hele familien":f.scope==="mine"?`Kun hendelser for ${familyMembers.find(member=>member.id===f.mineFamilyMemberId)?.name??"ukjent familiemedlem"}`:f.selectedMemberIds.map(id=>familyMembers.find(m=>m.id===id)?.name).filter(Boolean).join(", ")||"Valgte familiemedlemmer";
  return <main className="settings-shell settings-shell--detail calendar-export-settings" aria-label="Kalenderfeeder">
   <Link className="settings-back-link" href="/settings/calendar" aria-label="Tilbake"><ChevronLeft/></Link>
   <header className="settings-hero settings-hero--detail"><h1>Kalenderfeeder</h1><p>Lag separate private kalenderlenker for kalenderapper og tjenester som Home Assistant.</p></header>

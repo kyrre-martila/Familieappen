@@ -319,6 +319,7 @@ export interface CalendarExportFeedSettings {
   includeSchoolWeekReminders: boolean;
   scope: CalendarExportScope;
   selectedMemberIds: string[];
+  mineFamilyMemberId: string | null;
   createdAt: string;
   updatedAt: string;
 }

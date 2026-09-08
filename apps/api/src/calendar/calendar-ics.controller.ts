@@ -9,6 +9,7 @@ import {
   CalendarIcsSyncResultDto,
   CreateCalendarIcsSourceRequestDto,
   CreateCalendarExportFeedRequestDto,
+  LegacyCalendarExportFeedDto,
   UpdateCalendarExportFeedRequestDto,
   UpdateCalendarIcsSourceRequestDto
 } from "./dto/calendar-ics.dto";
@@ -89,7 +90,7 @@ export class CalendarIcsController {
   async getFeedSettings(
     @Req() request: AuthenticatedRequest,
     @Headers("x-family-id") familyId: string
-  ): Promise<ApiResponse<CalendarExportFeedDto>> {
+  ): Promise<ApiResponse<LegacyCalendarExportFeedDto>> {
     return createApiResponse(await this.feedService.getOrCreateFeed(request.user.id, requireFamilyId(familyId)));
   }
 
@@ -128,7 +129,7 @@ export class CalendarIcsController {
     @Req() request: AuthenticatedRequest,
     @Headers("x-family-id") familyId: string,
     @Body() body: UpdateCalendarExportFeedRequestDto
-  ): Promise<ApiResponse<CalendarExportFeedDto>> {
+  ): Promise<ApiResponse<LegacyCalendarExportFeedDto>> {
     return createApiResponse(await this.feedService.updateLegacyFeed(request.user.id, requireFamilyId(familyId), body));
   }
 
@@ -136,7 +137,7 @@ export class CalendarIcsController {
   async regenerateFeedToken(
     @Req() request: AuthenticatedRequest,
     @Headers("x-family-id") familyId: string
-  ): Promise<ApiResponse<CalendarExportFeedDto>> {
+  ): Promise<ApiResponse<LegacyCalendarExportFeedDto>> {
     return createApiResponse(await this.feedService.regenerateLegacyFeed(request.user.id, requireFamilyId(familyId)));
   }
 }

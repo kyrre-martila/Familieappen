@@ -57,8 +57,13 @@ export interface CalendarExportFeedDto {
   includeSchoolWeekReminders: boolean;
   scope: CalendarExportScopeDto;
   selectedMemberIds: string[];
+  mineFamilyMemberId: string | null;
   createdAt: string;
   updatedAt: string;
+}
+
+export interface LegacyCalendarExportFeedDto extends Omit<CalendarExportFeedDto, "selectedMemberIds" | "mineFamilyMemberId"> {
+  selectedFamilyMemberId: string | null;
 }
 
 export interface UpdateCalendarExportFeedRequestDto {
