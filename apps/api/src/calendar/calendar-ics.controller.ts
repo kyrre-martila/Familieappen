@@ -8,6 +8,7 @@ import {
   CalendarIcsSourceDto,
   CalendarIcsSyncResultDto,
   CreateCalendarIcsSourceRequestDto,
+  CreateCalendarExportFeedRequestDto,
   UpdateCalendarExportFeedRequestDto,
   UpdateCalendarIcsSourceRequestDto
 } from "./dto/calendar-ics.dto";
@@ -92,13 +93,43 @@ export class CalendarIcsController {
     return createApiResponse(await this.feedService.getOrCreateFeed(request.user.id, requireFamilyId(familyId)));
   }
 
+  @Get("feeds")
+  async listFeeds(@Req() request: AuthenticatedRequest, @Headers("x-family-id") familyId: string): Promise<ApiResponse<CalendarExportFeedDto[]>> {
+    return createApiResponse(await this.feedService.listFeeds(request.user.id, requireFamilyId(familyId)));
+  }
+
+  @Post("feeds")
+  async createFeed(@Req() request: AuthenticatedRequest, @Headers("x-family-id") familyId: string, @Body() body: CreateCalendarExportFeedRequestDto): Promise<ApiResponse<CalendarExportFeedDto>> {
+    return createApiResponse(await this.feedService.createFeed(request.user.id, requireFamilyId(familyId), body));
+  }
+
+  @Get("feeds/:feedId")
+  async getFeed(@Req() request: AuthenticatedRequest, @Headers("x-family-id") familyId: string, @Param("feedId") feedId: string): Promise<ApiResponse<CalendarExportFeedDto>> {
+    return createApiResponse(await this.feedService.getFeed(request.user.id, requireFamilyId(familyId), feedId));
+  }
+
+  @Patch("feeds/:feedId")
+  async updateFeed(@Req() request: AuthenticatedRequest, @Headers("x-family-id") familyId: string, @Param("feedId") feedId: string, @Body() body: UpdateCalendarExportFeedRequestDto): Promise<ApiResponse<CalendarExportFeedDto>> {
+    return createApiResponse(await this.feedService.updateFeed(request.user.id, requireFamilyId(familyId), feedId, body));
+  }
+
+  @Delete("feeds/:feedId")
+  async deleteFeed(@Req() request: AuthenticatedRequest, @Headers("x-family-id") familyId: string, @Param("feedId") feedId: string): Promise<ApiResponse<CalendarExportFeedDto>> {
+    return createApiResponse(await this.feedService.deleteFeed(request.user.id, requireFamilyId(familyId), feedId));
+  }
+
+  @Post("feeds/:feedId/regenerate")
+  async regenerateFeed(@Req() request: AuthenticatedRequest, @Headers("x-family-id") familyId: string, @Param("feedId") feedId: string): Promise<ApiResponse<CalendarExportFeedDto>> {
+    return createApiResponse(await this.feedService.regenerateFeedToken(request.user.id, requireFamilyId(familyId), feedId));
+  }
+
   @Patch("feed-settings")
   async updateFeedSettings(
     @Req() request: AuthenticatedRequest,
     @Headers("x-family-id") familyId: string,
     @Body() body: UpdateCalendarExportFeedRequestDto
   ): Promise<ApiResponse<CalendarExportFeedDto>> {
-    return createApiResponse(await this.feedService.updateFeed(request.user.id, requireFamilyId(familyId), body));
+    return createApiResponse(await this.feedService.updateLegacyFeed(request.user.id, requireFamilyId(familyId), body));
   }
 
   @Post("feed-settings/regenerate")
@@ -106,7 +137,7 @@ export class CalendarIcsController {
     @Req() request: AuthenticatedRequest,
     @Headers("x-family-id") familyId: string
   ): Promise<ApiResponse<CalendarExportFeedDto>> {
-    return createApiResponse(await this.feedService.regenerateFeedToken(request.user.id, requireFamilyId(familyId)));
+    return createApiResponse(await this.feedService.regenerateLegacyFeed(request.user.id, requireFamilyId(familyId)));
   }
 }
 
