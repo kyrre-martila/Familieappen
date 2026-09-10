@@ -22,6 +22,8 @@ There is intentionally no transition table or graph. API commands in Run 2 may o
 
 `activeLevelStartedAt` and `activeStepStartedAt` are the separate logical starts of the current level and step progress windows. `pausedAt` is populated exactly while status is `PAUSED`. Resume shifts both active start timestamps forward by `resumedAt - pausedAt`. Consequently paused wall-clock time is excluded from duration calculation, without accumulating a lossy counter. Pause and resume operations must update the plan and append history atomically.
 
+The database also rejects start timestamps without their corresponding pointer (and pointers without start timestamps), requires pointers for `ACTIVE`/`PAUSED`, and forbids pointers for `DRAFT`. A completed or archived plan may retain its final pointers and starts as useful terminal context. These are deliberately state-shape checks, not a workflow engine: allowed status transitions and timestamp ordering remain service policy.
+
 ## Schedules and time zones
 
 A step may have any number of schedules and each schedule owns one or more ordered actions. The three recurrence shapes are:
@@ -32,7 +34,9 @@ A step may have any number of schedules and each schedule owns one or more order
 
 The database enforces the shape except duplicate weekday array entries, which the domain validator rejects. `localTime` is PostgreSQL `TIME(0)`, `anchorDate` is `DATE`, and `timezone` is an IANA zone with `Europe/Oslo` as the default. A future occurrence generator must combine the calendar date and local time in the stored IANA zone before converting to UTC. It must use a time-zone-aware library and explicitly define behavior for DST gaps/overlaps; it must not add 24-hour UTC durations to generate local daily times. The interval predicate is the number of local calendar days from `anchorDate`, modulo `intervalDays`, which makes “every other day” deterministic.
 
-Schedules and actions are version-like rows: editing a schedule/action that may have generated occurrences retires it (`retiredAt`) and creates replacement rows rather than mutating it. `effectiveFrom` bounds new schedule generation. This policy keeps old configuration inspectable and prevents historical interpretation from changing.
+Schedules and actions are version-like rows: editing a schedule/action that may have generated occurrences retires it (`retiredAt`) and creates replacement rows rather than mutating it. Both row types have `effectiveFrom`, and the database rejects a `retiredAt` before it. Schedule retirement is not sufficient for action-only edits: an action replacement can remain under the same schedule, so its own effective range identifies when it became eligible for generation.
+
+Retired action versions may reuse `(scheduleId, sortOrder)`. PostgreSQL enforces that only one **unretired** action occupies a given order using the partial unique index `health_plan_actions_active_sort_order_key ... WHERE "retiredAt" IS NULL`. Prisma cannot express partial indexes, so there is intentionally no matching `@@unique` in `schema.prisma`; the adjacent schema comment and migration SQL are the source of truth. Replacement must retire the old row before inserting the active replacement (in one transaction). Run 2 must select only schedule/action versions whose effective range contains the generated instant and must never repoint an existing occurrence.
 
 ## Occurrences and immutable history
 
@@ -40,9 +44,17 @@ A `HealthPlanOccurrence` is one action at one instant, so completion is naturall
 
 Occurrence statuses are `PENDING`, `COMPLETED`, `SKIPPED`, and `SNOOZED`. `MISSED` is **derived**, not stored: a pending occurrence is missed when `scheduledAt` is before the evaluation time. Storing it would require a time-based mutation and could become inconsistent. Run 2 should define the grace boundary, if one is desired, in API policy.
 
-A snooze keeps `originalScheduledAt`, changes `scheduledAt`, and sets `SNOOZED`; Run 2 must define when it returns to pending. Completion requires `completedAt`; the database ensures only completed rows have that timestamp. Actor foreign keys use `SET NULL` so account deactivation/deletion does not destroy occurrences.
+A snooze keeps `originalScheduledAt`, changes `scheduledAt`, and sets `SNOOZED`; Run 2 must define when it returns to pending. Completion requires `completedAt`; the database ensures only completed rows have that timestamp. `completedByUserId` is forbidden for every non-completed status, but is nullable for a completed row because deleting the referenced user uses `SET NULL`. Actor foreign keys therefore do not destroy occurrences.
 
-`HealthPlanNote` supports a plan note (neither target set), an occurrence note, or an action-definition note. It stores unstructured text only. At most one specific target may be set. Target-to-plan consistency is an API transaction invariant for Run 2; occurrence/action relations are restricted so a note cannot be orphaned.
+`(sourceActionId, originalScheduledAt)` remains the idempotency key. Recreated actions receive a new immutable ID, so action versions cannot collide. A snooze changes neither component. PostgreSQL timestamps represent instants, so two local times in a DST overlap become distinct UTC instants once Run 2 applies its explicit overlap policy. Multiple actions at the same instant are distinct by action ID. The generator must reuse the same source action version on retries; creating a new version is a definition edit, not a retry mechanism.
+
+`HealthPlanNote` supports a plan note (neither target set), an occurrence note, or an action-definition note. It stores unstructured text only. The `num_nonnulls` check permits zero or one specific target and rejects two. Deferred database constraint triggers prove that a targeted occurrence/action belongs to the note's plan and that an occurrence's source action belongs to its plan. Relations are restricted so notes and occurrences cannot be orphaned.
+
+## Database-only constraints and migration discipline
+
+Prisma models the columns, nullability, enums, relations, referential actions, ordinary indexes, and ordinary unique constraints. It cannot currently declare this foundation's CHECK constraints, partial unique action index, or deferred PL/pgSQL constraint triggers. Those objects live in `20260910120000_health_plans_foundation/migration.sql` and are intentional, not schema drift to remove. Future migrations must preserve and, when affected columns change, explicitly update them. In particular, do not replace the partial action index with a normal `@@unique`, and inspect generated migration SQL before applying it.
+
+The database-only rules cover recurrence/effective-range shapes, action ordering, occurrence completion actor/state, note target cardinality, active pointer/status/timestamp shape, active step-to-level membership, and same-plan occurrence/note targets. Unit tests and SQL text assertions protect domain behavior and the presence of this custom SQL; only applying the migration and exercising it against PostgreSQL validates PostgreSQL syntax and runtime constraint behavior.
 
 A single append-only `HealthPlanHistory` is used rather than separate tables because all required lifecycle changes share actor/time/type/metadata semantics and are queried as one timeline. Its enum records creation, pause, resume, level increase/decrease, step advance, and status change. Metadata carries event-specific snapshots such as from/to IDs and indexes. `actorDisplayName` preserves useful audit display when the optional user FK is later cleared. Definition versioning remains in definition tables rather than overloading lifecycle history.
 
@@ -57,11 +69,11 @@ The API/service layer must implement each command in a transaction and:
 5. permit manual level changes only to the adjacent level, never automatically upward;
 6. append history in the same transaction as every lifecycle change;
 7. retire and replace used schedules/actions rather than mutate them;
-8. generate occurrences idempotently and copy action/time-zone presentation snapshots;
+8. generate occurrences idempotently from the effective schedule/action versions and copy action/time-zone presentation snapshots;
 9. archive used plans instead of exposing hard delete.
 
 ## Deferred work and risks
 
 Run 2 still needs DTOs, controllers, transactional services, authenticated family authorization, optimistic/concurrency behavior, definition editing/versioning commands, lifecycle commands, occurrence generation, and integration tests against PostgreSQL. Notifications and dashboards remain out of scope.
 
-Before the occurrence generator ships, choose and test an explicit DST gap/overlap policy and a generation horizon. Before allowing edits, define whether already-pending future occurrences are retained, cancelled/skipped, or regenerated; completed and past occurrences must always remain immutable. Consider adding database triggers for note target-to-plan consistency if writes outside the API become a supported integration surface.
+Before the occurrence generator ships, choose and test an explicit DST gap/overlap policy and a generation horizon. Before allowing edits, define whether already-pending future occurrences are retained, cancelled/skipped, or regenerated; completed and past occurrences must always remain immutable. Run 2 must also make definition replacement atomic and avoid updating versioned rows after they have been referenced. The current deferred same-plan triggers validate resource writes, but do not turn configuration into globally immutable rows; service authorization and edit commands remain responsible for that policy.

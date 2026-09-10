@@ -107,5 +107,39 @@ for (const model of [
 assert.match(schema, /@@unique\(\[healthPlanId, levelIndex\]\)/);
 assert.match(schema, /@@unique\(\[levelId, stepOrder\]\)/);
 assert.match(schema, /@@index\(\[familyId, status, scheduledAt\]\)/);
+
+// These are textual regression assertions for database-only migration features. They do
+// not replace applying the migration to PostgreSQL (see the architecture document).
+assert.doesNotMatch(schema, /@@unique\(\[scheduleId, sortOrder\]\)/);
+assert.match(schema, /effectiveFrom DateTime @default\(now\(\)\)/);
+assert.match(
+  migration,
+  /CREATE UNIQUE INDEX "health_plan_actions_active_sort_order_key"[\s\S]*WHERE "retiredAt" IS NULL;/,
+);
+assert.match(migration, /health_plan_actions_effective_range_check/);
+
+assert.match(migration, /health_plan_occurrences_completed_by_check/);
+assert.match(migration, /"completedByUserId" IS NULL OR "status" = 'COMPLETED'/);
+assert.match(migration, /health_plan_occurrences_completion_check/);
+
+assert.match(migration, /health_plans_active_pointer_pair_check/);
+assert.match(migration, /health_plans_active_pointer_timestamps_check/);
+assert.match(migration, /health_plans_active_status_check/);
+assert.match(migration, /health_plans_draft_state_check/);
+assert.match(migration, /health_plans_pause_state_check/);
 assert.match(migration, /health_plans_active_pointer_consistency/);
+
+assert.match(migration, /health_plan_schedules_shape_check/);
+assert.match(migration, /health_plan_schedules_effective_range_check/);
+assert.match(migration, /health_plan_notes_single_target_check/);
+assert.match(migration, /num_nonnulls\("occurrenceId", "sourceActionId"\) <= 1/);
+assert.match(migration, /health_plan_notes_resource_consistency/);
 assert.match(migration, /health_plan_occurrences_resource_consistency/);
+assert.match(
+  migration,
+  /CREATE UNIQUE INDEX "health_plan_occurrences_sourceActionId_originalScheduledAt_key"/,
+);
+assert.match(
+  migration,
+  /health_plan_occurrences_sourceActionId_fkey[\s\S]*ON DELETE RESTRICT/,
+);

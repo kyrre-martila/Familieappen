@@ -441,6 +441,8 @@ model FamilyMember {
 }
 
 model HealthPlan {
+  /// Several lifecycle/pointer invariants are enforced by database CHECK constraints and a
+  /// deferred trigger in the foundation migration; Prisma cannot express them in this schema.
   id                    String           @id @default(cuid())
   familyId              String
   familyMemberId        String
@@ -538,13 +540,15 @@ model HealthPlanAction {
   title       String
   instruction String?
   sortOrder   Int
+  effectiveFrom DateTime @default(now())
   retiredAt   DateTime?
   createdAt   DateTime @default(now())
   schedule    HealthPlanSchedule @relation(fields: [scheduleId], references: [id], onDelete: Cascade)
   occurrences HealthPlanOccurrence[]
   notes       HealthPlanNote[]
 
-  @@unique([scheduleId, sortOrder])
+  /// Active sort-order uniqueness is a partial unique index in PostgreSQL
+  /// (WHERE "retiredAt" IS NULL), which Prisma cannot express with @@unique.
   @@index([scheduleId, retiredAt])
   @@map("health_plan_actions")
 }
