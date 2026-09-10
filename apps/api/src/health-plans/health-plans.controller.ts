@@ -32,9 +32,8 @@ export class HealthPlansController {
   @Post(":id/resume") resume(@Req() req: Request, @Headers("x-family-id") f: string | undefined, @Param("id") id: string) { return this.command(req, f, id, "resume"); }
   @Post(":id/level-up") levelUp(@Req() req: Request, @Headers("x-family-id") f: string | undefined, @Param("id") id: string) { return this.command(req, f, id, "levelUp"); }
   @Post(":id/level-down") levelDown(@Req() req: Request, @Headers("x-family-id") f: string | undefined, @Param("id") id: string) { return this.command(req, f, id, "levelDown"); }
-  @Post(":id/advance-step") advanceStep(@Req() req: Request, @Headers("x-family-id") f: string | undefined, @Param("id") id: string) { return this.command(req, f, id, "advanceStep"); }
   @Post(":id/archive") archive(@Req() req: Request, @Headers("x-family-id") f: string | undefined, @Param("id") id: string) { return this.command(req, f, id, "archive"); }
-  private command(req: Request, familyId: string | undefined, id: string, command: "start" | "pause" | "resume" | "levelUp" | "levelDown" | "advanceStep" | "archive") {
+  private command(req: Request, familyId: string | undefined, id: string, command: "start" | "pause" | "resume" | "levelUp" | "levelDown" | "archive") {
     return this.service[command](...this.context(req, familyId), id).then(createApiResponse);
   }
   @Post(":id/notes") note(@Req() req: Request, @Headers("x-family-id") f: string | undefined, @Param("id") id: string, @Body() body: CreateHealthPlanNoteDto) {

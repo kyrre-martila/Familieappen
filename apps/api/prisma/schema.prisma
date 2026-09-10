@@ -102,6 +102,7 @@ enum HealthPlanHistoryType {
   LEVEL_DECREASED
   STEP_ADVANCED
   STATUS_CHANGED
+  DEFINITION_UPDATED
 }
 
 model AdminUser {

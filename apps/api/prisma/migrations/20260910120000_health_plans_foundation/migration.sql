@@ -3,7 +3,7 @@
 CREATE TYPE "HealthPlanStatus" AS ENUM ('DRAFT', 'ACTIVE', 'PAUSED', 'COMPLETED', 'ARCHIVED');
 CREATE TYPE "HealthPlanRecurrenceType" AS ENUM ('DAILY', 'WEEKDAYS', 'INTERVAL_DAYS');
 CREATE TYPE "HealthPlanOccurrenceStatus" AS ENUM ('PENDING', 'COMPLETED', 'SKIPPED', 'SNOOZED');
-CREATE TYPE "HealthPlanHistoryType" AS ENUM ('CREATED', 'PAUSED', 'RESUMED', 'LEVEL_INCREASED', 'LEVEL_DECREASED', 'STEP_ADVANCED', 'STATUS_CHANGED');
+CREATE TYPE "HealthPlanHistoryType" AS ENUM ('CREATED', 'PAUSED', 'RESUMED', 'LEVEL_INCREASED', 'LEVEL_DECREASED', 'STEP_ADVANCED', 'STATUS_CHANGED', 'DEFINITION_UPDATED');
 
 -- Enables a composite foreign key to prove that a plan subject belongs to its family.
 ALTER TABLE "family_members" ADD CONSTRAINT "family_members_id_familyId_key" UNIQUE ("id", "familyId");
