@@ -33,6 +33,14 @@ assert.doesNotMatch(source, /familyId\??:/);
 assert.doesNotMatch(source, /authorUserId\??:/);
 assert.doesNotMatch(source, /completedByUserId\??:/);
 assert.doesNotMatch(source, /completedAt\??:/);
+
+// Automatic step progression is an internal scheduler primitive, never a client route.
+const controller = readFileSync(resolve(__dirname, "../src/health-plans/health-plans.controller.ts"), "utf8");
+assert.doesNotMatch(controller, /advance-step|advanceStep/);
+const schema = readFileSync(resolve(__dirname, "../prisma/schema.prisma"), "utf8");
+const migration = readFileSync(resolve(__dirname, "../prisma/migrations/20260910120000_health_plans_foundation/migration.sql"), "utf8");
+assert.match(schema, /DEFINITION_UPDATED/);
+assert.match(migration, /DEFINITION_UPDATED/);
 }
 
 void main();

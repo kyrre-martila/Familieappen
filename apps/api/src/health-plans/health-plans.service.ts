@@ -6,8 +6,10 @@ import { CreateHealthPlanDto, CreateHealthPlanNoteDto, ListHealthPlanOccurrences
 
 const LIMITS = { levels: 10, steps: 20, schedules: 20, actions: 20 } as const;
 type Client = PrismaService["client"];
+type PlanStatus = "DRAFT" | "ACTIVE" | "PAUSED" | "COMPLETED" | "ARCHIVED";
+type HistoryType = "CREATED" | "PAUSED" | "RESUMED" | "LEVEL_INCREASED" | "LEVEL_DECREASED" | "STEP_ADVANCED" | "STATUS_CHANGED" | "DEFINITION_UPDATED";
 type PlanState = {
-  id: string; familyId: string; status: string; updatedAt: Date; pausedAt: Date | null;
+  id: string; familyId: string; status: PlanStatus; updatedAt: Date; pausedAt: Date | null;
   activeLevelId: string | null; activeStepId: string | null;
   activeLevelStartedAt: Date | null; activeStepStartedAt: Date | null;
 };
@@ -70,7 +72,7 @@ export class HealthPlansService {
           await tx.healthPlanOccurrence.updateMany({ where: { sourceActionId: old.id, scheduledAt: { gt: now }, status: { in: ["PENDING", "SNOOZED"] } }, data: { status: "SKIPPED", completedAt: null, completedByUserId: null } });
         }
       }
-      await this.writeHistory(tx, id, "STATUS_CHANGED", userId, actor.displayName, { definitionEdited: true });
+      await this.writeHistory(tx, id, "DEFINITION_UPDATED", userId, actor.displayName, { definitionEdited: true });
       return this.getPlan(id, familyId, tx, true);
     });
   }
@@ -88,7 +90,9 @@ export class HealthPlansService {
   }); }
   levelUp(userId: string, familyId: string, id: string) { return this.moveLevel(userId, familyId, id, 1, "LEVEL_INCREASED"); }
   levelDown(userId: string, familyId: string, id: string) { return this.moveLevel(userId, familyId, id, -1, "LEVEL_DECREASED"); }
-  advanceStep(userId: string, familyId: string, id: string) { return this.transition(userId, familyId, id, "ACTIVE", "STEP_ADVANCED", async (tx, plan, now) => {
+  // Internal progression primitive for the Run 3 scheduler. It is deliberately
+  // not reachable from HTTP; the scheduler must decide that the duration elapsed.
+  private advanceStep(userId: string, familyId: string, id: string) { return this.transition(userId, familyId, id, "ACTIVE", "STEP_ADVANCED", async (tx, plan, now) => {
     const current = await tx.healthPlanStep.findFirst({ where: { id: plan.activeStepId, healthPlanId: id } });
     if (!current?.autoAdvance || current.durationDays == null) throw new ConflictException("Current step cannot advance automatically");
     const next = await tx.healthPlanStep.findFirst({ where: { healthPlanId: id, levelId: current.levelId, stepOrder: current.stepOrder + 1 } });
@@ -138,7 +142,7 @@ export class HealthPlansService {
     });
   }
 
-  private async transition(userId: string, familyId: string, id: string, allowed: string | string[], event: string, change: (tx: Client, plan: PlanState, now: Date) => Promise<Record<string, unknown>>) {
+  private async transition(userId: string, familyId: string, id: string, allowed: PlanStatus | PlanStatus[], event: HistoryType, change: (tx: Client, plan: PlanState, now: Date) => Promise<Record<string, unknown>>) {
     const actor = await this.authorization.requireFamilyMember(userId, familyId);
     return this.prisma.client.$transaction(async (tx) => {
       const plan = await this.getPlan(id, familyId, tx, false) as PlanState; const statuses = Array.isArray(allowed) ? allowed : [allowed];
@@ -150,7 +154,7 @@ export class HealthPlansService {
       return this.getPlan(id, familyId, tx, true);
     });
   }
-  private writeHistory(tx: Client, healthPlanId: string, type: string, actorUserId: string, actorDisplayName: string, metadata: unknown) { return tx.healthPlanHistory.create({ data: { healthPlanId, type, actorUserId, actorDisplayName, metadata } }); }
+  private writeHistory(tx: Client, healthPlanId: string, type: HistoryType, actorUserId: string, actorDisplayName: string, metadata: unknown) { return tx.healthPlanHistory.create({ data: { healthPlanId, type, actorUserId, actorDisplayName, metadata } }); }
   private async getPlan(id: string, familyId: string, client: Client, details: boolean) { const plan = await client.healthPlan.findFirst({ where: { id, familyId }, ...(details ? { include: { familyMember: true, levels: { orderBy: { levelIndex: "asc" }, include: { steps: { orderBy: { stepOrder: "asc" }, include: { schedules: { where: { retiredAt: null }, include: { actions: { where: { retiredAt: null }, orderBy: { sortOrder: "asc" } } } } } } } }, notes: { orderBy: { createdAt: "asc" } } } } : {}) }); if (!plan) throw new NotFoundException("Health plan was not found"); return plan; }
 
   private validateDefinition(input: CreateHealthPlanDto) {
