@@ -25,6 +25,16 @@ CREATE TABLE "health_plans" (
   "updatedAt" TIMESTAMP(3) NOT NULL,
   CONSTRAINT "health_plans_pkey" PRIMARY KEY ("id"),
   CONSTRAINT "health_plans_active_pointer_pair_check" CHECK (("activeLevelId" IS NULL) = ("activeStepId" IS NULL)),
+  CONSTRAINT "health_plans_active_pointer_timestamps_check" CHECK (
+    (("activeLevelId" IS NULL) = ("activeLevelStartedAt" IS NULL)) AND
+    (("activeStepId" IS NULL) = ("activeStepStartedAt" IS NULL))
+  ),
+  CONSTRAINT "health_plans_active_status_check" CHECK (
+    "status" NOT IN ('ACTIVE', 'PAUSED') OR "activeLevelId" IS NOT NULL
+  ),
+  CONSTRAINT "health_plans_draft_state_check" CHECK (
+    "status" <> 'DRAFT' OR "activeLevelId" IS NULL
+  ),
   CONSTRAINT "health_plans_pause_state_check" CHECK (("status" = 'PAUSED') = ("pausedAt" IS NOT NULL))
 );
 
@@ -84,10 +94,12 @@ CREATE TABLE "health_plan_actions" (
   "title" TEXT NOT NULL,
   "instruction" TEXT,
   "sortOrder" INTEGER NOT NULL,
+  "effectiveFrom" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
   "retiredAt" TIMESTAMP(3),
   "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
   CONSTRAINT "health_plan_actions_pkey" PRIMARY KEY ("id"),
-  CONSTRAINT "health_plan_actions_sort_order_check" CHECK ("sortOrder" >= 0)
+  CONSTRAINT "health_plan_actions_sort_order_check" CHECK ("sortOrder" >= 0),
+  CONSTRAINT "health_plan_actions_effective_range_check" CHECK ("retiredAt" IS NULL OR "retiredAt" >= "effectiveFrom")
 );
 
 CREATE TABLE "health_plan_occurrences" (
@@ -106,7 +118,10 @@ CREATE TABLE "health_plan_occurrences" (
   "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
   "updatedAt" TIMESTAMP(3) NOT NULL,
   CONSTRAINT "health_plan_occurrences_pkey" PRIMARY KEY ("id"),
-  CONSTRAINT "health_plan_occurrences_completion_check" CHECK (("status" = 'COMPLETED') = ("completedAt" IS NOT NULL))
+  CONSTRAINT "health_plan_occurrences_completion_check" CHECK (("status" = 'COMPLETED') = ("completedAt" IS NOT NULL)),
+  -- A completed actor is optional because its user FK is ON DELETE SET NULL. For every
+  -- other status an actor would be misleading and is rejected.
+  CONSTRAINT "health_plan_occurrences_completed_by_check" CHECK ("completedByUserId" IS NULL OR "status" = 'COMPLETED')
 );
 
 CREATE TABLE "health_plan_notes" (
@@ -143,7 +158,10 @@ CREATE UNIQUE INDEX "health_plan_steps_levelId_stepOrder_key" ON "health_plan_st
 CREATE UNIQUE INDEX "health_plan_steps_id_healthPlanId_key" ON "health_plan_steps"("id", "healthPlanId");
 CREATE INDEX "health_plan_steps_healthPlanId_idx" ON "health_plan_steps"("healthPlanId");
 CREATE INDEX "health_plan_schedules_stepId_retiredAt_idx" ON "health_plan_schedules"("stepId", "retiredAt");
-CREATE UNIQUE INDEX "health_plan_actions_scheduleId_sortOrder_key" ON "health_plan_actions"("scheduleId", "sortOrder");
+-- Prisma cannot represent partial indexes. Keep this index and the corresponding
+-- schema comment in sync: historical action versions may share an order, active ones may not.
+CREATE UNIQUE INDEX "health_plan_actions_active_sort_order_key"
+ON "health_plan_actions"("scheduleId", "sortOrder") WHERE "retiredAt" IS NULL;
 CREATE INDEX "health_plan_actions_scheduleId_retiredAt_idx" ON "health_plan_actions"("scheduleId", "retiredAt");
 CREATE UNIQUE INDEX "health_plan_occurrences_sourceActionId_originalScheduledAt_key" ON "health_plan_occurrences"("sourceActionId", "originalScheduledAt");
 CREATE INDEX "health_plan_occurrences_familyId_status_scheduledAt_idx" ON "health_plan_occurrences"("familyId", "status", "scheduledAt");
