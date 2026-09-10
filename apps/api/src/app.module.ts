@@ -8,6 +8,7 @@ import { ConfigModule } from "./config";
 import { FamiliesModule } from "./families";
 import { FeedbackModule } from "./feedback";
 import { HealthModule } from "./health";
+import { HealthPlansModule } from "./health-plans";
 import { HuskModule } from "./husk";
 import { MealsModule } from "./meals";
 import { NotificationPreferencesModule } from "./notification-preferences";
@@ -24,6 +25,7 @@ import { WishlistsModule } from "./wishlists";
     ScheduleModule.forRoot(),
     PrismaModule,
     HealthModule,
+    HealthPlansModule,
     AuthModule,
     AdminModule,
     AdvertisementsModule,

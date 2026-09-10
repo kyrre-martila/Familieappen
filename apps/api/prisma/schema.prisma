@@ -73,6 +73,37 @@ enum AdvertisementEventType {
   CLICK
 }
 
+enum HealthPlanStatus {
+  DRAFT
+  ACTIVE
+  PAUSED
+  COMPLETED
+  ARCHIVED
+}
+
+enum HealthPlanRecurrenceType {
+  DAILY
+  WEEKDAYS
+  INTERVAL_DAYS
+}
+
+enum HealthPlanOccurrenceStatus {
+  PENDING
+  COMPLETED
+  SKIPPED
+  SNOOZED
+}
+
+enum HealthPlanHistoryType {
+  CREATED
+  PAUSED
+  RESUMED
+  LEVEL_INCREASED
+  LEVEL_DECREASED
+  STEP_ADVANCED
+  STATUS_CHANGED
+}
+
 model AdminUser {
   id             String          @id @default(cuid())
   email          String          @unique
@@ -225,6 +256,10 @@ model User {
   feedbackSubmissions FeedbackSubmission[]
   sessions UserSession[]
   passwordResetTokens PasswordResetToken[]
+  createdHealthPlans HealthPlan[] @relation("HealthPlanCreatedBy")
+  completedHealthPlanOccurrences HealthPlanOccurrence[] @relation("HealthPlanOccurrenceCompletedBy")
+  authoredHealthPlanNotes HealthPlanNote[] @relation("HealthPlanNoteAuthor")
+  healthPlanHistoryEntries HealthPlanHistory[] @relation("HealthPlanHistoryActor")
 
   @@index([deactivatedAt])
   @@map("users")
@@ -367,6 +402,8 @@ model Family {
   feedbackSubmissions FeedbackSubmission[]
   notifications Notification[]
   customShoppingItems FamilyCustomShoppingItem[]
+  healthPlans HealthPlan[]
+  healthPlanOccurrences HealthPlanOccurrence[]
 
   @@map("families")
 }
@@ -395,10 +432,185 @@ model FamilyMember {
   ownedCalendarExportFeeds CalendarExportFeed[] @relation("CalendarExportFeedOwner")
   mineCalendarExportFeeds  CalendarExportFeed[] @relation("CalendarExportFeedMineMember")
   calendarExportFeedSelections CalendarExportFeedMember[]
+  healthPlans HealthPlan[]
 
+  @@unique([id, familyId])
   @@index([familyId])
   @@index([userId])
   @@map("family_members")
+}
+
+model HealthPlan {
+  id                    String           @id @default(cuid())
+  familyId              String
+  familyMemberId        String
+  name                  String
+  description           String?
+  status                HealthPlanStatus @default(DRAFT)
+  activeLevelId         String?
+  activeStepId          String?
+  activeLevelStartedAt  DateTime?
+  activeStepStartedAt   DateTime?
+  pausedAt              DateTime?
+  createdByUserId       String?
+  createdAt             DateTime         @default(now())
+  updatedAt             DateTime         @updatedAt
+  family                Family           @relation(fields: [familyId], references: [id], onDelete: Restrict)
+  familyMember          FamilyMember     @relation(fields: [familyMemberId, familyId], references: [id, familyId], onDelete: Restrict)
+  createdByUser         User?            @relation("HealthPlanCreatedBy", fields: [createdByUserId], references: [id], onDelete: SetNull)
+  activeLevel           HealthPlanLevel? @relation("HealthPlanActiveLevel", fields: [activeLevelId, id], references: [id, healthPlanId], onDelete: Restrict)
+  activeStep            HealthPlanStep?  @relation("HealthPlanActiveStep", fields: [activeStepId, id], references: [id, healthPlanId], onDelete: Restrict)
+  levels                HealthPlanLevel[] @relation("HealthPlanLevels")
+  steps                 HealthPlanStep[]  @relation("HealthPlanSteps")
+  occurrences           HealthPlanOccurrence[]
+  notes                 HealthPlanNote[]
+  history               HealthPlanHistory[]
+
+  @@unique([id, familyId])
+  @@index([familyId, status])
+  @@index([familyMemberId, status])
+  @@index([activeLevelId])
+  @@index([activeStepId])
+  @@map("health_plans")
+}
+
+model HealthPlanLevel {
+  id             String    @id @default(cuid())
+  healthPlanId   String
+  levelIndex     Int
+  name           String?
+  description    String?
+  createdAt      DateTime  @default(now())
+  updatedAt      DateTime  @updatedAt
+  healthPlan     HealthPlan @relation("HealthPlanLevels", fields: [healthPlanId], references: [id], onDelete: Cascade)
+  activeForPlans HealthPlan[] @relation("HealthPlanActiveLevel")
+  steps          HealthPlanStep[]
+
+  @@unique([healthPlanId, levelIndex])
+  @@unique([id, healthPlanId])
+  @@map("health_plan_levels")
+}
+
+model HealthPlanStep {
+  id             String   @id @default(cuid())
+  healthPlanId   String
+  levelId        String
+  stepOrder      Int
+  name           String?
+  description    String?
+  durationDays   Int?
+  autoAdvance    Boolean  @default(false)
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+  healthPlan     HealthPlan @relation("HealthPlanSteps", fields: [healthPlanId], references: [id], onDelete: Cascade)
+  level          HealthPlanLevel @relation(fields: [levelId, healthPlanId], references: [id, healthPlanId], onDelete: Cascade)
+  activeForPlans HealthPlan[] @relation("HealthPlanActiveStep")
+  schedules      HealthPlanSchedule[]
+
+  @@unique([levelId, stepOrder])
+  @@unique([id, healthPlanId])
+  @@index([healthPlanId])
+  @@map("health_plan_steps")
+}
+
+model HealthPlanSchedule {
+  id               String                   @id @default(cuid())
+  stepId           String
+  recurrenceType   HealthPlanRecurrenceType
+  localTime        DateTime                 @db.Time(0)
+  timezone         String                   @default("Europe/Oslo")
+  weekdays         Int[]                    @default([])
+  intervalDays     Int?
+  anchorDate       DateTime?                @db.Date
+  effectiveFrom    DateTime                 @default(now())
+  retiredAt        DateTime?
+  createdAt        DateTime                 @default(now())
+  step             HealthPlanStep           @relation(fields: [stepId], references: [id], onDelete: Cascade)
+  actions          HealthPlanAction[]
+
+  @@index([stepId, retiredAt])
+  @@map("health_plan_schedules")
+}
+
+model HealthPlanAction {
+  id          String   @id @default(cuid())
+  scheduleId  String
+  title       String
+  instruction String?
+  sortOrder   Int
+  retiredAt   DateTime?
+  createdAt   DateTime @default(now())
+  schedule    HealthPlanSchedule @relation(fields: [scheduleId], references: [id], onDelete: Cascade)
+  occurrences HealthPlanOccurrence[]
+  notes       HealthPlanNote[]
+
+  @@unique([scheduleId, sortOrder])
+  @@index([scheduleId, retiredAt])
+  @@map("health_plan_actions")
+}
+
+model HealthPlanOccurrence {
+  id                String                     @id @default(cuid())
+  healthPlanId      String
+  familyId          String
+  sourceActionId    String
+  scheduledAt       DateTime
+  originalScheduledAt DateTime
+  timezone          String
+  actionTitle       String
+  actionInstruction String?
+  status            HealthPlanOccurrenceStatus @default(PENDING)
+  completedAt       DateTime?
+  completedByUserId String?
+  createdAt         DateTime                   @default(now())
+  updatedAt         DateTime                   @updatedAt
+  healthPlan        HealthPlan                 @relation(fields: [healthPlanId, familyId], references: [id, familyId], onDelete: Restrict)
+  family            Family                     @relation(fields: [familyId], references: [id], onDelete: Restrict)
+  sourceAction      HealthPlanAction            @relation(fields: [sourceActionId], references: [id], onDelete: Restrict)
+  completedByUser   User?                      @relation("HealthPlanOccurrenceCompletedBy", fields: [completedByUserId], references: [id], onDelete: SetNull)
+  notes             HealthPlanNote[]
+
+  @@unique([sourceActionId, originalScheduledAt])
+  @@index([familyId, status, scheduledAt])
+  @@index([healthPlanId, status, scheduledAt])
+  @@index([completedByUserId])
+  @@map("health_plan_occurrences")
+}
+
+model HealthPlanNote {
+  id             String   @id @default(cuid())
+  healthPlanId   String
+  occurrenceId   String?
+  sourceActionId String?
+  authorUserId   String?
+  text           String
+  createdAt      DateTime @default(now())
+  healthPlan     HealthPlan @relation(fields: [healthPlanId], references: [id], onDelete: Restrict)
+  occurrence     HealthPlanOccurrence? @relation(fields: [occurrenceId], references: [id], onDelete: Restrict)
+  sourceAction   HealthPlanAction? @relation(fields: [sourceActionId], references: [id], onDelete: Restrict)
+  authorUser     User? @relation("HealthPlanNoteAuthor", fields: [authorUserId], references: [id], onDelete: SetNull)
+
+  @@index([healthPlanId, createdAt])
+  @@index([occurrenceId])
+  @@index([sourceActionId])
+  @@index([authorUserId])
+  @@map("health_plan_notes")
+}
+
+model HealthPlanHistory {
+  id               String                @id @default(cuid())
+  healthPlanId     String
+  type             HealthPlanHistoryType
+  actorUserId      String?
+  actorDisplayName String?
+  metadata         Json?
+  occurredAt       DateTime              @default(now())
+  healthPlan       HealthPlan            @relation(fields: [healthPlanId], references: [id], onDelete: Restrict)
+  actorUser        User?                 @relation("HealthPlanHistoryActor", fields: [actorUserId], references: [id], onDelete: SetNull)
+
+  @@index([healthPlanId, occurredAt])
+  @@index([actorUserId])
+  @@map("health_plan_history")
 }
 
 model ShoppingList {
