@@ -51,6 +51,14 @@ interface PrismaClientConnection {
   feedbackSubmission: PrismaDelegate;
   notification: PrismaDelegate & { upsert(args: Record<string, unknown>): Promise<any>; };
   pushDevice: PrismaDelegate & { upsert(args: Record<string, unknown>): Promise<any>; };
+  healthPlan: PrismaDelegate;
+  healthPlanLevel: PrismaDelegate;
+  healthPlanStep: PrismaDelegate;
+  healthPlanSchedule: PrismaDelegate;
+  healthPlanAction: PrismaDelegate;
+  healthPlanOccurrence: PrismaDelegate;
+  healthPlanNote: PrismaDelegate;
+  healthPlanHistory: PrismaDelegate;
   $connect(): Promise<void>;
   $disconnect(): Promise<void>;
   $queryRaw<T = unknown>(query: TemplateStringsArray): Promise<T>;
