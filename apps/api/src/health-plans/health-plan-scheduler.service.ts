@@ -30,8 +30,9 @@ export class HealthPlanSchedulerService {
       if (!advanced) break;
     }
     const plan = await this.prisma.client.healthPlan.findFirst({ where: { id, status: "ACTIVE" }, include: { activeStep: { include: { schedules: { include: { actions: true } } } } } });
-    if (!plan?.activeStep) return;
-    const from = new Date(now.getTime() - HEALTH_PLAN_GENERATION_LOOKBACK_HOURS * 3_600_000);
+    if (!plan?.activeStep || !plan.generationNotBefore) return;
+    const lookback = new Date(now.getTime() - HEALTH_PLAN_GENERATION_LOOKBACK_HOURS * 3_600_000);
+    const from = plan.generationNotBefore > lookback ? plan.generationNotBefore : lookback;
     const to = new Date(now.getTime() + HEALTH_PLAN_GENERATION_HORIZON_DAYS * 86_400_000);
     const rows: Record<string, unknown>[] = [];
     for (const schedule of plan.activeStep.schedules) {
@@ -63,7 +64,7 @@ export class HealthPlanSchedulerService {
       if (expiry > now) return false;
       const next = await tx.healthPlanStep.findFirst({ where: { healthPlanId: id, levelId: step.levelId, stepOrder: step.stepOrder + 1 } });
       if (!next) return false; // final autoAdvance step remains active, without repeated history
-      const changed = await tx.healthPlan.updateMany({ where: { id, status: "ACTIVE", activeStepId: step.id, updatedAt: plan.updatedAt }, data: { activeStepId: next.id, activeStepStartedAt: expiry } });
+      const changed = await tx.healthPlan.updateMany({ where: { id, status: "ACTIVE", activeStepId: step.id, updatedAt: plan.updatedAt }, data: { activeStepId: next.id, activeStepStartedAt: expiry, generationNotBefore: expiry } });
       if (changed.count !== 1) return false;
       await tx.healthPlanOccurrence.updateMany({ where: { healthPlanId: id, scheduledAt: { gte: expiry }, status: { in: ["PENDING", "SNOOZED"] }, sourceAction: { schedule: { stepId: step.id } } }, data: { status: "SKIPPED", completedAt: null, completedByUserId: null } });
       await tx.healthPlanHistory.create({ data: { healthPlanId: id, type: "STEP_ADVANCED", actorDisplayName: "System", metadata: { fromStepId: step.id, toStepId: next.id, effectiveAt: expiry.toISOString() } } });

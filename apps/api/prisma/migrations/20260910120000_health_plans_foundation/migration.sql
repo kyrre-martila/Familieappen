@@ -19,6 +19,7 @@ CREATE TABLE "health_plans" (
   "activeStepId" TEXT,
   "activeLevelStartedAt" TIMESTAMP(3),
   "activeStepStartedAt" TIMESTAMP(3),
+  "generationNotBefore" TIMESTAMP(3),
   "pausedAt" TIMESTAMP(3),
   "createdByUserId" TEXT,
   "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
@@ -33,7 +34,10 @@ CREATE TABLE "health_plans" (
     "status" NOT IN ('ACTIVE', 'PAUSED') OR "activeLevelId" IS NOT NULL
   ),
   CONSTRAINT "health_plans_draft_state_check" CHECK (
-    "status" <> 'DRAFT' OR "activeLevelId" IS NULL
+    "status" <> 'DRAFT' OR ("activeLevelId" IS NULL AND "generationNotBefore" IS NULL)
+  ),
+  CONSTRAINT "health_plans_generation_boundary_check" CHECK (
+    "status" NOT IN ('ACTIVE', 'PAUSED') OR "generationNotBefore" IS NOT NULL
   ),
   CONSTRAINT "health_plans_pause_state_check" CHECK (("status" = 'PAUSED') = ("pausedAt" IS NOT NULL))
 );
