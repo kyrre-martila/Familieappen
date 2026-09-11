@@ -21,7 +21,15 @@ export class HealthPlansService {
 
   async list(userId: string, familyId: string) {
     await this.authorization.requireFamilyMember(userId, familyId);
-    return this.prisma.client.healthPlan.findMany({ where: { familyId }, orderBy: [{ createdAt: "desc" }, { id: "asc" }], include: { familyMember: true } });
+    return this.prisma.client.healthPlan.findMany({
+      where: { familyId },
+      orderBy: [{ createdAt: "desc" }, { id: "asc" }],
+      include: {
+        familyMember: true,
+        activeLevel: { select: { id: true, levelIndex: true, name: true } },
+        activeStep: { select: { id: true, stepOrder: true, name: true } },
+      },
+    });
   }
 
   async get(userId: string, familyId: string, id: string) {
@@ -143,6 +151,12 @@ export class HealthPlansService {
     return this.prisma.client.healthPlanOccurrence.findMany({
       where: {
         familyId,
+        // A work-surface feed contains unresolved work only while its plan is
+        // active. Resolved rows remain visible as immutable history.
+        OR: [
+          { status: { in: ["COMPLETED", "SKIPPED"] } },
+          { status: { in: ["PENDING", "SNOOZED"] }, healthPlan: { status: "ACTIVE" } },
+        ],
         ...(query.healthPlanId ? { healthPlanId: query.healthPlanId } : {}),
         ...(query.familyMemberId ? { healthPlan: { familyMemberId: query.familyMemberId } } : {}),
         scheduledAt: { ...(from ? { gte: from } : {}), ...(to ? { lt: to } : {}) },
