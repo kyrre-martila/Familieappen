@@ -16,6 +16,7 @@ type PrismaDelegate = {
   findFirst(args: Record<string, unknown>): Promise<any>;
   findMany(args: Record<string, unknown>): Promise<any[]>;
   create(args: Record<string, unknown>): Promise<any>;
+  createMany(args: Record<string, unknown>): Promise<{ count: number }>;
   delete(args: Record<string, unknown>): Promise<any>;
   deleteMany(args: Record<string, unknown>): Promise<any>;
   update(args: Record<string, unknown>): Promise<any>;

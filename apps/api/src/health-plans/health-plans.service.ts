@@ -83,7 +83,12 @@ export class HealthPlansService {
     if (!level || !step) throw new ConflictException("Plan has no valid base level and first step");
     return { status: "ACTIVE", activeLevelId: level.id, activeStepId: step.id, activeLevelStartedAt: now, activeStepStartedAt: now, pausedAt: null };
   }); }
-  pause(userId: string, familyId: string, id: string) { return this.transition(userId, familyId, id, "ACTIVE", "PAUSED", async (_tx, _plan, now) => ({ status: "PAUSED", pausedAt: now })); }
+  pause(userId: string, familyId: string, id: string) { return this.transition(userId, familyId, id, "ACTIVE", "PAUSED", async (tx, _plan, now) => {
+    // Preserve audit rows, but remove future work from the active queue. Resume
+    // generates a fresh rolling horizon against the shifted logical clocks.
+    await tx.healthPlanOccurrence.updateMany({ where: { healthPlanId: id, scheduledAt: { gt: now }, status: { in: ["PENDING", "SNOOZED"] } }, data: { status: "SKIPPED", completedAt: null, completedByUserId: null } });
+    return { status: "PAUSED", pausedAt: now };
+  }); }
   resume(userId: string, familyId: string, id: string) { return this.transition(userId, familyId, id, "PAUSED", "RESUMED", async (_tx, plan, now) => {
     if (!plan.pausedAt || !plan.activeLevelStartedAt || !plan.activeStepStartedAt) throw new ConflictException("Paused plan has invalid progress timestamps");
     return { status: "ACTIVE", pausedAt: null, activeLevelStartedAt: resumeProgressStartedAt(plan.activeLevelStartedAt, plan.pausedAt, now), activeStepStartedAt: resumeProgressStartedAt(plan.activeStepStartedAt, plan.pausedAt, now) };
