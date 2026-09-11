@@ -1,6 +1,6 @@
 # Helseplan: backend, API and persistence
 
-This document records the Run 1 persistence foundation and the Run 2 API/service boundary for **Helseplan**. There is no UI, notification job, dashboard integration, measurement model, plan-copying feature, occurrence generator, or medical decision logic. The NestJS module is named `health-plans` to avoid confusion with the existing system `/health` endpoint.
+This document records the Run 1 persistence foundation, Run 2 API/service boundary, and Run 3 occurrence scheduler for **Helseplan**. There is no UI, push notification, dashboard integration, measurement model, plan-copying feature, cycle model, or medical decision logic. The NestJS module is named `health-plans` to avoid confusion with the existing system `/health` endpoint.
 
 ## Domain shape
 
@@ -96,11 +96,31 @@ The API/service layer must implement each command in a transaction and:
 8. a future generator must generate occurrences idempotently from effective schedule/action versions and copy action/time-zone presentation snapshots;
 9. archive used plans instead of exposing hard delete.
 
-## Run 3 and remaining risks
+## Run 3 scheduler and time engine
 
-Run 3 owns occurrence generation, recurrence calculation, a generation horizon, implementation of DST gap/overlap policy, automatic time-triggered step advancement, restart-safe generation, and deterministic regeneration after broader schedule/structural edits. Notifications and dashboards remain out of scope.
+`HealthPlanSchedulerService` follows the repository's NestJS Schedule pattern. Its hourly cron calls the independently testable `runOnce(now?)`; callers and tests can supply an instant and never need to patch the process clock. A run lists only `ACTIVE` plan IDs and handles each plan independently. A malformed or stale plan is logged by ID and skipped without exposing action titles/instructions or preventing other families' plans from running. `DRAFT`, `PAUSED`, `COMPLETED`, and `ARCHIVED` are never generated. `COMPLETED` remains an explicitly selected terminal status in v1; the scheduler does not complete plans.
 
-Before the occurrence generator ships, choose and test an explicit DST gap/overlap policy and a generation horizon. Broader schedule/structure editing and replacement occurrence generation remain unavailable. Service tests use a stateful persistence double to exercise family isolation, lifecycle clocks and adjacency, occurrence ownership/completion, note authorship, transaction-coupled history, and concrete concurrent start/double-completion races through conditional `status`/`updatedAt` writes. SQL-text tests protect custom object presence. PostgreSQL runtime constraint/race tests still require a configured PostgreSQL 16 database; unit and SQL-text tests alone do not validate database execution. The deferred same-plan triggers validate resource writes, but do not turn configuration into globally immutable rows; service authorization and edit commands remain responsible for that policy.
+Each plan is processed in this order: advance every elapsed eligible step, reload the resulting active step, calculate occurrences, and insert them as one per-plan batch. The rolling window is **four hours of lookback through fourteen days ahead**, expressed by exported constants. Four hours recovers ordinary short outages while intentionally refusing to create weeks of missed history; fourteen days provides useful near-future work without unbounded rows. The end of the horizon is treated as an inclusive instant. Runs remain bounded by the active step's schedules/actions.
+
+### Recurrence and timezone rules
+
+Every candidate is built independently from a local calendar date plus the schedule's PostgreSQL `TIME(0)` and IANA timezone, then converted to an instant. No recurrence adds 24 or 48 UTC hours. `DAILY` selects every local date. `WEEKDAYS` compares ISO weekday 1–7 for the local date. `INTERVAL_DAYS` takes the signed number of calendar dates since `anchorDate`, requires it to be non-negative, and applies modulo `intervalDays`; month/year boundaries therefore have no special cases.
+
+Conversion uses the platform `Intl` implementation already required by definition validation rather than adding a large date dependency. Offset candidates on both sides of a transition are considered. In an autumn overlap the **earliest instant** is selected. In a spring gap the requested wall time is shifted forward by the gap (for example Oslo 02:30 becomes 03:30), preserving minutes and providing a stable instant. Both policies are covered by explicit Europe/Oslo tests, along with a second IANA zone.
+
+### Idempotency, versioning, and concurrency
+
+The batch uses Prisma `createMany({ skipDuplicates: true })`; PostgreSQL's unique constraint on `(sourceActionId, originalScheduledAt)` is the final arbiter. Consequently repeated calls, retries, restarts, and concurrent API containers converge without a race-prone check-before-insert. Different actions at one instant remain separate rows. Every row copies `healthPlanId`, `familyId`, source action ID, timezone, title, and instruction snapshot.
+
+Schedules and actions participate only where the candidate instant is at or after `effectiveFrom` and strictly before `retiredAt`. The generator never repoints or rewrites an occurrence. A replacement action has a new source ID, so it can create the replacement occurrence while the edit transaction retains the old future row as `SKIPPED`. Retired schedules likewise stop contributing after retirement.
+
+Step advancement uses Europe/Oslo as the explicit plan progress timezone because the current schema has no plan timezone and schedules within one step may disagree. Duration means adding N local calendar dates while preserving the logical start wall time, including across DST. Inside a per-plan transaction the scheduler re-reads active state, verifies `autoAdvance`, duration, expiry, and the next step in the same level. A conditional update on status, active step, and `updatedAt` elects one concurrent runner; only its transaction skips unresolved future occurrences from the expired step and appends one `STEP_ADVANCED` history event. The next start is the calculated expiry rather than runner wall time, so downtime can deterministically advance multiple elapsed steps. Advancement never changes levels. An auto-advance final step simply remains active and writes no history, on every later run.
+
+Pause atomically changes plan state, writes history, and marks future `PENDING`/`SNOOZED` occurrences `SKIPPED`; completed, past, and historical snapshots remain. While paused no generation or progress occurs. Resume shifts the level and step starts by the complete pause interval as before. The next run only regenerates the bounded window from that shifted logical timeline; skipped history is never deleted or revived.
+
+Run 4 may build notifications and broader schedule/structural edit APIs on these stable occurrence snapshots and generation semantics. Dashboard, measurements, copying, medical decisions, automatic level-up, arbitrary transitions, and seasonal activation remain outside this scheduler. A later annual cycle should supply activation windows rather than assume a plan is active only once; nothing in candidate generation requires permanent activation.
+
+The remaining material verification risk is database runtime behavior: unit tests and SQL-text checks do not prove PostgreSQL adapter semantics, trigger execution, or real concurrent transactions. PostgreSQL 16 integration tests should exercise migration deployment, `skipDuplicates`, the unique race, conditional advancement race, and custom family/source triggers whenever a test database is available.
 
 
 ### Future consideration: seasonal cycles
