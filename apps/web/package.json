@@ -10,7 +10,8 @@
     "typecheck": "tsc -p tsconfig.json --noEmit",
     "test:email": "tsx --conditions react-server --test lib/email/email-service.test.ts",
     "test:app-info": "tsx --test app/settings/about/app-info-settings-client.test.ts",
-    "test:advertisements": "tsx --test components/advertisement-card.test.ts"
+    "test:advertisements": "tsx --test components/advertisement-card.test.ts",
+    "test": "tsx --test features/health-plan/model.test.ts"
   },
   "dependencies": {
     "@familieappen/shared": "workspace:*",

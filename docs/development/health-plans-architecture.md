@@ -147,3 +147,11 @@ API client, AuthProvider guards, and FamilyProvider bootstrap.
 Notifications, measurements, annual cycles, parallel base-level behavior,
 medical advice, automatic level changes, and structural edits to existing plans
 remain out of scope.
+
+## Run 4 hardening: web work surfaces and create contract
+
+- Weekday schedules use ISO weekday numbers end-to-end: Monday is `1` and Sunday is `7`. Web DTOs must never translate these values to JavaScript `Date.getDay()` semantics (`0` for Sunday).
+- The create flow supports multiple contiguous delsteg per level. Each delsteg owns its duration, schedules, actions, and `autoAdvance`; order values are generated contiguously from zero. The final delsteg cannot enable `autoAdvance`, and this does not imply automatic level-up.
+- The occurrence feed is a work-surface feed: unresolved `PENDING`/`SNOOZED` rows are returned only for `ACTIVE` plans. Resolved `COMPLETED`/`SKIPPED` rows remain available as non-actionable, visually muted history; the `I dag` UI shows resolved rows from the current day, while upcoming events include only actionable work.
+- The plan-list response selects only lightweight `activeLevel` (`id`, `levelIndex`, `name`) and `activeStep` (`id`, `stepOrder`, `name`) relations. It does not load every nested definition and therefore avoids per-card requests. Draft or archived plans without active pointers show no invented progress context.
+- Selecting a family member narrows the plan selector. If the current plan does not belong to that member, the plan filter resets to **Alle planer**; selecting all members restores the complete family-scoped plan list.
