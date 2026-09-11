@@ -53,6 +53,23 @@ export function isOccurrenceActionable(item: Pick<HealthPlanOccurrence, "status"
 export function occurrenceMenuActions(item: Pick<HealthPlanOccurrence, "status" | "healthPlan">) { return isOccurrenceActionable(item) ? ["COMPLETED", "SKIPPED", "SNOOZED", "NOTE"] as const : ["NOTE"] as const; }
 export function planProgressLabel(plan: Pick<HealthPlan, "status" | "activeLevel" | "activeStep">) { if (!plan.activeLevel || !plan.activeStep) return null; return `${plan.activeLevel.levelIndex === 0 ? "Basisplan" : `Trinn ${plan.activeLevel.levelIndex}`} · Del ${plan.activeStep.stepOrder + 1}`; }
 
+const WEEKDAY_NAMES = ["mandag", "tirsdag", "onsdag", "torsdag", "fredag", "lørdag", "søndag"];
+export function recurrenceLabel(schedule: Pick<import("../../lib/api").HealthPlanSchedule, "recurrenceType" | "weekdays" | "intervalDays">) {
+  if (schedule.recurrenceType === "DAILY") return "Hver dag";
+  if (schedule.recurrenceType === "INTERVAL_DAYS") return `Hver ${schedule.intervalDays}. dag`;
+  const names = schedule.weekdays.map(day => WEEKDAY_NAMES[day - 1]).filter(Boolean);
+  return names.length < 2 ? (names[0] ?? "Utvalgte ukedager") : `${names.slice(0, -1).join(", ")} og ${names.at(-1)}`;
+}
+export function availablePlanActions(plan: Pick<HealthPlan, "status" | "activeLevelId" | "levels">) {
+  const levels = plan.levels ?? []; const current = levels.find(level => level.id === plan.activeLevelId);
+  return {
+    start: plan.status === "DRAFT", pause: plan.status === "ACTIVE", resume: plan.status === "PAUSED",
+    complete: plan.status === "ACTIVE" || plan.status === "PAUSED", archive: plan.status === "DRAFT" || plan.status === "COMPLETED",
+    levelUp: plan.status === "ACTIVE" && !!current && levels.some(level => level.levelIndex === current.levelIndex + 1),
+    levelDown: plan.status === "ACTIVE" && !!current && levels.some(level => level.levelIndex === current.levelIndex - 1),
+  };
+}
+
 export function sortOccurrences(items: HealthPlanOccurrence[]) {
   return [...items].sort((a, b) => new Date(a.scheduledAt).getTime() - new Date(b.scheduledAt).getTime() || a.id.localeCompare(b.id));
 }
