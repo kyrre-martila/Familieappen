@@ -167,6 +167,16 @@ export interface SubmitFeedbackInput {
   appVersion?: string;
 }
 
+export type HealthPlanStatus = "DRAFT" | "ACTIVE" | "PAUSED" | "COMPLETED" | "ARCHIVED";
+export type HealthPlanOccurrenceStatus = "PENDING" | "COMPLETED" | "SKIPPED" | "SNOOZED";
+export interface HealthPlanLevel { id: string; levelIndex: number; name: string | null; steps?: HealthPlanStep[] }
+export interface HealthPlanStep { id: string; stepOrder: number; name: string | null; durationDays: number | null; autoAdvance: boolean; schedules?: HealthPlanSchedule[] }
+export interface HealthPlanSchedule { id: string; localTime: string; recurrenceType: "DAILY" | "WEEKDAYS" | "INTERVAL_DAYS"; weekdays: number[]; intervalDays: number | null; actions: HealthPlanAction[] }
+export interface HealthPlanAction { id: string; title: string; instruction: string | null; sortOrder: number }
+export interface HealthPlan { id: string; familyMemberId: string; name: string; description: string | null; status: HealthPlanStatus; activeLevelId: string | null; activeStepId: string | null; familyMember: FamilyMember; levels?: HealthPlanLevel[] }
+export interface HealthPlanOccurrence { id: string; healthPlanId: string; scheduledAt: string; originalScheduledAt: string; actionTitle: string; actionInstruction: string | null; status: HealthPlanOccurrenceStatus; completedAt: string | null; healthPlan: Pick<HealthPlan, "id" | "name" | "status"> & { familyMember: Pick<FamilyMember, "id" | "displayName">; activeLevel: Pick<HealthPlanLevel, "levelIndex" | "name"> | null; activeStep: Pick<HealthPlanStep, "stepOrder" | "name"> | null } }
+export interface CreateHealthPlanInput { familyMemberId: string; name: string; description?: string | null; levels: Array<{ levelIndex: number; name?: string; steps: Array<{ stepOrder: number; name?: string; durationDays?: number | null; autoAdvance?: boolean; schedules: Array<{ recurrenceType: "DAILY" | "WEEKDAYS" | "INTERVAL_DAYS"; localTime: string; timezone?: string; weekdays?: number[]; intervalDays?: number; anchorDate?: string; actions: Array<{ title: string; instruction?: string | null; sortOrder: number }> }> }> }> }
+
 
 export const NOTIFICATION_TYPES = [
   "shopping_item_added",
@@ -1250,6 +1260,14 @@ export async function updateNotificationPreferences(input: NotificationPreferenc
 export async function getTasks(familyId: string): Promise<Task[]> {
   return apiRequest<Task[]>("/tasks", { familyId });
 }
+
+export function getHealthPlans(familyId: string): Promise<HealthPlan[]> { return apiRequest<HealthPlan[]>("/health-plans", { familyId }); }
+export function getHealthPlan(familyId: string, id: string): Promise<HealthPlan> { return apiRequest<HealthPlan>(`/health-plans/${encodeURIComponent(id)}`, { familyId }); }
+export function createHealthPlan(familyId: string, input: CreateHealthPlanInput): Promise<HealthPlan> { return apiRequest<HealthPlan>("/health-plans", { method: "POST", body: input, familyId }); }
+export function healthPlanCommand(familyId: string, id: string, command: "start" | "pause" | "resume" | "level-up" | "level-down" | "archive"): Promise<HealthPlan> { return apiRequest<HealthPlan>(`/health-plans/${encodeURIComponent(id)}/${command}`, { method: "POST", familyId }); }
+export function getHealthPlanOccurrences(familyId: string, input: { from?: string; to?: string; familyMemberId?: string; healthPlanId?: string; limit?: number } = {}): Promise<HealthPlanOccurrence[]> { const query = new URLSearchParams(); Object.entries(input).forEach(([key, value]) => { if (value !== undefined) query.set(key, String(value)); }); return apiRequest<HealthPlanOccurrence[]>(`/health-plans/occurrences/feed?${query}`, { familyId }); }
+export function updateHealthPlanOccurrence(familyId: string, occurrence: Pick<HealthPlanOccurrence, "id" | "healthPlanId">, input: { status: "COMPLETED" | "SKIPPED" | "SNOOZED"; scheduledAt?: string }): Promise<HealthPlanOccurrence> { return apiRequest<HealthPlanOccurrence>(`/health-plans/${encodeURIComponent(occurrence.healthPlanId)}/occurrences/${encodeURIComponent(occurrence.id)}`, { method: "PATCH", body: input, familyId }); }
+export function addHealthPlanNote(familyId: string, healthPlanId: string, input: { text: string; occurrenceId?: string }): Promise<unknown> { return apiRequest(`/health-plans/${encodeURIComponent(healthPlanId)}/notes`, { method: "POST", body: input, familyId }); }
 
 export async function addTask(
   familyId: string,

@@ -1,6 +1,6 @@
 # Helseplan: backend, API and persistence
 
-This document records the Run 1 persistence foundation, Run 2 API/service boundary, and Run 3 occurrence scheduler for **Helseplan**. There is no UI, push notification, dashboard integration, measurement model, plan-copying feature, cycle model, or medical decision logic. The NestJS module is named `health-plans` to avoid confusion with the existing system `/health` endpoint.
+This document records the Run 1 persistence foundation, Run 2 API/service boundary, Run 3 occurrence scheduler, and Run 4 web surface for **Helseplan**. There is no push notification, dashboard integration, measurement model, plan-copying feature, cycle model, or medical decision logic. The NestJS module is named `health-plans` to avoid confusion with the existing system `/health` endpoint.
 
 ## Domain shape
 
@@ -128,3 +128,22 @@ The remaining material verification risk is database runtime behavior: unit test
 ### Future consideration: seasonal cycles
 
 A later design may attach a `HealthPlanCycle` (or equivalent activation policy) for annual/seasonal windows such as a July–August medication plan. The current plan definition, lifecycle state, immutable occurrences, and append-only history do not require recurrence to be embedded in the plan itself, so such a policy can be composed without changing action snapshots. No cycle fields, API, scheduler, or seasonal behavior are implemented in this run.
+
+## Web work surface (Run 4)
+
+The `/health-plans` web route deliberately separates **I dag** (doing) from
+**Planer** (administration). I dag is a family-scoped, cross-plan occurrence
+feed with prominent family-member filtering, an optional plan filter, a bounded
+upcoming list, and occurrence actions for complete, skip, snooze, and comments.
+Planer exposes the backend lifecycle and the supported create definition without
+inventing additional status or treatment semantics.
+
+`GET /health-plans/occurrences/feed` reads family identity exclusively from the
+authenticated `X-Family-Id` context. It supports `from`, `to`, `limit`,
+`familyMemberId`, and `healthPlanId`, returns display context in one query, and
+uses stable scheduled-time/action/id ordering. The web client uses the shared
+API client, AuthProvider guards, and FamilyProvider bootstrap.
+
+Notifications, measurements, annual cycles, parallel base-level behavior,
+medical advice, automatic level changes, and structural edits to existing plans
+remain out of scope.

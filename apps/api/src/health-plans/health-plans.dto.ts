@@ -60,4 +60,7 @@ export interface UpdateHealthPlanOccurrenceDto {
 export interface ListHealthPlanOccurrencesQueryDto {
   from?: string;
   to?: string;
+  familyMemberId?: string;
+  healthPlanId?: string;
+  limit?: string;
 }

@@ -133,6 +133,27 @@ export class HealthPlansService {
     if (from && to && from >= to) throw new BadRequestException("from must be before to");
     return this.prisma.client.healthPlanOccurrence.findMany({ where: { healthPlanId: id, familyId, scheduledAt: { ...(from ? { gte: from } : {}), ...(to ? { lt: to } : {}) } }, orderBy: [{ scheduledAt: "asc" }, { id: "asc" }], take: 1000 });
   }
+  async occurrenceFeed(userId: string, familyId: string, query: ListHealthPlanOccurrencesQueryDto) {
+    await this.authorization.requireFamilyMember(userId, familyId);
+    const from = query.from ? this.date(query.from, "from") : undefined;
+    const to = query.to ? this.date(query.to, "to") : undefined;
+    if (from && to && from >= to) throw new BadRequestException("from must be before to");
+    const parsedLimit = query.limit === undefined ? 100 : Number(query.limit);
+    if (!Number.isInteger(parsedLimit) || parsedLimit < 1 || parsedLimit > 500) throw new BadRequestException("limit must be an integer between 1 and 500");
+    return this.prisma.client.healthPlanOccurrence.findMany({
+      where: {
+        familyId,
+        ...(query.healthPlanId ? { healthPlanId: query.healthPlanId } : {}),
+        ...(query.familyMemberId ? { healthPlan: { familyMemberId: query.familyMemberId } } : {}),
+        scheduledAt: { ...(from ? { gte: from } : {}), ...(to ? { lt: to } : {}) },
+      },
+      orderBy: [{ scheduledAt: "asc" }, { sourceAction: { sortOrder: "asc" } }, { id: "asc" }],
+      take: parsedLimit,
+      include: {
+        healthPlan: { select: { id: true, name: true, status: true, familyMember: { select: { id: true, displayName: true } }, activeLevel: { select: { levelIndex: true, name: true } }, activeStep: { select: { stepOrder: true, name: true } } } },
+      },
+    });
+  }
   async updateOccurrence(userId: string, familyId: string, id: string, occurrenceId: string, input: UpdateHealthPlanOccurrenceDto) {
     await this.authorization.requireFamilyMember(userId, familyId);
     return this.prisma.client.$transaction(async (tx) => {
