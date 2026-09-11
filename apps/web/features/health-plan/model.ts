@@ -14,6 +14,16 @@ export const blankSchedule = (): ScheduleDraft => ({ localTime: "20:00", recurre
 export const blankStep = (): StepDraft => ({ durationDays: "", autoAdvance: false, schedules: [blankSchedule()] });
 export const blankLevel = (): LevelDraft => ({ steps: [blankStep()] });
 
+export function localDateInTimeZone(date: Date, timeZone: string): string {
+  const parts = new Intl.DateTimeFormat("en-CA", { timeZone, year: "numeric", month: "2-digit", day: "2-digit" }).formatToParts(date);
+  const part = (type: Intl.DateTimeFormatPartTypes) => parts.find(item => item.type === type)?.value;
+  return `${part("year")}-${part("month")}-${part("day")}`;
+}
+
+export function withStepDuration(step: StepDraft, durationDays: string): StepDraft {
+  return { ...step, durationDays, autoAdvance: durationDays === "" ? false : step.autoAdvance };
+}
+
 export function buildCreateHealthPlanInput(name: string, description: string, familyMemberId: string, levels: LevelDraft[], today = new Date()): CreateHealthPlanInput {
   if (!name.trim()) throw new Error("Navn på planen er påkrevd.");
   if (!familyMemberId) throw new Error("Velg et familiemedlem.");
@@ -23,6 +33,7 @@ export function buildCreateHealthPlanInput(name: string, description: string, fa
     return { levelIndex, steps: level.steps.map((step, stepOrder) => {
       const durationDays = step.durationDays === "" ? null : Number(step.durationDays);
       if (durationDays !== null && (!Number.isInteger(durationDays) || durationDays < 1)) throw new Error("Varighet må være et heltall på minst 1.");
+      if (step.autoAdvance && durationDays === null) throw new Error("Automatisk overgang krever varighet på minst 1 dag.");
       if (!step.schedules.length) throw new Error("Hvert delsteg må ha minst ett tidspunkt.");
       return { stepOrder, durationDays, autoAdvance: stepOrder < level.steps.length - 1 && step.autoAdvance, schedules: step.schedules.map(schedule => {
         if (!schedule.actions.length) throw new Error("Hvert tidspunkt må ha minst én hendelse.");
@@ -30,7 +41,7 @@ export function buildCreateHealthPlanInput(name: string, description: string, fa
         if (schedule.recurrenceType === "WEEKDAYS" && (!schedule.weekdays.length || schedule.weekdays.some(day => !Number.isInteger(day) || day < 1 || day > 7))) throw new Error("Velg minst én gyldig ukedag (mandag 1 til søndag 7).");
         const intervalDays = Number(schedule.intervalDays);
         if (schedule.recurrenceType === "INTERVAL_DAYS" && (!Number.isInteger(intervalDays) || intervalDays < 1)) throw new Error("Intervall må være et heltall på minst 1.");
-        return { localTime: schedule.localTime, recurrenceType: schedule.recurrenceType, ...(schedule.recurrenceType === "WEEKDAYS" ? { weekdays: [...schedule.weekdays].sort((a, b) => a - b) } : {}), ...(schedule.recurrenceType === "INTERVAL_DAYS" ? { intervalDays, anchorDate: today.toISOString().slice(0, 10) } : {}), actions: schedule.actions.map((action, sortOrder) => ({ title: action.title.trim(), instruction: action.instruction.trim() || null, sortOrder })) };
+        return { localTime: schedule.localTime, recurrenceType: schedule.recurrenceType, ...(schedule.recurrenceType === "WEEKDAYS" ? { weekdays: [...schedule.weekdays].sort((a, b) => a - b) } : {}), ...(schedule.recurrenceType === "INTERVAL_DAYS" ? { intervalDays, anchorDate: localDateInTimeZone(today, "Europe/Oslo") } : {}), actions: schedule.actions.map((action, sortOrder) => ({ title: action.title.trim(), instruction: action.instruction.trim() || null, sortOrder })) };
       }) };
     }) };
   }) };
