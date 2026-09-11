@@ -8,8 +8,8 @@ const now = new Date("2026-09-10T10:00:00Z");
 
 class StatefulClient {
   plans: Row[] = [
-    { id: "pa", familyId: "a", status: "DRAFT", updatedAt: new Date(0), pausedAt: null, activeLevelId: null, activeStepId: null, activeLevelStartedAt: null, activeStepStartedAt: null },
-    { id: "pb", familyId: "b", status: "DRAFT", updatedAt: new Date(0), pausedAt: null, activeLevelId: null, activeStepId: null, activeLevelStartedAt: null, activeStepStartedAt: null },
+    { id: "pa", familyId: "a", status: "DRAFT", updatedAt: new Date(0), pausedAt: null, activeLevelId: null, activeStepId: null, activeLevelStartedAt: null, activeStepStartedAt: null, generationNotBefore: null },
+    { id: "pb", familyId: "b", status: "DRAFT", updatedAt: new Date(0), pausedAt: null, activeLevelId: null, activeStepId: null, activeLevelStartedAt: null, activeStepStartedAt: null, generationNotBefore: null },
   ];
   levels: Row[] = [
     { id: "l0", healthPlanId: "pa", levelIndex: 0 }, { id: "l1", healthPlanId: "pa", levelIndex: 1 },
@@ -24,6 +24,7 @@ class StatefulClient {
   occurrences: Row[] = [];
   actions: Row[] = [];
   serial = 1;
+  failNextPlanUpdate = false;
   healthPlan = {
     findFirst: undefined,
   } as any;
@@ -32,6 +33,7 @@ class StatefulClient {
     this.healthPlan.update = async ({ where, data }: Row) => { const p = this.plans.find(x => x.id === where.id)!; Object.assign(p, data); p.updatedAt = new Date(p.updatedAt.getTime() + 1); return p; };
     this.healthPlan.updateMany = async ({ where, data }: Row) => {
       await new Promise(resolve => setImmediate(resolve));
+      if (this.failNextPlanUpdate) { this.failNextPlanUpdate = false; return { count: 0 }; }
       const p = this.plans.find(x => x.id === where.id && x.familyId === where.familyId && x.status === where.status && x.updatedAt.getTime() === where.updatedAt.getTime());
       if (!p) return { count: 0 }; Object.assign(p, data); p.updatedAt = new Date(p.updatedAt.getTime() + 1); return { count: 1 };
     };
@@ -47,6 +49,7 @@ class StatefulClient {
     findFirst: async ({ where }: Row) => this.occurrences.find(x => x.id === where.id && x.healthPlanId === where.healthPlanId && x.familyId === where.familyId) ?? null,
     updateMany: async ({ where, data }: Row) => {
       if (where.sourceActionId) { let count = 0; for (const x of this.occurrences) if (x.sourceActionId === where.sourceActionId && x.scheduledAt > where.scheduledAt.gt && where.status.in.includes(x.status)) { Object.assign(x, data); count++; } return { count }; }
+      if (where.healthPlanId && where.scheduledAt?.gt) { let count = 0; for (const x of this.occurrences) if (x.healthPlanId === where.healthPlanId && x.scheduledAt > where.scheduledAt.gt && where.status.in.includes(x.status)) { Object.assign(x, data); count++; } return { count }; }
       await new Promise(resolve => setImmediate(resolve)); const x = this.occurrences.find(o => o.id === where.id && o.status === where.status && o.updatedAt.getTime() === where.updatedAt.getTime()); if (!x) return { count: 0 }; Object.assign(x, data); x.updatedAt = new Date(x.updatedAt.getTime() + 1); return { count: 1 };
     },
     count: async ({ where }: Row) => this.occurrences.filter(x => x.sourceActionId === where.sourceActionId).length,
@@ -57,7 +60,11 @@ class StatefulClient {
     create: async ({ data }: Row) => { const x = { id: `action${this.serial++}`, healthPlanId: "pa", retiredAt: null, ...data }; this.actions.push(x); return x; },
   };
   healthPlanNote = { create: async ({ data }: Row) => { const row = { id: `n${this.serial++}`, ...data }; this.notes.push(row); return row; } };
-  async $transaction<T>(fn: (tx: this) => Promise<T>): Promise<T> { return fn(this); }
+  async $transaction<T>(fn: (tx: this) => Promise<T>): Promise<T> {
+    const emulateRollback = this.failNextPlanUpdate;
+    const plans = structuredClone(this.plans), occurrences = structuredClone(this.occurrences), histories = structuredClone(this.histories);
+    try { return await fn(this); } catch (error) { if (emulateRollback) { this.plans = plans; this.occurrences = occurrences; this.histories = histories; } throw error; }
+  }
 }
 
 const auth = { requireFamilyMember: async (userId: string, familyId: string) => {
@@ -76,6 +83,7 @@ async function main() {
   const [winner, loser] = await Promise.allSettled([service.start("ua", "a", "pa"), service.start("ua", "a", "pa")]);
   assert.equal([winner, loser].filter(x => x.status === "fulfilled").length, 1, "only one concurrent start wins");
   assert.equal(db.plans[0].activeLevelId, "l0"); assert.equal(db.plans[0].activeStepId, "s0");
+  assert.ok(db.plans[0].generationNotBefore instanceof Date, "start opens generation at the activation instant");
   assert.equal(db.histories.filter(x => x.type === "STATUS_CHANGED").length, 1, "state and history commit once");
 
   await service.pause("ua", "a", "pa");
@@ -88,10 +96,19 @@ async function main() {
   await service.resume("ua", "a", "pa");
   const shift = (db.plans[0].activeLevelStartedAt as Date).getTime() - oldLevelStart.getTime();
   assert.ok(shift >= 10_000); assert.equal((db.plans[0].activeStepStartedAt as Date).getTime() - oldStepStart.getTime(), shift);
+  assert.ok((db.plans[0].generationNotBefore as Date) >= (db.plans[0].pausedAt ?? new Date(0)), "resume resets the wall-clock generation boundary");
 
   await assert.rejects(() => service.levelDown("ua", "a", "pa"), /base level/);
-  await service.levelUp("ua", "a", "pa"); assert.equal(db.plans[0].activeLevelId, "l1"); assert.equal(db.plans[0].activeStepId, "s2");
+  const beforeLevelUpBoundary = db.plans[0].generationNotBefore as Date;
+  await service.levelUp("ua", "a", "pa"); assert.equal(db.plans[0].activeLevelId, "l1"); assert.equal(db.plans[0].activeStepId, "s2"); assert.ok(db.plans[0].generationNotBefore >= beforeLevelUpBoundary);
   await service.levelDown("ua", "a", "pa"); assert.equal(db.plans[0].activeStepId, "s0", "entering a level resets to step zero");
+
+  // Occurrence updates run before the conditional plan write during pause. A losing
+  // transition must roll the whole database transaction back.
+  db.occurrences.push({ id: "pause-race", healthPlanId: "pa", familyId: "a", status: "PENDING", scheduledAt: new Date("2099-01-01"), updatedAt: new Date(0) });
+  db.failNextPlanUpdate = true;
+  await assert.rejects(() => service.pause("ua", "a", "pa"), ConflictException);
+  assert.equal(db.occurrences.find(x => x.id === "pause-race")?.status, "PENDING", "losing pause rolls occurrence skips back");
 
   db.occurrences.push({ id: "oa", healthPlanId: "pa", familyId: "a", status: "PENDING", scheduledAt: now, originalScheduledAt: now, updatedAt: new Date(0), completedAt: null, completedByUserId: null });
   const results = await Promise.allSettled([
@@ -99,14 +116,14 @@ async function main() {
     service.updateOccurrence("ua", "a", "pa", "oa", { status: "COMPLETED" }),
   ]);
   assert.equal(results.filter(x => x.status === "fulfilled").length, 1, "double completion conflicts deterministically");
-  assert.equal(db.occurrences[0].completedByUserId, "ua"); assert.ok(db.occurrences[0].completedAt instanceof Date);
+  assert.equal(db.occurrences.find(x => x.id === "oa")?.completedByUserId, "ua"); assert.ok(db.occurrences.find(x => x.id === "oa")?.completedAt instanceof Date);
   await assert.rejects(() => service.updateOccurrence("ua", "a", "pa", "oa", { status: "SKIPPED" }), ConflictException);
 
   db.occurrences.push({ id: "os", healthPlanId: "pa", familyId: "a", status: "PENDING", scheduledAt: now, originalScheduledAt: now, updatedAt: new Date(0), completedAt: null, completedByUserId: null });
   await service.updateOccurrence("ua", "a", "pa", "os", { status: "SNOOZED", scheduledAt: "2099-01-01T12:00:00Z" });
-  assert.equal(db.occurrences[1].originalScheduledAt, now); assert.equal(db.occurrences[1].scheduledAt.toISOString(), "2099-01-01T12:00:00.000Z");
+  assert.equal(db.occurrences.find(x => x.id === "os")?.originalScheduledAt, now); assert.equal(db.occurrences.find(x => x.id === "os")?.scheduledAt.toISOString(), "2099-01-01T12:00:00.000Z");
   await service.updateOccurrence("ua", "a", "pa", "os", { status: "SKIPPED" });
-  assert.equal(db.occurrences[1].status, "SKIPPED");
+  assert.equal(db.occurrences.find(x => x.id === "os")?.status, "SKIPPED");
   await assert.rejects(() => service.updateOccurrence("ua", "a", "pa", "os", { status: "SNOOZED", scheduledAt: "2000-01-01T00:00:00Z" }), ConflictException);
 
   db.occurrences.push({ id: "ob", healthPlanId: "pb", familyId: "b", status: "PENDING", updatedAt: new Date(0) });

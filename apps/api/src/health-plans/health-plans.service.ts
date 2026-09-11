@@ -12,6 +12,7 @@ type PlanState = {
   id: string; familyId: string; status: PlanStatus; updatedAt: Date; pausedAt: Date | null;
   activeLevelId: string | null; activeStepId: string | null;
   activeLevelStartedAt: Date | null; activeStepStartedAt: Date | null;
+  generationNotBefore: Date | null;
 };
 
 @Injectable()
@@ -81,7 +82,7 @@ export class HealthPlansService {
     const level = await tx.healthPlanLevel.findFirst({ where: { healthPlanId: id, levelIndex: 0 } });
     const step = level && await tx.healthPlanStep.findFirst({ where: { healthPlanId: id, levelId: level.id, stepOrder: 0 } });
     if (!level || !step) throw new ConflictException("Plan has no valid base level and first step");
-    return { status: "ACTIVE", activeLevelId: level.id, activeStepId: step.id, activeLevelStartedAt: now, activeStepStartedAt: now, pausedAt: null };
+    return { status: "ACTIVE", activeLevelId: level.id, activeStepId: step.id, activeLevelStartedAt: now, activeStepStartedAt: now, generationNotBefore: now, pausedAt: null };
   }); }
   pause(userId: string, familyId: string, id: string) { return this.transition(userId, familyId, id, "ACTIVE", "PAUSED", async (tx, _plan, now) => {
     // Preserve audit rows, but remove future work from the active queue. Resume
@@ -91,7 +92,7 @@ export class HealthPlansService {
   }); }
   resume(userId: string, familyId: string, id: string) { return this.transition(userId, familyId, id, "PAUSED", "RESUMED", async (_tx, plan, now) => {
     if (!plan.pausedAt || !plan.activeLevelStartedAt || !plan.activeStepStartedAt) throw new ConflictException("Paused plan has invalid progress timestamps");
-    return { status: "ACTIVE", pausedAt: null, activeLevelStartedAt: resumeProgressStartedAt(plan.activeLevelStartedAt, plan.pausedAt, now), activeStepStartedAt: resumeProgressStartedAt(plan.activeStepStartedAt, plan.pausedAt, now) };
+    return { status: "ACTIVE", pausedAt: null, activeLevelStartedAt: resumeProgressStartedAt(plan.activeLevelStartedAt, plan.pausedAt, now), activeStepStartedAt: resumeProgressStartedAt(plan.activeStepStartedAt, plan.pausedAt, now), generationNotBefore: now };
   }); }
   levelUp(userId: string, familyId: string, id: string) { return this.moveLevel(userId, familyId, id, 1, "LEVEL_INCREASED"); }
   levelDown(userId: string, familyId: string, id: string) { return this.moveLevel(userId, familyId, id, -1, "LEVEL_DECREASED"); }
@@ -102,7 +103,7 @@ export class HealthPlansService {
     if (!current?.autoAdvance || current.durationDays == null) throw new ConflictException("Current step cannot advance automatically");
     const next = await tx.healthPlanStep.findFirst({ where: { healthPlanId: id, levelId: current.levelId, stepOrder: current.stepOrder + 1 } });
     if (!next) throw new ConflictException("Current step is the last step in this level");
-    return { activeStepId: next.id, activeStepStartedAt: now, __metadata: { fromStepId: current.id, toStepId: next.id } };
+    return { activeStepId: next.id, activeStepStartedAt: now, generationNotBefore: now, __metadata: { fromStepId: current.id, toStepId: next.id } };
   }); }
   archive(userId: string, familyId: string, id: string) { return this.transition(userId, familyId, id, ["DRAFT", "ACTIVE", "PAUSED", "COMPLETED"], "STATUS_CHANGED", async () => ({ status: "ARCHIVED", pausedAt: null, __metadata: { toStatus: "ARCHIVED" } })); }
 
@@ -114,7 +115,7 @@ export class HealthPlansService {
       if (!next) throw new ConflictException(delta > 0 ? "Plan has no higher level" : "Plan is already at the base level");
       const firstStep = await tx.healthPlanStep.findFirst({ where: { healthPlanId: id, levelId: next.id, stepOrder: 0 } });
       if (!firstStep) throw new ConflictException("Target level has no first step");
-      return { activeLevelId: next.id, activeStepId: firstStep.id, activeLevelStartedAt: now, activeStepStartedAt: now, __metadata: { fromLevelId: current.id, fromLevelIndex: current.levelIndex, toLevelId: next.id, toLevelIndex: next.levelIndex } };
+      return { activeLevelId: next.id, activeStepId: firstStep.id, activeLevelStartedAt: now, activeStepStartedAt: now, generationNotBefore: now, __metadata: { fromLevelId: current.id, fromLevelIndex: current.levelIndex, toLevelId: next.id, toLevelIndex: next.levelIndex } };
     });
   }
 

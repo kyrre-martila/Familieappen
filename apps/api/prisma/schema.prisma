@@ -454,6 +454,8 @@ model HealthPlan {
   activeStepId          String?
   activeLevelStartedAt  DateTime?
   activeStepStartedAt   DateTime?
+  /// Earliest wall-clock instant eligible for occurrence generation in the current activation context.
+  generationNotBefore   DateTime?
   pausedAt              DateTime?
   createdByUserId       String?
   createdAt             DateTime         @default(now())
