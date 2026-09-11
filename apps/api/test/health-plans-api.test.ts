@@ -20,11 +20,19 @@ const valid = {
 async function main(): Promise<void> {
 let occurrenceQuery: Record<string, any> | undefined;
 let listQuery: Record<string, any> | undefined;
+const occurrenceRows = ["COMPLETED", "SKIPPED", "PENDING"].map((status, index) => ({
+  id: `occurrence-${index}`,
+  status,
+  healthPlan: { id: "plan-a", name: "Plan", status: "ACTIVE", familyMember: { id: "member-a", displayName: "Alma" } },
+  // The plan has moved to step 2, but this source action remains attached to step 1.
+  sourceAction: { schedule: { step: { stepOrder: 0, name: "Del 1", level: { levelIndex: 1, name: "Trinn 1" } } } },
+}));
+occurrenceRows.push({ id: "missing", status: "COMPLETED", healthPlan: occurrenceRows[0].healthPlan, sourceAction: null } as never);
 const queryService = new HealthPlansService({ client: {
-  healthPlanOccurrence: { findMany: async (query: Record<string, any>) => { occurrenceQuery = query; return []; } },
+  healthPlanOccurrence: { findMany: async (query: Record<string, any>) => { occurrenceQuery = query; return occurrenceRows; } },
   healthPlan: { findMany: async (query: Record<string, any>) => { listQuery = query; return []; } },
 } } as never, authorization as never);
-await queryService.occurrenceFeed("user", "family-a", { familyMemberId: "member-a", healthPlanId: "plan-a" });
+const feed = await queryService.occurrenceFeed("user", "family-a", { familyMemberId: "member-a", healthPlanId: "plan-a" });
 assert.equal(occurrenceQuery?.where.familyId, "family-a");
 assert.equal(occurrenceQuery?.where.healthPlanId, "plan-a");
 assert.deepEqual(occurrenceQuery?.where.healthPlan, { familyMemberId: "member-a" });
@@ -32,6 +40,11 @@ assert.deepEqual(occurrenceQuery?.where.OR, [
   { status: { in: ["COMPLETED", "SKIPPED"] } },
   { status: { in: ["PENDING", "SNOOZED"] }, healthPlan: { status: "ACTIVE" } },
 ]);
+assert.deepEqual(occurrenceQuery?.include.healthPlan.select, { id: true, name: true, status: true, familyMember: { select: { id: true, displayName: true } } });
+assert.deepEqual(occurrenceQuery?.include.sourceAction.select.schedule.select.step.select, { stepOrder: true, name: true, level: { select: { levelIndex: true, name: true } } });
+for (const item of feed.slice(0, 3)) { assert.equal(item.occurrenceStep?.name, "Del 1"); assert.equal(item.occurrenceStep?.stepOrder, 0); assert.equal(item.occurrenceLevel?.levelIndex, 1); assert.ok(!("sourceAction" in item)); }
+assert.equal(feed[3].occurrenceStep, null);
+assert.equal(feed[3].occurrenceLevel, null);
 await queryService.list("user", "family-a");
 assert.equal(listQuery?.where.familyId, "family-a");
 assert.deepEqual(listQuery?.include.activeLevel.select, { id: true, levelIndex: true, name: true });

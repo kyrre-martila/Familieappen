@@ -148,7 +148,7 @@ export class HealthPlansService {
     if (from && to && from >= to) throw new BadRequestException("from must be before to");
     const parsedLimit = query.limit === undefined ? 100 : Number(query.limit);
     if (!Number.isInteger(parsedLimit) || parsedLimit < 1 || parsedLimit > 500) throw new BadRequestException("limit must be an integer between 1 and 500");
-    return this.prisma.client.healthPlanOccurrence.findMany({
+    const occurrences = await this.prisma.client.healthPlanOccurrence.findMany({
       where: {
         familyId,
         // A work-surface feed contains unresolved work only while its plan is
@@ -164,9 +164,15 @@ export class HealthPlansService {
       orderBy: [{ scheduledAt: "asc" }, { sourceAction: { sortOrder: "asc" } }, { id: "asc" }],
       take: parsedLimit,
       include: {
-        healthPlan: { select: { id: true, name: true, status: true, familyMember: { select: { id: true, displayName: true } }, activeLevel: { select: { levelIndex: true, name: true } }, activeStep: { select: { stepOrder: true, name: true } } } },
+        healthPlan: { select: { id: true, name: true, status: true, familyMember: { select: { id: true, displayName: true } } } },
+        sourceAction: { select: { schedule: { select: { step: { select: { stepOrder: true, name: true, level: { select: { levelIndex: true, name: true } } } } } } } },
       },
     });
+    return occurrences.map(({ sourceAction, ...occurrence }) => ({
+      ...occurrence,
+      occurrenceLevel: sourceAction?.schedule?.step?.level ?? null,
+      occurrenceStep: sourceAction?.schedule?.step ? { stepOrder: sourceAction.schedule.step.stepOrder, name: sourceAction.schedule.step.name } : null,
+    }));
   }
   async updateOccurrence(userId: string, familyId: string, id: string, occurrenceId: string, input: UpdateHealthPlanOccurrenceDto) {
     await this.authorization.requireFamilyMember(userId, familyId);
