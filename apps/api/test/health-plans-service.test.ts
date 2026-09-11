@@ -53,6 +53,7 @@ class StatefulClient {
       await new Promise(resolve => setImmediate(resolve)); const x = this.occurrences.find(o => o.id === where.id && o.status === where.status && o.updatedAt.getTime() === where.updatedAt.getTime()); if (!x) return { count: 0 }; Object.assign(x, data); x.updatedAt = new Date(x.updatedAt.getTime() + 1); return { count: 1 };
     },
     count: async ({ where }: Row) => this.occurrences.filter(x => x.sourceActionId === where.sourceActionId).length,
+    findMany: async ({ where, take }: Row) => this.occurrences.filter(x => x.familyId === where.familyId && (!where.healthPlanId || x.healthPlanId === where.healthPlanId)).slice(0, take),
   };
   healthPlanAction = {
     findFirst: async ({ where }: Row) => this.actions.find(x => x.id === where.id && x.healthPlanId === where.schedule.step.healthPlanId && (where.retiredAt === undefined || x.retiredAt === where.retiredAt)) ?? null,
@@ -75,6 +76,11 @@ const auth = { requireFamilyMember: async (userId: string, familyId: string) => 
 async function main() {
   const db = new StatefulClient();
   const service = new HealthPlansService({ client: db } as never, auth as never);
+
+  db.occurrences.push({ id: "feed-a", healthPlanId: "pa", familyId: "a", status: "PENDING", scheduledAt: now });
+  db.occurrences.push({ id: "feed-b", healthPlanId: "pb", familyId: "b", status: "PENDING", scheduledAt: now });
+  assert.deepEqual((await service.occurrenceFeed("ua", "a", { limit: "5" }) as Row[]).map(x => x.id), ["feed-a"], "feed is scoped by authenticated family context");
+  await assert.rejects(() => service.occurrenceFeed("ua", "a", { limit: "501" }), BadRequestException);
 
   assert.equal((await service.get("ua", "a", "pa") as Row).id, "pa");
   await assert.rejects(() => service.get("ua", "a", "pb"), NotFoundException);

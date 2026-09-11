@@ -18,6 +18,9 @@ export class HealthPlansController {
   @Get() list(@Req() req: Request, @Headers("x-family-id") familyId?: string): Promise<ApiResponse<unknown>> {
     return this.service.list(...this.context(req, familyId)).then(createApiResponse);
   }
+  @Get("occurrences/feed") occurrenceFeed(@Req() req: Request, @Headers("x-family-id") familyId: string | undefined, @Query() query: ListHealthPlanOccurrencesQueryDto) {
+    return this.service.occurrenceFeed(...this.context(req, familyId), query).then(createApiResponse);
+  }
   @Post() create(@Req() req: Request, @Headers("x-family-id") familyId: string | undefined, @Body() body: CreateHealthPlanDto): Promise<ApiResponse<unknown>> {
     return this.service.create(...this.context(req, familyId), body).then(createApiResponse);
   }
