@@ -60,6 +60,7 @@ interface PrismaClientConnection {
   healthPlanOccurrence: PrismaDelegate;
   healthPlanNote: PrismaDelegate;
   healthPlanHistory: PrismaDelegate;
+  healthPlanNotificationRecipient: PrismaDelegate;
   $connect(): Promise<void>;
   $disconnect(): Promise<void>;
   $queryRaw<T = unknown>(query: TemplateStringsArray): Promise<T>;

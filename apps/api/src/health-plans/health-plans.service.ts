@@ -47,7 +47,7 @@ export class HealthPlansService {
       const plan = await tx.healthPlan.create({ data: { familyId, familyMemberId: input.familyMemberId, name: validated.name, description: validated.description, createdByUserId: userId } });
       const recipientIds = input.notificationRecipientIds === undefined ? (actor.userId === userId ? [actor.id] : []) : input.notificationRecipientIds;
       const recipients = await this.validateRecipients(tx, familyId, recipientIds);
-      if (recipients.length) await (tx as any).healthPlanNotificationRecipient.createMany({ data: recipients.map(familyMemberId => ({ healthPlanId: plan.id, familyId, familyMemberId })) });
+      if (recipients.length) await tx.healthPlanNotificationRecipient.createMany({ data: recipients.map(familyMemberId => ({ healthPlanId: plan.id, familyId, familyMemberId })) });
       for (const levelInput of input.levels) {
         const level = await tx.healthPlanLevel.create({ data: { healthPlanId: plan.id, levelIndex: levelInput.levelIndex, name: this.optionalText(levelInput.name, 120, "Level name"), description: this.optionalText(levelInput.description, 1000, "Level description") } });
         for (const stepInput of levelInput.steps) {
@@ -70,8 +70,8 @@ export class HealthPlansService {
       const plan = await this.getPlan(id, familyId, tx, false) as PlanState;
       if (plan.status === "COMPLETED" || plan.status === "ARCHIVED") throw new ConflictException("Completed and archived plans cannot be edited");
       const recipientIds = await this.validateRecipients(tx, familyId, input.familyMemberIds);
-      await (tx as any).healthPlanNotificationRecipient.deleteMany({ where: { healthPlanId: id } });
-      if (recipientIds.length) await (tx as any).healthPlanNotificationRecipient.createMany({ data: recipientIds.map(familyMemberId => ({ healthPlanId: id, familyId, familyMemberId })) });
+      await tx.healthPlanNotificationRecipient.deleteMany({ where: { healthPlanId: id } });
+      if (recipientIds.length) await tx.healthPlanNotificationRecipient.createMany({ data: recipientIds.map(familyMemberId => ({ healthPlanId: id, familyId, familyMemberId })) });
       return this.getPlan(id, familyId, tx, true);
     });
   }

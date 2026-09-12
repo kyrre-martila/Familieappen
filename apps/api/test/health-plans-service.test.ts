@@ -20,6 +20,7 @@ class StatefulClient {
     { id: "s2", healthPlanId: "pa", levelId: "l1", stepOrder: 0, autoAdvance: false, durationDays: null },
   ];
   histories: Row[] = [];
+  recipients: Row[] = [];
   notes: Row[] = [];
   occurrences: Row[] = [];
   actions: Row[] = [];
@@ -38,7 +39,14 @@ class StatefulClient {
       if (!p) return { count: 0 }; Object.assign(p, data); p.updatedAt = new Date(p.updatedAt.getTime() + 1); return { count: 1 };
     };
   }
-  familyMember = { findFirst: async ({ where }: Row) => where.id === "wrong" ? null : { id: where.id } };
+  familyMember = {
+    findFirst: async ({ where }: Row) => where.id === "wrong" ? null : { id: where.id },
+    findMany: async ({ where }: Row) => (where.id.in as string[]).filter(id => !id.startsWith("foreign")).map(id => ({ id, userId: id.startsWith("unlinked") ? null : `user-${id}` })),
+  };
+  healthPlanNotificationRecipient = {
+    deleteMany: async ({ where }: Row) => { this.recipients = this.recipients.filter(x => x.healthPlanId !== where.healthPlanId); return { count: 1 }; },
+    createMany: async ({ data }: Row) => { this.recipients.push(...data); return { count: data.length }; },
+  };
   healthPlanLevel = { findFirst: async ({ where }: Row) => this.levels.find(x => Object.entries(where).every(([k,v]) => x[k] === v)) ?? null };
   healthPlanStep = { findFirst: async ({ where }: Row) => this.steps.find(x => Object.entries(where).every(([k,v]) => x[k] === v)) ?? null };
   healthPlanHistory = {
@@ -112,6 +120,23 @@ async function main() {
     assert.equal(raced.filter(result => result.status === "fulfilled").length, 1, `${competing} and complete elect one winner`);
     assert.equal(raceDb.histories.length, before + 1, `${competing} and complete write only the winner's history`);
   }
+  // Recipient mutation is family-scoped, requires linked users, preserves input order
+  // while deduplicating, and permits only mutable plan states.
+  for (const status of ["DRAFT", "ACTIVE", "PAUSED"] as const) {
+    const recipientDb = new StatefulClient(); recipientDb.plans[0].status = status;
+    const recipientService = new HealthPlansService({ client: recipientDb } as never, auth as never);
+    await recipientService.updateNotificationRecipients("ua", "a", "pa", { familyMemberIds: ["m2", "m1", "m2"] });
+    assert.deepEqual(recipientDb.recipients.map(x => x.familyMemberId), ["m2", "m1"], `${status} dedupes recipients deterministically`);
+    await recipientService.updateNotificationRecipients("ua", "a", "pa", { familyMemberIds: [] });
+    assert.equal(recipientDb.recipients.length, 0, `${status} empty array clears recipients`);
+    await assert.rejects(() => recipientService.updateNotificationRecipients("ua", "a", "pa", { familyMemberIds: ["foreign-member"] }), BadRequestException);
+    await assert.rejects(() => recipientService.updateNotificationRecipients("ua", "a", "pa", { familyMemberIds: ["unlinked-member"] }), BadRequestException);
+  }
+  for (const status of ["COMPLETED", "ARCHIVED"] as const) {
+    const recipientDb = new StatefulClient(); recipientDb.plans[0].status = status;
+    await assert.rejects(() => new HealthPlansService({ client: recipientDb } as never, auth as never).updateNotificationRecipients("ua", "a", "pa", { familyMemberIds: ["m1"] }), ConflictException);
+  }
+
   const db = new StatefulClient();
   const service = new HealthPlansService({ client: db } as never, auth as never);
 
