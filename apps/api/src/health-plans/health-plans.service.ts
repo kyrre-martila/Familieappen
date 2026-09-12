@@ -65,7 +65,7 @@ export class HealthPlansService {
     if (input.name === undefined && input.description === undefined && input.action === undefined) throw new BadRequestException("At least one editable field is required");
     return this.prisma.client.$transaction(async (tx) => {
       const plan = await this.getPlan(id, familyId, tx, false) as PlanState;
-      if (plan.status === "ARCHIVED") throw new ConflictException("Archived plans cannot be edited");
+      if (plan.status === "COMPLETED" || plan.status === "ARCHIVED") throw new ConflictException("Completed and archived plans cannot be edited");
       if (input.name !== undefined || input.description !== undefined) await tx.healthPlan.update({ where: { id }, data: { ...(input.name !== undefined ? { name: this.requiredText(input.name, 120, "Plan name") } : {}), ...(input.description !== undefined ? { description: this.optionalText(input.description, 2000, "Plan description") } : {}) } });
       if (input.action) {
         const old = await tx.healthPlanAction.findFirst({ where: { id: input.action.id, retiredAt: null, schedule: { step: { healthPlanId: id } } } });

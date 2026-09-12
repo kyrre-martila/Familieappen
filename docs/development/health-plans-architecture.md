@@ -184,9 +184,22 @@ occurrence cleanup or history.
 
 Archive and completion are deliberately different. Drafts may be archived;
 active or paused plans are completed from the detail page; completed plans may
-then be archived; archived plans are read-only. The v1 edit surface mirrors the
-existing backend contract: plan name/description and action title/instruction
-only. Used actions are replaced through action versioning so historical
+then be archived. Both `COMPLETED` and `ARCHIVED` are immutable, read-only
+states; only `DRAFT`, `ACTIVE`, and `PAUSED` may use the supported plan
+name/description and action title/instruction edits. The service enforces this
+before writing metadata, action versions, occurrences, or `DEFINITION_UPDATED`
+history. Used actions are replaced through action versioning so historical
 occurrence snapshots remain intact. Adding/removing/reordering levels, steps,
 schedules, recurrence rules, or actions remains out of scope until an atomic
 structural editing API exists.
+
+Health-plan web state is scoped to the current active family (and, on the detail
+route, the current plan ID). A context change immediately hides and clears the
+previous members, plans, occurrences, dialogs, and selection filters; the
+member and plan filters reset to their unfiltered values and the upcoming limit
+resets to its default. Loads and mutations use the existing API client's
+`AbortSignal` support, with a local request-generation guard as a second barrier
+against completions that win an abort race. Consequently stale list, detail,
+lifecycle, occurrence, note, edit, and create responses cannot commit into a
+new family context, and loading is distinct from a completed not-found/error
+state.
