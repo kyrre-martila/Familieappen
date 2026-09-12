@@ -510,8 +510,8 @@ export async function joinFamilyByCode(code: string): Promise<FamilyInvitation> 
   }));
 }
 
-export async function getFamily(familyId: string): Promise<FamilyDetails> {
-  return apiRequest<FamilyDetails>(`/families/${encodeURIComponent(familyId)}`);
+export async function getFamily(familyId: string, signal?: AbortSignal): Promise<FamilyDetails> {
+  return apiRequest<FamilyDetails>(`/families/${encodeURIComponent(familyId)}`, { signal });
 }
 
 export async function updateFamily(familyId: string, input: { name: string }): Promise<Family> {
@@ -1261,14 +1261,14 @@ export async function getTasks(familyId: string): Promise<Task[]> {
   return apiRequest<Task[]>("/tasks", { familyId });
 }
 
-export function getHealthPlans(familyId: string): Promise<HealthPlan[]> { return apiRequest<HealthPlan[]>("/health-plans", { familyId }); }
-export function getHealthPlan(familyId: string, id: string): Promise<HealthPlan> { return apiRequest<HealthPlan>(`/health-plans/${encodeURIComponent(id)}`, { familyId }); }
-export function createHealthPlan(familyId: string, input: CreateHealthPlanInput): Promise<HealthPlan> { return apiRequest<HealthPlan>("/health-plans", { method: "POST", body: input, familyId }); }
-export function updateHealthPlan(familyId: string, id: string, input: { name?: string; description?: string | null; action?: { id: string; title: string; instruction?: string | null } }): Promise<HealthPlan> { return apiRequest<HealthPlan>(`/health-plans/${encodeURIComponent(id)}`, { method: "PATCH", body: input, familyId }); }
-export function healthPlanCommand(familyId: string, id: string, command: "start" | "pause" | "resume" | "level-up" | "level-down" | "complete" | "archive"): Promise<HealthPlan> { return apiRequest<HealthPlan>(`/health-plans/${encodeURIComponent(id)}/${command}`, { method: "POST", familyId }); }
-export function getHealthPlanOccurrences(familyId: string, input: { from?: string; to?: string; familyMemberId?: string; healthPlanId?: string; limit?: number } = {}): Promise<HealthPlanOccurrence[]> { const query = new URLSearchParams(); Object.entries(input).forEach(([key, value]) => { if (value !== undefined) query.set(key, String(value)); }); return apiRequest<HealthPlanOccurrence[]>(`/health-plans/occurrences/feed?${query}`, { familyId }); }
-export function updateHealthPlanOccurrence(familyId: string, occurrence: Pick<HealthPlanOccurrence, "id" | "healthPlanId">, input: { status: "COMPLETED" | "SKIPPED" | "SNOOZED"; scheduledAt?: string }): Promise<HealthPlanOccurrence> { return apiRequest<HealthPlanOccurrence>(`/health-plans/${encodeURIComponent(occurrence.healthPlanId)}/occurrences/${encodeURIComponent(occurrence.id)}`, { method: "PATCH", body: input, familyId }); }
-export function addHealthPlanNote(familyId: string, healthPlanId: string, input: { text: string; occurrenceId?: string }): Promise<unknown> { return apiRequest(`/health-plans/${encodeURIComponent(healthPlanId)}/notes`, { method: "POST", body: input, familyId }); }
+export function getHealthPlans(familyId: string, signal?: AbortSignal): Promise<HealthPlan[]> { return apiRequest<HealthPlan[]>("/health-plans", { familyId, signal }); }
+export function getHealthPlan(familyId: string, id: string, signal?: AbortSignal): Promise<HealthPlan> { return apiRequest<HealthPlan>(`/health-plans/${encodeURIComponent(id)}`, { familyId, signal }); }
+export function createHealthPlan(familyId: string, input: CreateHealthPlanInput, signal?: AbortSignal): Promise<HealthPlan> { return apiRequest<HealthPlan>("/health-plans", { method: "POST", body: input, familyId, signal }); }
+export function updateHealthPlan(familyId: string, id: string, input: { name?: string; description?: string | null; action?: { id: string; title: string; instruction?: string | null } }, signal?: AbortSignal): Promise<HealthPlan> { return apiRequest<HealthPlan>(`/health-plans/${encodeURIComponent(id)}`, { method: "PATCH", body: input, familyId, signal }); }
+export function healthPlanCommand(familyId: string, id: string, command: "start" | "pause" | "resume" | "level-up" | "level-down" | "complete" | "archive", signal?: AbortSignal): Promise<HealthPlan> { return apiRequest<HealthPlan>(`/health-plans/${encodeURIComponent(id)}/${command}`, { method: "POST", familyId, signal }); }
+export function getHealthPlanOccurrences(familyId: string, input: { from?: string; to?: string; familyMemberId?: string; healthPlanId?: string; limit?: number } = {}, signal?: AbortSignal): Promise<HealthPlanOccurrence[]> { const query = new URLSearchParams(); Object.entries(input).forEach(([key, value]) => { if (value !== undefined) query.set(key, String(value)); }); return apiRequest<HealthPlanOccurrence[]>(`/health-plans/occurrences/feed?${query}`, { familyId, signal }); }
+export function updateHealthPlanOccurrence(familyId: string, occurrence: Pick<HealthPlanOccurrence, "id" | "healthPlanId">, input: { status: "COMPLETED" | "SKIPPED" | "SNOOZED"; scheduledAt?: string }, signal?: AbortSignal): Promise<HealthPlanOccurrence> { return apiRequest<HealthPlanOccurrence>(`/health-plans/${encodeURIComponent(occurrence.healthPlanId)}/occurrences/${encodeURIComponent(occurrence.id)}`, { method: "PATCH", body: input, familyId, signal }); }
+export function addHealthPlanNote(familyId: string, healthPlanId: string, input: { text: string; occurrenceId?: string }, signal?: AbortSignal): Promise<unknown> { return apiRequest(`/health-plans/${encodeURIComponent(healthPlanId)}/notes`, { method: "POST", body: input, familyId, signal }); }
 
 export async function addTask(
   familyId: string,

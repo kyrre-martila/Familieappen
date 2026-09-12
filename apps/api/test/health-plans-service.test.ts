@@ -74,6 +74,26 @@ const auth = { requireFamilyMember: async (userId: string, familyId: string) => 
 } };
 
 async function main() {
+  for (const status of ["DRAFT", "ACTIVE", "PAUSED"] as const) {
+    const editableDb = new StatefulClient(); editableDb.plans[0].status = status;
+    const editableService = new HealthPlansService({ client: editableDb } as never, auth as never);
+    await editableService.update("ua", "a", "pa", { name: `${status} edit` });
+    assert.equal(editableDb.plans[0].name, `${status} edit`, `${status} metadata remains editable`);
+  }
+  for (const status of ["COMPLETED", "ARCHIVED"] as const) {
+    for (const input of [{ name: "rejected" }, { action: { id: "terminal-action", title: "rejected", instruction: null } }]) {
+      const terminalDb = new StatefulClient(); terminalDb.plans[0].status = status;
+      terminalDb.actions.push({ id: "terminal-action", healthPlanId: "pa", scheduleId: "schedule", sortOrder: 0, title: "original", retiredAt: null });
+      terminalDb.occurrences.push({ id: "terminal-future", sourceActionId: "terminal-action", scheduledAt: new Date("2099-01-01"), status: "PENDING" });
+      const terminalService = new HealthPlansService({ client: terminalDb } as never, auth as never);
+      const historyCount = terminalDb.histories.length; const actionCount = terminalDb.actions.length;
+      await assert.rejects(() => terminalService.update("ua", "a", "pa", input), ConflictException, `${status} definition edits conflict`);
+      assert.equal(terminalDb.histories.length, historyCount, `${status} rejection writes no definition history`);
+      assert.equal(terminalDb.actions.length, actionCount, `${status} rejection creates no action version`);
+      assert.equal(terminalDb.actions[0].title, "original", `${status} rejection leaves the action untouched`);
+      assert.equal(terminalDb.occurrences[0].status, "PENDING", `${status} rejection leaves future occurrences untouched`);
+    }
+  }
   for (const competing of ["pause", "levelUp", "levelDown"] as const) {
     const raceDb = new StatefulClient(); const raceService = new HealthPlansService({ client: raceDb } as never, auth as never);
     await raceService.start("ua", "a", "pa");
