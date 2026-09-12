@@ -134,13 +134,36 @@ export class HealthPlansService {
   }
 
   async addNote(userId: string, familyId: string, id: string, input: CreateHealthPlanNoteDto) {
-    await this.authorization.requireFamilyMember(userId, familyId); await this.getPlan(id, familyId, this.prisma.client, false);
+    await this.authorization.requireFamilyMember(userId, familyId); const plan = await this.getPlan(id, familyId, this.prisma.client, false) as PlanState;
+    if (plan.status === "COMPLETED" || plan.status === "ARCHIVED") throw new ConflictException("Completed and archived plans cannot receive notes");
     if (input.occurrenceId && input.sourceActionId) throw new BadRequestException("A note may have only one specific target");
     if (input.occurrenceId && !await this.prisma.client.healthPlanOccurrence.findFirst({ where: { id: input.occurrenceId, healthPlanId: id, familyId } })) throw new NotFoundException("Occurrence was not found");
     if (input.sourceActionId && !await this.prisma.client.healthPlanAction.findFirst({ where: { id: input.sourceActionId, schedule: { step: { healthPlanId: id } } } })) throw new NotFoundException("Action was not found");
     return this.prisma.client.healthPlanNote.create({ data: { healthPlanId: id, occurrenceId: input.occurrenceId, sourceActionId: input.sourceActionId, authorUserId: userId, text: this.requiredText(input.text, 4000, "Note") } });
   }
   async history(userId: string, familyId: string, id: string) { await this.authorization.requireFamilyMember(userId, familyId); await this.getPlan(id, familyId, this.prisma.client, false); return this.prisma.client.healthPlanHistory.findMany({ where: { healthPlanId: id }, orderBy: [{ occurredAt: "asc" }, { id: "asc" }] }); }
+  async log(userId: string, familyId: string, id: string) {
+    await this.authorization.requireFamilyMember(userId, familyId);
+    await this.getPlan(id, familyId, this.prisma.client, false);
+    const [history, notes] = await Promise.all([
+      this.prisma.client.healthPlanHistory.findMany({ where: { healthPlanId: id }, orderBy: [{ occurredAt: "desc" }, { id: "desc" }], take: 500 }),
+      this.prisma.client.healthPlanNote.findMany({
+        where: { healthPlanId: id }, orderBy: [{ createdAt: "desc" }, { id: "desc" }], take: 500,
+        include: {
+          authorUser: { select: { displayName: true } },
+          occurrence: { select: { scheduledAt: true, actionTitle: true, sourceAction: { select: { schedule: { select: { step: { select: { stepOrder: true, level: { select: { levelIndex: true } } } } } } } } } },
+          sourceAction: { select: { title: true, schedule: { select: { localTime: true, step: { select: { stepOrder: true, level: { select: { levelIndex: true } } } } } } } },
+        },
+      }),
+    ]);
+    return { history, notes: notes.map(({ authorUser, occurrence, sourceAction, ...note }) => ({
+      ...note,
+      authorDisplayName: authorUser?.displayName || null,
+      targetContext: occurrence ? { kind: "OCCURRENCE", actionTitle: occurrence.actionTitle, scheduledAt: occurrence.scheduledAt, levelIndex: occurrence.sourceAction.schedule.step.level.levelIndex, stepOrder: occurrence.sourceAction.schedule.step.stepOrder }
+        : sourceAction ? { kind: "ACTION", actionTitle: sourceAction.title, localTime: sourceAction.schedule.localTime, levelIndex: sourceAction.schedule.step.level.levelIndex, stepOrder: sourceAction.schedule.step.stepOrder }
+          : null,
+    })) };
+  }
   async occurrences(userId: string, familyId: string, id: string, query: ListHealthPlanOccurrencesQueryDto) {
     await this.authorization.requireFamilyMember(userId, familyId); await this.getPlan(id, familyId, this.prisma.client, false);
     const from = query.from ? this.date(query.from, "from") : undefined; const to = query.to ? this.date(query.to, "to") : undefined;
@@ -183,7 +206,8 @@ export class HealthPlansService {
   async updateOccurrence(userId: string, familyId: string, id: string, occurrenceId: string, input: UpdateHealthPlanOccurrenceDto) {
     await this.authorization.requireFamilyMember(userId, familyId);
     return this.prisma.client.$transaction(async (tx) => {
-      await this.getPlan(id, familyId, tx, false);
+      const plan = await this.getPlan(id, familyId, tx, false) as PlanState;
+      if (plan.status === "COMPLETED" || plan.status === "ARCHIVED") throw new ConflictException("Completed and archived plans cannot receive notes or occurrence changes");
       const occurrence = await tx.healthPlanOccurrence.findFirst({ where: { id: occurrenceId, healthPlanId: id, familyId } });
       if (!occurrence) throw new NotFoundException("Occurrence was not found");
       if (!["PENDING", "SNOOZED"].includes(occurrence.status)) throw new ConflictException("Occurrence is already resolved");

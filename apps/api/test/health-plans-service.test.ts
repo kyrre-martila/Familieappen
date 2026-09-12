@@ -60,7 +60,10 @@ class StatefulClient {
     update: async ({ where, data }: Row) => { const x = this.actions.find(a => a.id === where.id)!; Object.assign(x, data); return x; },
     create: async ({ data }: Row) => { const x = { id: `action${this.serial++}`, healthPlanId: "pa", retiredAt: null, ...data }; this.actions.push(x); return x; },
   };
-  healthPlanNote = { create: async ({ data }: Row) => { const row = { id: `n${this.serial++}`, ...data }; this.notes.push(row); return row; } };
+  healthPlanNote = {
+    create: async ({ data }: Row) => { const row = { id: `n${this.serial++}`, createdAt: new Date(), ...data }; this.notes.push(row); return row; },
+    findMany: async ({ where }: Row) => this.notes.filter(x => x.healthPlanId === where.healthPlanId),
+  };
   async $transaction<T>(fn: (tx: this) => Promise<T>): Promise<T> {
     const emulateRollback = this.failNextPlanUpdate;
     const plans = structuredClone(this.plans), occurrences = structuredClone(this.occurrences), histories = structuredClone(this.histories);
@@ -79,8 +82,14 @@ async function main() {
     const editableService = new HealthPlansService({ client: editableDb } as never, auth as never);
     await editableService.update("ua", "a", "pa", { name: `${status} edit` });
     assert.equal(editableDb.plans[0].name, `${status} edit`, `${status} metadata remains editable`);
+    const originalNotes = editableDb.notes.length;
+    await editableService.addNote("ua", "a", "pa", { text: `${status} note` });
+    assert.equal(editableDb.notes.length, originalNotes + 1, `${status} accepts append-only notes`);
   }
   for (const status of ["COMPLETED", "ARCHIVED"] as const) {
+    const noteDb = new StatefulClient(); noteDb.plans[0].status = status;
+    await assert.rejects(() => new HealthPlansService({ client: noteDb } as never, auth as never).addNote("ua", "a", "pa", { text: "rejected" }), ConflictException);
+    assert.equal(noteDb.notes.length, 0, `${status} writes no note`);
     for (const input of [{ name: "rejected" }, { action: { id: "terminal-action", title: "rejected", instruction: null } }]) {
       const terminalDb = new StatefulClient(); terminalDb.plans[0].status = status;
       terminalDb.actions.push({ id: "terminal-action", healthPlanId: "pa", scheduleId: "schedule", sortOrder: 0, title: "original", retiredAt: null });
@@ -170,6 +179,12 @@ async function main() {
   await service.addNote("ua", "a", "pa", { text: "action", sourceActionId: "aa" });
   await assert.rejects(() => service.addNote("ua", "a", "pa", { text: "cross action", sourceActionId: "ab" }), NotFoundException);
   await assert.rejects(() => service.addNote("ua", "a", "pa", { text: "cross", occurrenceId: "ob" }), NotFoundException);
+  await assert.rejects(() => service.addNote("ua", "a", "pb", { text: "cross family" }), NotFoundException);
+
+  const logged = await service.log("ua", "a", "pa") as Row;
+  assert.ok(logged.notes.every((note: Row) => note.healthPlanId === "pa"), "log contains only the requested plan's notes");
+  assert.ok(logged.history.every((history: Row) => history.healthPlanId === "pa"), "log contains only the requested plan's history");
+  await assert.rejects(() => service.log("ua", "a", "pb"), NotFoundException);
 
   assert.deepEqual(db.histories.map(x => x.type), ["STATUS_CHANGED", "PAUSED", "RESUMED", "LEVEL_INCREASED", "LEVEL_DECREASED"]);
   const action: Row = { id: "used", healthPlanId: "pa", scheduleId: "schedule", sortOrder: 3, title: "old", instruction: "old", retiredAt: null };
