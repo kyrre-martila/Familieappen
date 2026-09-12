@@ -205,3 +205,23 @@ against completions that win an abort race. Consequently stale list, detail,
 lifecycle, occurrence, note, edit, and create responses cannot commit into a
 new family context, and loading is distinct from a completed not-found/error
 state.
+
+### Review hardening: menus and post-mutation refresh
+
+Occurrence menus use the shared presentation model backed by
+`occurrenceMenuActions`; JSX does not maintain a second action policy. Active,
+unresolved occurrences expose completion, skip, snooze, and comment actions,
+while resolved rows on non-terminal plans expose comments only. Completed and
+archived plans render no occurrence menu, matching the backend prohibition on
+new notes and occurrence mutations for terminal plans.
+
+The web mutation flows treat the primary write and the following read refresh
+as separate outcomes. After a successful lifecycle command or edit, the
+returned plan is committed and its dialog is closed before refreshing the log.
+After a successful append-only plan note, the note dialog is closed and reset
+before refreshing; occurrence comments follow the same rule. A failed refresh
+therefore produces a page-level warning that the write succeeded rather than a
+save error or an implicit retry opportunity, preventing duplicate notes.
+`AbortController`, request-generation guards, and family/plan context checks
+remain active around both phases. Stale or aborted mutation/refresh results do
+not commit state and do not display either errors or warnings.

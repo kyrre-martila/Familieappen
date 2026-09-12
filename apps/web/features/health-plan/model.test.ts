@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import { availablePlanActions, blankLevel, blankSchedule, blankStep, buildCreateHealthPlanInput, compatiblePlanId, filterOccurrences, isOccurrenceActionable, ISO_WEEKDAYS, localDateInTimeZone, occurrenceMenuActions, planProgressLabel, plansForMember, recurrenceLabel, sortOccurrences, withStepDuration } from "./model";
+import { availablePlanActions, blankLevel, blankSchedule, blankStep, buildCreateHealthPlanInput, compatiblePlanId, filterOccurrences, isOccurrenceActionable, ISO_WEEKDAYS, localDateInTimeZone, occurrenceMenuActions, occurrenceMenuModel, planProgressLabel, plansForMember, recurrenceLabel, sortOccurrences, withStepDuration } from "./model";
 
 const occurrence = (id: string, at: string, member = "alma", plan = "p1", status = "PENDING", planStatus = "ACTIVE") => ({ id, healthPlanId: plan, scheduledAt: at, status, healthPlan: { status: planStatus, familyMember: { id: member } } }) as never;
 const plan = (id: string, member: string) => ({ id, familyMemberId: member }) as never;
@@ -20,3 +20,10 @@ test("occurrences are chronological and stable", () => assert.deepEqual(sortOccu
 test("recurrences have human labels", () => { assert.equal(recurrenceLabel({ recurrenceType: "DAILY", weekdays: [], intervalDays: null }), "Hver dag"); assert.equal(recurrenceLabel({ recurrenceType: "WEEKDAYS", weekdays: [1, 3, 5], intervalDays: null }), "mandag, onsdag og fredag"); assert.equal(recurrenceLabel({ recurrenceType: "INTERVAL_DAYS", weekdays: [], intervalDays: 2 }), "Hver 2. dag"); });
 test("detail lifecycle actions follow status and adjacent-level policy", () => { const levels = [{ id: "l0", levelIndex: 0 }, { id: "l1", levelIndex: 1 }, { id: "l2", levelIndex: 2 }] as never; const at = (status: string, activeLevelId: string | null) => availablePlanActions({ status, activeLevelId, levels } as never); assert.deepEqual(at("DRAFT", null), { start: true, pause: false, resume: false, complete: false, archive: true, levelUp: false, levelDown: false }); assert.deepEqual(at("ACTIVE", "l1"), { start: false, pause: true, resume: false, complete: true, archive: false, levelUp: true, levelDown: true }); assert.equal(at("ACTIVE", "l2").levelUp, false); assert.equal(at("ACTIVE", "l0").levelDown, false); assert.equal(at("PAUSED", "l1").resume, true); assert.equal(at("PAUSED", "l1").levelUp, false); assert.equal(at("COMPLETED", "l1").archive, true); assert.equal(at("COMPLETED", "l1").complete, false); assert.ok(Object.values(at("ARCHIVED", "l1")).every(value => !value)); });
 test("terminal plans expose no occurrence comment action", () => { for (const planStatus of ["COMPLETED", "ARCHIVED"] as const) assert.deepEqual(occurrenceMenuActions(occurrence("a", "2026-09-11", "a", "p", "COMPLETED", planStatus)), []); });
+test("occurrence presentation follows the shared menu policy", () => {
+  assert.deepEqual(occurrenceMenuModel(occurrence("a", "2026-09-11", "a", "p", "PENDING", "ACTIVE")), { actions: ["COMPLETED", "SKIPPED", "SNOOZED", "NOTE"], showMenu: true });
+  assert.deepEqual(occurrenceMenuModel(occurrence("a", "2026-09-11", "a", "p", "COMPLETED", "ACTIVE")), { actions: ["NOTE"], showMenu: true });
+  assert.deepEqual(occurrenceMenuModel(occurrence("a", "2026-09-11", "a", "p", "COMPLETED", "PAUSED")), { actions: ["NOTE"], showMenu: true });
+  assert.deepEqual(occurrenceMenuModel(occurrence("a", "2026-09-11", "a", "p", "COMPLETED", "COMPLETED")), { actions: [], showMenu: false });
+  assert.deepEqual(occurrenceMenuModel(occurrence("a", "2026-09-11", "a", "p", "SKIPPED", "ARCHIVED")), { actions: [], showMenu: false });
+});

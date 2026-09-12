@@ -51,6 +51,10 @@ export function plansForMember(plans: HealthPlan[], memberId: string) { return p
 export function compatiblePlanId(plans: HealthPlan[], memberId: string, planId: string) { return !planId || plansForMember(plans, memberId).some(plan => plan.id === planId) ? planId : ""; }
 export function isOccurrenceActionable(item: Pick<HealthPlanOccurrence, "status" | "healthPlan">) { return item.healthPlan.status === "ACTIVE" && (item.status === "PENDING" || item.status === "SNOOZED"); }
 export function occurrenceMenuActions(item: Pick<HealthPlanOccurrence, "status" | "healthPlan">) { if (item.healthPlan.status === "COMPLETED" || item.healthPlan.status === "ARCHIVED") return [] as const; return isOccurrenceActionable(item) ? ["COMPLETED", "SKIPPED", "SNOOZED", "NOTE"] as const : ["NOTE"] as const; }
+export function occurrenceMenuModel(item: Pick<HealthPlanOccurrence, "status" | "healthPlan">) {
+  const actions: readonly ("COMPLETED" | "SKIPPED" | "SNOOZED" | "NOTE")[] = occurrenceMenuActions(item);
+  return { actions, showMenu: actions.length > 0 };
+}
 export function planProgressLabel(plan: Pick<HealthPlan, "status" | "activeLevel" | "activeStep">) { if (!plan.activeLevel || !plan.activeStep) return null; return `${plan.activeLevel.levelIndex === 0 ? "Basisplan" : `Trinn ${plan.activeLevel.levelIndex}`} · Del ${plan.activeStep.stepOrder + 1}`; }
 
 const WEEKDAY_NAMES = ["mandag", "tirsdag", "onsdag", "torsdag", "fredag", "lørdag", "søndag"];
