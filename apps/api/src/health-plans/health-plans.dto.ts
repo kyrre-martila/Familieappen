@@ -37,7 +37,10 @@ export interface CreateHealthPlanDto {
   name: string;
   description?: string | null;
   levels: CreateHealthPlanLevelDto[];
+  notificationRecipientIds?: string[];
 }
+
+export interface UpdateHealthPlanNotificationRecipientsDto { familyMemberIds: string[]; }
 
 export interface UpdateHealthPlanDto {
   name?: string;

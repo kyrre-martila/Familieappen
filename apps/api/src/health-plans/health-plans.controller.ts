@@ -1,7 +1,7 @@
 import { Body, Controller, Get, Headers, HttpStatus, Param, Patch, Post, Query, Req, UseGuards } from "@nestjs/common";
 import { AuthGuard } from "../auth/guards/auth.guard";
 import { API_ERROR_CODES, ApiException, ApiResponse, createApiResponse } from "../common";
-import { CreateHealthPlanDto, CreateHealthPlanNoteDto, ListHealthPlanOccurrencesQueryDto, UpdateHealthPlanDto, UpdateHealthPlanOccurrenceDto } from "./health-plans.dto";
+import { CreateHealthPlanDto, CreateHealthPlanNoteDto, ListHealthPlanOccurrencesQueryDto, UpdateHealthPlanDto, UpdateHealthPlanNotificationRecipientsDto, UpdateHealthPlanOccurrenceDto } from "./health-plans.dto";
 import { HealthPlansService } from "./health-plans.service";
 
 type Request = { user: { id: string; email: string } };
@@ -29,6 +29,9 @@ export class HealthPlansController {
   }
   @Patch(":id") update(@Req() req: Request, @Headers("x-family-id") familyId: string | undefined, @Param("id") id: string, @Body() body: UpdateHealthPlanDto): Promise<ApiResponse<unknown>> {
     return this.service.update(...this.context(req, familyId), id, body).then(createApiResponse);
+  }
+  @Patch(":id/notification-recipients") recipients(@Req() req: Request, @Headers("x-family-id") familyId: string | undefined, @Param("id") id: string, @Body() body: UpdateHealthPlanNotificationRecipientsDto) {
+    return this.service.updateNotificationRecipients(...this.context(req, familyId), id, body).then(createApiResponse);
   }
   @Post(":id/start") start(@Req() req: Request, @Headers("x-family-id") f: string | undefined, @Param("id") id: string) { return this.command(req, f, id, "start"); }
   @Post(":id/pause") pause(@Req() req: Request, @Headers("x-family-id") f: string | undefined, @Param("id") id: string) { return this.command(req, f, id, "pause"); }

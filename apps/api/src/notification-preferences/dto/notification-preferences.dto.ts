@@ -8,6 +8,7 @@ export interface NotificationPreferencesDto {
   mealsEnabled: boolean;
   wishlistEnabled: boolean;
   systemEnabled: boolean;
+  healthPlansEnabled: boolean;
   createdAt: string;
   updatedAt: string;
 }
@@ -20,4 +21,5 @@ export interface UpdateNotificationPreferencesRequestDto {
   mealsEnabled?: unknown;
   wishlistEnabled?: unknown;
   systemEnabled?: unknown;
+  healthPlansEnabled?: unknown;
 }

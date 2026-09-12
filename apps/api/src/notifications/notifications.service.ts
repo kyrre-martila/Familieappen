@@ -11,6 +11,7 @@ type PushDeviceRecord = Omit<PushDeviceDto, "createdAt" | "updatedAt" | "lastSee
 type CreateNotificationInput = {
   familyId: string; recipientUserId: string; actorUserId?: string | null; type: string; title: string; body: string;
   entityType?: string | null; entityId?: string | null; deepLink?: string | null; allowSelfNotification?: boolean; allowNonFamilyRecipient?: boolean; cooldownMinutes?: number;
+  dedupeKey?: string | null;
 };
 
 type CreateFamilyNotificationsInput = Omit<CreateNotificationInput, "recipientUserId"> & {
@@ -103,8 +104,15 @@ export class NotificationsService {
     void allowNonFamilyRecipient;
     void allowSelfNotification;
     void cooldownMinutes;
-    const row = await this.notification.create({ data: { ...data, actorUserId: input.actorUserId ?? null, entityType: input.entityType ?? null, entityId: input.entityId ?? null, deepLink: input.deepLink ?? null } });
-    return this.toNotificationDto(row);
+    try {
+      const row = await this.notification.create({ data: { ...data, actorUserId: input.actorUserId ?? null, entityType: input.entityType ?? null, entityId: input.entityId ?? null, deepLink: input.deepLink ?? null, dedupeKey: input.dedupeKey ?? null } });
+      return this.toNotificationDto(row);
+    } catch (error) {
+      // The database uniqueness constraint is the concurrency boundary. A second
+      // scheduler/process observing the same delivery treats P2002 as success.
+      if (input.dedupeKey && (error as { code?: string }).code === "P2002") return null;
+      throw error;
+    }
   }
 
   async getUserDisplayName(userId: string): Promise<string> {
@@ -143,7 +151,7 @@ export class NotificationsService {
     return preferences[category];
   }
 
-  private getPreferenceCategory(type: string): "shoppingEnabled" | "calendarEnabled" | "remindersEnabled" | "tasksEnabled" | "mealsEnabled" | "wishlistEnabled" | "systemEnabled" | null {
+  private getPreferenceCategory(type: string): "shoppingEnabled" | "calendarEnabled" | "remindersEnabled" | "tasksEnabled" | "mealsEnabled" | "wishlistEnabled" | "systemEnabled" | "healthPlansEnabled" | null {
     if (type.startsWith("shopping_") || type === "list_created" || type === "list_item_added") return "shoppingEnabled";
     if (type.startsWith("calendar_")) return "calendarEnabled";
     if (type.startsWith("reminder_")) return "remindersEnabled";
@@ -151,18 +159,23 @@ export class NotificationsService {
     if (type.startsWith("meal_")) return "mealsEnabled";
     if (type.startsWith("wishlist_")) return "wishlistEnabled";
     if (type.startsWith("system_")) return "systemEnabled";
+    if (type.startsWith("health_plan_")) return "healthPlansEnabled";
     return null;
   }
 
   private async requireFamilyUser(familyId: string, userId: string): Promise<void> {
-    const membership = await this.familyMember.findFirst({ where: { familyId, userId } });
+    const membership = await this.familyMember.findFirst({ where: { familyId, userId, user: { deactivatedAt: null } } });
     if (!membership) throw new BadRequestException("Recipient must belong to the family");
   }
 
   private parseLimit(value?: string): number { const n = value ? Number(value) : 50; return Math.min(Math.max(Number.isFinite(n) ? n : 50, 1), 100); }
   private requiredString(value: unknown, field: string): string { if (typeof value !== "string" || !value.trim()) throw new BadRequestException(`${field} is required`); return value.trim(); }
   private optionalString(value: unknown, field: string): string | null { if (value === undefined || value === null || value === "") return null; if (typeof value !== "string") throw new BadRequestException(`${field} must be a string`); return value.trim(); }
-  private toNotificationDto(row: NotificationRecord): NotificationDto { return { ...row, readAt: row.readAt?.toISOString() ?? null, createdAt: row.createdAt.toISOString(), updatedAt: row.updatedAt.toISOString() }; }
+  private toNotificationDto(row: NotificationRecord): NotificationDto {
+    const { dedupeKey: _dedupeKey, ...publicRow } = row as NotificationRecord & { dedupeKey?: string | null };
+    void _dedupeKey;
+    return { ...publicRow, readAt: row.readAt?.toISOString() ?? null, createdAt: row.createdAt.toISOString(), updatedAt: row.updatedAt.toISOString() };
+  }
   private toPushDeviceDto(row: PushDeviceRecord): PushDeviceDto { return { ...row, lastSeenAt: row.lastSeenAt.toISOString(), disabledAt: row.disabledAt?.toISOString() ?? null, createdAt: row.createdAt.toISOString(), updatedAt: row.updatedAt.toISOString() }; }
   private get notification() { return (this.prisma.client as any).notification; }
   private get pushDevice() { return (this.prisma.client as any).pushDevice; }

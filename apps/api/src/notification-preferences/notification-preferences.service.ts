@@ -9,7 +9,8 @@ const preferenceKeys = [
   "tasksEnabled",
   "mealsEnabled",
   "wishlistEnabled",
-  "systemEnabled"
+  "systemEnabled",
+  "healthPlansEnabled"
 ] as const;
 
 type PreferenceModelKey = (typeof preferenceKeys)[number];
@@ -37,6 +38,7 @@ type NotificationPreferenceRecord = {
   mealsEnabled: boolean;
   wishlistEnabled: boolean;
   systemEnabled: boolean;
+  healthPlansEnabled: boolean;
   createdAt: Date;
   updatedAt: Date;
 };
@@ -108,6 +110,7 @@ export class NotificationPreferencesService {
       mealsEnabled: preferences.mealsEnabled,
       wishlistEnabled: preferences.wishlistEnabled,
       systemEnabled: preferences.systemEnabled,
+      healthPlansEnabled: preferences.healthPlansEnabled,
       createdAt: preferences.createdAt.toISOString(),
       updatedAt: preferences.updatedAt.toISOString()
     };

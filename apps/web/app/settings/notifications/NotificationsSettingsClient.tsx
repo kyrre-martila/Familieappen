@@ -11,6 +11,7 @@ import {
   ShoppingBasket,
   Utensils,
   Wrench,
+  HeartPulse,
   type LucideIcon,
 } from "lucide-react";
 import { AppListRow } from "../../../components/app-ui";
@@ -28,7 +29,8 @@ type NotificationPreferenceKey =
   | "tasksEnabled"
   | "mealsEnabled"
   | "wishlistEnabled"
-  | "systemEnabled";
+  | "systemEnabled"
+  | "healthPlansEnabled";
 
 type NotificationToggle = {
   key: NotificationPreferenceKey;
@@ -48,6 +50,7 @@ const defaultPreferences: Pick<
   mealsEnabled: true,
   wishlistEnabled: true,
   systemEnabled: true,
+  healthPlansEnabled: true,
 };
 
 const notificationToggles: NotificationToggle[] = [
@@ -88,6 +91,12 @@ const notificationToggles: NotificationToggle[] = [
     icon: Gift,
   },
   {
+    key: "healthPlansEnabled",
+    label: "Helseplan",
+    description: "Motta varsler når en planlagt helseplan-hendelse forfaller.",
+    icon: HeartPulse,
+  },
+  {
     key: "systemEnabled",
     label: "Systemvarsler",
     description: "Motta automatiske varsler om manglende planlegging.",
@@ -106,6 +115,7 @@ function pickPreferences(
     mealsEnabled: preferences.mealsEnabled,
     wishlistEnabled: preferences.wishlistEnabled,
     systemEnabled: preferences.systemEnabled,
+    healthPlansEnabled: preferences.healthPlansEnabled,
   };
 }
 
