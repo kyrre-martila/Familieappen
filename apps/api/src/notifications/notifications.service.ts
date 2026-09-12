@@ -2,6 +2,7 @@ import { BadRequestException, Injectable, NotFoundException } from "@nestjs/comm
 import { PrismaService } from "../prisma";
 import { NotificationPreferencesService } from "../notification-preferences/notification-preferences.service";
 import { NotificationDto, RegisterPushDeviceRequestDto, PushDeviceDto } from "./dto/notifications.dto";
+import { PushNotificationService } from "./push-notification.service";
 
 type NotificationRecord = NotificationDto & { createdAt: Date; updatedAt: Date; readAt: Date | null };
 type PushDeviceRecord = Omit<PushDeviceDto, "createdAt" | "updatedAt" | "lastSeenAt" | "disabledAt"> & {
@@ -20,7 +21,7 @@ type CreateFamilyNotificationsInput = Omit<CreateNotificationInput, "recipientUs
 
 @Injectable()
 export class NotificationsService {
-  constructor(private readonly prisma: PrismaService, private readonly notificationPreferencesService: NotificationPreferencesService) {}
+  constructor(private readonly prisma: PrismaService, private readonly notificationPreferencesService: NotificationPreferencesService, private readonly pushNotifications: PushNotificationService) {}
 
   async listNotifications(userId: string, query: { unreadOnly?: string; limit?: string; cursor?: string; before?: string }): Promise<NotificationDto[]> {
     const take = this.parseLimit(query.limit);
@@ -110,9 +111,16 @@ export class NotificationsService {
     } catch (error) {
       // The database uniqueness constraint is the concurrency boundary. A second
       // scheduler/process observing the same delivery treats P2002 as success.
-      if (input.dedupeKey && (error as { code?: string }).code === "P2002") return null;
+      if (input.dedupeKey && this.isDedupeConflict(error)) return null;
       throw error;
     }
+  }
+
+  /** Explicit opt-in transport: legacy producers remain in-app only. */
+  async createNotificationAndDeliver(input: CreateNotificationInput): Promise<NotificationDto | null> {
+    const notification = await this.createNotification(input);
+    if (notification) await this.pushNotifications.sendToUser(input.recipientUserId, notification);
+    return notification;
   }
 
   async getUserDisplayName(userId: string): Promise<string> {
@@ -161,6 +169,14 @@ export class NotificationsService {
     if (type.startsWith("system_")) return "systemEnabled";
     if (type.startsWith("health_plan_")) return "healthPlansEnabled";
     return null;
+  }
+
+  private isDedupeConflict(error: unknown): boolean {
+    if (!error || typeof error !== "object" || (error as { code?: unknown }).code !== "P2002") return false;
+    const target = (error as { meta?: { target?: unknown } }).meta?.target;
+    if (target === undefined) return true;
+    if (Array.isArray(target)) return target.includes("dedupeKey");
+    return typeof target === "string" && target.includes("dedupeKey");
   }
 
   private async requireFamilyUser(familyId: string, userId: string): Promise<void> {
