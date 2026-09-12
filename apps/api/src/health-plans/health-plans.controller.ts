@@ -46,6 +46,9 @@ export class HealthPlansController {
   @Get(":id/history") history(@Req() req: Request, @Headers("x-family-id") f: string | undefined, @Param("id") id: string) {
     return this.service.history(...this.context(req, f), id).then(createApiResponse);
   }
+  @Get(":id/log") log(@Req() req: Request, @Headers("x-family-id") f: string | undefined, @Param("id") id: string) {
+    return this.service.log(...this.context(req, f), id).then(createApiResponse);
+  }
   @Get(":id/occurrences") occurrences(@Req() req: Request, @Headers("x-family-id") f: string | undefined, @Param("id") id: string, @Query() query: ListHealthPlanOccurrencesQueryDto) {
     return this.service.occurrences(...this.context(req, f), id, query).then(createApiResponse);
   }

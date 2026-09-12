@@ -16131,3 +16131,16 @@ button.family-settings-row:focus-visible:not(:disabled) {
 .health-step-heading { display: flex; align-items: center; justify-content: space-between; gap: 1rem; }
 .health-step-heading button { border: 0; background: transparent; color: var(--color-muted); }
 .health-action-input button { min-width: 44px; border: 0; background: transparent; }
+
+.health-log { display: grid; gap: var(--space-l); }
+.health-log > header { display: flex; align-items: center; justify-content: space-between; gap: 1rem; }
+.health-log h2, .health-log-day h3 { margin: 0; }
+.health-log-day { display: grid; gap: .75rem; }
+.health-log-day > h3 { color: var(--color-muted); font-size: .9rem; text-transform: capitalize; }
+.health-log-day > div { display: grid; gap: .65rem; }
+.health-log-entry { display: grid; grid-template-columns: 12px 1fr; gap: .8rem; border: 1px solid var(--color-border); border-radius: var(--radius-l); padding: 1rem; background: var(--color-surface); }
+.health-log-entry > span { width: 10px; height: 10px; margin-top: .4rem; border-radius: 50%; background: var(--color-primary); }
+.health-log-entry--note > span { background: #d49b3f; }
+.health-log-entry strong, .health-log-entry small { display: block; }
+.health-log-entry small { margin-top: .2rem; color: var(--color-muted); }
+.health-log-entry p { margin: .65rem 0; white-space: pre-wrap; }
