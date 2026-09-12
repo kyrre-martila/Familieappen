@@ -49,7 +49,7 @@ class StatefulClient {
     findFirst: async ({ where }: Row) => this.occurrences.find(x => x.id === where.id && x.healthPlanId === where.healthPlanId && x.familyId === where.familyId) ?? null,
     updateMany: async ({ where, data }: Row) => {
       if (where.sourceActionId) { let count = 0; for (const x of this.occurrences) if (x.sourceActionId === where.sourceActionId && x.scheduledAt > where.scheduledAt.gt && where.status.in.includes(x.status)) { Object.assign(x, data); count++; } return { count }; }
-      if (where.healthPlanId && where.scheduledAt?.gt) { let count = 0; for (const x of this.occurrences) if (x.healthPlanId === where.healthPlanId && x.scheduledAt > where.scheduledAt.gt && where.status.in.includes(x.status)) { Object.assign(x, data); count++; } return { count }; }
+      if (where.healthPlanId && (where.scheduledAt?.gt || where.scheduledAt?.gte)) { const boundary = where.scheduledAt.gt ?? where.scheduledAt.gte; let count = 0; for (const x of this.occurrences) if (x.healthPlanId === where.healthPlanId && (!where.familyId || x.familyId === where.familyId) && (where.scheduledAt.gt ? x.scheduledAt > boundary : x.scheduledAt >= boundary) && where.status.in.includes(x.status)) { Object.assign(x, data); count++; } return { count }; }
       await new Promise(resolve => setImmediate(resolve)); const x = this.occurrences.find(o => o.id === where.id && o.status === where.status && o.updatedAt.getTime() === where.updatedAt.getTime()); if (!x) return { count: 0 }; Object.assign(x, data); x.updatedAt = new Date(x.updatedAt.getTime() + 1); return { count: 1 };
     },
     count: async ({ where }: Row) => this.occurrences.filter(x => x.sourceActionId === where.sourceActionId).length,
@@ -74,6 +74,15 @@ const auth = { requireFamilyMember: async (userId: string, familyId: string) => 
 } };
 
 async function main() {
+  for (const competing of ["pause", "levelUp", "levelDown"] as const) {
+    const raceDb = new StatefulClient(); const raceService = new HealthPlansService({ client: raceDb } as never, auth as never);
+    await raceService.start("ua", "a", "pa");
+    if (competing === "levelDown") { await raceService.levelUp("ua", "a", "pa"); }
+    const before = raceDb.histories.length;
+    const raced = await Promise.allSettled([raceService[competing]("ua", "a", "pa"), raceService.complete("ua", "a", "pa")]);
+    assert.equal(raced.filter(result => result.status === "fulfilled").length, 1, `${competing} and complete elect one winner`);
+    assert.equal(raceDb.histories.length, before + 1, `${competing} and complete write only the winner's history`);
+  }
   const db = new StatefulClient();
   const service = new HealthPlansService({ client: db } as never, auth as never);
 
@@ -161,6 +170,31 @@ async function main() {
   assert.equal(db.histories.at(-1)?.type, "DEFINITION_UPDATED");
   assert.equal(db.histories.filter(x => x.type === "STATUS_CHANGED").length, 1, "definition edit is not a lifecycle status event");
 
+  const beforeCompleteHistory = db.histories.length;
+  db.occurrences.push(
+    { id: "complete-pending", healthPlanId: "pa", familyId: "a", scheduledAt: new Date("2099-02-01"), status: "PENDING" },
+    { id: "complete-snoozed", healthPlanId: "pa", familyId: "a", scheduledAt: new Date("2099-02-02"), status: "SNOOZED" },
+    { id: "complete-past", healthPlanId: "pa", familyId: "a", scheduledAt: new Date("2000-02-01"), status: "PENDING" },
+    { id: "complete-done", healthPlanId: "pa", familyId: "a", scheduledAt: new Date("2099-02-03"), status: "COMPLETED" },
+    { id: "complete-skipped", healthPlanId: "pa", familyId: "a", scheduledAt: new Date("2099-02-04"), status: "SKIPPED" },
+  );
+  await service.complete("ua", "a", "pa");
+  assert.equal(db.plans[0].status, "COMPLETED", "ACTIVE can be completed");
+  assert.equal(db.occurrences.find(x => x.id === "complete-pending")!.status, "SKIPPED");
+  assert.equal(db.occurrences.find(x => x.id === "complete-snoozed")!.status, "SKIPPED");
+  assert.equal(db.occurrences.find(x => x.id === "complete-past")!.status, "PENDING");
+  assert.equal(db.occurrences.find(x => x.id === "complete-done")!.status, "COMPLETED");
+  assert.equal(db.occurrences.find(x => x.id === "complete-skipped")!.status, "SKIPPED");
+  assert.equal(db.histories.length, beforeCompleteHistory + 1, "complete writes history exactly once");
+  await assert.rejects(() => service.complete("ua", "a", "pa"), ConflictException, "double complete is rejected");
+  await assert.rejects(() => service.complete("ua", "a", "pb"), NotFoundException, "another family's plan is hidden");
+  db.plans[0].status = "PAUSED"; db.plans[0].pausedAt = new Date(); db.plans[0].updatedAt = new Date(db.plans[0].updatedAt.getTime() + 1);
+  await service.complete("ua", "a", "pa"); assert.equal(db.plans[0].status, "COMPLETED", "PAUSED can be completed");
+  db.plans[0].status = "DRAFT"; db.plans[0].updatedAt = new Date(db.plans[0].updatedAt.getTime() + 1);
+  await assert.rejects(() => service.complete("ua", "a", "pa"), ConflictException);
+  db.plans[0].status = "ARCHIVED"; db.plans[0].updatedAt = new Date(db.plans[0].updatedAt.getTime() + 1);
+  await assert.rejects(() => service.complete("ua", "a", "pa"), ConflictException);
+  db.plans[0].status = "COMPLETED"; db.plans[0].updatedAt = new Date(db.plans[0].updatedAt.getTime() + 1);
   await service.archive("ua", "a", "pa");
   await assert.rejects(() => service.pause("ua", "a", "pa"), ConflictException);
 }

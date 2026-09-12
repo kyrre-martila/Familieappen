@@ -157,3 +157,36 @@ remain out of scope.
 - Occurrence cards get their level and step context through the occurrence's immutable `sourceAction` version and its schedule/step/level relations. They omit the context label defensively if that relation is unavailable, rather than falling back to potentially incorrect current plan progress. Plan-list cards continue to use current `activeLevel` and `activeStep` context.
 - The plan-list response selects only lightweight `activeLevel` (`id`, `levelIndex`, `name`) and `activeStep` (`id`, `stepOrder`, `name`) relations. It does not load every nested definition and therefore avoids per-card requests. Draft or archived plans without active pointers show no invented progress context.
 - Selecting a family member narrows the plan selector. If the current plan does not belong to that member, the plan filter resets to **Alle planer**; selecting all members restores the complete family-scoped plan list.
+
+## Plan details and lifecycle (Run 5)
+
+`/health-plans/[id]` is the protected, family-scoped administration surface for
+one plan. It displays metadata, the complete Basisplan/Trinn/Del structure,
+human-readable schedules, and action instructions. For `ACTIVE` and `PAUSED`
+plans it marks the single current level and step; paused progress remains visible,
+while drafts, completed plans, and archived plans never present a false active
+label. Only one level runs at a time: Basisplan does not continue in parallel
+when a numbered Trinn is current.
+
+Lifecycle decisions remain explicit and medically neutral. Start, pause, resume,
+and manual level-up/down use the existing commands and backend clocks. A manual
+level change always enters Del 1 of the adjacent target level; there is no
+automatic level-up or recommendation engine. `POST /health-plans/:id/complete`
+implements **Avslutt plan** for `ACTIVE` and `PAUSED` only. Its optimistic,
+transactional transition preserves terminal level/step and
+`generationNotBefore` context, clears `pausedAt`, writes one `STATUS_CHANGED`
+history row, and changes every `PENDING` or `SNOOZED` occurrence scheduled at or
+after command time to `SKIPPED`. Earlier unresolved occurrences and already
+resolved history are unchanged. The scheduler already excludes `COMPLETED`.
+Concurrent or repeated lifecycle commands are resolved by the existing
+status-plus-`updatedAt` conditional write, so a losing transaction cannot commit
+occurrence cleanup or history.
+
+Archive and completion are deliberately different. Drafts may be archived;
+active or paused plans are completed from the detail page; completed plans may
+then be archived; archived plans are read-only. The v1 edit surface mirrors the
+existing backend contract: plan name/description and action title/instruction
+only. Used actions are replaced through action versioning so historical
+occurrence snapshots remain intact. Adding/removing/reordering levels, steps,
+schedules, recurrence rules, or actions remains out of scope until an atomic
+structural editing API exists.

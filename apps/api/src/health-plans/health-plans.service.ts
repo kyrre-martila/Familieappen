@@ -104,6 +104,12 @@ export class HealthPlansService {
   }); }
   levelUp(userId: string, familyId: string, id: string) { return this.moveLevel(userId, familyId, id, 1, "LEVEL_INCREASED"); }
   levelDown(userId: string, familyId: string, id: string) { return this.moveLevel(userId, familyId, id, -1, "LEVEL_DECREASED"); }
+  complete(userId: string, familyId: string, id: string) { return this.transition(userId, familyId, id, ["ACTIVE", "PAUSED"], "STATUS_CHANGED", async (tx, plan, now) => {
+    // Keep the progress pointers and generation boundary as terminal context, but
+    // atomically remove unresolved work at or after the completion instant.
+    await tx.healthPlanOccurrence.updateMany({ where: { healthPlanId: id, familyId, scheduledAt: { gte: now }, status: { in: ["PENDING", "SNOOZED"] } }, data: { status: "SKIPPED", completedAt: null, completedByUserId: null } });
+    return { status: "COMPLETED", pausedAt: null, __metadata: { fromStatus: plan.status, toStatus: "COMPLETED" } };
+  }); }
   // Internal progression primitive for the Run 3 scheduler. It is deliberately
   // not reachable from HTTP; the scheduler must decide that the duration elapsed.
   private advanceStep(userId: string, familyId: string, id: string) { return this.transition(userId, familyId, id, "ACTIVE", "STEP_ADVANCED", async (tx, plan, now) => {
@@ -202,7 +208,7 @@ export class HealthPlansService {
     });
   }
   private writeHistory(tx: Client, healthPlanId: string, type: HistoryType, actorUserId: string, actorDisplayName: string, metadata: unknown) { return tx.healthPlanHistory.create({ data: { healthPlanId, type, actorUserId, actorDisplayName, metadata } }); }
-  private async getPlan(id: string, familyId: string, client: Client, details: boolean) { const plan = await client.healthPlan.findFirst({ where: { id, familyId }, ...(details ? { include: { familyMember: true, levels: { orderBy: { levelIndex: "asc" }, include: { steps: { orderBy: { stepOrder: "asc" }, include: { schedules: { where: { retiredAt: null }, include: { actions: { where: { retiredAt: null }, orderBy: { sortOrder: "asc" } } } } } } } }, notes: { orderBy: { createdAt: "asc" } } } } : {}) }); if (!plan) throw new NotFoundException("Health plan was not found"); return plan; }
+  private async getPlan(id: string, familyId: string, client: Client, details: boolean) { const plan = await client.healthPlan.findFirst({ where: { id, familyId }, ...(details ? { include: { familyMember: true, activeLevel: { select: { id: true, levelIndex: true, name: true } }, activeStep: { select: { id: true, stepOrder: true, name: true } }, levels: { orderBy: { levelIndex: "asc" }, include: { steps: { orderBy: { stepOrder: "asc" }, include: { schedules: { where: { retiredAt: null }, include: { actions: { where: { retiredAt: null }, orderBy: { sortOrder: "asc" } } } } } } } }, notes: { orderBy: { createdAt: "asc" } } } } : {}) }); if (!plan) throw new NotFoundException("Health plan was not found"); return plan; }
 
   private validateDefinition(input: CreateHealthPlanDto) {
     if (!input || !Array.isArray(input.levels) || input.levels.length > LIMITS.levels) throw new BadRequestException(`A plan must have at most ${LIMITS.levels} levels`);
