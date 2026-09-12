@@ -225,3 +225,13 @@ save error or an implicit retry opportunity, preventing duplicate notes.
 `AbortController`, request-generation guards, and family/plan context checks
 remain active around both phases. Stale or aborted mutation/refresh results do
 not commit state and do not display either errors or warnings.
+
+## V1-varslinger
+
+Planens `familyMemberId` beskriver hvem planen gjelder, mens `HealthPlanNotificationRecipient` er den eksplisitte varslingsmålgruppen. Det finnes ingen implisitt «alle voksne»-regel. Mottakere må være `FamilyMember` i samme familie og ha en koblet `User`; opprettelse velger kun innlogget brukers sikkert identifiserte medlem som standard, og en tom målgruppe er gyldig. Målgruppen kan endres for DRAFT, ACTIVE og PAUSED, men er skrivebeskyttet for COMPLETED og ARCHIVED. Brukerens globale `healthPlansEnabled` (standard `true`) filtrerer målgruppen på samme måte som øvrige varslingskategorier. Frakoblede eller deaktiverte brukere hoppes over isolert.
+
+`HealthPlanOccurrence` er eneste kilde for V1-varsler. Jobben kjører hvert minutt og behandler ACTIVE-planers PENDING/SNOOZED-hendelser når `scheduledAt <= now`, med et konservativt catch-up-vindu på 30 minutter. DRAFT, PAUSED, COMPLETED og ARCHIVED varsler aldri, og heller ikke COMPLETED/SKIPPED occurrences. Status og tidspunkt leses på nytt rett før opprettelse for å begrense race mot fullfør/hopp over.
+
+Notification-raden er leveringsledgeren. Den nullable, generelle `Notification.dedupeKey` er unik i databasen, og Helseplan bruker opaque identitet `health-plan-occurrence:<occurrenceId>:<recipientUserId>:<scheduledAt ISO>`. Dermed er overlappende jobber/restart race-safe, flere mottakere er separate, og snooze til et nytt `scheduledAt` kan varsle én gang på nytt. Eksisterende notifications uten nøkkel påvirkes ikke. Push-transport/retry forblir ansvaret til eksisterende Notification/PushDevice-infrastruktur; dagens push-service er fortsatt en inaktiv transport-placeholder, og jobben lager ikke en ny rad ved senere kjøringer etter transportfeil.
+
+Både in-app og låseskjerminnhold er bevisst generisk: tittel `Helseplan`, tekst `Du har en planlagt helseplan-hendelse.` og deep link `/health-plans` (I dag). Plan-, person-, handling-, instruksjons- og medisininnhold lagres ikke i notification metadata eller dedupe-nøkkelen. Jobblogger inneholder bare tellinger og opaque IDs. Varsling skrives ikke til `HealthPlanHistory`, som fortsatt bare er livssyklus-/definisjonslogg.

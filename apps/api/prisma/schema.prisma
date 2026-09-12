@@ -330,6 +330,7 @@ model NotificationPreference {
   mealsEnabled     Boolean  @default(true)
   wishlistEnabled  Boolean  @default(true)
   systemEnabled    Boolean  @default(true)
+  healthPlansEnabled Boolean @default(true)
   createdAt        DateTime @default(now())
   updatedAt        DateTime @updatedAt
   user             User     @relation(fields: [userId], references: [id], onDelete: Cascade)
@@ -350,6 +351,8 @@ model Notification {
   entityType      String?
   entityId        String?
   deepLink        String?
+  /// Optional producer supplied idempotency identity. Null keeps legacy notifications unchanged.
+  dedupeKey       String?   @unique
   readAt          DateTime?
   createdAt       DateTime  @default(now())
   updatedAt       DateTime  @updatedAt
@@ -404,6 +407,7 @@ model Family {
   notifications Notification[]
   customShoppingItems FamilyCustomShoppingItem[]
   healthPlans HealthPlan[]
+  healthPlanNotificationRecipients HealthPlanNotificationRecipient[]
   healthPlanOccurrences HealthPlanOccurrence[]
 
   @@map("families")
@@ -434,6 +438,7 @@ model FamilyMember {
   mineCalendarExportFeeds  CalendarExportFeed[] @relation("CalendarExportFeedMineMember")
   calendarExportFeedSelections CalendarExportFeedMember[]
   healthPlans HealthPlan[]
+  healthPlanNotificationRecipients HealthPlanNotificationRecipient[]
 
   @@unique([id, familyId])
   @@index([familyId])
@@ -470,6 +475,7 @@ model HealthPlan {
   occurrences           HealthPlanOccurrence[]
   notes                 HealthPlanNote[]
   history               HealthPlanHistory[]
+  notificationRecipients HealthPlanNotificationRecipient[]
 
   @@unique([id, familyId])
   @@index([familyId, status])
@@ -477,6 +483,21 @@ model HealthPlan {
   @@index([activeLevelId])
   @@index([activeStepId])
   @@map("health_plans")
+}
+
+model HealthPlanNotificationRecipient {
+  healthPlanId   String
+  familyMemberId String
+  familyId       String
+  createdAt      DateTime     @default(now())
+  healthPlan     HealthPlan   @relation(fields: [healthPlanId, familyId], references: [id, familyId], onDelete: Cascade)
+  familyMember   FamilyMember @relation(fields: [familyMemberId, familyId], references: [id, familyId], onDelete: Cascade)
+  family         Family       @relation(fields: [familyId], references: [id], onDelete: Cascade)
+
+  @@id([healthPlanId, familyMemberId])
+  @@index([familyId])
+  @@index([familyMemberId])
+  @@map("health_plan_notification_recipients")
 }
 
 model HealthPlanLevel {
