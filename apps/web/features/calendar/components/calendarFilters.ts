@@ -1,6 +1,6 @@
 import type { CalendarMvpEvent, MealSummary, ReminderSummary, Task } from "@familieappen/shared";
 import type { HealthPlanOccurrence } from "../../../lib/api";
-import { osloCalendarDate } from "../../health-plan/occurrence-summary";
+import { healthPlanOccurrencesForCalendarDate, osloCalendarDate } from "../../health-plan/occurrence-summary";
 
 import { defaultListFilters } from "./calendarConfig";
 import type {
@@ -78,6 +78,7 @@ export function buildListDayGroups(
   mealPlannerMeals: MealSummary[],
   tasks: Task[] = [],
   healthPlanOccurrences: HealthPlanOccurrence[] = [],
+  todayDate = osloCalendarDate(new Date()),
 ): CalendarListDayGroup[] {
   const dates = new Set<string>();
 
@@ -85,7 +86,10 @@ export function buildListDayGroups(
   reminders.forEach((reminder) => dates.add(reminder.date));
   calendarEvents.forEach((event) => dates.add(event.date));
   tasks.filter((task) => task.dueDate).forEach((task) => dates.add(task.dueDate!.slice(0, 10)));
-  healthPlanOccurrences.forEach((item) => dates.add(osloCalendarDate(item.scheduledAt)));
+  healthPlanOccurrences.forEach((item) => {
+    const date = osloCalendarDate(item.scheduledAt);
+    if (healthPlanOccurrencesForCalendarDate([item], date, todayDate).length > 0) dates.add(date);
+  });
 
   return Array.from(dates)
     .sort((firstDate, secondDate) => firstDate.localeCompare(secondDate))
@@ -133,7 +137,7 @@ export function buildListDayGroups(
         : [];
 
       const filteredHealthPlanOccurrences = filters.contentType === "all" && filters.category === "all" && filters.familyMemberId === "all"
-        ? healthPlanOccurrences.filter(item => osloCalendarDate(item.scheduledAt) === date)
+        ? healthPlanOccurrencesForCalendarDate(healthPlanOccurrences, date, todayDate)
         : [];
 
       return { date, events, meal, reminders: filteredReminders, tasks: filteredTasks, healthPlanOccurrences: filteredHealthPlanOccurrences };

@@ -10,6 +10,7 @@ import { CalendarHealthPlanChip } from "./CalendarHealthPlanChip";
 import { healthPlanOccurrenceSummary } from "../../health-plan/occurrence-summary";
 import { formatListDate } from "./calendarFormatters";
 import type { CalendarListDayGroup as CalendarListDayGroupType } from "./calendarTypes";
+import { calendarListContentAriaLabel } from "./calendarContentLabels";
 
 export function CalendarListDayGroup({
   group,
@@ -52,7 +53,7 @@ export function CalendarListDayGroup({
       {group.meal || group.reminders.length > 0 || group.tasks.length > 0 || group.healthPlanOccurrences.length > 0 ? (
         <div
           className="calendar-list-day__chips"
-          aria-label={`Middag og husk for ${formatListDate(group.date)}`}
+          aria-label={calendarListContentAriaLabel(formatListDate(group.date))}
         >
           {group.meal ? (
             <CalendarMealChip
@@ -61,7 +62,7 @@ export function CalendarListDayGroup({
               meal={group.meal}
             />
           ) : null}
-          <CalendarHealthPlanChip summary={healthPlanOccurrenceSummary(group.healthPlanOccurrences)} />
+          <CalendarHealthPlanChip summary={healthPlanOccurrenceSummary(group.healthPlanOccurrences, new Date(), group.date, today)} />
           {visibleReminders.map((reminder) => (
             <CalendarReminderChip reminder={reminder} key={reminder.id} />
           ))}

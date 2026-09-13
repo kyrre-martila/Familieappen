@@ -8,7 +8,8 @@ import { CalendarReminderSummaryChip } from "./CalendarReminderChip";
 import { CalendarSchoolWeekChip } from "./CalendarSchoolWeekChip";
 import { CalendarTaskChip } from "./CalendarTaskChip";
 import { CalendarHealthPlanChip } from "./CalendarHealthPlanChip";
-import { healthPlanOccurrenceSummary, occurrencesForOsloDate } from "../../health-plan/occurrence-summary";
+import { calendarDayContentAriaLabel } from "./calendarContentLabels";
+import { healthPlanOccurrenceSummary, healthPlanOccurrencesForCalendarDate } from "../../health-plan/occurrence-summary";
 
 export function CalendarDayChips({ selectedDate }: { selectedDate: string }) {
   const {
@@ -18,9 +19,13 @@ export function CalendarDayChips({ selectedDate }: { selectedDate: string }) {
     tasks,
     ensureHealthPlansForRange,
     healthPlanOccurrences,
+    today,
   } = useCalendar();
   useEffect(() => { void ensureHealthPlansForRange(selectedDate, selectedDate); }, [ensureHealthPlansForRange, selectedDate]);
-  const healthSummary = useMemo(() => healthPlanOccurrenceSummary(occurrencesForOsloDate(healthPlanOccurrences, selectedDate)), [healthPlanOccurrences, selectedDate]);
+  const healthSummary = useMemo(() => healthPlanOccurrenceSummary(
+    healthPlanOccurrencesForCalendarDate(healthPlanOccurrences, selectedDate, today),
+    new Date(), selectedDate, today,
+  ), [healthPlanOccurrences, selectedDate, today]);
   const meal = mealPlannerMeals.find((item) => item.date === selectedDate);
   const visibleReminders = reminders.filter(
     (item) => item.date === selectedDate,
@@ -42,7 +47,7 @@ export function CalendarDayChips({ selectedDate }: { selectedDate: string }) {
   return (
     <section
       className="calendar-summary-chips"
-      aria-label="Middag, skoleuke og påminnelser"
+      aria-label={calendarDayContentAriaLabel}
     >
       {meal ? <CalendarMealChip date={selectedDate} meal={meal} /> : null}
       <CalendarHealthPlanChip summary={healthSummary} />

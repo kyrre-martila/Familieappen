@@ -15,16 +15,34 @@ export type HealthPlanOccurrenceSummary = {
   resolved: number;
 };
 
-export function isOccurrenceVisible(item: HealthPlanSummaryOccurrence) {
+export function isOccurrenceVisibleForCalendarDate(
+  item: HealthPlanSummaryOccurrence,
+  occurrenceDate: string,
+  todayDate: string,
+) {
+  if (item.status === "SKIPPED" && occurrenceDate > todayDate) return false;
   return item.status === "COMPLETED" || item.status === "SKIPPED" ||
     (item.healthPlan.status === "ACTIVE" && (item.status === "PENDING" || item.status === "SNOOZED"));
+}
+
+export function healthPlanOccurrencesForCalendarDate<T extends HealthPlanSummaryOccurrence>(
+  items: readonly T[],
+  date: string,
+  todayDate = osloCalendarDate(new Date()),
+) {
+  return items.filter(item =>
+    osloCalendarDate(item.scheduledAt) === date &&
+    isOccurrenceVisibleForCalendarDate(item, date, todayDate),
+  );
 }
 
 export function healthPlanOccurrenceSummary(
   items: readonly HealthPlanSummaryOccurrence[],
   now = new Date(),
+  date = osloCalendarDate(now),
+  todayDate = osloCalendarDate(now),
 ): HealthPlanOccurrenceSummary {
-  const visible = items.filter(isOccurrenceVisible);
+  const visible = items.filter(item => isOccurrenceVisibleForCalendarDate(item, date, todayDate));
   const unresolved = visible.filter(item => item.status === "PENDING" || item.status === "SNOOZED");
   return {
     total: visible.length,
@@ -32,6 +50,14 @@ export function healthPlanOccurrenceSummary(
     overdue: unresolved.filter(item => new Date(item.scheduledAt).getTime() < now.getTime()).length,
     resolved: visible.filter(item => item.status === "COMPLETED" || item.status === "SKIPPED").length,
   };
+}
+
+export function hasHealthPlanActivityForCalendarDate(
+  items: readonly HealthPlanSummaryOccurrence[],
+  date: string,
+  todayDate = osloCalendarDate(new Date()),
+) {
+  return healthPlanOccurrencesForCalendarDate(items, date, todayDate).length > 0;
 }
 
 export function healthPlanChipLabel(summary: HealthPlanOccurrenceSummary) {

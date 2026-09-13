@@ -10,7 +10,7 @@ import {
 } from "./calendarFormatters";
 import { CalendarMonthCell } from "./CalendarMonthCell";
 import { CalendarWeekNumber } from "./CalendarWeekNumber";
-import { occurrencesForOsloDate } from "../../health-plan/occurrence-summary";
+import { hasHealthPlanActivityForCalendarDate } from "../../health-plan/occurrence-summary";
 
 export function CalendarMonthGrid({
   selectedDate,
@@ -70,7 +70,7 @@ export function CalendarMonthGrid({
             const hasMeal = itemsForDate.some((item) => item.type === "meal");
             const hasReminder = itemsForDate.some(
               (item) => item.type === "reminder" || item.type === "task",
-            ) || occurrencesForOsloDate(healthPlanOccurrences, date).length > 0;
+            ) || hasHealthPlanActivityForCalendarDate(healthPlanOccurrences, date, today);
 
             return (
               <CalendarMonthCell

@@ -16,7 +16,7 @@ import { CalendarReminderSummaryChip } from "../../features/calendar/components/
 import { CalendarSchoolWeekChip } from "../../features/calendar/components/CalendarSchoolWeekChip";
 import { CalendarTaskChip } from "../../features/calendar/components/CalendarTaskChip";
 import { CalendarHealthPlanChip } from "../../features/calendar/components/CalendarHealthPlanChip";
-import { healthPlanOccurrenceSummary, occurrencesForOsloDate } from "../../features/health-plan/occurrence-summary";
+import { healthPlanOccurrenceSummary, healthPlanOccurrencesForCalendarDate } from "../../features/health-plan/occurrence-summary";
 import { CalendarProvider, useCalendar } from "../../features/calendar/hooks/useCalendar";
 import { getShoppingList, getTasks, type ShoppingList, type Task } from "../../lib/api";
 import { FeedbackSheet } from "../settings/about/AppInfoSettingsClient";
@@ -246,7 +246,10 @@ function HomeTodayChips({
   const dueTasks = calendarTasks.filter((task) => task.dueDate?.slice(0, 10) === selectedDate);
   const schoolWeekItems = safeNormalizedItems.filter((item) => item?.date === selectedDate && item.type === "school-week");
   const hasShoppingChip = missingShoppingCount > 0;
-  const healthSummary = useMemo(() => healthPlanOccurrenceSummary(occurrencesForOsloDate(healthPlanOccurrences, selectedDate)), [healthPlanOccurrences, selectedDate]);
+  const healthSummary = useMemo(() => healthPlanOccurrenceSummary(
+    healthPlanOccurrencesForCalendarDate(healthPlanOccurrences, selectedDate, selectedDate),
+    new Date(), selectedDate, selectedDate,
+  ), [healthPlanOccurrences, selectedDate]);
   const chipCount = (meal ? 1 : 0) + visibleReminders.length + dueTasks.length + schoolWeekItems.length + (hasShoppingChip ? 1 : 0) + (healthSummary.total ? 1 : 0);
 
   if (chipCount === 0) return null;

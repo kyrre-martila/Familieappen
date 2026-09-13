@@ -22,6 +22,15 @@ test("calendar surfaces aggregate occurrences without CalendarEvent conversion",
   assert.match(provider, /getHealthPlanOccurrences/);
 });
 
+test("calendar chip groups use durable content labels", () => {
+  const day = source("../calendar/components/CalendarDayChips.tsx");
+  const list = source("../calendar/components/CalendarListDayGroup.tsx");
+  assert.match(day, /aria-label={calendarDayContentAriaLabel}/);
+  assert.match(list, /aria-label={calendarListContentAriaLabel/);
+  assert.doesNotMatch(day, /Middag, skoleuke og påminnelser/);
+  assert.doesNotMatch(list, /Middag og husk for/);
+});
+
 test("menu contains Helseplan once while bottom navigation and global create stay unchanged", () => {
   const options = source("../../components/navigation-options.ts");
   const menu = source("../../app/menu/page.tsx");

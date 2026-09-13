@@ -254,6 +254,14 @@ forsinket når `scheduledAt` er før evalueringstidspunktet. COMPLETED/SKIPPED
 regnes som løst og kan representere historisk aktivitet. Feedens eksisterende
 policy hindrer at fremtidig uløst arbeid fra ikke-aktive planer presenteres.
 
+En felles presentasjonspolicy for Hjem og Kalender skjuler `SKIPPED` etter
+dagens lokale kalenderdato i Europe/Oslo. `SKIPPED` i dag og historisk beholdes
+som løst aktivitet, mens `COMPLETED` beholder eksisterende semantikk. Dette er
+en V1-avgrensning fordi `SKIPPED` foreløpig både betyr at brukeren hoppet over
+og at systemet ugyldiggjorde fremtidig arbeid. Backenddataene endres ikke;
+dag-, liste- og månedsvisningen bruker den samme policyen, slik at skjulte
+forekomster verken lager chip, listegruppe eller månedsmarkering.
+
 `HealthPlanOccurrence` forblir eneste datakilde. Data kopieres ikke til, lagres
 ikke som og konverteres ikke til `CalendarEvent`. Den rene summary-helperen
 krever bare status, tidspunkt og planstatus, slik at etiketten er
