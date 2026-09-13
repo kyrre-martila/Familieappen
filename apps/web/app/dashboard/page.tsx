@@ -15,6 +15,8 @@ import { CalendarMealChip } from "../../features/calendar/components/CalendarMea
 import { CalendarReminderSummaryChip } from "../../features/calendar/components/CalendarReminderChip";
 import { CalendarSchoolWeekChip } from "../../features/calendar/components/CalendarSchoolWeekChip";
 import { CalendarTaskChip } from "../../features/calendar/components/CalendarTaskChip";
+import { CalendarHealthPlanChip } from "../../features/calendar/components/CalendarHealthPlanChip";
+import { healthPlanOccurrenceSummary, occurrencesForOsloDate } from "../../features/health-plan/occurrence-summary";
 import { CalendarProvider, useCalendar } from "../../features/calendar/hooks/useCalendar";
 import { getShoppingList, getTasks, type ShoppingList, type Task } from "../../lib/api";
 import { FeedbackSheet } from "../settings/about/AppInfoSettingsClient";
@@ -234,7 +236,8 @@ function HomeTodayChips({
   missingShoppingCount: number;
   selectedDate: string;
 }) {
-  const { mealSummaries, normalizedItems, reminders, tasks: calendarTasks } = useCalendar();
+  const { ensureHealthPlansForRange, healthPlanOccurrences, mealSummaries, normalizedItems, reminders, tasks: calendarTasks } = useCalendar();
+  useEffect(() => { void ensureHealthPlansForRange(selectedDate, selectedDate); }, [ensureHealthPlansForRange, selectedDate]);
   const safeMealSummaries = Array.isArray(mealSummaries) ? mealSummaries : [];
   const safeNormalizedItems = Array.isArray(normalizedItems) ? normalizedItems : [];
   const safeReminders = Array.isArray(reminders) ? reminders : [];
@@ -243,13 +246,15 @@ function HomeTodayChips({
   const dueTasks = calendarTasks.filter((task) => task.dueDate?.slice(0, 10) === selectedDate);
   const schoolWeekItems = safeNormalizedItems.filter((item) => item?.date === selectedDate && item.type === "school-week");
   const hasShoppingChip = missingShoppingCount > 0;
-  const chipCount = (meal ? 1 : 0) + visibleReminders.length + dueTasks.length + schoolWeekItems.length + (hasShoppingChip ? 1 : 0);
+  const healthSummary = useMemo(() => healthPlanOccurrenceSummary(occurrencesForOsloDate(healthPlanOccurrences, selectedDate)), [healthPlanOccurrences, selectedDate]);
+  const chipCount = (meal ? 1 : 0) + visibleReminders.length + dueTasks.length + schoolWeekItems.length + (hasShoppingChip ? 1 : 0) + (healthSummary.total ? 1 : 0);
 
   if (chipCount === 0) return null;
 
   return (
     <section className={`calendar-summary-chips home-today__chips${chipCount === 1 ? " home-today__chips--single" : ""}`} aria-label="Det viktigste i dag">
       {meal ? <CalendarMealChip date={selectedDate} meal={meal} /> : null}
+      <CalendarHealthPlanChip summary={healthSummary} />
       {visibleReminders.map((reminder) => (
         <CalendarReminderSummaryChip
           ariaLabel={`Åpne påminnelser i Husk: ${reminder.title}`}

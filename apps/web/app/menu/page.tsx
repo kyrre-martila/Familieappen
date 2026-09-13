@@ -1,6 +1,6 @@
 "use client";
 
-import { CalendarDays, CheckCircle2, Gift, Home, ListChecks, LogOut, Settings, ShoppingCart, Utensils } from "lucide-react";
+import { CalendarDays, CheckCircle2, Gift, HeartPulse, Home, ListChecks, LogOut, Settings, ShoppingCart, Utensils } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { AdvertisementPlacementCard } from "../../components/AdvertisementCard";
 import { ProtectedFamilyRoute } from "../../components/ProtectedFamilyRoute";
@@ -49,6 +49,12 @@ const menuItems = [
     icon: <Gift />,
     title: "Ønskeliste",
     description: "Gaver og ønsker familien deler",
+  },
+  {
+    href: "/health-plans",
+    icon: <HeartPulse />,
+    title: "Helseplan",
+    description: "Dagens hendelser og planer",
   },
   {
     href: "/settings",

@@ -1,0 +1,34 @@
+import assert from "node:assert/strict";
+import { readFileSync } from "node:fs";
+import test from "node:test";
+
+const source = (path: string) => readFileSync(new URL(path, import.meta.url), "utf8");
+
+test("home uses one linked, aggregated health-plan chip and no large health card", () => {
+  const home = source("../../app/dashboard/page.tsx");
+  const chip = source("../calendar/components/CalendarHealthPlanChip.tsx");
+  assert.match(home, /<CalendarHealthPlanChip summary={healthSummary}/);
+  assert.doesNotMatch(home, /health-plan-card|home-card--health/);
+  assert.match(chip, /href="\/health-plans"/);
+});
+
+test("calendar surfaces aggregate occurrences without CalendarEvent conversion", () => {
+  const day = source("../calendar/components/CalendarDayChips.tsx");
+  const list = source("../calendar/components/CalendarListDayGroup.tsx");
+  const provider = source("../calendar/hooks/useCalendar.tsx");
+  assert.equal((day.match(/<CalendarHealthPlanChip/g) ?? []).length, 1);
+  assert.equal((list.match(/<CalendarHealthPlanChip/g) ?? []).length, 1);
+  assert.doesNotMatch(provider, /healthPlanOccurrenceToCalendarEvent/);
+  assert.match(provider, /getHealthPlanOccurrences/);
+});
+
+test("menu contains Helseplan once while bottom navigation and global create stay unchanged", () => {
+  const options = source("../../components/navigation-options.ts");
+  const menu = source("../../app/menu/page.tsx");
+  assert.equal((menu.match(/title: "Helseplan"/g) ?? []).length, 1);
+  assert.match(menu, /href: "\/health-plans"/);
+  const bottomBlock = options.slice(options.indexOf("bottomNavigationItems"), options.indexOf("menuNavigationItems"));
+  assert.doesNotMatch(bottomBlock, /health-plans/);
+  const createBlock = options.slice(options.indexOf("defaultCreateOptions"));
+  assert.doesNotMatch(createBlock, /helseplan/i);
+});
