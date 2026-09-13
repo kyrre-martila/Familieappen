@@ -12,6 +12,7 @@ class SchedulerDb {
   occurrences = new Map<string, Row>();
   histories: Row[] = [];
   updateDelay = false;
+  createManyFailures = 0;
 
   constructor(plan: Row, steps: Row[]) { this.plan = plan; this.steps = steps; }
   healthPlan = {
@@ -29,7 +30,7 @@ class SchedulerDb {
   };
   healthPlanStep = { findFirst: async ({ where }: Row) => this.steps.find(step => step.healthPlanId === where.healthPlanId && step.levelId === where.levelId && step.stepOrder === where.stepOrder) ?? null };
   healthPlanOccurrence = {
-    createMany: async ({ data }: Row) => { let count = 0; for (const row of data) { const key = `${row.sourceActionId}:${row.originalScheduledAt.toISOString()}`; if (!this.occurrences.has(key)) { this.occurrences.set(key, row); count++; } } return { count }; },
+    createMany: async ({ data }: Row) => { if (this.createManyFailures-- > 0) throw Object.assign(new Error("injected occurrence write failure"), { code: "TEST_CREATE_MANY" }); let count = 0; for (const row of data) { const key = `${row.sourceActionId}:${row.originalScheduledAt.toISOString()}`; if (!this.occurrences.has(key)) { this.occurrences.set(key, row); count++; } } return { count }; },
     updateMany: async ({ where, data }: Row) => { let count = 0; for (const row of this.occurrences.values()) if (row.healthPlanId === where.healthPlanId && row.scheduledAt >= where.scheduledAt.gte && where.status.in.includes(row.status) && this.steps.find(s => s.id === this.plan.activeStepId)?.id !== where.sourceAction.schedule.stepId) { Object.assign(row, data); count++; } return { count }; },
   };
   healthPlanHistory = { create: async ({ data }: Row) => { this.histories.push(data); return data; } };
@@ -45,6 +46,12 @@ function fixture(boundary: string, time = "08:00", now = "2026-09-10T08:05:00Z")
 const times = (db: SchedulerDb) => [...db.occurrences.values()].map(row => row.originalScheduledAt.toISOString()).sort();
 
 async function main() {
+  { // Per-plan isolation: a corrupt plan cannot prevent later plans from running.
+    const processed: string[] = [];
+    const service = new HealthPlanSchedulerService({ client: { healthPlan: { findMany: async () => [{ id: "bad" }, { id: "good" }] } } } as never) as any;
+    service.runPlan = async (id: string) => { if (id === "bad") throw Object.assign(new Error("corrupt"), { code: "TEST_CORRUPT" }); processed.push(id); };
+    await service.runOnce(new Date("2026-09-10T08:00:00Z")); assert.deepEqual(processed, ["good"]);
+  }
   { // Start after today's schedule: do not backfill it, but generate tomorrow.
     const { db, service, now } = fixture("2026-09-10T08:00:00Z"); await service.runOnce(now);
     assert.ok(!times(db).includes("2026-09-10T06:00:00.000Z")); assert.ok(times(db).includes("2026-09-11T06:00:00.000Z"));
@@ -77,6 +84,15 @@ async function main() {
     assert.equal(db.plan.activeStepId, "s3"); assert.equal(db.plan.activeStepStartedAt.toISOString(), "2026-09-10T06:00:00.000Z"); assert.equal(db.plan.generationNotBefore.toISOString(), "2026-09-10T06:00:00.000Z");
     assert.equal(db.histories.length, 2); assert.ok([...db.occurrences.values()].every(row => row.sourceActionId === "final")); assert.ok(times(db).includes("2026-09-10T07:00:00.000Z"));
     const count = db.occurrences.size; await new HealthPlanSchedulerService({ client: db } as never).runOnce(new Date("2026-09-10T08:00:00Z")); assert.equal(db.occurrences.size, count, "restart is idempotent");
+  }
+  { // A crash after the atomic transition is recovered by the next generation pass.
+    const steps = [{ id: "s1", healthPlanId: "p", levelId: "l", stepOrder: 0, autoAdvance: true, durationDays: 1, schedules: [schedule("old", "09:00")] }, { id: "s2", healthPlanId: "p", levelId: "l", stepOrder: 1, autoAdvance: false, durationDays: null, schedules: [schedule("new", "09:00")] }];
+    const db = new SchedulerDb({ id: "p", familyId: "f", status: "ACTIVE", activeStepId: "s1", activeStepStartedAt: new Date("2026-09-09T06:00:00Z"), generationNotBefore: new Date("2026-09-09T06:00:00Z"), updatedAt: new Date(0) }, steps); db.createManyFailures = 1;
+    const service = new HealthPlanSchedulerService({ client: db } as never); await service.runOnce(new Date("2026-09-10T08:00:00Z"));
+    assert.equal(db.plan.activeStepId, "s2"); assert.equal(db.histories.length, 1); assert.equal(db.occurrences.size, 0);
+    await service.runOnce(new Date("2026-09-10T08:00:00Z")); assert.equal(db.histories.length, 1, "recovery does not duplicate transition history");
+    assert.ok(db.occurrences.size > 0); assert.ok([...db.occurrences.values()].every(row => row.sourceActionId === "new"));
+    const count = db.occurrences.size; await service.runOnce(new Date("2026-09-10T08:00:00Z")); assert.equal(db.occurrences.size, count);
   }
   { // No early advance; final auto-advance step writes no repeated history.
     const future = { id: "s1", healthPlanId: "p", levelId: "l", stepOrder: 0, autoAdvance: true, durationDays: 1, schedules: [] };
