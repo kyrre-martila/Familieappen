@@ -75,14 +75,6 @@ export function assertValidHealthPlanSchedule(schedule: HealthPlanScheduleInput)
   }
 }
 
-/** Moves the progress clock forward by the pause, so paused wall-clock time is not consumed. */
-export function resumeProgressStartedAt(progressStartedAt: Date, pausedAt: Date, resumedAt: Date): Date {
-  if (resumedAt.getTime() < pausedAt.getTime()) {
-    throw new Error("A health plan cannot resume before it was paused");
-  }
-  return new Date(progressStartedAt.getTime() + resumedAt.getTime() - pausedAt.getTime());
-}
-
 /** MISSED is deliberately derived, rather than persisted as mutable historical state. */
 export function isHealthPlanOccurrenceMissed(status: string, scheduledAt: Date, now: Date): boolean {
   return status === "PENDING" && scheduledAt.getTime() < now.getTime();

@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import { formatHealthPlanHistoryEntry, healthPlanTimeline } from "./log";
+import { formatHealthPlanHistoryEntry, healthPlanTimeline, osloTime } from "./log";
 const entry = (type: Parameters<typeof formatHealthPlanHistoryEntry>[0]["type"], metadata: Record<string, unknown> | null = null) => ({ type, metadata });
 test("formats known health plan history defensively", () => {
   assert.equal(formatHealthPlanHistoryEntry(entry("CREATED")), "Planen ble opprettet");
@@ -20,4 +20,10 @@ test("combines notes and history newest first", () => {
   const timeline = healthPlanTimeline({ history: [{ id: "h", healthPlanId: "p", type: "CREATED", actorDisplayName: "Kyrre", metadata: null, occurredAt: "2026-09-12T10:00:00Z" }], notes: [{ id: "n", healthPlanId: "p", occurrenceId: "o", sourceActionId: null, authorDisplayName: "Elisabeth", text: "Fortsatt tørr.", createdAt: "2026-09-12T10:15:00Z", targetContext: { kind: "OCCURRENCE", actionTitle: "Smør krem", scheduledAt: "2026-09-12T10:00:00Z", levelIndex: 1, stepOrder: 1 } }] });
   assert.deepEqual(timeline.map(item => item.id), ["note:n", "history:h"]);
   assert.equal(timeline[0].title, "Kommentar til «Smør krem»");
+});
+test("renders health plan instants in Europe/Oslo regardless of runtime timezone", () => {
+  assert.match(osloTime("2026-01-15T07:00:00Z"), /^08[.:]00$/);
+  assert.match(osloTime("2026-07-15T06:00:00Z"), /^08[.:]00$/);
+  assert.match(osloTime("2026-03-29T01:30:00Z"), /^03[.:]30$/);
+  assert.match(osloTime("2026-10-25T00:30:00Z"), /^02[.:]30$/);
 });

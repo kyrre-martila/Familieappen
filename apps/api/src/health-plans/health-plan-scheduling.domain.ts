@@ -62,3 +62,19 @@ export function calendarExpiry(start: Date, durationDays: number, timeZone = DEF
   const date = addLocalDays(p, durationDays);
   return localDateTimeToInstant(date, new Date(Date.UTC(1970, 0, 1, p.hour, p.minute, p.second)), timeZone);
 }
+
+/** Shift a logical progress clock by the pause measured on the local calendar.
+ * This preserves its wall clock through 23- and 25-hour Oslo days. */
+export function resumeProgressStartedAt(progressStartedAt: Date, pausedAt: Date, resumedAt: Date, timeZone = DEFAULT_HEALTH_PLAN_TIMEZONE): Date {
+  if (resumedAt.getTime() < pausedAt.getTime()) throw new Error("A health plan cannot resume before it was paused");
+  const progress = localParts(progressStartedAt, timeZone);
+  const paused = localParts(pausedAt, timeZone);
+  const resumed = localParts(resumedAt, timeZone);
+  const wallPause = tuple(resumed) - tuple(paused);
+  const shifted = new Date(tuple(progress) + wallPause);
+  return localDateTimeToInstant(
+    { year: shifted.getUTCFullYear(), month: shifted.getUTCMonth() + 1, day: shifted.getUTCDate() },
+    new Date(Date.UTC(1970, 0, 1, shifted.getUTCHours(), shifted.getUTCMinutes(), shifted.getUTCSeconds())),
+    timeZone,
+  );
+}

@@ -40,7 +40,7 @@ assert.deepEqual(occurrenceQuery?.where.OR, [
   { status: { in: ["COMPLETED", "SKIPPED"] } },
   { status: { in: ["PENDING", "SNOOZED"] }, healthPlan: { status: "ACTIVE" } },
 ]);
-assert.deepEqual(occurrenceQuery?.include.healthPlan.select, { id: true, name: true, status: true, familyMember: { select: { id: true, displayName: true } } });
+assert.deepEqual(occurrenceQuery?.include.healthPlan.select, { id: true, name: true, status: true, subjectDisplayName: true, familyMember: { select: { id: true, displayName: true } } });
 assert.deepEqual(occurrenceQuery?.include.sourceAction.select.schedule.select.step.select, { stepOrder: true, name: true, level: { select: { levelIndex: true, name: true } } });
 for (const item of feed.slice(0, 3)) { assert.equal(item.occurrenceStep?.name, "Del 1"); assert.equal(item.occurrenceStep?.stepOrder, 0); assert.equal(item.occurrenceLevel?.levelIndex, 1); assert.ok(!("sourceAction" in item)); }
 assert.equal(feed[3].occurrenceStep, null);
