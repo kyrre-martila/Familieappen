@@ -451,7 +451,9 @@ model HealthPlan {
   /// deferred trigger in the foundation migration; Prisma cannot express them in this schema.
   id                    String           @id @default(cuid())
   familyId              String
-  familyMemberId        String
+  familyMemberId        String?
+  /// Immutable presentation snapshot retained when the subject membership is removed.
+  subjectDisplayName    String
   name                  String
   description           String?
   status                HealthPlanStatus @default(DRAFT)
@@ -465,8 +467,9 @@ model HealthPlan {
   createdByUserId       String?
   createdAt             DateTime         @default(now())
   updatedAt             DateTime         @updatedAt
-  family                Family           @relation(fields: [familyId], references: [id], onDelete: Restrict)
-  familyMember          FamilyMember     @relation(fields: [familyMemberId, familyId], references: [id, familyId], onDelete: Restrict)
+  family                Family           @relation(fields: [familyId], references: [id], onDelete: Cascade)
+  /// Same-family ownership for this nullable link is enforced by a database trigger.
+  familyMember          FamilyMember?    @relation(fields: [familyMemberId], references: [id], onDelete: SetNull)
   createdByUser         User?            @relation("HealthPlanCreatedBy", fields: [createdByUserId], references: [id], onDelete: SetNull)
   activeLevel           HealthPlanLevel? @relation("HealthPlanActiveLevel", fields: [activeLevelId, id], references: [id, healthPlanId], onDelete: Restrict)
   activeStep            HealthPlanStep?  @relation("HealthPlanActiveStep", fields: [activeStepId, id], references: [id, healthPlanId], onDelete: Restrict)
@@ -592,9 +595,9 @@ model HealthPlanOccurrence {
   completedByUserId String?
   createdAt         DateTime                   @default(now())
   updatedAt         DateTime                   @updatedAt
-  healthPlan        HealthPlan                 @relation(fields: [healthPlanId, familyId], references: [id, familyId], onDelete: Restrict)
-  family            Family                     @relation(fields: [familyId], references: [id], onDelete: Restrict)
-  sourceAction      HealthPlanAction            @relation(fields: [sourceActionId], references: [id], onDelete: Restrict)
+  healthPlan        HealthPlan                 @relation(fields: [healthPlanId, familyId], references: [id, familyId], onDelete: Cascade)
+  family            Family                     @relation(fields: [familyId], references: [id], onDelete: Cascade)
+  sourceAction      HealthPlanAction            @relation(fields: [sourceActionId], references: [id], onDelete: Cascade)
   completedByUser   User?                      @relation("HealthPlanOccurrenceCompletedBy", fields: [completedByUserId], references: [id], onDelete: SetNull)
   notes             HealthPlanNote[]
 
@@ -613,9 +616,9 @@ model HealthPlanNote {
   authorUserId   String?
   text           String
   createdAt      DateTime @default(now())
-  healthPlan     HealthPlan @relation(fields: [healthPlanId], references: [id], onDelete: Restrict)
-  occurrence     HealthPlanOccurrence? @relation(fields: [occurrenceId], references: [id], onDelete: Restrict)
-  sourceAction   HealthPlanAction? @relation(fields: [sourceActionId], references: [id], onDelete: Restrict)
+  healthPlan     HealthPlan @relation(fields: [healthPlanId], references: [id], onDelete: Cascade)
+  occurrence     HealthPlanOccurrence? @relation(fields: [occurrenceId], references: [id], onDelete: Cascade)
+  sourceAction   HealthPlanAction? @relation(fields: [sourceActionId], references: [id], onDelete: Cascade)
   authorUser     User? @relation("HealthPlanNoteAuthor", fields: [authorUserId], references: [id], onDelete: SetNull)
 
   @@index([healthPlanId, createdAt])
@@ -633,7 +636,7 @@ model HealthPlanHistory {
   actorDisplayName String?
   metadata         Json?
   occurredAt       DateTime              @default(now())
-  healthPlan       HealthPlan            @relation(fields: [healthPlanId], references: [id], onDelete: Restrict)
+  healthPlan       HealthPlan            @relation(fields: [healthPlanId], references: [id], onDelete: Cascade)
   actorUser        User?                 @relation("HealthPlanHistoryActor", fields: [actorUserId], references: [id], onDelete: SetNull)
 
   @@index([healthPlanId, occurredAt])

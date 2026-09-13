@@ -34,7 +34,7 @@ function occurrence(
     completedAt: null,
     occurrenceLevel: null,
     occurrenceStep: null,
-    healthPlan: { id: "plan-1", name: "ADHD-medisin", status: planStatus, familyMember: { id: "member-1", displayName: "Alma" } },
+    healthPlan: { id: "plan-1", subjectDisplayName: "Alma", name: "ADHD-medisin", status: planStatus, familyMember: { id: "member-1", displayName: "Alma" } },
   } satisfies HealthPlanOccurrence;
 }
 

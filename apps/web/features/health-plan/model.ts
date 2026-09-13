@@ -78,7 +78,7 @@ export function sortOccurrences(items: HealthPlanOccurrence[]) {
   return [...items].sort((a, b) => new Date(a.scheduledAt).getTime() - new Date(b.scheduledAt).getTime() || a.id.localeCompare(b.id));
 }
 export function filterOccurrences(items: HealthPlanOccurrence[], memberId: string, planId: string) {
-  return sortOccurrences(items.filter((item) => (!memberId || item.healthPlan.familyMember.id === memberId) && (!planId || item.healthPlanId === planId)));
+  return sortOccurrences(items.filter((item) => (!memberId || item.healthPlan.familyMember?.id === memberId) && (!planId || item.healthPlanId === planId)));
 }
 export function isOverdue(item: Pick<HealthPlanOccurrence, "status" | "scheduledAt">, now = new Date()) {
   return item.status === "PENDING" && new Date(item.scheduledAt) < now;
