@@ -145,6 +145,20 @@ export class HealthPlansService {
       if (!next) throw new ConflictException(delta > 0 ? "Plan has no higher level" : "Plan is already at the base level");
       const firstStep = await tx.healthPlanStep.findFirst({ where: { healthPlanId: id, levelId: next.id, stepOrder: 0 } });
       if (!firstStep) throw new ConflictException("Target level has no first step");
+      // Occurrences are immutable context snapshots. Keep them for the log, but
+      // remove future work from the level that is no longer active. This must be
+      // in the transition transaction so a losing concurrent command cannot
+      // leave skipped rows behind.
+      await tx.healthPlanOccurrence.updateMany({
+        where: {
+          healthPlanId: id,
+          familyId,
+          scheduledAt: { gte: now },
+          status: { in: ["PENDING", "SNOOZED"] },
+          sourceAction: { schedule: { step: { levelId: current.id } } },
+        },
+        data: { status: "SKIPPED", completedAt: null, completedByUserId: null },
+      });
       return { activeLevelId: next.id, activeStepId: firstStep.id, activeLevelStartedAt: now, activeStepStartedAt: now, generationNotBefore: now, __metadata: { fromLevelId: current.id, fromLevelIndex: current.levelIndex, toLevelId: next.id, toLevelIndex: next.levelIndex } };
     });
   }
