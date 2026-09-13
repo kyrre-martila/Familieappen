@@ -3,6 +3,7 @@ import { createHash, randomBytes } from "crypto";
 import { EmailService, getAppBaseUrl } from "../email";
 import { NotificationsService } from "../notifications";
 import { PrismaService } from "../prisma";
+import { prepareHealthPlansForSubjectRemoval } from "../health-plans/health-plan-subject-removal";
 import { FamilyDashboardDto } from "./dto/dashboard.dto";
 import {
   AddFamilyMemberRequestDto,
@@ -581,7 +582,7 @@ export class FamiliesService {
   }
 
   async removeFamilyMember(userId: string, familyId: string, memberId: string): Promise<FamilyMemberDto> {
-    await this.familyAuthorization.requireFamilyRole(userId, familyId, FAMILY_MANAGER_ROLES);
+    const actor = await this.familyAuthorization.requireFamilyRole(userId, familyId, FAMILY_MANAGER_ROLES);
 
     const member = await this.prisma.client.familyMember.findFirst({
       where: {
@@ -598,8 +599,9 @@ export class FamiliesService {
       await this.assertAnotherAdministratorExists(familyId, member.id);
     }
 
-    const deletedMember = await this.prisma.client.familyMember.delete({
-      where: { id: member.id }
+    const deletedMember = await this.prisma.client.$transaction(async (tx) => {
+      await prepareHealthPlansForSubjectRemoval(tx, familyId, member.id, { userId, displayName: actor.displayName });
+      return tx.familyMember.delete({ where: { id: member.id } });
     });
 
     return this.toFamilyMemberDto(deletedMember);

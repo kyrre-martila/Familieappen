@@ -25,7 +25,7 @@ export class HealthPlansService {
       where: { familyId },
       orderBy: [{ createdAt: "desc" }, { id: "asc" }],
       select: {
-        id: true, familyMemberId: true, name: true, description: true, status: true,
+        id: true, familyMemberId: true, subjectDisplayName: true, name: true, description: true, status: true,
         activeLevelId: true, activeStepId: true,
         familyMember: { select: { id: true, displayName: true } },
         activeLevel: { select: { id: true, levelIndex: true, name: true } },
@@ -43,11 +43,11 @@ export class HealthPlansService {
     const actor = await this.authorization.requireFamilyMember(userId, familyId);
     this.validateCreateShape(input);
     const validated = this.validateDefinition(input);
-    const member = await this.prisma.client.familyMember.findFirst({ where: { id: input.familyMemberId, familyId }, select: { id: true } });
+    const member = await this.prisma.client.familyMember.findFirst({ where: { id: input.familyMemberId, familyId }, select: { id: true, displayName: true } });
     if (!member) throw new BadRequestException("Family member must belong to the active family");
 
     return this.prisma.client.$transaction(async (tx) => {
-      const plan = await tx.healthPlan.create({ data: { familyId, familyMemberId: input.familyMemberId, name: validated.name, description: validated.description, createdByUserId: userId } });
+      const plan = await tx.healthPlan.create({ data: { familyId, familyMemberId: input.familyMemberId, subjectDisplayName: member.displayName, name: validated.name, description: validated.description, createdByUserId: userId } });
       const recipientIds = input.notificationRecipientIds === undefined ? (actor.userId === userId ? [actor.id] : []) : input.notificationRecipientIds;
       const recipients = await this.validateRecipients(tx, familyId, recipientIds);
       if (recipients.length) await tx.healthPlanNotificationRecipient.createMany({ data: recipients.map(familyMemberId => ({ healthPlanId: plan.id, familyId, familyMemberId })) });
@@ -241,7 +241,7 @@ export class HealthPlansService {
       orderBy: [{ scheduledAt: "asc" }, { sourceAction: { sortOrder: "asc" } }, { id: "asc" }],
       take: parsedLimit,
       include: {
-        healthPlan: { select: { id: true, name: true, status: true, familyMember: { select: { id: true, displayName: true } } } },
+        healthPlan: { select: { id: true, name: true, status: true, subjectDisplayName: true, familyMember: { select: { id: true, displayName: true } } } },
         sourceAction: { select: { schedule: { select: { step: { select: { stepOrder: true, name: true, level: { select: { levelIndex: true, name: true } } } } } } } },
       },
     });
@@ -290,7 +290,7 @@ export class HealthPlansService {
   private async getPlan(id: string, familyId: string, client: Client, details: boolean) {
     const args: Record<string, unknown> = { where: { id, familyId } };
     if (details) args.select = {
-      id: true, familyMemberId: true, name: true, description: true, status: true,
+      id: true, familyMemberId: true, subjectDisplayName: true, name: true, description: true, status: true,
       activeLevelId: true, activeStepId: true,
       familyMember: { select: { id: true, displayName: true } },
       notificationRecipients: { select: { familyMemberId: true, familyMember: { select: { id: true, displayName: true } } }, orderBy: { createdAt: "asc" } },

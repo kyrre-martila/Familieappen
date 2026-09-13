@@ -5,6 +5,7 @@ import { extname, join, basename } from "node:path";
 import { API_ERROR_CODES, ApiException } from "../common";
 import { PrismaService } from "../prisma";
 import { AuthService } from "./auth.service";
+import { prepareHealthPlansForSubjectRemoval } from "../health-plans/health-plan-subject-removal";
 import { ChangePasswordRequestDto, ChangePasswordResponseDto, DeleteAccountRequestDto, DeleteAccountResponseDto, UpdateUserProfileRequestDto, UserProfileDto } from "./dto/profile.dto";
 
 const TECHNICAL_REGISTRATION_NAMES = new Set(["Ny bruker"]);
@@ -106,7 +107,7 @@ export class ProfileService {
     await this.prisma.client.$transaction(async (tx) => {
       const memberships = await tx.familyMember.findMany({
         where: { userId },
-        select: { id: true, familyId: true, role: true }
+        select: { id: true, familyId: true, role: true, displayName: true }
       });
 
       for (const membership of memberships) {
@@ -149,6 +150,10 @@ export class ProfileService {
         if (memberCount <= 1) {
           await tx.family.delete({ where: { id: membership.familyId } });
         } else {
+          await prepareHealthPlansForSubjectRemoval(tx, membership.familyId, membership.id, {
+            userId,
+            displayName: membership.displayName
+          });
           await tx.familyMember.delete({ where: { id: membership.id } });
         }
       }

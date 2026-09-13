@@ -4,6 +4,8 @@ Kontrollert 2026-09-13 mot implementasjonen og den representative planen
 `Testplan` (Basisplan med to deler, flere handlinger på samme tidspunkt og ett
 tilstøtende trinn). Dette er funksjonell acceptance, ikke produksjonsgodkjenning.
 
+Medlems- og kontosletting er en V1-lifecycle-invariant: fjerning av planens subject terminaliserer aktivt arbeid atomisk, beholder historikken og subject-snapshotet i familien og fjerner subject-/recipient-tilgang; sletting av siste medlem sletter hele familien og Helseplan-treet.
+
 | Område | Status | Kontroll |
 | --- | --- | --- |
 | Opprettelse og DRAFT | PASS | Validering, sortering, komplett definisjonstre, mottaker-default/`[]`, én `CREATED`, ingen scheduler/varsling før start. |
