@@ -27,6 +27,8 @@ class StatefulClient {
   actions: Row[] = [];
   serial = 1;
   failNextPlanUpdate = false;
+  failNextActionCreate = false;
+  failNextNoteCreate = false;
   healthPlan = {
     findFirst: undefined,
   } as any;
@@ -67,16 +69,23 @@ class StatefulClient {
   healthPlanAction = {
     findFirst: async ({ where }: Row) => this.actions.find(x => x.id === where.id && x.healthPlanId === where.schedule.step.healthPlanId && (where.retiredAt === undefined || x.retiredAt === where.retiredAt)) ?? null,
     update: async ({ where, data }: Row) => { const x = this.actions.find(a => a.id === where.id)!; Object.assign(x, data); return x; },
-    create: async ({ data }: Row) => { const x = { id: `action${this.serial++}`, healthPlanId: "pa", retiredAt: null, ...data }; this.actions.push(x); return x; },
+    create: async ({ data }: Row) => { if (this.failNextActionCreate) { this.failNextActionCreate = false; throw new Error("forced action create failure"); } const x = { id: `action${this.serial++}`, healthPlanId: "pa", retiredAt: null, ...data }; this.actions.push(x); return x; },
   };
   healthPlanNote = {
-    create: async ({ data }: Row) => { const row = { id: `n${this.serial++}`, createdAt: new Date(), ...data }; this.notes.push(row); return row; },
+    create: async ({ data }: Row) => { if (this.failNextNoteCreate) { this.failNextNoteCreate = false; throw new Error("forced note create failure"); } const row = { id: `n${this.serial++}`, createdAt: new Date(), ...data }; this.notes.push(row); return row; },
     findMany: async ({ where }: Row) => this.notes.filter(x => x.healthPlanId === where.healthPlanId),
   };
   async $transaction<T>(fn: (tx: this) => Promise<T>): Promise<T> {
-    const emulateRollback = this.failNextPlanUpdate;
+    const emulateRollback = this.failNextPlanUpdate || this.failNextActionCreate || this.failNextNoteCreate;
     const plans = structuredClone(this.plans), occurrences = structuredClone(this.occurrences), histories = structuredClone(this.histories);
-    try { return await fn(this); } catch (error) { if (emulateRollback) { this.plans = plans; this.occurrences = occurrences; this.histories = histories; } throw error; }
+    const actions = structuredClone(this.actions), notes = structuredClone(this.notes), recipients = structuredClone(this.recipients);
+    try { return await fn(this); } catch (error) {
+      if (emulateRollback) {
+        this.plans = plans; this.occurrences = occurrences; this.histories = histories;
+        this.actions = actions; this.notes = notes; this.recipients = recipients;
+      }
+      throw error;
+    }
   }
 }
 
@@ -190,6 +199,29 @@ async function main() {
   assert.equal(db.occurrences.find(x => x.id === "old-level-completed")?.status, "COMPLETED", "completed old-level work is untouched");
   assert.equal(db.occurrences.find(x => x.id === "old-level-past")?.status, "PENDING", "past old-level work is untouched");
   await service.levelDown("ua", "a", "pa"); assert.equal(db.plans[0].activeStepId, "s0", "entering a level resets to step zero");
+
+  // Versioning is all-or-nothing: retiring the old row must not survive a failure
+  // before the replacement, future cleanup, and history are committed.
+  const versionDb = new StatefulClient();
+  versionDb.actions.push({ id: "version-old", healthPlanId: "pa", scheduleId: "schedule", sortOrder: 0, title: "old", retiredAt: null });
+  versionDb.occurrences.push({ id: "version-future", healthPlanId: "pa", familyId: "a", sourceActionId: "version-old", status: "PENDING", scheduledAt: new Date("2099-01-01"), updatedAt: new Date(0) });
+  versionDb.failNextActionCreate = true;
+  await assert.rejects(() => new HealthPlansService({ client: versionDb } as never, auth as never).update("ua", "a", "pa", { action: { id: "version-old", title: "replacement", instruction: null } }), /forced action create failure/);
+  assert.equal(versionDb.actions.length, 1, "failed versioning creates no replacement");
+  assert.equal(versionDb.actions[0].retiredAt, null, "failed versioning restores the old active action");
+  assert.equal(versionDb.occurrences[0].status, "PENDING", "failed versioning does not clean future work");
+  assert.equal(versionDb.histories.length, 0, "failed versioning writes no history");
+
+  // Occurrence status and its optional note share one transaction.
+  const noteFailureDb = new StatefulClient();
+  noteFailureDb.plans[0].status = "ACTIVE";
+  noteFailureDb.occurrences.push({ id: "note-failure", healthPlanId: "pa", familyId: "a", status: "PENDING", scheduledAt: now, originalScheduledAt: now, updatedAt: new Date(0), completedAt: null, completedByUserId: null });
+  noteFailureDb.failNextNoteCreate = true;
+  await assert.rejects(() => new HealthPlansService({ client: noteFailureDb } as never, auth as never).updateOccurrence("ua", "a", "pa", "note-failure", { status: "COMPLETED", note: "atomic note" }), /forced note create failure/);
+  assert.equal(noteFailureDb.occurrences[0].status, "PENDING", "note failure restores occurrence status");
+  assert.equal(noteFailureDb.occurrences[0].completedAt, null, "note failure restores completion time");
+  assert.equal(noteFailureDb.occurrences[0].completedByUserId, null, "note failure restores completion actor");
+  assert.equal(noteFailureDb.notes.length, 0, "note failure leaves no note");
 
   // Occurrence updates run before the conditional plan write during pause. A losing
   // transition must roll the whole database transaction back.

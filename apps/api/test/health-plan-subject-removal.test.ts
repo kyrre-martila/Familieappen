@@ -75,6 +75,41 @@ async function main() {
   await families.removeFamilyMember("admin", "family", "child");
   assert.equal(familyPlans[0].status, "COMPLETED");
   assert.equal(familyPlans[0].familyMemberId, null);
+
+  // A later plan failure must roll back cleanup already performed for plan one.
+  const multiPlans: Row[] = [
+    { id: "multi-1", familyId: "family", familyMemberId: "child", status: "ACTIVE" },
+    { id: "multi-2", familyId: "family", familyMemberId: "child", status: "PAUSED" },
+  ];
+  const multiOccurrences: Row[] = multiPlans.map(plan => ({ id: `${plan.id}-future`, healthPlanId: plan.id, familyId: "family", scheduledAt: new Date("2030-01-02"), status: "PENDING" }));
+  const multiHistory: Row[] = [];
+  const multiTx: Row = {
+    healthPlan: {
+      findMany: async () => multiPlans.map(({ id, status }) => ({ id, status })),
+      updateMany: async ({ where, data }: Row) => {
+        if (where.id === "multi-2") throw new Error("forced second plan failure");
+        const selected = multiPlans.filter(plan => plan.familyId === where.familyId && plan.familyMemberId === where.familyMemberId && (!where.id || plan.id === where.id) && (!where.status || plan.status === where.status));
+        selected.forEach(plan => Object.assign(plan, data)); return { count: selected.length };
+      },
+    },
+    healthPlanOccurrence: { updateMany: async ({ where, data }: Row) => { const selected = multiOccurrences.filter(row => row.healthPlanId === where.healthPlanId); selected.forEach(row => Object.assign(row, data)); return { count: selected.length }; } },
+    healthPlanHistory: { create: async ({ data }: Row) => { multiHistory.push(data); return data; } },
+    familyMember: { delete: async () => member },
+  };
+  const multiPrisma = { client: {
+    familyMember: { findFirst: async () => member },
+    $transaction: async (work: (tx: Row) => Promise<unknown>) => {
+      const beforePlans = structuredClone(multiPlans), beforeOccurrences = structuredClone(multiOccurrences), beforeHistory = structuredClone(multiHistory);
+      try { return await work(multiTx); } catch (error) {
+        multiPlans.splice(0, multiPlans.length, ...beforePlans); multiOccurrences.splice(0, multiOccurrences.length, ...beforeOccurrences); multiHistory.splice(0, multiHistory.length, ...beforeHistory); throw error;
+      }
+    },
+  } };
+  const multiFamilies = new FamiliesService(multiPrisma as never, authorization as never, {} as never, {} as never);
+  await assert.rejects(() => multiFamilies.removeFamilyMember("admin", "family", "child"), /forced second plan failure/);
+  assert.deepEqual(multiPlans.map(plan => [plan.status, plan.familyMemberId]), [["ACTIVE", "child"], ["PAUSED", "child"]], "later plan failure restores every plan");
+  assert.ok(multiOccurrences.every(row => row.status === "PENDING"), "later plan failure restores earlier occurrence cleanup");
+  assert.equal(multiHistory.length, 0, "later plan failure restores earlier history");
 }
 
 void main();
