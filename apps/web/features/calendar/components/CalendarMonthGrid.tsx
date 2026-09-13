@@ -10,6 +10,7 @@ import {
 } from "./calendarFormatters";
 import { CalendarMonthCell } from "./CalendarMonthCell";
 import { CalendarWeekNumber } from "./CalendarWeekNumber";
+import { occurrencesForOsloDate } from "../../health-plan/occurrence-summary";
 
 export function CalendarMonthGrid({
   selectedDate,
@@ -20,7 +21,7 @@ export function CalendarMonthGrid({
   visibleMonth: Date;
   onSelectDate: (date: string) => void;
 }) {
-  const { ensureSchoolWeeksForRange, normalizedItems, today } = useCalendar();
+  const { ensureHealthPlansForRange, ensureSchoolWeeksForRange, healthPlanOccurrences, normalizedItems, today } = useCalendar();
   const activeMonth = visibleMonth.getMonth();
   const weeks = useMemo(() => buildMonthWeeks(visibleMonth), [visibleMonth]);
   const firstVisibleDate = formatDateString(weeks[0].days[0]);
@@ -28,7 +29,8 @@ export function CalendarMonthGrid({
 
   useEffect(() => {
     void ensureSchoolWeeksForRange(firstVisibleDate, lastVisibleDate);
-  }, [ensureSchoolWeeksForRange, firstVisibleDate, lastVisibleDate]);
+    void ensureHealthPlansForRange(firstVisibleDate, lastVisibleDate);
+  }, [ensureHealthPlansForRange, ensureSchoolWeeksForRange, firstVisibleDate, lastVisibleDate]);
 
   return (
     <div
@@ -68,7 +70,7 @@ export function CalendarMonthGrid({
             const hasMeal = itemsForDate.some((item) => item.type === "meal");
             const hasReminder = itemsForDate.some(
               (item) => item.type === "reminder" || item.type === "task",
-            );
+            ) || occurrencesForOsloDate(healthPlanOccurrences, date).length > 0;
 
             return (
               <CalendarMonthCell

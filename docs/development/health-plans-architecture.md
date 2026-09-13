@@ -226,6 +226,41 @@ save error or an implicit retry opportunity, preventing duplicate notes.
 remain active around both phases. Stale or aborted mutation/refresh results do
 not commit state and do not display either errors or warnings.
 
+## Lett integrasjon i Meny, Hjem og Kalender (Run 16)
+
+Helseplan er tilgjengelig som en ordinær funksjon i **Meny**, med
+`/health-plans` som destinasjon. Den permanente bunnnavigasjonen og den globale
+plussmenyen er uendret. `/health-plans` åpner fortsatt fanen **I dag** som
+standard.
+
+Helseplan har med vilje ikke et eget stort dashboardkort eller en egen seksjon
+på Hjem. Det eksisterende **I dag**-området viser i stedet én liten, aggregert
+chip når dagens feed inneholder forekomster. Chipen viser bare den generelle
+etiketten Helseplan og status som antall gjenstående/forsinkede eller «Alt
+gjort». Den viser aldri plan- eller medlemsnavn, handling, instruksjon, medisin,
+dose, diagnose, notat, nivå eller del. Uten forekomster skjules chipen.
+
+Kalenderens dag- og agendapresentasjon viser tilsvarende én aggregert
+Helseplan-chip per norsk kalenderdato, uansett antall handlinger. Månedsvisningen
+markerer datoen i den eksisterende kompakte statusbehandlingen. Trykk åpner
+`/health-plans`; valgt kalenderdato sendes ikke videre i V1. Det er en bevisst
+begrensning for å unngå en ny deep-link-/datovelgerprotokoll.
+
+Begge flatene bruker `GET /health-plans/occurrences/feed`. Hjem henter bare det
+halvåpne Europe/Oslo-vinduet for i dag. Kalenderen henter hvert synlige
+dag-, måneds- eller agendaintervall samlet, ikke én request per dato. Alle
+PENDING/SNOOZED-forekomster fra ACTIVE-planer regnes som gjenstående, og de er
+forsinket når `scheduledAt` er før evalueringstidspunktet. COMPLETED/SKIPPED
+regnes som løst og kan representere historisk aktivitet. Feedens eksisterende
+policy hindrer at fremtidig uløst arbeid fra ikke-aktive planer presenteres.
+
+`HealthPlanOccurrence` forblir eneste datakilde. Data kopieres ikke til, lagres
+ikke som og konverteres ikke til `CalendarEvent`. Den rene summary-helperen
+krever bare status, tidspunkt og planstatus, slik at etiketten er
+privacy-by-design. Sekundære feed-feil skjuler bare chipen og gjør ikke Hjem
+eller Kalender utilgjengelig. Ved familiebytte avbrytes utestående requests,
+lokal occurrence-cache tømmes, og en generasjonsvakt avviser stale svar.
+
 ## V1-varslinger
 
 Planens `familyMemberId` beskriver hvem planen gjelder, mens `HealthPlanNotificationRecipient` er den eksplisitte varslingsmålgruppen. Det finnes ingen implisitt «alle voksne»-regel. Mottakere må være `FamilyMember` i samme familie og ha en koblet `User`; opprettelse velger kun innlogget brukers sikkert identifiserte medlem som standard, og en tom målgruppe er gyldig. Målgruppen kan endres for DRAFT, ACTIVE og PAUSED, men er skrivebeskyttet for COMPLETED og ARCHIVED. Brukerens globale `healthPlansEnabled` (standard `true`) filtrerer målgruppen på samme måte som øvrige varslingskategorier. Frakoblede eller deaktiverte brukere hoppes over isolert.

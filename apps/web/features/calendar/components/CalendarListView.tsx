@@ -34,19 +34,21 @@ export function CalendarListView() {
     setSelectedDate,
     setSelectedView,
     today,
+    ensureHealthPlansForRange,
+    healthPlanOccurrences,
   } = useCalendar();
   useEffect(() => {
     const todayDate = parseDateString(today);
-    void ensureSchoolWeeksForRange(
-      formatDateString(addDays(todayDate, -30)),
-      formatDateString(addDays(todayDate, 90)),
-    );
-  }, [ensureSchoolWeeksForRange, today]);
+    const from = formatDateString(addDays(todayDate, -30));
+    const to = formatDateString(addDays(todayDate, 90));
+    void ensureSchoolWeeksForRange(from, to);
+    void ensureHealthPlansForRange(from, to);
+  }, [ensureHealthPlansForRange, ensureSchoolWeeksForRange, today]);
 
   const dayGroups = useMemo(
     () =>
-      buildListDayGroups(filters, calendarEvents, reminders, mealPlannerMeals, tasks),
-    [calendarEvents, filters, mealPlannerMeals, reminders, tasks],
+      buildListDayGroups(filters, calendarEvents, reminders, mealPlannerMeals, tasks, healthPlanOccurrences),
+    [calendarEvents, filters, healthPlanOccurrences, mealPlannerMeals, reminders, tasks],
   );
   const initialScrollCompleteRef = useRef(false);
 

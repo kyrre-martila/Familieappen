@@ -6,6 +6,7 @@ import {
   useContext,
   useEffect,
   useMemo,
+  useRef,
   useState,
   type ReactNode,
 } from "react";
@@ -22,6 +23,7 @@ import {
   deleteCalendarEvent as deleteBackendCalendarEvent,
   deleteCalendarEventOccurrence,
   getCalendarEvents,
+  getHealthPlanOccurrences,
   getSchoolWeekReminders,
   getTasks,
   updateCalendarEvent as updateBackendCalendarEvent,
@@ -29,6 +31,7 @@ import {
   type CalendarEvent as BackendCalendarEvent,
   type SchoolWeekReminder as BackendSchoolWeekReminder,
   type Task,
+  type HealthPlanOccurrence,
 } from "../../../lib/api";
 import { getUserFacingApiMessage } from "../../../lib/auth-family";
 import { schoolWeekChangedEvent, type SchoolWeekChangedDetail } from "../../husk/hooks/schoolWeekCache";
@@ -38,6 +41,7 @@ import { useFamilyMembers } from "../../family/hooks/useFamilyMembers";
 import { useReminders } from "../../husk/hooks/useReminders";
 import { useMeals } from "../../meals/hooks/useMeals";
 import type { CalendarEvent, CalendarFamilyMember } from "../../types";
+import { osloCalendarDate, osloDayBounds } from "../../health-plan/occurrence-summary";
 
 export type CalendarEventInput = Partial<CalendarEvent> &
   Pick<CalendarEvent, "title" | "date">;
@@ -62,6 +66,8 @@ export type CalendarContract = {
     fromDate: string,
     toDate: string,
   ) => Promise<void>;
+  ensureHealthPlansForRange: (fromDate: string, toDate: string) => Promise<void>;
+  healthPlanOccurrences: HealthPlanOccurrence[];
   reminders: ReminderSummary[];
   mealSummaries: MealSummary[];
   familyMembers: CalendarFamilyMember[];
@@ -87,7 +93,7 @@ const CalendarContext = createContext<CalendarContract | null>(null);
 const CALENDAR_ERROR_COPY = "Kunne ikke hente kalenderen akkurat nå";
 
 function getTodayString() {
-  return formatLocalDateString(new Date());
+  return osloCalendarDate(new Date());
 }
 
 function getCalendarRange(today: string) {
@@ -429,7 +435,55 @@ function useCalendarContractValue(): CalendarContract {
   const [selectedView, setSelectedView] = useState<CalendarViewMode>("day");
   const [mealSummaries, setMealSummaries] = useState<MealSummary[]>([]);
   const [tasks, setTasks] = useState<Task[]>([]);
+  const [healthPlanOccurrences, setHealthPlanOccurrences] = useState<HealthPlanOccurrence[]>([]);
+  const [healthPlanContext, setHealthPlanContext] = useState<string | null>(null);
+  const healthPlanRanges = useRef(new Set<string>());
+  const healthPlanControllers = useRef(new Set<AbortController>());
+  const healthPlanGeneration = useRef(0);
   const activeFamilyId = family?.id ?? null;
+
+  useEffect(() => {
+    healthPlanGeneration.current += 1;
+    healthPlanControllers.current.forEach(controller => controller.abort());
+    healthPlanControllers.current.clear();
+    healthPlanRanges.current.clear();
+    setHealthPlanOccurrences([]);
+    setHealthPlanContext(null);
+    return () => {
+      healthPlanGeneration.current += 1;
+      healthPlanControllers.current.forEach(controller => controller.abort());
+      healthPlanControllers.current.clear();
+    };
+  }, [activeFamilyId]);
+
+  const ensureHealthPlansForRange = useCallback(async (fromDate: string, toDate: string) => {
+    if (!activeFamilyId) return;
+    const rangeKey = `${fromDate}:${toDate}`;
+    if (healthPlanRanges.current.has(rangeKey)) return;
+    healthPlanRanges.current.add(rangeKey);
+    const generation = healthPlanGeneration.current;
+    const controller = new AbortController();
+    healthPlanControllers.current.add(controller);
+    try {
+      const from = osloDayBounds(fromDate).start.toISOString();
+      const to = osloDayBounds(toDate).end.toISOString();
+      const items = await getHealthPlanOccurrences(activeFamilyId, { from, to, limit: 500 }, controller.signal);
+      if (controller.signal.aborted || generation !== healthPlanGeneration.current) return;
+      setHealthPlanOccurrences(current => {
+        const byId = new Map(current.map(item => [item.id, item]));
+        items.forEach(item => byId.set(item.id, item));
+        return Array.from(byId.values());
+      });
+      setHealthPlanContext(activeFamilyId);
+    } catch {
+      if (!controller.signal.aborted && generation === healthPlanGeneration.current) {
+        healthPlanRanges.current.delete(rangeKey);
+      }
+      // Helseplan is secondary calendar data and must not replace the calendar error state.
+    } finally {
+      healthPlanControllers.current.delete(controller);
+    }
+  }, [activeFamilyId]);
 
   const refresh = useCallback(async () => {
     if (!activeFamilyId) {
@@ -841,6 +895,8 @@ function useCalendarContractValue(): CalendarContract {
       error,
       refresh,
       ensureSchoolWeeksForRange,
+      ensureHealthPlansForRange,
+      healthPlanOccurrences: healthPlanContext === activeFamilyId ? healthPlanOccurrences : [],
       reminders: calendarReminders,
       mealSummaries,
       familyMembers,
@@ -863,6 +919,9 @@ function useCalendarContractValue(): CalendarContract {
       createEvent,
       deleteEvent,
       ensureSchoolWeeksForRange,
+      ensureHealthPlansForRange,
+      healthPlanContext,
+      healthPlanOccurrences,
       error,
       familyMembers,
       familyMembersError,

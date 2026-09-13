@@ -1,4 +1,5 @@
 import type { CalendarMvpEvent, MealSummary, ReminderSummary, Task } from "@familieappen/shared";
+import type { HealthPlanOccurrence } from "../../../lib/api";
 
 export type CalendarContentTypeFilter = "all" | "events" | "reminders" | "meals";
 export type CalendarCategoryFilter =
@@ -24,4 +25,5 @@ export interface CalendarListDayGroup {
   meal: MealSummary | undefined;
   reminders: ReminderSummary[];
   tasks: Task[];
+  healthPlanOccurrences: HealthPlanOccurrence[];
 }

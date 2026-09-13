@@ -85,6 +85,15 @@ function NavIcon({ icon, className = "bottom-nav__svg" }: { icon: NavigationIcon
     );
   }
 
+  if (icon === "health") {
+    return (
+      <svg {...commonProps}>
+        <path d="M19.5 5.6a4.5 4.5 0 0 0-6.4 0L12 6.7l-1.1-1.1a4.5 4.5 0 0 0-6.4 6.4L12 19.5l7.5-7.5a4.5 4.5 0 0 0 0-6.4Z" />
+        <path d="M7.5 12h2l1-2.2 2.1 4.4 1.1-2.2h2.8" />
+      </svg>
+    );
+  }
+
   if (icon === "list") {
     return (
       <svg {...commonProps}>
