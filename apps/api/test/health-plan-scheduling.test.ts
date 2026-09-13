@@ -43,6 +43,9 @@ for (const day of [1, 3, 5]) assert.equal(recurrenceMatches({ year: 2026, month:
 assert.equal(recurrenceMatches({ year: 2026, month: 10, day: 1 }, { recurrenceType: "INTERVAL_DAYS", intervalDays: 3, anchorDate: anchor }), true); // month boundary, distance 30
 assert.equal(recurrenceMatches({ year: 2027, month: 1, day: 2 }, { recurrenceType: "INTERVAL_DAYS", intervalDays: 3, anchorDate: anchor }), true); // year boundary, distance 123
 assert.equal(recurrenceMatches({ year: 2026, month: 8, day: 30 }, { recurrenceType: "INTERVAL_DAYS", intervalDays: 2, anchorDate: anchor }), false);
+const springInterval = { recurrenceType: "INTERVAL_DAYS", intervalDays: 2, anchorDate: new Date("2026-03-27T00:00:00.000Z") } as const;
+for (const day of [27, 29, 31]) assert.equal(recurrenceMatches({ year: 2026, month: 3, day }, springInterval), true, `${day} remains on the local two-day cadence across spring DST`);
+for (const day of [28, 30]) assert.equal(recurrenceMatches({ year: 2026, month: 3, day }, springInterval), false);
 assert.deepEqual(addLocalDays({ year: 2026, month: 12, day: 31 }, 1), { year: 2027, month: 1, day: 1 });
 
 // Step duration preserves the logical Oslo wall-clock across DST.

@@ -51,6 +51,13 @@ async function schedulerTests() {
   await db.run(instant("21:00")); assert.equal(db.ledger.size, 4, "new snooze instant has a new identity");
   await db.run(instant("21:01")); assert.equal(db.ledger.size, 4, "snooze instant is delivered once");
 
+  const overlap = new SchedulerFake(); const overlapRow = occurrence(new Date("2026-10-25T00:15:00Z"), "PENDING", "ACTIVE", [recipient("user-a")], "dst-occurrence"); overlap.rows = [overlapRow];
+  await overlap.run(new Date("2026-10-25T00:15:00Z"));
+  overlapRow.scheduledAt = new Date("2026-10-25T01:15:00Z"); overlapRow.status = "SNOOZED";
+  await overlap.run(new Date("2026-10-25T01:15:00Z"));
+  assert.equal(overlap.ledger.size, 2, "elapsed-time snooze across the autumn overlap gets one new delivery identity");
+  assert.deepEqual([...overlap.ledger.keys()], ["health-plan-occurrence:dst-occurrence:user-a:2026-10-25T00:15:00.000Z", "health-plan-occurrence:dst-occurrence:user-a:2026-10-25T01:15:00.000Z"]);
+
   for (const recipients of [[recipient("user-a", false), recipient("user-b")], [recipient("user-a", true, true), recipient("user-b")]]) {
     const eligibility = new SchedulerFake(); eligibility.rows = [occurrence(instant("20:00"), "PENDING", "ACTIVE", recipients)]; await eligibility.run(instant("20:00")); assert.deepEqual([...eligibility.ledger.values()].map(x => x.recipientUserId), ["user-b"]);
   }

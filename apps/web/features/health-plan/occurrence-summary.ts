@@ -107,6 +107,16 @@ export function osloDayBounds(date: string) {
   return { start: osloMidnight(date), end: osloMidnight(addCalendarDays(date, 1)) };
 }
 
+/** Fetch and grouping bounds based on Norwegian calendar dates, never the device zone. */
+export function osloCalendarDayBounds(now = new Date()) {
+  const date = osloCalendarDate(now);
+  return {
+    start: osloMidnight(date),
+    tomorrow: osloMidnight(addCalendarDays(date, 1)),
+    horizon: osloMidnight(addCalendarDays(date, 14)),
+  };
+}
+
 export function occurrencesForOsloDate<T extends Pick<HealthPlanSummaryOccurrence, "scheduledAt">>(items: readonly T[], date: string) {
   return items.filter(item => osloCalendarDate(item.scheduledAt) === date);
 }
