@@ -1,17 +1,18 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { Check, Clock3, MoreHorizontal, Plus, X } from "lucide-react";
+import { Check, Clock3, MoreHorizontal, Plus, SlidersHorizontal, X } from "lucide-react";
 import Link from "next/link";
 import { AppShell } from "../../components/AppShell";
 import { useAuth } from "../../components/AuthProvider";
 import { ProtectedFamilyRoute, useFamilyAccess } from "../../components/ProtectedFamilyRoute";
 import { addHealthPlanNote, createHealthPlan, getFamily, getHealthPlanOccurrences, getHealthPlans, updateHealthPlanOccurrence, type CreateHealthPlanInput, type FamilyMember, type HealthPlan, type HealthPlanOccurrence } from "../../lib/api";
-import { blankLevel, blankSchedule, blankStep, buildCreateHealthPlanInput, compatiblePlanId, filterOccurrences, isOccurrenceActionable, isOverdue, ISO_WEEKDAYS, localDayBounds, occurrenceMenuModel, planProgressLabel, plansForMember, splitOccurrencesForToday, withStepDuration, type LevelDraft, type ScheduleDraft } from "../../features/health-plan/model";
+import { blankLevel, blankSchedule, blankStep, buildCreateHealthPlanInput, compatiblePlanId, filterOccurrences, isOccurrenceActionable, isOverdue, ISO_WEEKDAYS, localDayBounds, occurrenceMenuModel, planProgressLabel, splitOccurrencesForToday, withStepDuration, type LevelDraft, type ScheduleDraft } from "../../features/health-plan/model";
 import { mutationThenRefresh } from "../../features/health-plan/mutation-refresh";
 import { emptyHealthPlanOverviewState, FamilyRequestGuard } from "../../features/health-plan/request-context";
 import { osloTime } from "../../features/health-plan/log";
 import { currentOsloDay, millisecondsUntilNextOsloDay, osloDayChanged } from "../../features/health-plan/rollover";
+import { HealthPlanFilterSheet } from "../../features/health-plan/HealthPlanFilterSheet";
 
 const statusLabels = { DRAFT: "Utkast", ACTIVE: "Aktive", PAUSED: "Pausede", COMPLETED: "Avsluttede", ARCHIVED: "Arkiverte" } as const;
 const planStatusLabels = { DRAFT: "Utkast", ACTIVE: "Aktiv", PAUSED: "Pauset", COMPLETED: "Avsluttet", ARCHIVED: "Arkivert" } as const;
@@ -20,6 +21,7 @@ function HealthPlansContent() {
   const access = useFamilyAccess(); const { user } = useAuth(); const familyId = access.status === "approved" ? access.familyContext.activeFamilyId : null;
   const [tab, setTab] = useState<"today" | "plans">("today"); const [members, setMembers] = useState<FamilyMember[]>([]); const [plans, setPlans] = useState<HealthPlan[]>([]); const [items, setItems] = useState<HealthPlanOccurrence[]>([]);
   const [memberId, setMemberId] = useState(""); const [planId, setPlanId] = useState(""); const [upcomingCount, setUpcomingCount] = useState(5); const [busy, setBusy] = useState(""); const [error, setError] = useState(""); const [loading, setLoading] = useState(true); const [dataContext, setDataContext] = useState<string | null>(null); const [createOpen, setCreateOpen] = useState(false); const [warning, setWarning] = useState("");
+  const [filterOpen, setFilterOpen] = useState(false);
   const loadGuard = useRef(new FamilyRequestGuard()); const actionGuard = useRef(new FamilyRequestGuard()); const loadController = useRef<AbortController | null>(null); const actionControllers = useRef(new Set<AbortController>()); const busyOccurrences = useRef(new Set<string>()); const familyRef = useRef(familyId); familyRef.current = familyId;
   const refresh = useCallback(async (reportError = true) => {
     if (!familyId) return;
@@ -33,7 +35,7 @@ function HealthPlansContent() {
   }, [familyId]);
   useEffect(() => {
     loadController.current?.abort(); actionControllers.current.forEach(controller => controller.abort()); actionControllers.current.clear(); loadGuard.current.changeContext(familyId); actionGuard.current.changeContext(familyId);
-    const empty = emptyHealthPlanOverviewState(); setMembers(empty.members); setPlans(empty.plans); setItems(empty.items); setMemberId(empty.memberId); setPlanId(empty.planId); setUpcomingCount(empty.upcomingCount); setBusy(""); setError(""); setWarning(""); setDataContext(null); setCreateOpen(false); setLoading(true);
+    const empty = emptyHealthPlanOverviewState(); setMembers(empty.members); setPlans(empty.plans); setItems(empty.items); setMemberId(empty.memberId); setPlanId(empty.planId); setUpcomingCount(empty.upcomingCount); setBusy(""); setError(""); setWarning(""); setDataContext(null); setCreateOpen(false); setFilterOpen(false); setLoading(true);
     if (familyId) void refresh();
     return () => { loadController.current?.abort(); loadGuard.current.invalidate(); actionControllers.current.forEach(controller => controller.abort()); actionControllers.current.clear(); actionGuard.current.invalidate(); };
   }, [familyId, refresh]);
@@ -46,6 +48,7 @@ function HealthPlansContent() {
     return () => { clearTimeout(timer); document.removeEventListener("visibilitychange", resume); window.removeEventListener("focus", resume); };
   }, [familyId, refresh]);
   const filtered = useMemo(() => filterOccurrences(items, memberId, planId), [items, memberId, planId]); const { today, upcoming } = splitOccurrencesForToday(filtered);
+  const activeFilterCount = Number(Boolean(memberId)) + Number(Boolean(planId));
   function selectMember(nextMemberId: string) { setMemberId(nextMemberId); setPlanId(current => compatiblePlanId(plans, nextMemberId, current)); }
   async function occurrenceAction(item: HealthPlanOccurrence, action: "COMPLETED" | "SKIPPED" | "SNOOZED" | "NOTE", minutes = 0) { if (!familyId || busyOccurrences.current.has(item.id)) return; let note: string | null = null; if (action === "NOTE") { note = window.prompt("Kommentar"); if (!note?.trim()) return; } busyOccurrences.current.add(item.id); const requestFamilyId = familyId; const token = actionGuard.current.begin(); const controller = new AbortController(); actionControllers.current.add(controller); const isCurrent = () => !controller.signal.aborted && actionGuard.current.isCurrent(token) && familyRef.current === requestFamilyId; setBusy(item.id); setError(""); setWarning(""); try { const outcome = await mutationThenRefresh({ mutation: () => action === "NOTE" ? addHealthPlanNote(requestFamilyId, item.healthPlanId, { occurrenceId: item.id, text: note!.trim() }, controller.signal) : updateHealthPlanOccurrence(requestFamilyId, item, { status: action, ...(action === "SNOOZED" ? { scheduledAt: new Date(Date.now() + minutes * 60000).toISOString() } : {}) }, controller.signal), isCurrent, commitMutation: () => undefined, refresh: () => refresh(false), commitRefresh: () => undefined }); if (outcome === "refresh-failed" && isCurrent()) setWarning(action === "NOTE" ? "Kommentaren ble lagret, men visningen kunne ikke oppdateres." : "Handlingen ble lagret, men visningen kunne ikke oppdateres."); } catch (e) { if (isCurrent()) setError(e instanceof Error ? e.message : "Handlingen kunne ikke lagres."); } finally { busyOccurrences.current.delete(item.id); actionControllers.current.delete(controller); if (actionGuard.current.isCurrent(token)) setBusy(""); } }
   const switchingContext = dataContext !== familyId;
@@ -55,11 +58,12 @@ function HealthPlansContent() {
     {warning && <p className="health-warning" role="status">{warning}</p>}
     {(loading || switchingContext) && <div className="health-empty" aria-live="polite">Laster helseplaner …</div>}
     {!loading && !switchingContext && (tab === "today" ? <>
-      <div className="health-filters"><div><span>Familiemedlem</span><div className="health-chips"><button className={!memberId ? "active" : ""} onClick={() => selectMember("")}>Alle</button>{members.map(m => <button className={memberId === m.id ? "active" : ""} key={m.id} onClick={() => selectMember(m.id)}>{m.displayName}</button>)}</div></div><label>Plan<select value={planId} onChange={e => setPlanId(e.target.value)}><option value="">Alle planer</option>{plansForMember(plans, memberId).map(p => <option key={p.id} value={p.id}>{p.name}</option>)}</select></label></div>
+      <div className="health-filter-toolbar"><button className={`husk-filter-button${activeFilterCount ? " husk-filter-button--active" : ""}`} type="button" aria-label={activeFilterCount ? `Åpne filter for Helseplan. ${activeFilterCount} aktive filter` : "Åpne filter for Helseplan"} aria-expanded={filterOpen} onClick={() => setFilterOpen(true)}><SlidersHorizontal aria-hidden="true" size={20} strokeWidth={2.4}/><span>Filter</span>{activeFilterCount ? <span className="husk-filter-button__count" aria-hidden="true">{activeFilterCount}</span> : null}</button></div>
       <OccurrenceSection title="I dag" items={today} busy={busy} onAction={occurrenceAction} empty={items.length ? "Alt er gjort for i dag" : "Ingen helseplanhendelser i dag"} />
       <OccurrenceSection title="Kommende hendelser" items={upcoming.slice(0, upcomingCount)} busy={busy} onAction={occurrenceAction} empty="Ingen kommende hendelser" />
       {upcoming.length > upcomingCount && <button className="health-more" onClick={() => setUpcomingCount(n => n + 5)}>Vis flere</button>}
     </> : <><div className="health-plan-heading"><p>Administrer familiens helseplaner.</p><button className="health-primary" onClick={() => setCreateOpen(true)}><Plus size={18}/> Ny helseplan</button></div>{(Object.keys(statusLabels) as Array<keyof typeof statusLabels>).map(status => { const group = plans.filter(p => p.status === status); return group.length ? <section key={status}><h2>{statusLabels[status]}</h2><div className="health-plan-grid">{group.map(p => <PlanCard key={p.id} plan={p}/>)}</div></section> : null; })}{!plans.length && <div className="health-empty">Ingen helseplaner ennå.</div>}</>)}
+    <HealthPlanFilterSheet activeFilterCount={activeFilterCount} isOpen={filterOpen} memberId={memberId} members={members} onClose={() => setFilterOpen(false)} onMemberChange={selectMember} onPlanChange={setPlanId} onReset={() => { setMemberId(""); setPlanId(""); }} planId={planId} plans={plans}/>
     {createOpen && familyId && <CreatePlan familyId={familyId} members={members} currentUserId={user?.id ?? null} onClose={() => setCreateOpen(false)} onCreated={async createdFamilyId => { if (familyRef.current !== createdFamilyId) return; setCreateOpen(false); await refresh(); }}/>}
   </div></AppShell>;
 }
