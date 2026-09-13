@@ -1,4 +1,5 @@
-import { Body, Controller, Get, Headers, HttpStatus, Param, Patch, Post, Query, Req, UseGuards } from "@nestjs/common";
+import { Body, CallHandler, Controller, ExecutionContext, Get, Headers, HttpStatus, Injectable, NestInterceptor, Param, Patch, Post, Query, Req, UseGuards, UseInterceptors } from "@nestjs/common";
+import type { Observable } from "rxjs";
 import { AuthGuard } from "../auth/guards/auth.guard";
 import { API_ERROR_CODES, ApiException, ApiResponse, createApiResponse } from "../common";
 import { CreateHealthPlanDto, CreateHealthPlanNoteDto, ListHealthPlanOccurrencesQueryDto, UpdateHealthPlanDto, UpdateHealthPlanNotificationRecipientsDto, UpdateHealthPlanOccurrenceDto } from "./health-plans.dto";
@@ -6,8 +7,17 @@ import { HealthPlansService } from "./health-plans.service";
 
 type Request = { user: { id: string; email: string } };
 
+@Injectable()
+class HealthPlanNoStoreInterceptor implements NestInterceptor {
+  intercept(context: ExecutionContext, next: CallHandler): Observable<unknown> {
+    context.switchToHttp().getResponse<{ setHeader(name: string, value: string): void }>().setHeader("Cache-Control", "private, no-store");
+    return next.handle();
+  }
+}
+
 @Controller("health-plans")
 @UseGuards(AuthGuard)
+@UseInterceptors(HealthPlanNoStoreInterceptor)
 export class HealthPlansController {
   constructor(private readonly service: HealthPlansService) {}
   private context(request: Request, familyId?: string): [string, string] {

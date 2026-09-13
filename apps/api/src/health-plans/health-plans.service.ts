@@ -4,7 +4,7 @@ import { PrismaService } from "../prisma";
 import { assertValidHealthPlanLevels, assertValidHealthPlanSchedule, DEFAULT_HEALTH_PLAN_TIMEZONE, resumeProgressStartedAt } from "./health-plan.domain";
 import { CreateHealthPlanDto, CreateHealthPlanNoteDto, ListHealthPlanOccurrencesQueryDto, UpdateHealthPlanDto, UpdateHealthPlanNotificationRecipientsDto, UpdateHealthPlanOccurrenceDto } from "./health-plans.dto";
 
-const LIMITS = { levels: 10, steps: 20, schedules: 20, actions: 20 } as const;
+const LIMITS = { levels: 10, steps: 20, schedules: 20, actions: 20, recipients: 100, logEntries: 500 } as const;
 type Client = PrismaService["client"];
 type PlanStatus = "DRAFT" | "ACTIVE" | "PAUSED" | "COMPLETED" | "ARCHIVED";
 type HistoryType = "CREATED" | "PAUSED" | "RESUMED" | "LEVEL_INCREASED" | "LEVEL_DECREASED" | "STEP_ADVANCED" | "STATUS_CHANGED" | "DEFINITION_UPDATED";
@@ -24,8 +24,10 @@ export class HealthPlansService {
     return this.prisma.client.healthPlan.findMany({
       where: { familyId },
       orderBy: [{ createdAt: "desc" }, { id: "asc" }],
-      include: {
-        familyMember: true,
+      select: {
+        id: true, familyMemberId: true, name: true, description: true, status: true,
+        activeLevelId: true, activeStepId: true,
+        familyMember: { select: { id: true, displayName: true } },
         activeLevel: { select: { id: true, levelIndex: true, name: true } },
         activeStep: { select: { id: true, stepOrder: true, name: true } },
       },
@@ -39,6 +41,7 @@ export class HealthPlansService {
 
   async create(userId: string, familyId: string, input: CreateHealthPlanDto) {
     const actor = await this.authorization.requireFamilyMember(userId, familyId);
+    this.validateCreateShape(input);
     const validated = this.validateDefinition(input);
     const member = await this.prisma.client.familyMember.findFirst({ where: { id: input.familyMemberId, familyId }, select: { id: true } });
     if (!member) throw new BadRequestException("Family member must belong to the active family");
@@ -65,6 +68,7 @@ export class HealthPlansService {
 
   async updateNotificationRecipients(userId: string, familyId: string, id: string, input: UpdateHealthPlanNotificationRecipientsDto) {
     await this.authorization.requireFamilyMember(userId, familyId);
+    this.assertAllowedKeys(input, ["familyMemberIds"], "notification recipients");
     if (!input || !Array.isArray(input.familyMemberIds)) throw new BadRequestException("familyMemberIds must be an array");
     return this.prisma.client.$transaction(async tx => {
       const plan = await this.getPlan(id, familyId, tx, false) as PlanState;
@@ -78,6 +82,8 @@ export class HealthPlansService {
 
   async update(userId: string, familyId: string, id: string, input: UpdateHealthPlanDto) {
     const actor = await this.authorization.requireFamilyMember(userId, familyId);
+    this.assertAllowedKeys(input, ["name", "description", "action"], "plan update");
+    if (input.action !== undefined) this.assertAllowedKeys(input.action, ["id", "title", "instruction"], "action update");
     if (input.name === undefined && input.description === undefined && input.action === undefined) throw new BadRequestException("At least one editable field is required");
     return this.prisma.client.$transaction(async (tx) => {
       const plan = await this.getPlan(id, familyId, tx, false) as PlanState;
@@ -164,21 +170,26 @@ export class HealthPlansService {
   }
 
   async addNote(userId: string, familyId: string, id: string, input: CreateHealthPlanNoteDto) {
-    await this.authorization.requireFamilyMember(userId, familyId); const plan = await this.getPlan(id, familyId, this.prisma.client, false) as PlanState;
+    await this.authorization.requireFamilyMember(userId, familyId);
+    this.assertAllowedKeys(input, ["text", "occurrenceId", "sourceActionId"], "note");
+    const plan = await this.getPlan(id, familyId, this.prisma.client, false) as PlanState;
     if (plan.status === "COMPLETED" || plan.status === "ARCHIVED") throw new ConflictException("Completed and archived plans cannot receive notes");
     if (input.occurrenceId && input.sourceActionId) throw new BadRequestException("A note may have only one specific target");
     if (input.occurrenceId && !await this.prisma.client.healthPlanOccurrence.findFirst({ where: { id: input.occurrenceId, healthPlanId: id, familyId } })) throw new NotFoundException("Occurrence was not found");
     if (input.sourceActionId && !await this.prisma.client.healthPlanAction.findFirst({ where: { id: input.sourceActionId, schedule: { step: { healthPlanId: id } } } })) throw new NotFoundException("Action was not found");
-    return this.prisma.client.healthPlanNote.create({ data: { healthPlanId: id, occurrenceId: input.occurrenceId, sourceActionId: input.sourceActionId, authorUserId: userId, text: this.requiredText(input.text, 4000, "Note") } });
+    return this.prisma.client.healthPlanNote.create({
+      data: { healthPlanId: id, occurrenceId: input.occurrenceId, sourceActionId: input.sourceActionId, authorUserId: userId, text: this.requiredText(input.text, 4000, "Note") },
+      select: { id: true, healthPlanId: true, occurrenceId: true, sourceActionId: true, text: true, createdAt: true },
+    });
   }
-  async history(userId: string, familyId: string, id: string) { await this.authorization.requireFamilyMember(userId, familyId); await this.getPlan(id, familyId, this.prisma.client, false); return this.prisma.client.healthPlanHistory.findMany({ where: { healthPlanId: id }, orderBy: [{ occurredAt: "asc" }, { id: "asc" }] }); }
+  async history(userId: string, familyId: string, id: string) { await this.authorization.requireFamilyMember(userId, familyId); await this.getPlan(id, familyId, this.prisma.client, false); return this.prisma.client.healthPlanHistory.findMany({ where: { healthPlanId: id }, orderBy: [{ occurredAt: "desc" }, { id: "desc" }], take: LIMITS.logEntries, select: { id: true, healthPlanId: true, type: true, actorDisplayName: true, metadata: true, occurredAt: true } }); }
   async log(userId: string, familyId: string, id: string) {
     await this.authorization.requireFamilyMember(userId, familyId);
     await this.getPlan(id, familyId, this.prisma.client, false);
     const [history, notes] = await Promise.all([
-      this.prisma.client.healthPlanHistory.findMany({ where: { healthPlanId: id }, orderBy: [{ occurredAt: "desc" }, { id: "desc" }], take: 500 }),
+      this.prisma.client.healthPlanHistory.findMany({ where: { healthPlanId: id }, orderBy: [{ occurredAt: "desc" }, { id: "desc" }], take: LIMITS.logEntries, select: { id: true, healthPlanId: true, type: true, actorDisplayName: true, metadata: true, occurredAt: true } }),
       this.prisma.client.healthPlanNote.findMany({
-        where: { healthPlanId: id }, orderBy: [{ createdAt: "desc" }, { id: "desc" }], take: 500,
+        where: { healthPlanId: id }, orderBy: [{ createdAt: "desc" }, { id: "desc" }], take: LIMITS.logEntries,
         include: {
           authorUser: { select: { displayName: true } },
           occurrence: { select: { scheduledAt: true, actionTitle: true, sourceAction: { select: { schedule: { select: { step: { select: { stepOrder: true, level: { select: { levelIndex: true } } } } } } } } } },
@@ -195,13 +206,20 @@ export class HealthPlansService {
     })) };
   }
   async occurrences(userId: string, familyId: string, id: string, query: ListHealthPlanOccurrencesQueryDto) {
-    await this.authorization.requireFamilyMember(userId, familyId); await this.getPlan(id, familyId, this.prisma.client, false);
+    await this.authorization.requireFamilyMember(userId, familyId);
+    this.assertAllowedKeys(query, ["from", "to", "familyMemberId", "healthPlanId", "limit"], "occurrence query");
+    await this.getPlan(id, familyId, this.prisma.client, false);
     const from = query.from ? this.date(query.from, "from") : undefined; const to = query.to ? this.date(query.to, "to") : undefined;
     if (from && to && from >= to) throw new BadRequestException("from must be before to");
-    return this.prisma.client.healthPlanOccurrence.findMany({ where: { healthPlanId: id, familyId, scheduledAt: { ...(from ? { gte: from } : {}), ...(to ? { lt: to } : {}) } }, orderBy: [{ scheduledAt: "asc" }, { id: "asc" }], take: 1000 });
+    return this.prisma.client.healthPlanOccurrence.findMany({
+      where: { healthPlanId: id, familyId, scheduledAt: { ...(from ? { gte: from } : {}), ...(to ? { lt: to } : {}) } },
+      orderBy: [{ scheduledAt: "asc" }, { id: "asc" }], take: 1000,
+      select: { id: true, healthPlanId: true, scheduledAt: true, originalScheduledAt: true, actionTitle: true, actionInstruction: true, status: true, completedAt: true },
+    });
   }
   async occurrenceFeed(userId: string, familyId: string, query: ListHealthPlanOccurrencesQueryDto) {
     await this.authorization.requireFamilyMember(userId, familyId);
+    this.assertAllowedKeys(query, ["from", "to", "familyMemberId", "healthPlanId", "limit"], "occurrence query");
     const from = query.from ? this.date(query.from, "from") : undefined;
     const to = query.to ? this.date(query.to, "to") : undefined;
     if (from && to && from >= to) throw new BadRequestException("from must be before to");
@@ -227,14 +245,18 @@ export class HealthPlansService {
         sourceAction: { select: { schedule: { select: { step: { select: { stepOrder: true, name: true, level: { select: { levelIndex: true, name: true } } } } } } } },
       },
     });
-    return occurrences.map(({ sourceAction, ...occurrence }) => ({
-      ...occurrence,
+    return occurrences.map(({ sourceAction, ...row }) => ({
+      id: row.id, healthPlanId: row.healthPlanId, scheduledAt: row.scheduledAt, originalScheduledAt: row.originalScheduledAt,
+      actionTitle: row.actionTitle, actionInstruction: row.actionInstruction, status: row.status, completedAt: row.completedAt,
+      healthPlan: row.healthPlan,
       occurrenceLevel: sourceAction?.schedule?.step?.level ?? null,
       occurrenceStep: sourceAction?.schedule?.step ? { stepOrder: sourceAction.schedule.step.stepOrder, name: sourceAction.schedule.step.name } : null,
     }));
   }
   async updateOccurrence(userId: string, familyId: string, id: string, occurrenceId: string, input: UpdateHealthPlanOccurrenceDto) {
     await this.authorization.requireFamilyMember(userId, familyId);
+    this.assertAllowedKeys(input, ["status", "scheduledAt", "note"], "occurrence update");
+    if (!input || !["COMPLETED", "SKIPPED", "SNOOZED"].includes(input.status)) throw new BadRequestException("status must be COMPLETED, SKIPPED or SNOOZED");
     return this.prisma.client.$transaction(async (tx) => {
       const plan = await this.getPlan(id, familyId, tx, false) as PlanState;
       if (plan.status === "COMPLETED" || plan.status === "ARCHIVED") throw new ConflictException("Completed and archived plans cannot receive notes or occurrence changes");
@@ -245,7 +267,10 @@ export class HealthPlansService {
       const changed = await tx.healthPlanOccurrence.updateMany({ where: { id: occurrenceId, healthPlanId: id, familyId, status: occurrence.status, updatedAt: occurrence.updatedAt }, data });
       if (changed.count !== 1) throw new ConflictException("Occurrence changed concurrently; reload before retrying");
       if (input.note !== undefined) await tx.healthPlanNote.create({ data: { healthPlanId: id, occurrenceId, authorUserId: userId, text: this.requiredText(input.note, 4000, "Note") } });
-      return tx.healthPlanOccurrence.findFirst({ where: { id: occurrenceId, healthPlanId: id, familyId } });
+      return tx.healthPlanOccurrence.findFirst({
+        where: { id: occurrenceId, healthPlanId: id, familyId },
+        select: { id: true, healthPlanId: true, scheduledAt: true, originalScheduledAt: true, actionTitle: true, actionInstruction: true, status: true, completedAt: true },
+      });
     });
   }
 
@@ -262,12 +287,36 @@ export class HealthPlansService {
     });
   }
   private writeHistory(tx: Client, healthPlanId: string, type: HistoryType, actorUserId: string, actorDisplayName: string, metadata: unknown) { return tx.healthPlanHistory.create({ data: { healthPlanId, type, actorUserId, actorDisplayName, metadata } }); }
-  private async getPlan(id: string, familyId: string, client: Client, details: boolean) { const plan = await client.healthPlan.findFirst({ where: { id, familyId }, ...(details ? { include: { familyMember: true, notificationRecipients: { include: { familyMember: true }, orderBy: { createdAt: "asc" } }, activeLevel: { select: { id: true, levelIndex: true, name: true } }, activeStep: { select: { id: true, stepOrder: true, name: true } }, levels: { orderBy: { levelIndex: "asc" }, include: { steps: { orderBy: { stepOrder: "asc" }, include: { schedules: { where: { retiredAt: null }, include: { actions: { where: { retiredAt: null }, orderBy: { sortOrder: "asc" } } } } } } } }, notes: { orderBy: { createdAt: "asc" } } } } : {}) }); if (!plan) throw new NotFoundException("Health plan was not found"); return plan; }
+  private async getPlan(id: string, familyId: string, client: Client, details: boolean) {
+    const args: Record<string, unknown> = { where: { id, familyId } };
+    if (details) args.select = {
+      id: true, familyMemberId: true, name: true, description: true, status: true,
+      activeLevelId: true, activeStepId: true,
+      familyMember: { select: { id: true, displayName: true } },
+      notificationRecipients: { select: { familyMemberId: true, familyMember: { select: { id: true, displayName: true } } }, orderBy: { createdAt: "asc" } },
+      activeLevel: { select: { id: true, levelIndex: true, name: true } },
+      activeStep: { select: { id: true, stepOrder: true, name: true } },
+      levels: { orderBy: { levelIndex: "asc" }, select: {
+        id: true, levelIndex: true, name: true, description: true,
+        steps: { orderBy: { stepOrder: "asc" }, select: {
+          id: true, stepOrder: true, name: true, description: true, durationDays: true, autoAdvance: true,
+          schedules: { where: { retiredAt: null }, select: {
+            id: true, recurrenceType: true, localTime: true, weekdays: true, intervalDays: true,
+            actions: { where: { retiredAt: null }, orderBy: { sortOrder: "asc" }, select: { id: true, title: true, instruction: true, sortOrder: true } },
+          } },
+        } },
+      } },
+    };
+    const plan = await client.healthPlan.findFirst(args);
+    if (!plan) throw new NotFoundException("Health plan was not found");
+    return plan;
+  }
 
   private async validateRecipients(client: Client, familyId: string, input: unknown[]): Promise<string[]> {
+    if (input.length > LIMITS.recipients) throw new BadRequestException(`A plan may have at most ${LIMITS.recipients} notification recipients`);
     if (input.some(id => typeof id !== "string" || !id)) throw new BadRequestException("Recipient IDs must be non-empty strings");
     const ids = [...new Set(input as string[])];
-    const members = ids.length ? await client.familyMember.findMany({ where: { id: { in: ids }, familyId }, select: { id: true, userId: true } }) : [];
+    const members = ids.length ? await client.familyMember.findMany({ where: { id: { in: ids }, familyId, user: { deactivatedAt: null } }, select: { id: true, userId: true } }) : [];
     if (members.length !== ids.length) throw new BadRequestException("Every recipient must belong to the active family");
     if (members.some(member => !member.userId)) throw new BadRequestException("Every recipient must have their own login");
     return ids;
@@ -293,6 +342,27 @@ export class HealthPlansService {
     }
     try { assertValidHealthPlanLevels(input.levels.map((level) => ({ levelIndex: level.levelIndex, steps: level.steps.map((step) => ({ stepOrder: step.stepOrder, durationDays: step.durationDays, autoAdvance: step.autoAdvance ?? false, schedules: step.schedules.map((schedule) => ({ actionCount: schedule.actions.length })) })) }))); } catch (error) { throw new BadRequestException(error instanceof Error ? error.message : "Invalid plan definition"); }
     return { name: this.requiredText(input.name, 120, "Plan name"), description: this.optionalText(input.description, 2000, "Plan description") };
+  }
+  private validateCreateShape(input: CreateHealthPlanDto) {
+    this.assertAllowedKeys(input, ["familyMemberId", "name", "description", "levels", "notificationRecipientIds"], "plan");
+    if (!Array.isArray(input?.levels)) return;
+    for (const level of input.levels) {
+      this.assertAllowedKeys(level, ["levelIndex", "name", "description", "steps"], "level");
+      if (!Array.isArray(level.steps)) continue;
+      for (const step of level.steps) {
+        this.assertAllowedKeys(step, ["stepOrder", "name", "description", "durationDays", "autoAdvance", "schedules"], "step");
+        if (!Array.isArray(step.schedules)) continue;
+        for (const schedule of step.schedules) {
+          this.assertAllowedKeys(schedule, ["recurrenceType", "localTime", "timezone", "weekdays", "intervalDays", "anchorDate", "actions"], "schedule");
+          if (Array.isArray(schedule.actions)) for (const action of schedule.actions) this.assertAllowedKeys(action, ["title", "instruction", "sortOrder"], "action");
+        }
+      }
+    }
+  }
+  private assertAllowedKeys(value: unknown, allowed: readonly string[], label: string): void {
+    if (!value || typeof value !== "object" || Array.isArray(value)) throw new BadRequestException(`${label} must be an object`);
+    const unknown = Object.keys(value).filter(key => !allowed.includes(key));
+    if (unknown.length) throw new BadRequestException(`${label} contains unsupported fields: ${unknown.join(", ")}`);
   }
   private requiredText(value: unknown, max: number, label: string) { if (typeof value !== "string" || value.trim().length < 1 || value.trim().length > max) throw new BadRequestException(`${label} must be between 1 and ${max} characters`); return value.trim(); }
   private optionalText(value: unknown, max: number, label: string): string | null { if (value == null || value === "") return null; if (typeof value !== "string" || value.trim().length > max) throw new BadRequestException(`${label} must be at most ${max} characters`); return value.trim() || null; }
