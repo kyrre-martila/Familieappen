@@ -137,6 +137,8 @@ The `/health-plans` web route deliberately separates **I dag** (doing) from
 **Planer** (administration). I dag is a family-scoped, cross-plan occurrence
 feed with prominent family-member filtering, an optional plan filter, a bounded
 upcoming list, and occurrence actions for complete, skip, snooze, and comments.
+Its fetch window and I dag/Kommende grouping use Europe/Oslo calendar-day
+midnights; the browser or device timezone cannot change health-plan grouping.
 Planer exposes the backend lifecycle and the supported create definition without
 inventing additional status or treatment semantics.
 

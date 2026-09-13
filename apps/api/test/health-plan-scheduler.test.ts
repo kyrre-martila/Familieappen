@@ -94,6 +94,26 @@ async function main() {
     const dst = fixture("2026-03-29T01:45:00Z", "02:30", "2026-03-29T01:50:00Z"); await dst.service.runOnce(dst.now);
     assert.ok(!times(dst.db).includes("2026-03-29T01:30:00.000Z")); assert.ok(times(dst.db).includes("2026-03-30T00:30:00.000Z"));
   }
+  { // Fourteen local calendar days preserve wall time across spring DST; the upper instant is inclusive.
+    const now = "2026-03-20T07:00:00Z"; // 08:00 Oslo
+    const horizon = fixture("2026-03-01T00:00:00Z", "08:00", now);
+    horizon.db.steps[0].schedules.push(schedule("outside", "08:01", "outside"));
+    await horizon.service.runOnce(horizon.now);
+    assert.ok(times(horizon.db).includes("2026-04-03T06:00:00.000Z"), "occurrence exactly at the local-calendar horizon is generated");
+    assert.ok(!times(horizon.db).includes("2026-04-03T06:01:00.000Z"), "occurrence immediately beyond the horizon is excluded");
+    assert.equal(new Date("2026-04-03T06:00:00Z").getTime() - horizon.now.getTime(), 14 * 86_400_000 - 3_600_000);
+  }
+  { // A snoozed autumn-overlap occurrence retains its original dedupe identity on regeneration.
+    const dst = fixture("2026-10-01T00:00:00Z", "02:15", "2026-10-24T23:00:00Z");
+    const original = new Date("2026-10-25T00:15:00Z");
+    const snoozed = { sourceActionId: "daily", originalScheduledAt: original, scheduledAt: new Date("2026-10-25T01:15:00Z"), status: "SNOOZED" };
+    dst.db.occurrences.set(`daily:${original.toISOString()}`, snoozed);
+    await dst.service.runOnce(dst.now);
+    assert.equal(dst.db.occurrences.size, 14, "scheduler does not duplicate the snoozed source occurrence");
+    assert.equal(dst.db.occurrences.get(`daily:${original.toISOString()}`), snoozed);
+    assert.equal(snoozed.status, "SNOOZED");
+    assert.equal(snoozed.scheduledAt.getTime() - snoozed.originalScheduledAt.getTime(), 60 * 60_000);
+  }
   console.log("health-plan scheduler tests passed");
 }
 void main();

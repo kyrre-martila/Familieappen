@@ -1,4 +1,5 @@
 import type { CreateHealthPlanInput, HealthPlan, HealthPlanOccurrence } from "../../lib/api";
+import { osloCalendarDayBounds } from "./occurrence-summary";
 
 export const ISO_WEEKDAYS = [
   { value: 1, label: "Ma" }, { value: 2, label: "Ti" },
@@ -84,8 +85,14 @@ export function isOverdue(item: Pick<HealthPlanOccurrence, "status" | "scheduled
   return item.status === "PENDING" && new Date(item.scheduledAt) < now;
 }
 export function localDayBounds(now = new Date()) {
-  const start = new Date(now); start.setHours(0, 0, 0, 0);
-  const tomorrow = new Date(start); tomorrow.setDate(tomorrow.getDate() + 1);
-  const horizon = new Date(start); horizon.setDate(horizon.getDate() + 14);
-  return { start, tomorrow, horizon };
+  return osloCalendarDayBounds(now);
+}
+export function splitOccurrencesForToday(items: HealthPlanOccurrence[], now = new Date()) {
+  const { start, tomorrow } = localDayBounds(now);
+  const today = items.filter(item => {
+    const scheduledAt = new Date(item.scheduledAt);
+    return scheduledAt >= start && scheduledAt < tomorrow && (isOccurrenceActionable(item) || item.status === "COMPLETED" || item.status === "SKIPPED");
+  });
+  const upcoming = items.filter(item => new Date(item.scheduledAt) >= tomorrow && isOccurrenceActionable(item));
+  return { today, upcoming };
 }

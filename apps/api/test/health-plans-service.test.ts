@@ -214,6 +214,14 @@ async function main() {
   assert.equal(db.occurrences.find(x => x.id === "os")?.status, "SKIPPED");
   await assert.rejects(() => service.updateOccurrence("ua", "a", "pa", "os", { status: "SNOOZED", scheduledAt: "2000-01-01T00:00:00Z" }), ConflictException);
 
+  const overlapOriginal = new Date("2099-10-25T00:15:00Z"); // first Oslo 02:15
+  db.occurrences.push({ id: "dst-snooze", healthPlanId: "pa", familyId: "a", sourceActionId: "dst-action", status: "PENDING", scheduledAt: overlapOriginal, originalScheduledAt: overlapOriginal, updatedAt: new Date(0), completedAt: null, completedByUserId: null });
+  await service.updateOccurrence("ua", "a", "pa", "dst-snooze", { status: "SNOOZED", scheduledAt: "2099-10-25T01:15:00Z" });
+  const dstSnooze = db.occurrences.find(x => x.id === "dst-snooze")!;
+  assert.equal(dstSnooze.originalScheduledAt, overlapOriginal, "snooze preserves original occurrence identity across DST");
+  assert.equal(dstSnooze.scheduledAt.getTime() - overlapOriginal.getTime(), 60 * 60_000, "snooze is sixty elapsed minutes across the autumn overlap");
+  assert.equal(dstSnooze.status, "SNOOZED");
+
   db.occurrences.push({ id: "ob", healthPlanId: "pb", familyId: "b", status: "PENDING", updatedAt: new Date(0) });
   db.occurrences.push({ id: "oc", healthPlanId: "pc", familyId: "a", status: "PENDING", updatedAt: new Date(0) });
   await assert.rejects(() => service.updateOccurrence("ua", "a", "pa", "ob", { status: "SKIPPED" }), NotFoundException);
