@@ -36,7 +36,8 @@ export class HealthPlanSchedulerService {
     if (!plan?.activeStep || !plan.generationNotBefore) return;
     const lookback = new Date(now.getTime() - HEALTH_PLAN_GENERATION_LOOKBACK_HOURS * 3_600_000);
     const from = plan.generationNotBefore > lookback ? plan.generationNotBefore : lookback;
-    const to = new Date(now.getTime() + HEALTH_PLAN_GENERATION_HORIZON_DAYS * 86_400_000);
+    // The horizon is a local-calendar boundary, not N elapsed 24-hour periods.
+    const to = calendarExpiry(now, HEALTH_PLAN_GENERATION_HORIZON_DAYS, DEFAULT_HEALTH_PLAN_TIMEZONE);
     const rows: Record<string, unknown>[] = [];
     for (const schedule of plan.activeStep.schedules) {
       const zone = schedule.timezone || DEFAULT_HEALTH_PLAN_TIMEZONE;

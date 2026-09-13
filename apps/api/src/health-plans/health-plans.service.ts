@@ -1,7 +1,8 @@
 import { BadRequestException, ConflictException, Injectable, NotFoundException } from "@nestjs/common";
 import { FamilyAuthorizationService } from "../families";
 import { PrismaService } from "../prisma";
-import { assertValidHealthPlanLevels, assertValidHealthPlanSchedule, DEFAULT_HEALTH_PLAN_TIMEZONE, resumeProgressStartedAt } from "./health-plan.domain";
+import { assertValidHealthPlanLevels, assertValidHealthPlanSchedule, DEFAULT_HEALTH_PLAN_TIMEZONE } from "./health-plan.domain";
+import { resumeProgressStartedAt } from "./health-plan-scheduling.domain";
 import { CreateHealthPlanDto, CreateHealthPlanNoteDto, ListHealthPlanOccurrencesQueryDto, UpdateHealthPlanDto, UpdateHealthPlanNotificationRecipientsDto, UpdateHealthPlanOccurrenceDto } from "./health-plans.dto";
 
 const LIMITS = { levels: 10, steps: 20, schedules: 20, actions: 20, recipients: 100, logEntries: 500 } as const;
