@@ -47,8 +47,10 @@ assert.equal(feed[3].occurrenceStep, null);
 assert.equal(feed[3].occurrenceLevel, null);
 await queryService.list("user", "family-a");
 assert.equal(listQuery?.where.familyId, "family-a");
-assert.deepEqual(listQuery?.include.activeLevel.select, { id: true, levelIndex: true, name: true });
-assert.deepEqual(listQuery?.include.activeStep.select, { id: true, stepOrder: true, name: true });
+assert.deepEqual(listQuery?.select.familyMember.select, { id: true, displayName: true });
+assert.deepEqual(listQuery?.select.activeLevel.select, { id: true, levelIndex: true, name: true });
+assert.deepEqual(listQuery?.select.activeStep.select, { id: true, stepOrder: true, name: true });
+assert.equal(listQuery?.select.createdByUserId, undefined, "list DTO excludes creator auth identifiers");
 await assert.rejects(() => service.create("user", "family", { ...valid, levels: [] }), BadRequestException);
 await assert.rejects(() => service.create("user", "family", { ...valid, levels: [{ ...valid.levels[0], levelIndex: 1 }] }), /level 0/);
 await assert.rejects(() => service.create("user", "family", { ...valid, levels: [valid.levels[0], { ...valid.levels[0], levelIndex: 2 }] }), /contiguous/);
@@ -70,6 +72,8 @@ assert.doesNotMatch(source, /familyId\??:/);
 assert.doesNotMatch(source, /authorUserId\??:/);
 assert.doesNotMatch(source, /completedByUserId\??:/);
 assert.doesNotMatch(source, /completedAt\??:/);
+
+await assert.rejects(() => service.create("user", "family", { ...valid, familyId: "foreign" } as never), BadRequestException);
 
 // Automatic step progression is an internal scheduler primitive, never a client route.
 const controller = readFileSync(resolve(__dirname, "../src/health-plans/health-plans.controller.ts"), "utf8");

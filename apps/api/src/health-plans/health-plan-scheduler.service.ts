@@ -19,7 +19,10 @@ export class HealthPlanSchedulerService {
     const plans = await this.prisma.client.healthPlan.findMany({ where: { status: "ACTIVE" }, select: { id: true } });
     for (const plan of plans) {
       try { await this.runPlan(plan.id, now); }
-      catch (error) { this.logger.warn(`Health-plan scheduler skipped plan ${plan.id}: ${error instanceof Error ? error.message : String(error)}`); }
+      catch (error) {
+        const code = error && typeof error === "object" && "code" in error ? String(error.code) : "unknown";
+        this.logger.warn(`Health-plan scheduler skipped plan=${plan.id} code=${code}`);
+      }
     }
   }
 

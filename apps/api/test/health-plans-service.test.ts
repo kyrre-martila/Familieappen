@@ -9,6 +9,7 @@ const now = new Date("2026-09-10T10:00:00Z");
 class StatefulClient {
   plans: Row[] = [
     { id: "pa", familyId: "a", status: "DRAFT", updatedAt: new Date(0), pausedAt: null, activeLevelId: null, activeStepId: null, activeLevelStartedAt: null, activeStepStartedAt: null, generationNotBefore: null },
+    { id: "pc", familyId: "a", status: "ACTIVE", updatedAt: new Date(0), pausedAt: null, activeLevelId: null, activeStepId: null, activeLevelStartedAt: null, activeStepStartedAt: null, generationNotBefore: null },
     { id: "pb", familyId: "b", status: "DRAFT", updatedAt: new Date(0), pausedAt: null, activeLevelId: null, activeStepId: null, activeLevelStartedAt: null, activeStepStartedAt: null, generationNotBefore: null },
   ];
   levels: Row[] = [
@@ -41,7 +42,7 @@ class StatefulClient {
   }
   familyMember = {
     findFirst: async ({ where }: Row) => where.id === "wrong" ? null : { id: where.id },
-    findMany: async ({ where }: Row) => (where.id.in as string[]).filter(id => !id.startsWith("foreign")).map(id => ({ id, userId: id.startsWith("unlinked") ? null : `user-${id}` })),
+    findMany: async ({ where }: Row) => (where.id.in as string[]).filter(id => !id.startsWith("foreign") && !id.startsWith("deactivated")).map(id => ({ id, userId: id.startsWith("unlinked") ? null : `user-${id}` })),
   };
   healthPlanNotificationRecipient = {
     deleteMany: async ({ where }: Row) => { this.recipients = this.recipients.filter(x => x.healthPlanId !== where.healthPlanId); return { count: 1 }; },
@@ -57,7 +58,7 @@ class StatefulClient {
     findFirst: async ({ where }: Row) => this.occurrences.find(x => x.id === where.id && x.healthPlanId === where.healthPlanId && x.familyId === where.familyId) ?? null,
     updateMany: async ({ where, data }: Row) => {
       if (where.sourceActionId) { let count = 0; for (const x of this.occurrences) if (x.sourceActionId === where.sourceActionId && x.scheduledAt > where.scheduledAt.gt && where.status.in.includes(x.status)) { Object.assign(x, data); count++; } return { count }; }
-      if (where.healthPlanId && (where.scheduledAt?.gt || where.scheduledAt?.gte)) { const boundary = where.scheduledAt.gt ?? where.scheduledAt.gte; let count = 0; for (const x of this.occurrences) if (x.healthPlanId === where.healthPlanId && (!where.familyId || x.familyId === where.familyId) && (where.scheduledAt.gt ? x.scheduledAt > boundary : x.scheduledAt >= boundary) && where.status.in.includes(x.status)) { Object.assign(x, data); count++; } return { count }; }
+      if (where.healthPlanId && (where.scheduledAt?.gt || where.scheduledAt?.gte)) { const boundary = where.scheduledAt.gt ?? where.scheduledAt.gte; let count = 0; for (const x of this.occurrences) { const source = this.actions.find(action => action.id === x.sourceActionId); const matchesLevel = !where.sourceAction || source?.levelId === where.sourceAction.schedule.step.levelId; if (x.healthPlanId === where.healthPlanId && (!where.familyId || x.familyId === where.familyId) && matchesLevel && (where.scheduledAt.gt ? x.scheduledAt > boundary : x.scheduledAt >= boundary) && where.status.in.includes(x.status)) { Object.assign(x, data); count++; } } return { count }; }
       await new Promise(resolve => setImmediate(resolve)); const x = this.occurrences.find(o => o.id === where.id && o.status === where.status && o.updatedAt.getTime() === where.updatedAt.getTime()); if (!x) return { count: 0 }; Object.assign(x, data); x.updatedAt = new Date(x.updatedAt.getTime() + 1); return { count: 1 };
     },
     count: async ({ where }: Row) => this.occurrences.filter(x => x.sourceActionId === where.sourceActionId).length,
@@ -131,6 +132,8 @@ async function main() {
     assert.equal(recipientDb.recipients.length, 0, `${status} empty array clears recipients`);
     await assert.rejects(() => recipientService.updateNotificationRecipients("ua", "a", "pa", { familyMemberIds: ["foreign-member"] }), BadRequestException);
     await assert.rejects(() => recipientService.updateNotificationRecipients("ua", "a", "pa", { familyMemberIds: ["unlinked-member"] }), BadRequestException);
+    await assert.rejects(() => recipientService.updateNotificationRecipients("ua", "a", "pa", { familyMemberIds: ["deactivated-member"] }), BadRequestException);
+    await assert.rejects(() => recipientService.updateNotificationRecipients("ua", "a", "pa", { familyMemberIds: Array.from({ length: 101 }, (_, index) => `m${index}`) }), BadRequestException);
   }
   for (const status of ["COMPLETED", "ARCHIVED"] as const) {
     const recipientDb = new StatefulClient(); recipientDb.plans[0].status = status;
@@ -144,9 +147,12 @@ async function main() {
   db.occurrences.push({ id: "feed-b", healthPlanId: "pb", familyId: "b", status: "PENDING", scheduledAt: now });
   assert.deepEqual((await service.occurrenceFeed("ua", "a", { limit: "5" }) as Row[]).map(x => x.id), ["feed-a"], "feed is scoped by authenticated family context");
   await assert.rejects(() => service.occurrenceFeed("ua", "a", { limit: "501" }), BadRequestException);
+  await assert.rejects(() => service.occurrenceFeed("ua", "a", { limit: "5", familyId: "b" } as never), BadRequestException);
 
   assert.equal((await service.get("ua", "a", "pa") as Row).id, "pa");
   await assert.rejects(() => service.get("ua", "a", "pb"), NotFoundException);
+  await assert.rejects(() => service.update("ua", "a", "pb", { name: "attack" }), NotFoundException);
+  await assert.rejects(() => service.start("ua", "a", "pb"), NotFoundException);
   await assert.rejects(() => service.create("ua", "a", { familyMemberId: "wrong", name: "x", levels: [] }), BadRequestException);
 
   const [winner, loser] = await Promise.allSettled([service.start("ua", "a", "pa"), service.start("ua", "a", "pa")]);
@@ -169,9 +175,20 @@ async function main() {
 
   await assert.rejects(() => service.levelDown("ua", "a", "pa"), /base level/);
   const beforeLevelUpBoundary = db.plans[0].generationNotBefore as Date;
-  db.occurrences.push({ id: "old-level-future", healthPlanId: "pa", familyId: "a", sourceLevelId: "l0", status: "PENDING", scheduledAt: new Date("2099-01-01"), updatedAt: new Date(0) });
+  db.actions.push({ id: "old-level-action", healthPlanId: "pa", levelId: "l0" }, { id: "target-level-action", healthPlanId: "pa", levelId: "l1" });
+  db.occurrences.push(
+    { id: "old-level-future", healthPlanId: "pa", familyId: "a", sourceActionId: "old-level-action", status: "PENDING", scheduledAt: new Date("2099-01-01"), updatedAt: new Date(0) },
+    { id: "old-level-snoozed", healthPlanId: "pa", familyId: "a", sourceActionId: "old-level-action", status: "SNOOZED", scheduledAt: new Date("2099-01-02"), updatedAt: new Date(0) },
+    { id: "target-level-future", healthPlanId: "pa", familyId: "a", sourceActionId: "target-level-action", status: "PENDING", scheduledAt: new Date("2099-01-01"), updatedAt: new Date(0) },
+    { id: "old-level-completed", healthPlanId: "pa", familyId: "a", sourceActionId: "old-level-action", status: "COMPLETED", scheduledAt: new Date("2099-01-01"), updatedAt: new Date(0) },
+    { id: "old-level-past", healthPlanId: "pa", familyId: "a", sourceActionId: "old-level-action", status: "PENDING", scheduledAt: new Date("2000-01-01"), updatedAt: new Date(0) },
+  );
   await service.levelUp("ua", "a", "pa"); assert.equal(db.plans[0].activeLevelId, "l1"); assert.equal(db.plans[0].activeStepId, "s2"); assert.ok(db.plans[0].generationNotBefore >= beforeLevelUpBoundary);
   assert.equal(db.occurrences.find(x => x.id === "old-level-future")?.status, "SKIPPED", "leaving a level retires its future unresolved work");
+  assert.equal(db.occurrences.find(x => x.id === "old-level-snoozed")?.status, "SKIPPED", "leaving a level retires snoozed work");
+  assert.equal(db.occurrences.find(x => x.id === "target-level-future")?.status, "PENDING", "target-level work is untouched");
+  assert.equal(db.occurrences.find(x => x.id === "old-level-completed")?.status, "COMPLETED", "completed old-level work is untouched");
+  assert.equal(db.occurrences.find(x => x.id === "old-level-past")?.status, "PENDING", "past old-level work is untouched");
   await service.levelDown("ua", "a", "pa"); assert.equal(db.plans[0].activeStepId, "s0", "entering a level resets to step zero");
 
   // Occurrence updates run before the conditional plan write during pause. A losing
@@ -198,15 +215,21 @@ async function main() {
   await assert.rejects(() => service.updateOccurrence("ua", "a", "pa", "os", { status: "SNOOZED", scheduledAt: "2000-01-01T00:00:00Z" }), ConflictException);
 
   db.occurrences.push({ id: "ob", healthPlanId: "pb", familyId: "b", status: "PENDING", updatedAt: new Date(0) });
+  db.occurrences.push({ id: "oc", healthPlanId: "pc", familyId: "a", status: "PENDING", updatedAt: new Date(0) });
   await assert.rejects(() => service.updateOccurrence("ua", "a", "pa", "ob", { status: "SKIPPED" }), NotFoundException);
+  await assert.rejects(() => service.updateOccurrence("ua", "a", "pa", "oc", { status: "SKIPPED" }), NotFoundException);
+  await assert.rejects(() => service.updateOccurrence("ua", "a", "pa", "oa", { status: "COMPLETED", completedByUserId: "attacker" } as never), BadRequestException);
   await service.addNote("ua", "a", "pa", { text: "plan" });
   await service.addNote("ua", "a", "pa", { text: "occurrence", occurrenceId: "oa" });
   assert.deepEqual(db.notes.map(x => x.authorUserId), ["ua", "ua"]);
-  db.actions.push({ id: "aa", healthPlanId: "pa", retiredAt: null }, { id: "ab", healthPlanId: "pb", retiredAt: null });
+  db.actions.push({ id: "aa", healthPlanId: "pa", retiredAt: null }, { id: "ab", healthPlanId: "pb", retiredAt: null }, { id: "ac", healthPlanId: "pc", retiredAt: null });
   await service.addNote("ua", "a", "pa", { text: "action", sourceActionId: "aa" });
   await assert.rejects(() => service.addNote("ua", "a", "pa", { text: "cross action", sourceActionId: "ab" }), NotFoundException);
+  await assert.rejects(() => service.addNote("ua", "a", "pa", { text: "same family, wrong plan", sourceActionId: "ac" }), NotFoundException);
   await assert.rejects(() => service.addNote("ua", "a", "pa", { text: "cross", occurrenceId: "ob" }), NotFoundException);
   await assert.rejects(() => service.addNote("ua", "a", "pb", { text: "cross family" }), NotFoundException);
+  await assert.rejects(() => service.addNote("ua", "a", "pa", { text: "spoof", authorUserId: "attacker" } as never), BadRequestException);
+  await assert.rejects(() => service.update("ua", "a", "pa", { status: "COMPLETED" } as never), BadRequestException);
 
   const logged = await service.log("ua", "a", "pa") as Row;
   assert.ok(logged.notes.every((note: Row) => note.healthPlanId === "pa"), "log contains only the requested plan's notes");
