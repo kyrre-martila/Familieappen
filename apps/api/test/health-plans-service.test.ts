@@ -169,7 +169,9 @@ async function main() {
 
   await assert.rejects(() => service.levelDown("ua", "a", "pa"), /base level/);
   const beforeLevelUpBoundary = db.plans[0].generationNotBefore as Date;
+  db.occurrences.push({ id: "old-level-future", healthPlanId: "pa", familyId: "a", sourceLevelId: "l0", status: "PENDING", scheduledAt: new Date("2099-01-01"), updatedAt: new Date(0) });
   await service.levelUp("ua", "a", "pa"); assert.equal(db.plans[0].activeLevelId, "l1"); assert.equal(db.plans[0].activeStepId, "s2"); assert.ok(db.plans[0].generationNotBefore >= beforeLevelUpBoundary);
+  assert.equal(db.occurrences.find(x => x.id === "old-level-future")?.status, "SKIPPED", "leaving a level retires its future unresolved work");
   await service.levelDown("ua", "a", "pa"); assert.equal(db.plans[0].activeStepId, "s0", "entering a level resets to step zero");
 
   // Occurrence updates run before the conditional plan write during pause. A losing
