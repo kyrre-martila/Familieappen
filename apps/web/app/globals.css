@@ -57,6 +57,7 @@ select,
 .health-tabs button[aria-selected="true"] { background: var(--color-surface); color: var(--color-primary-strong); box-shadow: 0 2px 8px color-mix(in srgb, var(--color-text) 10%, transparent); }
 .health-page h2 { margin: 0 0 var(--space-s); font-size: 1.15rem; }
 .health-filters { display: grid; gap: var(--space-m); }
+.health-filter-toolbar { display: flex; justify-content: flex-end; min-width: 0; }
 .health-filters span, .health-filters label, .health-modal label { display: grid; gap: .4rem; color: var(--color-muted); font-size: var(--text-small); font-weight: 700; }
 .health-chips { display: flex; gap: .5rem; overflow-x: auto; padding: .15rem 0; }
 .health-chips button, .health-more { min-height: 42px; border: 1px solid var(--color-border); border-radius: var(--radius-pill); padding: .5rem 1rem; background: var(--color-surface); white-space: nowrap; }
@@ -6860,6 +6861,8 @@ button.calendar-chip {
 .calendar-filter-option {
   position: relative;
   display: inline-flex;
+  max-width: 100%;
+  min-width: 0;
   min-height: calc(var(--space-xl) + var(--space-xs));
   align-items: center;
   gap: calc(var(--space-xs) * 0.75);
@@ -6901,6 +6904,11 @@ button.calendar-chip {
 .calendar-filter-option__label,
 .calendar-filter-option__check {
   pointer-events: none;
+}
+
+.calendar-filter-option__label {
+  min-width: 0;
+  overflow-wrap: anywhere;
 }
 
 .calendar-filter-sheet__actions {
