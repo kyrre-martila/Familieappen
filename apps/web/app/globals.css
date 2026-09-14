@@ -52,9 +52,6 @@ select,
 
 /* Helseplan reuses the app shell and visual tokens as a compact mobile work surface. */
 .health-page { display: grid; gap: var(--space-l); width: min(100%, 52rem); }
-.health-tabs { display: grid; grid-template-columns: 1fr 1fr; padding: .25rem; border-radius: var(--radius-pill); background: var(--color-primary-soft); }
-.health-tabs button { min-height: 44px; border: 0; border-radius: var(--radius-pill); background: transparent; color: var(--color-muted); font-weight: 750; }
-.health-tabs button[aria-selected="true"] { background: var(--color-surface); color: var(--color-primary-strong); box-shadow: 0 2px 8px color-mix(in srgb, var(--color-text) 10%, transparent); }
 .health-page h2 { margin: 0 0 var(--space-s); font-size: 1.15rem; }
 .health-filters { display: grid; gap: var(--space-m); }
 .health-filter-toolbar { display: flex; justify-content: flex-start; min-width: 0; }
@@ -7406,7 +7403,7 @@ button.calendar-chip {
   gap: var(--space-m);
 }
 
-.husk-tabs {
+.app-tabs {
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));
   gap: calc(var(--space-xs) * 0.5);
@@ -7419,7 +7416,7 @@ button.calendar-chip {
     color-mix(in srgb, var(--color-text) 5%, transparent);
 }
 
-.husk-tabs__option {
+.app-tabs__option {
   display: inline-flex;
   min-height: calc(var(--space-xl) + var(--space-xs));
   align-items: center;
@@ -7435,7 +7432,7 @@ button.calendar-chip {
   white-space: nowrap;
 }
 
-.husk-tabs__option--selected {
+.app-tabs__option--selected {
   background: var(--color-primary-soft);
 }
 
@@ -15361,7 +15358,7 @@ button.family-settings-row:focus-visible:not(:disabled) {
   display: grid;
   grid-template-rows: auto minmax(0, 1fr) auto;
   width: min(100%, calc(var(--page-width) * 0.5));
-  max-height: min(84vh, 48rem);
+  max-height: min(calc(100dvh - env(safe-area-inset-top) - var(--space-s)), 48rem);
   margin: 0 auto;
   overflow: hidden;
   border: 1px solid var(--app-card-border);
@@ -15396,7 +15393,10 @@ button.family-settings-row:focus-visible:not(:disabled) {
   display: grid;
   gap: var(--space-m);
   overflow-y: auto;
+  overscroll-behavior: contain;
+  -webkit-overflow-scrolling: touch;
   padding: var(--space-m);
+  touch-action: pan-y;
 }
 
 .app-field {
@@ -15556,6 +15556,54 @@ button.family-settings-row:focus-visible:not(:disabled) {
   padding-bottom: calc(
     var(--app-bottom-nav-height, 88px) + var(--app-footer-safe-area-spacing)
   );
+}
+
+/* Helseplan create/edit follows the shared sheet's scroll and action layout. */
+.health-modal.app-sheet__panel,
+.health-edit-sheet.app-sheet__panel {
+  width: min(100%, 42rem);
+  max-height: calc(100dvh - env(safe-area-inset-top) - var(--space-s));
+  padding: 0;
+  overflow: hidden;
+}
+
+.health-modal__content {
+  align-content: start;
+}
+
+.health-edit-sheet label {
+  display: grid;
+  gap: var(--space-xs);
+  color: var(--color-muted);
+  font-size: var(--text-small);
+  font-weight: 700;
+}
+
+.health-edit-sheet input,
+.health-edit-sheet textarea {
+  width: 100%;
+  min-height: var(--app-field-height);
+  border: 1px solid var(--color-border);
+  border-radius: var(--app-input-radius);
+  padding: var(--space-s) var(--space-m);
+  background: var(--color-surface);
+  color: var(--color-text);
+}
+
+.health-edit-sheet textarea {
+  min-height: 7rem;
+  resize: vertical;
+}
+
+.app-action-footer .button--primary,
+.app-action-footer .button--primary:disabled {
+  color: white;
+  -webkit-text-fill-color: white;
+}
+
+.app-action-footer .button:disabled {
+  cursor: not-allowed;
+  opacity: 0.48;
 }
 
 .calendar-event-form-sheet .app-card {
