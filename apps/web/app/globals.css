@@ -7405,7 +7405,7 @@ button.calendar-chip {
 
 .app-tabs {
   display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
+  grid-template-columns: repeat(var(--app-tabs-count), minmax(0, 1fr));
   gap: calc(var(--space-xs) * 0.5);
   border: 1px solid var(--color-border);
   border-radius: var(--radius-pill);
