@@ -9,5 +9,23 @@ export function HuskTabs({
   selectedTab: HuskTab;
   onSelectTab: (tab: HuskTab) => void;
 }) {
-  return <AppTabs ariaLabel="Velg husk-visning" className="husk-tabs" onSelect={onSelectTab} options={tabs} selected={selectedTab} />;
+  const options = tabs.map((tab) => {
+    const idSuffix = tab.value === "paminnelser" ? "husk" : tab.value;
+
+    return {
+      ...tab,
+      panelId: `husk-panel-${idSuffix}`,
+      tabId: `husk-tab-${idSuffix}`,
+    };
+  });
+
+  return (
+    <AppTabs
+      ariaLabel="Velg husk-visning"
+      className="husk-tabs"
+      onSelect={onSelectTab}
+      options={options}
+      selected={selectedTab}
+    />
+  );
 }

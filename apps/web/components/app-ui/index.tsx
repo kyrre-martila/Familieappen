@@ -5,6 +5,7 @@ import {
   useEffect,
   useState,
   type ComponentPropsWithoutRef,
+  type CSSProperties,
   type ElementType,
   type ReactNode,
 } from "react";
@@ -151,7 +152,12 @@ interface AppTabsProps<T extends string> {
   ariaLabel: string;
   className?: string;
   onSelect: (value: T) => void;
-  options: ReadonlyArray<{ label: string; value: T }>;
+  options: ReadonlyArray<{
+    label: string;
+    panelId?: string;
+    tabId?: string;
+    value: T;
+  }>;
   selected: T;
 }
 
@@ -163,13 +169,23 @@ export function AppTabs<T extends string>({
   selected,
 }: AppTabsProps<T>) {
   return (
-    <div className={cx("app-tabs", className)} role="tablist" aria-label={ariaLabel}>
+    <div
+      className={cx("app-tabs", className)}
+      role="tablist"
+      aria-label={ariaLabel}
+      style={{ "--app-tabs-count": options.length } as CSSProperties}
+    >
       {options.map((option) => {
         const isSelected = selected === option.value;
         return (
           <button
+            aria-controls={option.panelId}
             aria-selected={isSelected}
-            className={cx("app-tabs__option", isSelected && "app-tabs__option--selected")}
+            className={cx(
+              "app-tabs__option",
+              isSelected && "app-tabs__option--selected",
+            )}
+            id={option.tabId}
             key={option.value}
             onClick={() => onSelect(option.value)}
             role="tab"

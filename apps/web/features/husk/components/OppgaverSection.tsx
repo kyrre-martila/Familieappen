@@ -390,7 +390,12 @@ export function OppgaverSection({
   }
 
   return (
-    <section className="tasks-page" aria-labelledby="tasks-title">
+    <section
+      className="tasks-page"
+      id="husk-panel-oppgaver"
+      role="tabpanel"
+      aria-labelledby="husk-tab-oppgaver tasks-title"
+    >
       <div className="tasks-page__header">
         <div className="tasks-page__copy">
           <Badge tone="primary">Husk</Badge>
