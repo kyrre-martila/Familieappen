@@ -36,6 +36,7 @@ export function AppCard<T extends ElementType = "article">({
 }
 
 interface AppSheetProps {
+  actionFooterBottomNavAware?: boolean;
   actions?: ReactNode;
   backdropClassName?: string;
   baseClassName?: string;
@@ -54,6 +55,7 @@ interface AppSheetProps {
 }
 
 export function AppSheet({
+  actionFooterBottomNavAware = false,
   actions,
   backdropClassName,
   baseClassName = "app-sheet",
@@ -79,11 +81,25 @@ export function AppSheet({
   useEffect(() => {
     if (!isOpen) return;
 
+    const scrollY = window.scrollY;
+    const previousHtmlOverflow = document.documentElement.style.overflow;
     const previousOverflow = document.body.style.overflow;
+    const previousPosition = document.body.style.position;
+    const previousTop = document.body.style.top;
+    const previousWidth = document.body.style.width;
+    document.documentElement.style.overflow = "hidden";
     document.body.style.overflow = "hidden";
+    document.body.style.position = "fixed";
+    document.body.style.top = `-${scrollY}px`;
+    document.body.style.width = "100%";
 
     return () => {
+      document.documentElement.style.overflow = previousHtmlOverflow;
       document.body.style.overflow = previousOverflow;
+      document.body.style.position = previousPosition;
+      document.body.style.top = previousTop;
+      document.body.style.width = previousWidth;
+      window.scrollTo(0, scrollY);
     };
   }, [isOpen]);
 
@@ -119,12 +135,52 @@ export function AppSheet({
         ) : (
           children
         )}
-        {actions ? <AppActionFooter>{actions}</AppActionFooter> : null}
+        {actions ? (
+          <AppActionFooter bottomNavAware={actionFooterBottomNavAware}>
+            {actions}
+          </AppActionFooter>
+        ) : null}
       </Panel>
     </div>
   );
 
   return portal && isMounted ? createPortal(sheet, document.body) : sheet;
+}
+
+interface AppTabsProps<T extends string> {
+  ariaLabel: string;
+  className?: string;
+  onSelect: (value: T) => void;
+  options: ReadonlyArray<{ label: string; value: T }>;
+  selected: T;
+}
+
+export function AppTabs<T extends string>({
+  ariaLabel,
+  className,
+  onSelect,
+  options,
+  selected,
+}: AppTabsProps<T>) {
+  return (
+    <div className={cx("app-tabs", className)} role="tablist" aria-label={ariaLabel}>
+      {options.map((option) => {
+        const isSelected = selected === option.value;
+        return (
+          <button
+            aria-selected={isSelected}
+            className={cx("app-tabs__option", isSelected && "app-tabs__option--selected")}
+            key={option.value}
+            onClick={() => onSelect(option.value)}
+            role="tab"
+            type="button"
+          >
+            {option.label}
+          </button>
+        );
+      })}
+    </div>
+  );
 }
 
 export function AppField({

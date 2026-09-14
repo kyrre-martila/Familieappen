@@ -41,3 +41,19 @@ test("menu contains Helseplan once while bottom navigation and global create sta
   const createBlock = options.slice(options.indexOf("defaultCreateOptions"));
   assert.doesNotMatch(createBlock, /helseplan/i);
 });
+
+test("health-plan tabs and forms use shared mobile UI primitives", () => {
+  const overview = source("../../app/health-plans/page.tsx");
+  const detail = source("../../app/health-plans/[id]/page.tsx");
+  const huskTabs = source("../husk/components/HuskTabs.tsx");
+  const appUi = source("../../components/app-ui/index.tsx");
+
+  assert.match(overview, /<AppTabs[^>]+className="health-tabs"/);
+  assert.match(detail, /<AppTabs[^>]+className="health-tabs"/);
+  assert.match(huskTabs, /<AppTabs[^>]+className="husk-tabs"/);
+  assert.equal((overview.match(/actionFooterBottomNavAware/g) ?? []).length, 1);
+  assert.equal((detail.match(/actionFooterBottomNavAware/g) ?? []).length, 1);
+  assert.match(detail, /className="button button--primary"[^>]+type="submit">Lagre/);
+  assert.match(appUi, /document\.body\.style\.position = "fixed"/);
+  assert.match(appUi, /window\.scrollTo\(0, scrollY\)/);
+});
