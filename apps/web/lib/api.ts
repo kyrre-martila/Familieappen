@@ -296,6 +296,7 @@ export interface FamilyAddress {
   postalCode: string; postalPlace: string; municipalityNumber: string;
   municipalityName: string; addressCode: string; latitude: number | null; longitude: number | null;
 }
+export interface FamilyAddressResponse { address: FamilyAddress; wasteCollection: { status: "configured" | "unavailable"; lastSyncStatus: string | null; lastSyncError: string | null; }; }
 export interface WasteFraction { providerFractionId: string; name: string; icon: string | null; standardFractionId: string | null; standardFractionIcon: string | null; }
 export interface WasteSubscription { id: string; provider: string; enabled: boolean; address: FamilyAddress; selectedFractionIds: string[]; fractions: WasteFraction[]; lastSuccessfulSyncAt: string | null; lastSyncStatus: string | null; lastSyncError: string | null; }
 export interface WasteEvent { id: string; provider: string; providerFractionId: string; collectionDate: string; allDay: true; name: string; icon: string | null; standardFractionId: string | null; standardFractionIcon: string | null; }
@@ -1024,6 +1025,12 @@ export async function getCalendarEvents(
 
 export function searchFamilyAddresses(familyId: string, query: string, signal?: AbortSignal): Promise<FamilyAddress[]> {
   return apiRequest<FamilyAddress[]>(`/waste-collection/addresses/search?q=${encodeURIComponent(query)}`, { familyId, signal });
+}
+export function getFamilyAddress(familyId: string): Promise<FamilyAddressResponse> {
+  return apiRequest<FamilyAddressResponse>(`/families/${encodeURIComponent(familyId)}/address`, { familyId });
+}
+export function saveFamilyAddress(familyId: string, address: FamilyAddress): Promise<FamilyAddressResponse> {
+  return apiRequest<FamilyAddressResponse>(`/families/${encodeURIComponent(familyId)}/address`, { method: "PUT", familyId, body: { address } });
 }
 export function getWasteSubscription(familyId: string): Promise<WasteSubscription> {
   return apiRequest<WasteSubscription>("/waste-collection/subscription", { familyId });

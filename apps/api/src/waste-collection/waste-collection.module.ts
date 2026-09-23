@@ -8,5 +8,6 @@ import { MinRenovasjonProvider } from "./providers/min-renovasjon.provider";
 import { WasteCollectionController } from "./waste-collection.controller";
 import { WasteCollectionCron } from "./waste-collection.cron";
 import { WasteCollectionService } from "./waste-collection.service";
-@Module({ imports: [PrismaModule, FamiliesModule, AuthModule], controllers: [WasteCollectionController], providers: [GeonorgeClient, MinRenovasjonClient, MinRenovasjonProvider, WasteCollectionService, WasteCollectionCron], exports: [WasteCollectionService] })
+import { FamilyAddressController } from "./family-address.controller";
+@Module({ imports: [PrismaModule, FamiliesModule, AuthModule], controllers: [WasteCollectionController, FamilyAddressController], providers: [GeonorgeClient, MinRenovasjonClient, MinRenovasjonProvider, WasteCollectionService, WasteCollectionCron], exports: [WasteCollectionService] })
 export class WasteCollectionModule {}

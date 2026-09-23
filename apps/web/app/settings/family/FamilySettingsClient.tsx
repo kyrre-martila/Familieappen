@@ -17,8 +17,8 @@ import {
   revokeFamilyInvitation,
   updateFamily,
   updateFamilyMember,
-  configureWasteCollection,
-  getWasteSubscription,
+  getFamilyAddress,
+  saveFamilyAddress as saveFamilyAddressRequest,
   searchFamilyAddresses,
   type FamilyAddress,
   type Family,
@@ -348,7 +348,7 @@ export function FamilySettingsClient() {
       setFamily(details.family);
       setMembers(details.members);
       setInvitations(inviteList);
-      try { setAddress((await getWasteSubscription(activeFamilyId)).address); } catch { setAddress(null); }
+      try { setAddress((await getFamilyAddress(activeFamilyId)).address); } catch { setAddress(null); }
       setStatus("ready");
     } catch {
       setStatus("error");
@@ -387,10 +387,10 @@ export function FamilySettingsClient() {
   async function saveFamilyAddress(value: FamilyAddress) {
     if (!family || !beginPendingAction("save-family-address")) return;
     try {
-      const subscription = await configureWasteCollection(family.id, value);
-      setAddress(subscription.address);
+      const result = await saveFamilyAddressRequest(family.id, value);
+      setAddress(result.address);
       setSheet(null);
-      setMessage(subscription.lastSyncStatus === "error" ? "Adressen er lagret. Renovasjon kunne ikke synkroniseres akkurat nå, men prøves igjen automatisk." : "Adressen er lagret og renovasjon er konfigurert.");
+      setMessage(result.wasteCollection.status === "unavailable" ? "Adressen er lagret. Renovasjon kunne ikke synkroniseres akkurat nå, men prøves igjen automatisk." : "Adressen er lagret og renovasjon er konfigurert.");
     } catch { setMessage("Kunne ikke lagre adressen. Prøv igjen."); }
     finally { endPendingAction(); }
   }
