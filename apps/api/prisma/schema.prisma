@@ -409,8 +409,93 @@ model Family {
   healthPlans HealthPlan[]
   healthPlanNotificationRecipients HealthPlanNotificationRecipient[]
   healthPlanOccurrences HealthPlanOccurrence[]
+  homeAddress FamilyAddress?
+  wasteCollectionSubscription WasteCollectionSubscription?
 
   @@map("families")
+}
+
+/// Reusable, provider-neutral structured home address. Waste collection is the first
+/// consumer; onboarding can populate the same row later without introducing another address.
+model FamilyAddress {
+  id                 String   @id @default(cuid())
+  familyId           String   @unique
+  label              String
+  streetName         String
+  houseNumber        Int
+  houseLetter        String?
+  postalCode         String
+  postalPlace        String
+  municipalityNumber String
+  municipalityName   String
+  addressCode        String
+  latitude           Decimal? @db.Decimal(9, 6)
+  longitude          Decimal? @db.Decimal(9, 6)
+  createdAt          DateTime @default(now())
+  updatedAt          DateTime @updatedAt
+  family             Family   @relation(fields: [familyId], references: [id], onDelete: Cascade)
+  wasteCollectionSubscription WasteCollectionSubscription?
+
+  @@map("family_addresses")
+}
+
+model WasteCollectionSubscription {
+  id                   String   @id @default(cuid())
+  familyId             String   @unique
+  addressId            String   @unique
+  provider             String
+  enabled              Boolean  @default(true)
+  selectedFractionIds  String[] @default([])
+  lastSyncStartedAt    DateTime?
+  lastSuccessfulSyncAt DateTime?
+  nextSyncAt           DateTime?
+  lastSyncStatus       String?
+  lastSyncError        String?
+  createdAt            DateTime @default(now())
+  updatedAt            DateTime @updatedAt
+  family               Family   @relation(fields: [familyId], references: [id], onDelete: Cascade)
+  address              FamilyAddress @relation(fields: [addressId], references: [id], onDelete: Cascade)
+  fractions            WasteCollectionFraction[]
+  events               WasteCollectionEvent[]
+
+  @@index([enabled, nextSyncAt])
+  @@map("waste_collection_subscriptions")
+}
+
+model WasteCollectionFraction {
+  id                   String   @id @default(cuid())
+  subscriptionId       String
+  providerFractionId   String
+  name                 String
+  icon                 String?
+  standardFractionId   String?
+  standardFractionIcon String?
+  active               Boolean  @default(true)
+  createdAt            DateTime @default(now())
+  updatedAt            DateTime @updatedAt
+  subscription         WasteCollectionSubscription @relation(fields: [subscriptionId], references: [id], onDelete: Cascade)
+  events               WasteCollectionEvent[]
+
+  @@unique([subscriptionId, providerFractionId])
+  @@map("waste_collection_fractions")
+}
+
+model WasteCollectionEvent {
+  id                 String   @id @default(cuid())
+  subscriptionId     String
+  fractionId         String
+  provider           String
+  providerFractionId String
+  collectionDate     DateTime @db.Date
+  fetchedAt          DateTime @default(now())
+  createdAt          DateTime @default(now())
+  updatedAt          DateTime @updatedAt
+  subscription       WasteCollectionSubscription @relation(fields: [subscriptionId], references: [id], onDelete: Cascade)
+  fraction           WasteCollectionFraction @relation(fields: [fractionId], references: [id], onDelete: Cascade)
+
+  @@unique([subscriptionId, providerFractionId, collectionDate])
+  @@index([subscriptionId, collectionDate])
+  @@map("waste_collection_events")
 }
 
 model FamilyMember {

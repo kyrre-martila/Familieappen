@@ -12,6 +12,7 @@ export interface AppConfig {
   adminSessionSecret: string;
   adminSessionTtlSeconds: number;
   adminCookieDomain?: string;
+  minRenovasjonAppKey?: string;
 }
 
 type EnvironmentVariables = NodeJS.ProcessEnv;
@@ -235,6 +236,7 @@ export function getAppConfig(env: EnvironmentVariables = process.env): AppConfig
     authJwtSecret: resolveAuthJwtSecret(readString("AUTH_JWT_SECRET", env), nodeEnv),
     adminSessionSecret: resolveAdminSessionSecret(readString("ADMIN_SESSION_SECRET", env), nodeEnv),
     adminSessionTtlSeconds: parsePositiveInteger("ADMIN_SESSION_TTL", readString("ADMIN_SESSION_TTL", env), DEFAULT_ADMIN_SESSION_TTL_SECONDS),
-    adminCookieDomain: parseAdminCookieDomain(readOptionalRawString("ADMIN_COOKIE_DOMAIN", env))
+    adminCookieDomain: parseAdminCookieDomain(readOptionalRawString("ADMIN_COOKIE_DOMAIN", env)),
+    minRenovasjonAppKey: readString("MIN_RENOVASJON_APP_KEY", env)
   };
 }
