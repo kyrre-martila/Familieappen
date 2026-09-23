@@ -1,4 +1,4 @@
-import { Body, Controller, Delete, Get, Param, Patch, Post, Req, UseGuards } from "@nestjs/common";
+import { Body, Controller, Delete, Get, Param, Patch, Post, Query, Req, UseGuards } from "@nestjs/common";
 import { AuthGuard } from "../auth/guards/auth.guard";
 import { ApiResponse, createApiResponse } from "../common";
 import { FamilyDashboardDto } from "./dto/dashboard.dto";
@@ -18,6 +18,8 @@ import {
   UpdateFamilyRequestDto
 } from "./dto/family.dto";
 import { FamiliesService } from "./families.service";
+import { AddressLookupService } from "./address/address-lookup.service";
+import { NormalizedAddress } from "./address/address.domain";
 
 type AuthenticatedRequest = {
   user: {
@@ -29,7 +31,10 @@ type AuthenticatedRequest = {
 @Controller("families")
 @UseGuards(AuthGuard)
 export class FamiliesController {
-  constructor(private readonly familiesService: FamiliesService) {}
+  constructor(
+    private readonly familiesService: FamiliesService,
+    private readonly addressLookup: AddressLookupService
+  ) {}
 
   @Post()
   async createFamily(
@@ -73,6 +78,15 @@ export class FamiliesController {
     @Param("familyId") familyId: string
   ): Promise<ApiResponse<FamilyDashboardDto>> {
     return createApiResponse(await this.familiesService.getFamilyDashboard(request.user.id, familyId));
+  }
+
+  @Get(":familyId/address/search")
+  async searchAddresses(
+    @Req() request: AuthenticatedRequest,
+    @Param("familyId") familyId: string,
+    @Query("q") query: string | undefined
+  ): Promise<ApiResponse<NormalizedAddress[]>> {
+    return createApiResponse(await this.addressLookup.search(request.user.id, familyId, query));
   }
 
   @Get(":familyId")

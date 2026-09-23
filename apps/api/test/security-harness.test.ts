@@ -12,6 +12,7 @@ import { API_ERROR_CODES, ApiException, HttpExceptionFilter } from "../src/commo
 import { ConfigService } from "../src/config";
 import { EmailService } from "../src/email";
 import { FamiliesController } from "../src/families/families.controller";
+import { AddressLookupService } from "../src/families/address/address-lookup.service";
 import { FamiliesService } from "../src/families/families.service";
 import { ShoppingController } from "../src/shopping/shopping.controller";
 import { ShoppingService } from "../src/shopping/shopping.service";
@@ -323,6 +324,7 @@ async function createSecurityHarness() {
       { provide: PrismaService, useValue: prisma },
       { provide: EmailService, useValue: { sendEmail: async () => undefined } },
       { provide: FamiliesService, useValue: services.familiesService },
+      { provide: AddressLookupService, useValue: { search: async () => [] } },
       { provide: ShoppingService, useValue: services.shoppingService },
       { provide: TasksService, useValue: services.tasksService },
       { provide: WishlistsService, useValue: services.wishlistsService },

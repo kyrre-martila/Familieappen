@@ -1,8 +1,7 @@
 import { Body, Controller, Get, Headers, HttpStatus, Put, Query, Req, UseGuards } from "@nestjs/common";
 import { AuthGuard } from "../auth/guards/auth.guard";
 import { API_ERROR_CODES, ApiException, ApiResponse, createApiResponse } from "../common";
-import { ConfigureWasteCollectionDto, SearchAddressQueryDto, WasteEventDto, WasteSubscriptionDto } from "./dto/waste-collection.dto";
-import { NormalizedAddress } from "./waste-collection.domain";
+import { ConfigureWasteCollectionDto, WasteEventDto, WasteSubscriptionDto } from "./dto/waste-collection.dto";
 import { WasteCollectionService } from "./waste-collection.service";
 
 type Request = { user: { id: string } };
@@ -10,9 +9,6 @@ type Request = { user: { id: string } };
 @UseGuards(AuthGuard)
 export class WasteCollectionController {
   constructor(private readonly service: WasteCollectionService) {}
-  @Get("addresses/search") search(@Req() req: Request, @Headers("x-family-id") familyId: string, @Query() query: SearchAddressQueryDto): Promise<ApiResponse<NormalizedAddress[]>> {
-    return this.wrap(this.service.searchAddresses(req.user.id, requireFamilyId(familyId), query.q));
-  }
   @Put("subscription") configure(@Req() req: Request, @Headers("x-family-id") familyId: string, @Body() body: ConfigureWasteCollectionDto): Promise<ApiResponse<WasteSubscriptionDto>> {
     return this.wrap(this.service.configure(req.user.id, requireFamilyId(familyId), body));
   }

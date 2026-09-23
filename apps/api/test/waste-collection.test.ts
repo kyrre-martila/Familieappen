@@ -1,5 +1,6 @@
 import assert from "node:assert/strict";
-import { mapGeonorgeAddress } from "../src/waste-collection/providers/geonorge.client";
+import { AddressLookupService } from "../src/families/address/address-lookup.service";
+import { mapGeonorgeAddress } from "../src/families/address/geonorge.client";
 import { MinRenovasjonClient } from "../src/waste-collection/providers/min-renovasjon.client";
 import { mapFractions, MinRenovasjonProvider } from "../src/waste-collection/providers/min-renovasjon.provider";
 import { normalizeProviderDate, WasteProviderUnavailableError } from "../src/waste-collection/waste-collection.domain";
@@ -17,6 +18,15 @@ async function run(): Promise<void> {
     bokstav: "A", postnummer: address.postalCode, poststed: address.postalPlace, kommunenummer: 5605,
     kommunenavn: address.municipalityName, adressekode: 15050, representasjonspunkt: { lat: 69.67, lon: 18.95 } });
   assert.deepEqual(normalized, address, "Geonorge preserves the house letter and normalizes numeric identifiers");
+
+  let searchScope = "";
+  const addressLookup = new AddressLookupService(
+    { requireFamilyMember: async (_userId: string, familyId: string) => { searchScope = familyId; } } as any,
+    { search: async () => [address] } as any
+  );
+  assert.deepEqual(await addressLookup.search("member", "family-search", "Stull Hansens"), [address]);
+  assert.equal(searchScope, "family-search", "generic address search is authorized in the route family scope");
+  await assert.rejects(() => addressLookup.search("member", "family-search", "S"), /at least two characters/);
 
   const fractions = mapFractions([{ Id: 2, Navn: "Matavfall", Ikon: "mat.png", NorkartStandardFraksjonId: null, NorkartStandardFraksjonIkon: null }]);
   assert.deepEqual(fractions[0], { providerFractionId: "2", name: "Matavfall", icon: "mat.png", standardFractionId: null, standardFractionIcon: null });
@@ -63,7 +73,7 @@ async function run(): Promise<void> {
       findUnique: async (args: any) => { queriedFamily = args.where.familyId ?? queriedFamily; return args.where.id ? { id: "sub", enabled: true, address } : { id: "sub", provider: "min-renovasjon", enabled: true, address, selectedFractionIds: [], fractions: [], lastSuccessfulSyncAt: null, lastSyncStatus: null, lastSyncError: null }; },
       update: async (args: any) => { updates.push(args.data); return {}; }
     }
-  }} as any, { requireFamilyMember: async (_u: string, family: string) => { authorizedFamily = family; } } as any, {} as any,
+  }} as any, { requireFamilyMember: async (_u: string, family: string) => { authorizedFamily = family; } } as any,
   { providerId: "min-renovasjon", getCollections: async () => { throw new WasteProviderUnavailableError("down"); } } as any);
   await service.getSubscription("user-a", "family-a");
   assert.equal(authorizedFamily, "family-a"); assert.equal(queriedFamily, "family-a", "authorization and lookup use the same family scope");
@@ -75,7 +85,7 @@ async function run(): Promise<void> {
   const addressOnlyService = new WasteCollectionService({ client: {
     familyAddress: { findUnique: async ({ where }: any) => where.familyId === "family-address-only" ? { id: "address-only", familyId: where.familyId, ...address } : null },
     wasteCollectionSubscription: { findUnique: async () => null }
-  }} as any, { requireFamilyMember: async (_userId: string, familyId: string) => { addressReadScope = familyId; } } as any, {} as any, {} as any);
+  }} as any, { requireFamilyMember: async (_userId: string, familyId: string) => { addressReadScope = familyId; } } as any, {} as any);
   const addressOnly = await addressOnlyService.getFamilyAddress("member", "family-address-only");
   assert.equal(addressReadScope, "family-address-only", "family address reads are authorized in the requested family scope");
   assert.deepEqual(addressOnly.address, address, "FamilyAddress is readable without a WasteCollectionSubscription");
@@ -94,7 +104,7 @@ async function run(): Promise<void> {
       upsert: async () => ({ id: "configured", enabled: true }),
       update: async () => ({})
     }
-  }} as any, { requireFamilyRole: async () => {}, requireFamilyMember: async () => {} } as any, {} as any,
+  }} as any, { requireFamilyRole: async () => {}, requireFamilyMember: async () => {} } as any,
   { providerId: "min-renovasjon", getCollections: async () => { throw new WasteProviderUnavailableError("down"); } } as any);
   const configured = await configureService.configure("user-a", "family-a", { address, enabled: true });
   assert.equal(savedAddress.houseLetter, "A", "selected structured address preserves its house letter");
@@ -113,7 +123,7 @@ async function run(): Promise<void> {
     },
     wasteCollectionFraction: { updateMany: async () => ({}) },
     $transaction: async (callback: (tx: any) => Promise<any>) => callback({ wasteCollectionFraction: { updateMany: async () => ({}) }, wasteCollectionSubscription: { update: async () => ({}) } })
-  }} as any, { requireFamilyRole: async (_userId: string, familyId: string) => { saveRoleScope = familyId; } } as any, {} as any,
+  }} as any, { requireFamilyRole: async (_userId: string, familyId: string) => { saveRoleScope = familyId; } } as any,
   { providerId: "min-renovasjon", getCollections: async () => { providerCalls += 1; return { fractions: [], events: [] }; } } as any);
   const independentlySaved = await independentAddressService.saveFamilyAddress("owner", "family-save", address);
   assert.equal(saveRoleScope, "family-save", "family address writes use family-manager authorization in the requested scope");
