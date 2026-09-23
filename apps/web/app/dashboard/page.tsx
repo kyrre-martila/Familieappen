@@ -236,7 +236,7 @@ function HomeTodayChips({
   missingShoppingCount: number;
   selectedDate: string;
 }) {
-  const { ensureHealthPlansForRange, healthPlanOccurrences, mealSummaries, normalizedItems, reminders, tasks: calendarTasks } = useCalendar();
+  const { ensureHealthPlansForRange, events, healthPlanOccurrences, mealSummaries, normalizedItems, reminders, tasks: calendarTasks } = useCalendar();
   useEffect(() => { void ensureHealthPlansForRange(selectedDate, selectedDate); }, [ensureHealthPlansForRange, selectedDate]);
   const safeMealSummaries = Array.isArray(mealSummaries) ? mealSummaries : [];
   const safeNormalizedItems = Array.isArray(normalizedItems) ? normalizedItems : [];
@@ -245,12 +245,13 @@ function HomeTodayChips({
   const visibleReminders = safeReminders.filter((item) => item?.date === selectedDate);
   const dueTasks = calendarTasks.filter((task) => task.dueDate?.slice(0, 10) === selectedDate);
   const schoolWeekItems = safeNormalizedItems.filter((item) => item?.date === selectedDate && item.type === "school-week");
+  const wasteEvents = events.filter(item => item.source === "waste-collection" && item.date === selectedDate);
   const hasShoppingChip = missingShoppingCount > 0;
   const healthSummary = useMemo(() => healthPlanOccurrenceSummary(
     healthPlanOccurrencesForCalendarDate(healthPlanOccurrences, selectedDate, selectedDate),
     new Date(), selectedDate, selectedDate,
   ), [healthPlanOccurrences, selectedDate]);
-  const chipCount = (meal ? 1 : 0) + visibleReminders.length + dueTasks.length + schoolWeekItems.length + (hasShoppingChip ? 1 : 0) + (healthSummary.total ? 1 : 0);
+  const chipCount = (meal ? 1 : 0) + visibleReminders.length + dueTasks.length + schoolWeekItems.length + wasteEvents.length + (hasShoppingChip ? 1 : 0) + (healthSummary.total ? 1 : 0);
 
   if (chipCount === 0) return null;
 
@@ -272,6 +273,7 @@ function HomeTodayChips({
       {schoolWeekItems.map((item) => (
         <CalendarSchoolWeekChip item={item} key={item.id} />
       ))}
+      {wasteEvents.map(event => <Link className="calendar-chip" href="/waste-collection" key={event.id}><span aria-hidden="true">♻️</span><span>{event.title}</span></Link>)}
       {hasShoppingChip ? (
         <Link className="calendar-chip home-shopping-chip" href="/shopping">
           <span aria-hidden="true">🛒</span>

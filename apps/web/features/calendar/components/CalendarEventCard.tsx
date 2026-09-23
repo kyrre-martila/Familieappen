@@ -49,6 +49,7 @@ function getCalendarEventHref(event: CalendarMvpEvent) {
   if (event.source === "school-week") {
     return `/husk?tab=skoleuka&date=${event.date}`;
   }
+  if (event.source === "waste-collection") return "/waste-collection";
 
   if (event.isRecurringOccurrence && event.recurringEventId && event.occurrenceDate) {
     return `/calendar/events/${encodeURIComponent(event.recurringEventId)}?occurrenceDate=${encodeURIComponent(event.occurrenceDate)}`;

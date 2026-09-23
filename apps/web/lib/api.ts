@@ -291,6 +291,15 @@ export interface FamilyDetails {
   members: FamilyMember[];
 }
 
+export interface FamilyAddress {
+  label: string; streetName: string; houseNumber: number; houseLetter: string | null;
+  postalCode: string; postalPlace: string; municipalityNumber: string;
+  municipalityName: string; addressCode: string; latitude: number | null; longitude: number | null;
+}
+export interface WasteFraction { providerFractionId: string; name: string; icon: string | null; standardFractionId: string | null; standardFractionIcon: string | null; }
+export interface WasteSubscription { id: string; provider: string; enabled: boolean; address: FamilyAddress; selectedFractionIds: string[]; fractions: WasteFraction[]; lastSuccessfulSyncAt: string | null; lastSyncStatus: string | null; lastSyncError: string | null; }
+export interface WasteEvent { id: string; provider: string; providerFractionId: string; collectionDate: string; allDay: true; name: string; icon: string | null; standardFractionId: string | null; standardFractionIcon: string | null; }
+
 export interface FamilyWithMembership {
   family: Family;
   membership: FamilyMember;
@@ -1011,6 +1020,19 @@ export async function getCalendarEvents(
   const params = new URLSearchParams({ from: input.from, to: input.to });
 
   return apiRequest<CalendarEvent[]>(`/calendar/events?${params.toString()}`, { familyId });
+}
+
+export function searchFamilyAddresses(familyId: string, query: string, signal?: AbortSignal): Promise<FamilyAddress[]> {
+  return apiRequest<FamilyAddress[]>(`/waste-collection/addresses/search?q=${encodeURIComponent(query)}`, { familyId, signal });
+}
+export function getWasteSubscription(familyId: string): Promise<WasteSubscription> {
+  return apiRequest<WasteSubscription>("/waste-collection/subscription", { familyId });
+}
+export function configureWasteCollection(familyId: string, address: FamilyAddress): Promise<WasteSubscription> {
+  return apiRequest<WasteSubscription>("/waste-collection/subscription", { method: "PUT", familyId, body: { address, enabled: true } });
+}
+export function getWasteEvents(familyId: string, from: string, to: string): Promise<WasteEvent[]> {
+  return apiRequest<WasteEvent[]>(`/waste-collection/events?from=${encodeURIComponent(from)}&to=${encodeURIComponent(to)}`, { familyId });
 }
 
 export async function addCalendarEvent(

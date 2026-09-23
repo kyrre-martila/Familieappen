@@ -71,6 +71,23 @@ async function run(): Promise<void> {
   assert.equal(updates.some((u) => "lastSyncError" in u), true);
   assert.equal((service as any).prisma.client.wasteCollectionEvent, undefined, "provider failure cannot delete cached events");
 
+  let savedAddress: any = null;
+  const configuredSubscription = { id: "configured", provider: "min-renovasjon", enabled: true, address, selectedFractionIds: [], fractions: [], lastSuccessfulSyncAt: null, lastSyncStatus: "error", lastSyncError: "provider_unavailable" };
+  const configureService = new WasteCollectionService({ client: {
+    $transaction: async (callback: (tx: any) => Promise<any>) => callback({
+      familyAddress: { upsert: async (args: any) => { savedAddress = args.create; return { id: "address", ...args.create }; } },
+      wasteCollectionSubscription: { upsert: async () => ({ id: "configured", enabled: true }) }
+    }),
+    wasteCollectionSubscription: {
+      findUnique: async (args: any) => args.where.id ? { id: "configured", enabled: true, address } : configuredSubscription,
+      update: async () => ({})
+    }
+  }} as any, { requireFamilyRole: async () => {}, requireFamilyMember: async () => {} } as any, {} as any,
+  { providerId: "min-renovasjon", getCollections: async () => { throw new WasteProviderUnavailableError("down"); } } as any);
+  const configured = await configureService.configure("user-a", "family-a", { address, enabled: true });
+  assert.equal(savedAddress.houseLetter, "A", "selected structured address preserves its house letter");
+  assert.equal(configured.lastSyncStatus, "error", "address save succeeds and exposes a non-blocking provider failure");
+
   console.log("waste collection tests passed");
 }
 run().catch((error) => { console.error(error); process.exitCode = 1; });

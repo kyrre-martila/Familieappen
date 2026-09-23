@@ -119,7 +119,7 @@ export interface CalendarEvent {
   startTime: string | null;
   endTime: string | null;
   reminder: { minutesBefore: number; label: string } | null;
-  startsAt: string;
+  startsAt: string | null;
   endsAt: string | null;
   allDay: boolean;
   recurrenceFrequency: CalendarEventRecurrenceFrequency;
@@ -135,6 +135,8 @@ export interface CalendarEvent {
   createdAt: string;
   updatedAt: string;
   participants: CalendarEventParticipant[];
+  temporalKind?: "instant" | "date";
+  readOnly?: boolean;
 }
 
 export interface ReminderAudienceMember {

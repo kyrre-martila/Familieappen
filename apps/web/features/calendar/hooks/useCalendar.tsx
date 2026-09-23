@@ -278,8 +278,8 @@ function toCalendarEvent(event: BackendCalendarEvent): CalendarEvent {
     participantIds: event.participants.map(
       (participant) => participant.familyMemberId,
     ),
-    source: event.source === "ics" ? "ics" : "manual",
-    isImported: event.source === "ics",
+    source: event.source === "ics" ? "ics" : event.source === "waste-collection" ? "waste-collection" : "manual",
+    isImported: event.source === "ics" || event.source === "waste-collection",
     reminder: event.reminder,
     recurrence: event.recurrence,
     recurrenceUntil: event.recurrenceUntil ?? event.recurrence?.until ?? null,
@@ -289,6 +289,7 @@ function toCalendarEvent(event: BackendCalendarEvent): CalendarEvent {
     createdByMemberId: null,
     createdAt: event.createdAt,
     updatedAt: event.updatedAt,
+    readOnly: event.readOnly,
   };
 }
 

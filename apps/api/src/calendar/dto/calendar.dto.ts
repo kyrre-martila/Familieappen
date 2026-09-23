@@ -23,7 +23,8 @@ export interface CalendarEventDto {
   startTime: string | null;
   endTime: string | null;
   reminder: { minutesBefore: number; label: string } | null;
-  startsAt: string;
+  /** Timed/native events carry instants; date-only external events do not. */
+  startsAt: string | null;
   endsAt: string | null;
   allDay: boolean;
   recurrenceFrequency: CalendarEventRecurrenceFrequencyDto;
@@ -42,6 +43,8 @@ export interface CalendarEventDto {
   createdAt: string;
   updatedAt: string;
   participants: CalendarEventParticipantDto[];
+  temporalKind?: "instant" | "date";
+  readOnly?: boolean;
 }
 
 export interface ListCalendarEventsQueryDto {

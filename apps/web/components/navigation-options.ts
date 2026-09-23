@@ -14,6 +14,7 @@ export const menuNavigationItems = [
   { href: "/meals", label: "Middag", description: "Planlegg familiens middager", icon: "meal" },
   { href: "/wishlist", label: "Ønskeliste", description: "Gaver og ønsker", icon: "gift" },
   { href: "/health-plans", label: "Helseplan", description: "Dagens hendelser og planer", icon: "health" },
+  { href: "/waste-collection", label: "Renovasjon", description: "Neste tømminger", icon: "waste" },
   { href: "/settings", label: "Innstillinger", description: "Profil, familie og varsler", icon: "settings" }
 ] as const;
 

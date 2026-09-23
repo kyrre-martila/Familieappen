@@ -1,4 +1,4 @@
-export type CalendarEventSource = "manual" | "ics" | "school-week";
+export type CalendarEventSource = "manual" | "ics" | "school-week" | "waste-collection";
 
 export type CalendarEventIcon =
   | "sport"

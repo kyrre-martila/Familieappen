@@ -32,7 +32,11 @@ export class WasteCollectionService {
       return tx.wasteCollectionSubscription.upsert({ where: { familyId }, create: { familyId, addressId: storedAddress.id, provider: this.provider.providerId, enabled, selectedFractionIds: selected },
         update: { addressId: storedAddress.id, provider: this.provider.providerId, enabled, selectedFractionIds: selected, nextSyncAt: new Date() } });
     });
-    if (enabled) await this.syncSubscription(subscription.id);
+    // The home address is canonical family data. A provider outage must never
+    // roll back, or make the client believe it failed to save, that address.
+    if (enabled) {
+      try { await this.syncSubscription(subscription.id); } catch { /* sync status is persisted by syncSubscription */ }
+    }
     return this.getSubscription(userId, familyId);
   }
 
