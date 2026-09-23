@@ -7,6 +7,7 @@ import { CalendarMealChip } from "./CalendarMealChip";
 import { CalendarReminderChip } from "./CalendarReminderChip";
 import { CalendarTaskChip } from "./CalendarTaskChip";
 import { CalendarHealthPlanChip } from "./CalendarHealthPlanChip";
+import { CalendarWasteChip } from "./CalendarWasteChip";
 import { healthPlanOccurrenceSummary } from "../../health-plan/occurrence-summary";
 import { formatListDate } from "./calendarFormatters";
 import type { CalendarListDayGroup as CalendarListDayGroupType } from "./calendarTypes";
@@ -28,6 +29,8 @@ export function CalendarListDayGroup({
     group.reminders.length - visibleReminders.length,
   );
   const headingId = `calendar-list-${group.date}`;
+  const wasteEvents = group.events.filter((event) => event.source === "waste-collection");
+  const calendarEvents = group.events.filter((event) => event.source !== "waste-collection");
 
   return (
     <section
@@ -50,7 +53,7 @@ export function CalendarListDayGroup({
         ) : null}
       </div>
 
-      {group.meal || group.reminders.length > 0 || group.tasks.length > 0 || group.healthPlanOccurrences.length > 0 ? (
+      {group.meal || group.reminders.length > 0 || group.tasks.length > 0 || group.healthPlanOccurrences.length > 0 || wasteEvents.length > 0 ? (
         <div
           className="calendar-list-day__chips"
           aria-label={calendarListContentAriaLabel(formatListDate(group.date))}
@@ -69,6 +72,9 @@ export function CalendarListDayGroup({
           {visibleTasks.map((task) => (
             <CalendarTaskChip task={task} key={task.id} />
           ))}
+          {wasteEvents.map((event) => (
+            <CalendarWasteChip event={event} key={event.id} />
+          ))}
           {hiddenReminderCount > 0 ? (
             <button
               className="calendar-chip calendar-chip--more"
@@ -81,12 +87,12 @@ export function CalendarListDayGroup({
         </div>
       ) : null}
 
-      {group.events.length > 0 ? (
+      {calendarEvents.length > 0 ? (
         <div
           className="calendar-event-list calendar-list-day__events"
           aria-label={`Kalenderhendelser for ${formatListDate(group.date)}`}
         >
-          {group.events.map((event) => (
+          {calendarEvents.map((event) => (
             <CalendarEventCard event={event} key={event.id} />
           ))}
         </div>
