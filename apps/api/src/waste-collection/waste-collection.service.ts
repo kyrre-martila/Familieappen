@@ -1,10 +1,13 @@
 import { BadGatewayException, BadRequestException, Injectable, NotFoundException, ServiceUnavailableException } from "@nestjs/common";
 import { FamilyAuthorizationService } from "../families/family-authorization.service";
+import { addLocalDays, localParts } from "../health-plans/health-plan-scheduling.domain";
+import { DEFAULT_HEALTH_PLAN_TIMEZONE } from "../health-plans/health-plan.domain";
 import { PrismaService } from "../prisma";
 import { ConfigureWasteCollectionDto, WasteEventDto, WasteSubscriptionDto } from "./dto/waste-collection.dto";
 import { GeonorgeClient } from "./providers/geonorge.client";
 import { MinRenovasjonProvider } from "./providers/min-renovasjon.provider";
 import { InvalidProviderResponseError, ISO_LOCAL_DATE, NormalizedAddress, WasteProviderConfigurationError, WasteProviderUnavailableError } from "./waste-collection.domain";
+import { localDateToPrismaDate, prismaDateToLocalDate } from "./waste-collection.persistence";
 
 const DAY_MS = 86_400_000;
 @Injectable()
@@ -42,19 +45,19 @@ export class WasteCollectionService {
 
   async listEvents(userId: string, familyId: string, from?: unknown, to?: unknown): Promise<WasteEventDto[]> {
     await this.authorization.requireFamilyMember(userId, familyId);
-    const fromDate = validateDateQuery(from, todayDate());
+    const fromDate = validateDateQuery(from, currentOsloDate());
     const toDate = validateDateQuery(to, addDays(fromDate, 180));
     if (toDate < fromDate) throw new BadRequestException("to must not be before from");
     const subscription = await (this.prisma.client as any).wasteCollectionSubscription.findUnique({ where: { familyId }, select: { id: true, enabled: true, selectedFractionIds: true } });
     if (!subscription) throw new NotFoundException("Waste collection is not configured");
     if (!subscription.enabled) return [];
     const rows = await (this.prisma.client as any).wasteCollectionEvent.findMany({
-      where: { subscriptionId: subscription.id, collectionDate: { gte: persistenceDate(fromDate), lte: persistenceDate(toDate) },
+      where: { subscriptionId: subscription.id, collectionDate: { gte: localDateToPrismaDate(fromDate), lte: localDateToPrismaDate(toDate) },
         ...(subscription.selectedFractionIds.length > 0 ? { providerFractionId: { in: subscription.selectedFractionIds } } : {}) },
       include: { fraction: true }, orderBy: [{ collectionDate: "asc" }, { providerFractionId: "asc" }]
     });
     return rows.map((row: any) => ({ id: row.id, provider: row.provider, providerFractionId: row.providerFractionId,
-      collectionDate: dateOnly(row.collectionDate), allDay: true as const, name: row.fraction.name, icon: row.fraction.icon,
+      collectionDate: prismaDateToLocalDate(row.collectionDate), allDay: true as const, name: row.fraction.name, icon: row.fraction.icon,
       standardFractionId: row.fraction.standardFractionId, standardFractionIcon: row.fraction.standardFractionIcon }));
   }
 
@@ -76,8 +79,8 @@ export class WasteCollectionService {
         for (const event of result.events) {
           const fraction = fractions.get(event.providerFractionId);
           if (!fraction) throw new InvalidProviderResponseError("Calendar references an unknown fraction");
-          await tx.wasteCollectionEvent.upsert({ where: { subscriptionId_providerFractionId_collectionDate: { subscriptionId, providerFractionId: event.providerFractionId, collectionDate: persistenceDate(event.collectionDate) } },
-            create: { subscriptionId, fractionId: fraction.id, provider: this.provider.providerId, providerFractionId: event.providerFractionId, collectionDate: persistenceDate(event.collectionDate), fetchedAt: now },
+          await tx.wasteCollectionEvent.upsert({ where: { subscriptionId_providerFractionId_collectionDate: { subscriptionId, providerFractionId: event.providerFractionId, collectionDate: localDateToPrismaDate(event.collectionDate) } },
+            create: { subscriptionId, fractionId: fraction.id, provider: this.provider.providerId, providerFractionId: event.providerFractionId, collectionDate: localDateToPrismaDate(event.collectionDate), fetchedAt: now },
             update: { fractionId: fraction.id, fetchedAt: now } });
         }
         // Do not delete absent future rows: a short/incomplete upstream response must not erase a good cache.
@@ -108,9 +111,16 @@ function validateAddress(value: unknown): NormalizedAddress {
 }
 function validateSelectedFractions(value: unknown): string[] { if (value === undefined) return []; if (!Array.isArray(value) || value.some((v) => typeof v !== "string")) throw new BadRequestException("selectedFractionIds must be a list of strings"); return [...new Set(value)]; }
 function validateDateQuery(value: unknown, fallback: string): string { if (value === undefined) return fallback; if (typeof value !== "string" || !ISO_LOCAL_DATE.test(value)) throw new BadRequestException("Dates must use YYYY-MM-DD"); return value; }
-function persistenceDate(date: string): Date { return new Date(`${date}T00:00:00.000Z`); }
-function dateOnly(value: Date | string): string { if (typeof value === "string") return value.slice(0, 10); return `${value.getUTCFullYear()}-${String(value.getUTCMonth()+1).padStart(2,"0")}-${String(value.getUTCDate()).padStart(2,"0")}`; }
-function todayDate(): string { return dateOnly(new Date()); }
-function addDays(value: string, days: number): string { const date = persistenceDate(value); date.setUTCDate(date.getUTCDate() + days); return dateOnly(date); }
+export function currentOsloDate(now = new Date()): string {
+  const parts = localParts(now, DEFAULT_HEALTH_PLAN_TIMEZONE);
+  return formatLocalDate(parts);
+}
+function addDays(value: string, days: number): string {
+  const [year, month, day] = value.split("-").map(Number);
+  return formatLocalDate(addLocalDays({ year, month, day }, days));
+}
+function formatLocalDate(value: { year: number; month: number; day: number }): string {
+  return `${value.year}-${String(value.month).padStart(2, "0")}-${String(value.day).padStart(2, "0")}`;
+}
 function toAddress(row: any): NormalizedAddress { return { label: row.label, streetName: row.streetName, houseNumber: row.houseNumber, houseLetter: row.houseLetter, postalCode: row.postalCode, postalPlace: row.postalPlace, municipalityNumber: row.municipalityNumber, municipalityName: row.municipalityName, addressCode: row.addressCode, latitude: row.latitude == null ? null : Number(row.latitude), longitude: row.longitude == null ? null : Number(row.longitude) }; }
 function toSubscriptionDto(row: any): WasteSubscriptionDto { return { id: row.id, provider: row.provider, enabled: row.enabled, address: toAddress(row.address), selectedFractionIds: row.selectedFractionIds, fractions: row.fractions.map((f: any) => ({ providerFractionId: f.providerFractionId, name: f.name, icon: f.icon, standardFractionId: f.standardFractionId, standardFractionIcon: f.standardFractionIcon })), lastSuccessfulSyncAt: row.lastSuccessfulSyncAt?.toISOString() ?? null, lastSyncStatus: row.lastSyncStatus, lastSyncError: row.lastSyncError }; }

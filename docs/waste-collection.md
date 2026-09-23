@@ -13,6 +13,8 @@ Creating/updating an enabled subscription performs an initial sync. An hourly wo
 
 `MIN_RENOVASJON_APP_KEY` is required on the API server and must remain secret.
 
+Prisma 7 exposes PostgreSQL `DATE` values as JavaScript `Date` objects. That representation is confined to `waste-collection.persistence.ts`, where numeric UTC construction and UTC-only field access make the value a lossless ORM carrier rather than an instant. The domain and API only expose `YYYY-MM-DD`. Default event ranges use the current calendar date in `Europe/Oslo`, not the UTC date.
+
 ## Calendar follow-up
 
 Calendar aggregation is deliberately deferred. Its current DTO and persistence model represent every event with JavaScript instants (`startsAt`/`endsAt`), which cannot represent the required timezone-independent waste date without violating date-only semantics. The next integration should first add a date-only all-day variant to the calendar domain/DTO, then merge `WasteCollectionEvent.collectionDate` into `CalendarService.listEvents` with source `waste-collection`; it must not create ICS or synthesize midnight UTC timestamps.
