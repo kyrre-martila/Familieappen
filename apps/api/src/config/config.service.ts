@@ -40,4 +40,8 @@ export class ConfigService {
   get adminCookieDomain(): string | undefined {
     return this.config.adminCookieDomain;
   }
+
+  get minRenovasjonAppKey(): string | undefined {
+    return this.config.minRenovasjonAppKey;
+  }
 }

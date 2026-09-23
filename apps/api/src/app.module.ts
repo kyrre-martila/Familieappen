@@ -18,6 +18,7 @@ import { SchoolWeekModule } from "./school-week";
 import { ShoppingModule } from "./shopping";
 import { TasksModule } from "./tasks";
 import { WishlistsModule } from "./wishlists";
+import { WasteCollectionModule } from "./waste-collection";
 
 @Module({
   imports: [
@@ -39,7 +40,8 @@ import { WishlistsModule } from "./wishlists";
     SchoolWeekModule,
     WishlistsModule,
     NotificationPreferencesModule,
-    NotificationsModule
+    NotificationsModule,
+    WasteCollectionModule
   ]
 })
 export class AppModule {}
