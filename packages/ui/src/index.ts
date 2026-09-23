@@ -39,6 +39,8 @@ export const tokens = {
     accentSoft: "#ffe1d8",
     success: "#6f8f7a",
     successSoft: "#e5efe7",
+    waste: "#3f7259",
+    wasteSoft: "#e1eee5",
     warning: "#bd7d35",
     warningSoft: "#fff0d8",
     border: "#eadfce",

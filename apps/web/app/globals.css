@@ -5460,6 +5460,15 @@ button.calendar-chip {
   color: color-mix(in srgb, var(--color-success) 72%, var(--color-text));
 }
 
+.calendar-chip--waste {
+  background: var(--color-waste-soft);
+  color: var(--color-waste);
+}
+
+.calendar-chip--waste svg {
+  flex: 0 0 auto;
+}
+
 .calendar-chip--reminder {
   background: var(--color-primary-soft);
   color: var(--color-primary-strong);
@@ -12729,8 +12738,9 @@ button.family-settings-row:focus-visible:not(:disabled) {
 }
 
 .family-settings-row__value {
+  min-width: 0;
+  max-width: 100%;
   justify-self: end;
-  overflow: hidden;
   color: color-mix(
     in srgb,
     var(--color-muted) 92%,
@@ -12738,8 +12748,7 @@ button.family-settings-row:focus-visible:not(:disabled) {
   );
   font-size: clamp(0.98rem, 3vw, 1.22rem);
   font-weight: 690;
-  text-overflow: ellipsis;
-  white-space: nowrap;
+  overflow-wrap: anywhere;
 }
 
 .family-settings__copy,
@@ -12975,7 +12984,10 @@ button.family-settings-row:focus-visible:not(:disabled) {
 }
 
 @media (max-width: 38rem) {
-  .family-settings-row,
+  .family-settings-row {
+    grid-template-columns: minmax(0, 1fr) auto;
+  }
+
   .family-settings-member,
   .family-settings-invite {
     grid-template-columns: auto minmax(0, 1fr) auto;
@@ -16200,14 +16212,15 @@ button.family-settings-row:focus-visible:not(:disabled) {
 .health-log-entry strong, .health-log-entry small { display: block; }
 .health-log-entry small { margin-top: .2rem; color: var(--color-muted); }
 .health-log-entry p { margin: .65rem 0; white-space: pre-wrap; }
-.family-settings-row__value small { display:block; margin-top:.3rem; color:var(--color-text-muted); font-size:var(--font-size-xs); font-weight:500; }
+.family-settings-row__value small { display:block; margin-top:.3rem; color:var(--color-text-muted); font-size:var(--font-size-xs); font-weight:500; overflow-wrap:anywhere; white-space:normal; }
 .family-address-results { display:grid; max-height:16rem; overflow:auto; border:1px solid var(--color-border); border-radius:var(--radius-m); }
 .family-address-results button { min-height:44px; padding:var(--space-s); border:0; border-bottom:1px solid var(--color-border); background:var(--color-surface); color:var(--color-text); text-align:left; }
 .family-address-results button:last-child { border-bottom:0; }
-.waste-page { display:grid; gap:var(--space-m); width:100%; min-width:0; }
+.waste-page { display:grid; grid-auto-rows:max-content; align-content:start; gap:var(--space-m); width:100%; min-width:0; }
+.waste-page > .card { min-height:0; align-self:start; }
 .waste-page h2,.waste-page p { margin-top:0; }.waste-address-label { color:var(--color-text-muted); font-size:var(--font-size-sm); }.waste-warning { margin-top:var(--space-s)!important; color:var(--color-warning); }
 .waste-filters { display:flex; gap:var(--space-xs); max-width:100%; margin:var(--space-s) 0; padding-bottom:var(--space-xs); overflow-x:auto; scrollbar-width:thin; }
-.waste-filter { flex:0 0 auto; min-height:40px; border:1px solid var(--color-border); border-radius:var(--radius-pill); padding:.45rem .8rem; background:var(--color-surface); color:var(--color-text); font:inherit; font-weight:700; white-space:nowrap; cursor:pointer; }
+.waste-filter { flex:0 0 auto; min-height:40px; align-self:center; border:1px solid var(--color-border); border-radius:var(--radius-pill); padding:.45rem .8rem; background:var(--color-surface); color:var(--color-text); font:inherit; font-weight:700; line-height:1.2; white-space:nowrap; cursor:pointer; }
 .waste-filter--active { border-color:var(--color-primary); background:var(--color-primary-soft); color:var(--color-primary-strong); }
 .waste-filter:focus-visible { outline:3px solid color-mix(in srgb,var(--color-primary) 45%,transparent); outline-offset:2px; }
 .waste-events { display:grid; gap:0; margin:0; padding:0; list-style:none; }.waste-events li { display:flex; justify-content:space-between; gap:var(--space-m); padding:var(--space-m) 0; border-bottom:1px solid var(--color-border); }.waste-events li:last-child{border-bottom:0}.waste-events time{color:var(--color-text-muted);white-space:nowrap}
