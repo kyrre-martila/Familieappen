@@ -1,17 +1,5 @@
-/** Provider-neutral address selected from an authoritative address registry. */
-export interface NormalizedAddress {
-  label: string;
-  streetName: string;
-  houseNumber: number;
-  houseLetter: string | null;
-  postalCode: string;
-  postalPlace: string;
-  municipalityNumber: string;
-  municipalityName: string;
-  addressCode: string;
-  latitude: number | null;
-  longitude: number | null;
-}
+import { NormalizedAddress } from "../families/address/address.domain";
+export type { NormalizedAddress } from "../families/address/address.domain";
 
 export interface WasteFraction {
   providerFractionId: string;

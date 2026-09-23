@@ -1,5 +1,5 @@
 import { Injectable } from "@nestjs/common";
-import { InvalidProviderResponseError, NormalizedAddress, WasteProviderUnavailableError } from "../waste-collection.domain";
+import { AddressLookupUnavailableError, InvalidAddressLookupResponseError, NormalizedAddress } from "./address.domain";
 
 const URL = "https://ws.geonorge.no/adresser/v1/sok";
 
@@ -12,12 +12,12 @@ export class GeonorgeClient {
     try {
       response = await fetch(`${URL}?${new URLSearchParams({ sok: value, treffPerSide: "10" })}`, { signal: AbortSignal.timeout(8000) });
     } catch {
-      throw new WasteProviderUnavailableError("Address service is temporarily unavailable");
+      throw new AddressLookupUnavailableError("Address service is temporarily unavailable");
     }
-    if (!response.ok) throw new WasteProviderUnavailableError("Address service is temporarily unavailable");
+    if (!response.ok) throw new AddressLookupUnavailableError("Address service is temporarily unavailable");
     let body: any;
-    try { body = await response.json(); } catch { throw new InvalidProviderResponseError("Address service returned an invalid response"); }
-    if (!Array.isArray(body?.adresser)) throw new InvalidProviderResponseError("Address service returned an invalid response");
+    try { body = await response.json(); } catch { throw new InvalidAddressLookupResponseError("Address service returned an invalid response"); }
+    if (!Array.isArray(body?.adresser)) throw new InvalidAddressLookupResponseError("Address service returned an invalid response");
     return body.adresser.map(mapGeonorgeAddress);
   }
 }
@@ -27,7 +27,7 @@ export function mapGeonorgeAddress(value: any): NormalizedAddress {
   const point = value?.representasjonspunkt;
   if (!value?.adressetekst || !value?.adressenavn || !Number.isInteger(houseNumber) || !value?.postnummer ||
       !value?.poststed || !value?.kommunenummer || !value?.kommunenavn || value?.adressekode == null) {
-    throw new InvalidProviderResponseError("Address service returned an incomplete address");
+    throw new InvalidAddressLookupResponseError("Address service returned an incomplete address");
   }
   return {
     label: String(value.adressetekst), streetName: String(value.adressenavn), houseNumber,

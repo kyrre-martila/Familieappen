@@ -1024,7 +1024,7 @@ export async function getCalendarEvents(
 }
 
 export function searchFamilyAddresses(familyId: string, query: string, signal?: AbortSignal): Promise<FamilyAddress[]> {
-  return apiRequest<FamilyAddress[]>(`/waste-collection/addresses/search?q=${encodeURIComponent(query)}`, { familyId, signal });
+  return apiRequest<FamilyAddress[]>(`/families/${encodeURIComponent(familyId)}/address/search?q=${encodeURIComponent(query)}`, { familyId, signal });
 }
 export function getFamilyAddress(familyId: string): Promise<FamilyAddressResponse> {
   return apiRequest<FamilyAddressResponse>(`/families/${encodeURIComponent(familyId)}/address`, { familyId });

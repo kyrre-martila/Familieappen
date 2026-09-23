@@ -5,7 +5,6 @@ import { DEFAULT_HEALTH_PLAN_TIMEZONE } from "../health-plans/health-plan.domain
 import { PrismaService } from "../prisma";
 import { ConfigureWasteCollectionDto, WasteEventDto, WasteSubscriptionDto } from "./dto/waste-collection.dto";
 import { FamilyAddressResponseDto } from "./dto/family-address.dto";
-import { GeonorgeClient } from "./providers/geonorge.client";
 import { MinRenovasjonProvider } from "./providers/min-renovasjon.provider";
 import { InvalidProviderResponseError, ISO_LOCAL_DATE, NormalizedAddress, WasteProviderConfigurationError, WasteProviderUnavailableError } from "./waste-collection.domain";
 import { localDateToPrismaDate, prismaDateToLocalDate } from "./waste-collection.persistence";
@@ -14,13 +13,7 @@ const DAY_MS = 86_400_000;
 @Injectable()
 export class WasteCollectionService {
   constructor(private readonly prisma: PrismaService, private readonly authorization: FamilyAuthorizationService,
-    private readonly geonorge: GeonorgeClient, private readonly provider: MinRenovasjonProvider) {}
-
-  async searchAddresses(userId: string, familyId: string, query: unknown): Promise<NormalizedAddress[]> {
-    await this.authorization.requireFamilyMember(userId, familyId);
-    if (typeof query !== "string" || query.trim().length < 2) throw new BadRequestException("Address query must contain at least two characters");
-    try { return await this.geonorge.search(query); } catch (error) { this.rethrowProviderError(error); }
-  }
+    private readonly provider: MinRenovasjonProvider) {}
 
   async getFamilyAddress(userId: string, familyId: string): Promise<FamilyAddressResponseDto> {
     await this.authorization.requireFamilyMember(userId, familyId);
