@@ -77,8 +77,18 @@ export class WasteCollectionService {
     const fromDate = validateDateQuery(from, currentOsloDate());
     const toDate = validateDateQuery(to, addDays(fromDate, 180));
     if (toDate < fromDate) throw new BadRequestException("to must not be before from");
-    const subscription = await (this.prisma.client as any).wasteCollectionSubscription.findUnique({ where: { familyId }, select: { id: true, enabled: true, selectedFractionIds: true } });
+    const subscription = await (this.prisma.client as any).wasteCollectionSubscription.findUnique({ where: { familyId }, select: { id: true } });
     if (!subscription) throw new NotFoundException("Waste collection is not configured");
+    return this.listCachedEvents(familyId, fromDate, toDate);
+  }
+
+  /** Reads only the normalized persisted cache; feed rendering must never contact a provider. */
+  async listCachedEvents(familyId: string, fromDate: string, toDate: string): Promise<WasteEventDto[]> {
+    if (!ISO_LOCAL_DATE.test(fromDate) || !ISO_LOCAL_DATE.test(toDate) || toDate < fromDate) {
+      throw new BadRequestException("Invalid waste collection date range");
+    }
+    const subscription = await (this.prisma.client as any).wasteCollectionSubscription.findUnique({ where: { familyId }, select: { id: true, enabled: true, selectedFractionIds: true } });
+    if (!subscription) return [];
     if (!subscription.enabled) return [];
     const rows = await (this.prisma.client as any).wasteCollectionEvent.findMany({
       where: { subscriptionId: subscription.id, collectionDate: { gte: localDateToPrismaDate(fromDate), lte: localDateToPrismaDate(toDate) },

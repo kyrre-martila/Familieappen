@@ -344,6 +344,7 @@ export interface CalendarExportFeedSettings {
   includeMeals: boolean;
   includeReminders: boolean;
   includeSchoolWeekReminders: boolean;
+  includeWasteCollection: boolean;
   scope: CalendarExportScope;
   selectedMemberIds: string[];
   mineFamilyMemberId: string | null;
@@ -986,7 +987,7 @@ export async function getCalendarExportFeedSettings(familyId: string): Promise<C
 
 export async function updateCalendarExportFeedSettings(
   familyId: string,
-  input: Partial<Pick<CalendarExportFeedSettings, "enabled" | "includeEvents" | "includeMeals" | "includeReminders" | "includeSchoolWeekReminders" | "scope" | "selectedMemberIds">>
+  input: Partial<Pick<CalendarExportFeedSettings, "enabled" | "includeEvents" | "includeMeals" | "includeReminders" | "includeSchoolWeekReminders" | "includeWasteCollection" | "scope" | "selectedMemberIds">>
 ): Promise<CalendarExportFeedSettings> {
   return apiRequest<CalendarExportFeedSettings>("/calendar/feed-settings", { method: "PATCH", body: input, familyId });
 }

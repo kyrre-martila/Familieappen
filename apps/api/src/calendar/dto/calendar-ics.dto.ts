@@ -55,6 +55,7 @@ export interface CalendarExportFeedDto {
   includeMeals: boolean;
   includeReminders: boolean;
   includeSchoolWeekReminders: boolean;
+  includeWasteCollection: boolean;
   scope: CalendarExportScopeDto;
   selectedMemberIds: string[];
   mineFamilyMemberId: string | null;
@@ -73,6 +74,7 @@ export interface UpdateCalendarExportFeedRequestDto {
   includeMeals?: unknown;
   includeReminders?: unknown;
   includeSchoolWeekReminders?: unknown;
+  includeWasteCollection?: unknown;
   scope?: unknown;
   selectedMemberIds?: unknown;
   /** @deprecated Use selectedMemberIds. Kept for older deployed web clients. */
