@@ -71,6 +71,56 @@ async function run(): Promise<void> {
   assert.equal(updates.some((u) => "lastSyncError" in u), true);
   assert.equal((service as any).prisma.client.wasteCollectionEvent, undefined, "provider failure cannot delete cached events");
 
+  let addressReadScope = "";
+  const addressOnlyService = new WasteCollectionService({ client: {
+    familyAddress: { findUnique: async ({ where }: any) => where.familyId === "family-address-only" ? { id: "address-only", familyId: where.familyId, ...address } : null },
+    wasteCollectionSubscription: { findUnique: async () => null }
+  }} as any, { requireFamilyMember: async (_userId: string, familyId: string) => { addressReadScope = familyId; } } as any, {} as any, {} as any);
+  const addressOnly = await addressOnlyService.getFamilyAddress("member", "family-address-only");
+  assert.equal(addressReadScope, "family-address-only", "family address reads are authorized in the requested family scope");
+  assert.deepEqual(addressOnly.address, address, "FamilyAddress is readable without a WasteCollectionSubscription");
+  assert.equal(addressOnly.wasteCollection.status, "unavailable");
+
+  let savedAddress: any = null;
+  const configuredSubscription = { id: "configured", provider: "min-renovasjon", enabled: true, address, selectedFractionIds: [], fractions: [], lastSuccessfulSyncAt: null, lastSyncStatus: "error", lastSyncError: "provider_unavailable" };
+  const configureService = new WasteCollectionService({ client: {
+    familyAddress: { upsert: async (args: any) => { savedAddress = args.create; return { id: "address", ...args.create }; } },
+    $transaction: async (callback: (tx: any) => Promise<any>) => callback({
+      familyAddress: { upsert: async (args: any) => { savedAddress = args.create; return { id: "address", ...args.create }; } },
+      wasteCollectionSubscription: { upsert: async () => ({ id: "configured", enabled: true }) }
+    }),
+    wasteCollectionSubscription: {
+      findUnique: async (args: any) => args.where.id ? { id: "configured", enabled: true, address } : configuredSubscription,
+      upsert: async () => ({ id: "configured", enabled: true }),
+      update: async () => ({})
+    }
+  }} as any, { requireFamilyRole: async () => {}, requireFamilyMember: async () => {} } as any, {} as any,
+  { providerId: "min-renovasjon", getCollections: async () => { throw new WasteProviderUnavailableError("down"); } } as any);
+  const configured = await configureService.configure("user-a", "family-a", { address, enabled: true });
+  assert.equal(savedAddress.houseLetter, "A", "selected structured address preserves its house letter");
+  assert.equal(configured.lastSyncStatus, "error", "address save succeeds and exposes a non-blocking provider failure");
+  const savedDespiteProvider = await configureService.saveFamilyAddress("user-a", "family-a", address);
+  assert.deepEqual(savedDespiteProvider.address, address, "FamilyAddress persistence succeeds independently when the provider is unavailable");
+  assert.equal(savedDespiteProvider.wasteCollection.status, "unavailable", "provider failure remains an integration status");
+
+  let saveRoleScope = ""; let configuredAddressId = ""; let providerCalls = 0;
+  const independentAddressService = new WasteCollectionService({ client: {
+    familyAddress: { upsert: async ({ where, create }: any) => ({ id: "independent-address", familyId: where.familyId, ...create }) },
+    wasteCollectionSubscription: {
+      upsert: async ({ create }: any) => { configuredAddressId = create.addressId; return { id: "independent-subscription", enabled: true }; },
+      findUnique: async ({ where, include }: any) => where.id ? { id: where.id, enabled: true, address } : include ? { id: "independent-subscription", enabled: true, address, selectedFractionIds: [], fractions: [], lastSuccessfulSyncAt: null, lastSyncStatus: "success", lastSyncError: null } : { lastSyncStatus: "success", lastSyncError: null },
+      update: async () => ({})
+    },
+    wasteCollectionFraction: { updateMany: async () => ({}) },
+    $transaction: async (callback: (tx: any) => Promise<any>) => callback({ wasteCollectionFraction: { updateMany: async () => ({}) }, wasteCollectionSubscription: { update: async () => ({}) } })
+  }} as any, { requireFamilyRole: async (_userId: string, familyId: string) => { saveRoleScope = familyId; } } as any, {} as any,
+  { providerId: "min-renovasjon", getCollections: async () => { providerCalls += 1; return { fractions: [], events: [] }; } } as any);
+  const independentlySaved = await independentAddressService.saveFamilyAddress("owner", "family-save", address);
+  assert.equal(saveRoleScope, "family-save", "family address writes use family-manager authorization in the requested scope");
+  assert.equal(configuredAddressId, "independent-address", "saving/changing an address configures waste from the persisted FamilyAddress");
+  assert.equal(providerCalls, 1, "saving an address triggers provider synchronization when possible");
+  assert.deepEqual(independentlySaved.address, address, "all normalized FamilyAddress fields survive independent persistence");
+
   console.log("waste collection tests passed");
 }
 run().catch((error) => { console.error(error); process.exitCode = 1; });

@@ -57,6 +57,7 @@ export type CalendarEvent = {
   createdAt?: string;
   updatedAt?: string;
   pending?: boolean;
+  readOnly?: boolean;
 };
 
 export type ReminderAudience = {

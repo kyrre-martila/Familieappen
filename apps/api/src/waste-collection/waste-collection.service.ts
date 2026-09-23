@@ -4,6 +4,7 @@ import { addLocalDays, localParts } from "../health-plans/health-plan-scheduling
 import { DEFAULT_HEALTH_PLAN_TIMEZONE } from "../health-plans/health-plan.domain";
 import { PrismaService } from "../prisma";
 import { ConfigureWasteCollectionDto, WasteEventDto, WasteSubscriptionDto } from "./dto/waste-collection.dto";
+import { FamilyAddressResponseDto } from "./dto/family-address.dto";
 import { GeonorgeClient } from "./providers/geonorge.client";
 import { MinRenovasjonProvider } from "./providers/min-renovasjon.provider";
 import { InvalidProviderResponseError, ISO_LOCAL_DATE, NormalizedAddress, WasteProviderConfigurationError, WasteProviderUnavailableError } from "./waste-collection.domain";
@@ -21,6 +22,37 @@ export class WasteCollectionService {
     try { return await this.geonorge.search(query); } catch (error) { this.rethrowProviderError(error); }
   }
 
+  async getFamilyAddress(userId: string, familyId: string): Promise<FamilyAddressResponseDto> {
+    await this.authorization.requireFamilyMember(userId, familyId);
+    const address = await (this.prisma.client as any).familyAddress.findUnique({ where: { familyId } });
+    if (!address) throw new NotFoundException("Family address is not configured");
+    const subscription = await (this.prisma.client as any).wasteCollectionSubscription.findUnique({ where: { familyId }, select: { lastSyncStatus: true, lastSyncError: true } });
+    return familyAddressResponse(address, subscription);
+  }
+
+  async saveFamilyAddress(userId: string, familyId: string, input: unknown): Promise<FamilyAddressResponseDto> {
+    await this.authorization.requireFamilyRole(userId, familyId, ["OWNER", "PARENT"]);
+    const address = validateAddress(input);
+    const stored = await (this.prisma.client as any).familyAddress.upsert({
+      where: { familyId }, create: { familyId, ...address }, update: address
+    });
+
+    // Address persistence is complete before optional integrations run. No
+    // provider or subscription failure can roll canonical family data back.
+    try { await this.configureWasteForStoredAddress(familyId, stored.id); } catch { /* integration state is best effort */ }
+    const subscription = await (this.prisma.client as any).wasteCollectionSubscription.findUnique({ where: { familyId }, select: { lastSyncStatus: true, lastSyncError: true } });
+    return familyAddressResponse(stored, subscription);
+  }
+
+  private async configureWasteForStoredAddress(familyId: string, addressId: string): Promise<void> {
+    const subscription = await (this.prisma.client as any).wasteCollectionSubscription.upsert({
+      where: { familyId },
+      create: { familyId, addressId, provider: this.provider.providerId, enabled: true, selectedFractionIds: [] },
+      update: { addressId, provider: this.provider.providerId, enabled: true, nextSyncAt: new Date() }
+    });
+    try { await this.syncSubscription(subscription.id); } catch { /* syncSubscription records retry/error state */ }
+  }
+
   async configure(userId: string, familyId: string, input: ConfigureWasteCollectionDto): Promise<WasteSubscriptionDto> {
     await this.authorization.requireFamilyRole(userId, familyId, ["OWNER", "PARENT"]);
     const address = validateAddress(input.address);
@@ -32,7 +64,11 @@ export class WasteCollectionService {
       return tx.wasteCollectionSubscription.upsert({ where: { familyId }, create: { familyId, addressId: storedAddress.id, provider: this.provider.providerId, enabled, selectedFractionIds: selected },
         update: { addressId: storedAddress.id, provider: this.provider.providerId, enabled, selectedFractionIds: selected, nextSyncAt: new Date() } });
     });
-    if (enabled) await this.syncSubscription(subscription.id);
+    // The home address is canonical family data. A provider outage must never
+    // roll back, or make the client believe it failed to save, that address.
+    if (enabled) {
+      try { await this.syncSubscription(subscription.id); } catch { /* sync status is persisted by syncSubscription */ }
+    }
     return this.getSubscription(userId, familyId);
   }
 
@@ -123,4 +159,7 @@ function formatLocalDate(value: { year: number; month: number; day: number }): s
   return `${value.year}-${String(value.month).padStart(2, "0")}-${String(value.day).padStart(2, "0")}`;
 }
 function toAddress(row: any): NormalizedAddress { return { label: row.label, streetName: row.streetName, houseNumber: row.houseNumber, houseLetter: row.houseLetter, postalCode: row.postalCode, postalPlace: row.postalPlace, municipalityNumber: row.municipalityNumber, municipalityName: row.municipalityName, addressCode: row.addressCode, latitude: row.latitude == null ? null : Number(row.latitude), longitude: row.longitude == null ? null : Number(row.longitude) }; }
+function familyAddressResponse(row: any, subscription: any): FamilyAddressResponseDto {
+  return { address: toAddress(row), wasteCollection: { status: subscription && subscription.lastSyncStatus !== "error" ? "configured" : "unavailable", lastSyncStatus: subscription?.lastSyncStatus ?? null, lastSyncError: subscription?.lastSyncError ?? null } };
+}
 function toSubscriptionDto(row: any): WasteSubscriptionDto { return { id: row.id, provider: row.provider, enabled: row.enabled, address: toAddress(row.address), selectedFractionIds: row.selectedFractionIds, fractions: row.fractions.map((f: any) => ({ providerFractionId: f.providerFractionId, name: f.name, icon: f.icon, standardFractionId: f.standardFractionId, standardFractionIcon: f.standardFractionIcon })), lastSuccessfulSyncAt: row.lastSuccessfulSyncAt?.toISOString() ?? null, lastSyncStatus: row.lastSyncStatus, lastSyncError: row.lastSyncError }; }

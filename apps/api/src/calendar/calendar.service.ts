@@ -10,6 +10,7 @@ import {
   UpdateCalendarEventRequestDto,
   CalendarEventRecurrenceFrequencyDto
 } from "./dto/calendar.dto";
+import { localDateToPrismaDate, prismaDateToLocalDate } from "../waste-collection/waste-collection.persistence";
 
 type FamilyMemberRecord = {
   id: string;
@@ -100,12 +101,44 @@ export class CalendarService {
       orderBy: [{ startsAt: "asc" }, { createdAt: "asc" }]
     });
 
-    return events
+    const nativeEvents = events
       .flatMap((event: CalendarEventRecord) => this.expandEventForRange(event, from, to))
       .sort((first: CalendarEventOccurrence, second: CalendarEventOccurrence) =>
         first.startsAt.getTime() - second.startsAt.getTime() || first.createdAt.getTime() - second.createdAt.getTime()
       )
       .map((event: CalendarEventOccurrence) => this.toCalendarEventDto(event));
+
+    const fromDate = dateInOslo(from);
+    const toDate = dateInOslo(to);
+    const wasteSubscriptionModel = (this.prisma.client as any).wasteCollectionSubscription;
+    if (!wasteSubscriptionModel) return nativeEvents;
+    const subscription = await wasteSubscriptionModel.findUnique({
+      where: { familyId }, select: { id: true, enabled: true, selectedFractionIds: true }
+    });
+    if (!subscription?.enabled) return nativeEvents;
+    const wasteRows = await (this.prisma.client as any).wasteCollectionEvent.findMany({
+      where: {
+        subscriptionId: subscription.id,
+        collectionDate: { gte: localDateToPrismaDate(fromDate), lte: localDateToPrismaDate(toDate) },
+        ...(subscription.selectedFractionIds.length ? { providerFractionId: { in: subscription.selectedFractionIds } } : {})
+      },
+      include: { fraction: true }, orderBy: [{ collectionDate: "asc" }, { providerFractionId: "asc" }]
+    });
+    const wasteEvents: CalendarEventDto[] = wasteRows.map((row: any) => {
+      const date = prismaDateToLocalDate(row.collectionDate);
+      return {
+        id: `waste-${row.id}`, familyId, title: row.fraction.name, description: null,
+        location: "Renovasjon", icon: "family", reminderMinutesBefore: null,
+        date, endDate: date, startTime: null, endTime: null, reminder: null,
+        startsAt: null, endsAt: null, allDay: true, recurrenceFrequency: "never",
+        recurrence: null, source: "waste-collection", icsSourceId: null,
+        externalUid: row.id, createdByUserId: null, createdAt: row.fetchedAt.toISOString(),
+        updatedAt: row.fetchedAt.toISOString(), participants: [], temporalKind: "date", readOnly: true
+      };
+    });
+    return [...nativeEvents, ...wasteEvents].sort((a, b) =>
+      a.date.localeCompare(b.date) || (a.startTime ?? "00:00").localeCompare(b.startTime ?? "00:00") || a.title.localeCompare(b.title, "nb")
+    );
   }
 
   async createEvent(
@@ -786,6 +819,12 @@ export class CalendarService {
       }))
     };
   }
+}
+
+function dateInOslo(value: Date): string {
+  const parts = new Intl.DateTimeFormat("en-CA", { timeZone: "Europe/Oslo", year: "numeric", month: "2-digit", day: "2-digit" }).formatToParts(value);
+  const part = (type: Intl.DateTimeFormatPartTypes) => parts.find(item => item.type === type)?.value ?? "";
+  return `${part("year")}-${part("month")}-${part("day")}`;
 }
 
 function formatEventDate(event: Pick<CalendarEventOccurrence, "source" | "icsSourceId">, date: Date): string {

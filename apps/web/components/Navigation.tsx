@@ -123,6 +123,10 @@ function NavIcon({ icon, className = "bottom-nav__svg" }: { icon: NavigationIcon
     );
   }
 
+  if (icon === "waste") {
+    return <svg {...commonProps}><path d="M4.5 7h15M9 4h6l1 3M6.5 7l1 13h9l1-13M10 10v6M14 10v6" /></svg>;
+  }
+
   if (icon === "settings") {
     return (
       <svg {...commonProps}>

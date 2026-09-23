@@ -17,6 +17,10 @@ import {
   revokeFamilyInvitation,
   updateFamily,
   updateFamilyMember,
+  getFamilyAddress,
+  saveFamilyAddress as saveFamilyAddressRequest,
+  searchFamilyAddresses,
+  type FamilyAddress,
   type Family,
   type FamilyInvitation,
   type FamilyMember,
@@ -25,6 +29,7 @@ import {
 
 type SheetMode =
   | { type: "family-name" }
+  | { type: "family-address" }
   | { type: "edit-member"; member: FamilyMember }
   | { type: "remove-member"; member: FamilyMember }
   | { type: "invite" }
@@ -32,7 +37,7 @@ type SheetMode =
   | null;
 
 type RoleChoice = "ADMIN" | "MEMBER" | "CHILD";
-type PendingAction = "save-family-name" | "edit-member" | "remove-member" | "send-invite" | "resend-invite" | "revoke-invite" | "approve-request" | "reject-request" | null;
+type PendingAction = "save-family-name" | "save-family-address" | "edit-member" | "remove-member" | "send-invite" | "resend-invite" | "revoke-invite" | "approve-request" | "reject-request" | null;
 
 function isAdminRole(role: FamilyMember["role"]) {
   return role === "OWNER" || role === "PARENT";
@@ -139,6 +144,36 @@ function FamilyNameSheet({ name, isPending, onCancel, onSave }: { name: string; 
       </section>
     </div>
   );
+}
+
+function FamilyAddressSheet({ familyId, current, isPending, onCancel, onSave }: { familyId: string; current: FamilyAddress | null; isPending: boolean; onCancel: () => void; onSave: (address: FamilyAddress) => void }) {
+  const [query, setQuery] = useState(current?.label ?? "");
+  const [results, setResults] = useState<FamilyAddress[]>([]);
+  const [selected, setSelected] = useState<FamilyAddress | null>(current);
+  const [state, setState] = useState<"idle" | "loading" | "empty" | "error">("idle");
+  useEffect(() => {
+    const value = query.trim();
+    if (selected?.label === value || value.length < 2) { setResults([]); setState("idle"); return; }
+    const controller = new AbortController();
+    const timer = window.setTimeout(() => {
+      setState("loading");
+      searchFamilyAddresses(familyId, value, controller.signal)
+        .then(items => { setResults(items); setState(items.length ? "idle" : "empty"); })
+        .catch(() => { if (!controller.signal.aborted) setState("error"); });
+    }, 350);
+    return () => { window.clearTimeout(timer); controller.abort(); };
+  }, [familyId, query, selected]);
+  return <div className="profile-edit-sheet" role="presentation">
+    <button className="profile-edit-sheet__backdrop" type="button" aria-label="Avbryt" onClick={onCancel} disabled={isPending} />
+    <section className="profile-edit-sheet__panel" role="dialog" aria-modal="true" aria-labelledby="family-address-title">
+      <div className="profile-edit-sheet__handle" aria-hidden="true" /><h2 id="family-address-title">Familiens adresse</h2>
+      <label className="profile-edit-sheet__field"><span>Søk etter offisiell adresse</span><input autoFocus value={query} autoComplete="street-address" onChange={event => { setQuery(event.target.value); setSelected(null); }} disabled={isPending} /></label>
+      {state === "loading" ? <p role="status">Søker …</p> : null}{state === "empty" ? <p>Ingen adresser funnet.</p> : null}{state === "error" ? <p className="profile-edit-sheet__error">Kunne ikke søke etter adresser.</p> : null}
+      {results.length ? <div className="family-address-results" role="listbox" aria-label="Adresser">{results.map(address => <button type="button" role="option" aria-selected={selected?.addressCode === address.addressCode} key={`${address.addressCode}-${address.houseNumber}-${address.houseLetter ?? ""}`} onClick={() => { setSelected(address); setQuery(address.label); setResults([]); }}>{address.label}</button>)}</div> : null}
+      {!selected && query.trim().length >= 2 && state !== "loading" ? <p className="profile-edit-sheet__error">Velg en adresse fra søkeresultatene før du lagrer.</p> : null}
+      <div className="profile-edit-sheet__actions"><button className="profile-edit-sheet__button profile-edit-sheet__button--secondary" type="button" onClick={onCancel} disabled={isPending}>Avbryt</button><button className="profile-edit-sheet__button profile-edit-sheet__button--primary" type="button" onClick={() => selected && onSave(selected)} disabled={isPending || !selected}>{isPending ? "Lagrer …" : "Lagre"}</button></div>
+    </section>
+  </div>;
 }
 
 function MemberEditSheet({ member, isPending, onCancel, onSave }: { member: FamilyMember; isPending: boolean; onCancel: () => void; onSave: (displayName: string, role: RoleChoice, includeInSchoolWeek: boolean) => void }) {
@@ -287,6 +322,7 @@ export function FamilySettingsClient() {
   const [family, setFamily] = useState<Family | null>(activeFamily?.family ?? null);
   const [members, setMembers] = useState<FamilyMember[]>([]);
   const [invitations, setInvitations] = useState<FamilyInvitation[]>([]);
+  const [address, setAddress] = useState<FamilyAddress | null>(null);
   const [sheet, setSheet] = useState<SheetMode>(null);
   const [openMemberMenu, setOpenMemberMenu] = useState<string | null>(null);
   const [openInviteMenu, setOpenInviteMenu] = useState<string | null>(null);
@@ -312,6 +348,7 @@ export function FamilySettingsClient() {
       setFamily(details.family);
       setMembers(details.members);
       setInvitations(inviteList);
+      try { setAddress((await getFamilyAddress(activeFamilyId)).address); } catch { setAddress(null); }
       setStatus("ready");
     } catch {
       setStatus("error");
@@ -345,6 +382,17 @@ export function FamilySettingsClient() {
     } finally {
       endPendingAction();
     }
+  }
+
+  async function saveFamilyAddress(value: FamilyAddress) {
+    if (!family || !beginPendingAction("save-family-address")) return;
+    try {
+      const result = await saveFamilyAddressRequest(family.id, value);
+      setAddress(result.address);
+      setSheet(null);
+      setMessage(result.wasteCollection.status === "unavailable" ? "Adressen er lagret. Renovasjon kunne ikke synkroniseres akkurat nå, men prøves igjen automatisk." : "Adressen er lagret og renovasjon er konfigurert.");
+    } catch { setMessage("Kunne ikke lagre adressen. Prøv igjen."); }
+    finally { endPendingAction(); }
   }
 
   async function saveMember(member: FamilyMember, displayName: string, role: RoleChoice, includeInSchoolWeek: boolean) {
@@ -479,6 +527,11 @@ export function FamilySettingsClient() {
             <span className="family-settings-row__value">{family.name}</span>
             {isAdmin ? <Pencil aria-hidden="true" /> : null}
           </button>
+          <button className="family-settings-row" type="button" onClick={() => isAdmin && setSheet({ type: "family-address" })} disabled={!isAdmin || Boolean(pendingAction)}>
+            <span className="family-settings-row__label">Familiens adresse</span>
+            <span className="family-settings-row__value">{address ? <>{address.streetName} {address.houseNumber}{address.houseLetter}<br />{address.postalCode} {address.postalPlace}<small>Brukes blant annet til renovasjonsintegrasjonen.</small></> : <>Ikke lagt til<small>Brukes blant annet til renovasjonsintegrasjonen.</small></>}</span>
+            {isAdmin ? <Pencil aria-hidden="true" /> : null}
+          </button>
           <div className="family-settings-row">
             <span className="family-settings-row__label">Familienøkkel / familiekode</span>
             <span className="family-settings-row__value">{getFamilyCode(family)}</span>
@@ -565,6 +618,7 @@ export function FamilySettingsClient() {
       ) : null}
 
       {sheet?.type === "family-name" ? <FamilyNameSheet name={family.name} isPending={pendingAction === "save-family-name"} onCancel={() => setSheet(null)} onSave={saveFamilyName} /> : null}
+      {sheet?.type === "family-address" ? <FamilyAddressSheet familyId={family.id} current={address} isPending={pendingAction === "save-family-address"} onCancel={() => setSheet(null)} onSave={saveFamilyAddress} /> : null}
       {sheet?.type === "edit-member" ? <MemberEditSheet member={sheet.member} isPending={pendingAction === "edit-member"} onCancel={() => setSheet(null)} onSave={(displayName, role, includeInSchoolWeek) => void saveMember(sheet.member, displayName, role, includeInSchoolWeek)} /> : null}
       {sheet?.type === "remove-member" ? <RemoveSheet member={sheet.member} isSelf={sheet.member.id === currentMembership?.id} isPending={pendingAction === "remove-member"} onCancel={() => setSheet(null)} onRemove={() => void removeMember(sheet.member)} /> : null}
       {sheet?.type === "invite" ? <InviteSheet isPending={pendingAction === "send-invite"} onCancel={() => setSheet(null)} onSend={(email, role) => void sendInvite(email, role)} /> : null}
