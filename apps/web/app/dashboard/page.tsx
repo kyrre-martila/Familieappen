@@ -16,6 +16,7 @@ import { CalendarReminderSummaryChip } from "../../features/calendar/components/
 import { CalendarSchoolWeekChip } from "../../features/calendar/components/CalendarSchoolWeekChip";
 import { CalendarTaskChip } from "../../features/calendar/components/CalendarTaskChip";
 import { CalendarHealthPlanChip } from "../../features/calendar/components/CalendarHealthPlanChip";
+import { CalendarWasteChip } from "../../features/calendar/components/CalendarWasteChip";
 import { healthPlanOccurrenceSummary, healthPlanOccurrencesForCalendarDate } from "../../features/health-plan/occurrence-summary";
 import { CalendarProvider, useCalendar } from "../../features/calendar/hooks/useCalendar";
 import { getShoppingList, getTasks, type ShoppingList, type Task } from "../../lib/api";
@@ -273,7 +274,7 @@ function HomeTodayChips({
       {schoolWeekItems.map((item) => (
         <CalendarSchoolWeekChip item={item} key={item.id} />
       ))}
-      {wasteEvents.map(event => <Link className="calendar-chip" href="/waste-collection" key={event.id}><span aria-hidden="true">♻️</span><span>{event.title}</span></Link>)}
+      {wasteEvents.map(event => <CalendarWasteChip event={event} key={event.id} />)}
       {hasShoppingChip ? (
         <Link className="calendar-chip home-shopping-chip" href="/shopping">
           <span aria-hidden="true">🛒</span>
