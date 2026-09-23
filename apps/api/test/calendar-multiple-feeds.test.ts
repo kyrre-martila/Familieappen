@@ -29,7 +29,7 @@ const db: any = {
     findFirst: async ({ where }: any) => includeSelected(feeds.find(feed => (where.id === undefined || feed.id === where.id) && feed.familyId === where.familyId)),
     findUnique: async ({ where }: any) => includeSelected(feeds.find(feed => feed.token === where.token)),
     create: async ({ data }: any) => {
-      const feed = { id: `feed-${++sequence}`, name: data.name, familyId: data.familyId, token: data.token, enabled: data.enabled ?? false, includeEvents: data.includeEvents ?? true, includeMeals: data.includeMeals ?? true, includeReminders: data.includeReminders ?? true, includeSchoolWeekReminders: data.includeSchoolWeekReminders ?? true, scope: data.scope ?? "family", selectedFamilyMemberId: null, createdByFamilyMemberId: data.createdByFamilyMemberId ?? null, mineFamilyMemberId: data.mineFamilyMemberId ?? null, selectedMembers: (data.selectedMembers?.create ?? []).map(({ familyMemberId }: any) => ({ familyMemberId })), createdAt: now, updatedAt: now };
+      const feed = { id: `feed-${++sequence}`, name: data.name, familyId: data.familyId, token: data.token, enabled: data.enabled ?? false, includeEvents: data.includeEvents ?? true, includeMeals: data.includeMeals ?? true, includeReminders: data.includeReminders ?? true, includeSchoolWeekReminders: data.includeSchoolWeekReminders ?? true, includeWasteCollection: data.includeWasteCollection ?? false, scope: data.scope ?? "family", selectedFamilyMemberId: null, createdByFamilyMemberId: data.createdByFamilyMemberId ?? null, mineFamilyMemberId: data.mineFamilyMemberId ?? null, selectedMembers: (data.selectedMembers?.create ?? []).map(({ familyMemberId }: any) => ({ familyMemberId })), createdAt: now, updatedAt: now };
       feeds.push(feed); return includeSelected(feed);
     },
     update: async ({ where, data }: any) => {
@@ -47,7 +47,12 @@ const authorization: any = {
   requireFamilyMember: async (userId: string, familyId: string) => { if (!members.some(member => member.userId === userId && member.familyId === familyId)) throw new Error("forbidden"); },
   requireFamilyRole: async (userId: string, familyId: string) => authorization.requireFamilyMember(userId, familyId)
 };
-const service = new CalendarIcsFeedService({ client: db } as any, authorization);
+const wasteEvents = [
+  { id: "waste-paper", provider: "test-provider", providerFractionId: "paper", collectionDate: "2026-09-23", allDay: true as const, name: "Papir og papp", icon: null, standardFractionId: null, standardFractionIcon: null },
+  { id: "waste-food", provider: "test-provider", providerFractionId: "food", collectionDate: "2026-09-23", allDay: true as const, name: "Matavfall", icon: null, standardFractionId: null, standardFractionIcon: null }
+];
+const wasteCollection: any = { listCachedEvents: async () => wasteEvents };
+const service = new CalendarIcsFeedService({ client: db } as any, authorization, wasteCollection);
 const tokenFromUrl = (url: string) => url.match(/\/([^/]+)\.ics$/)?.[1] as string;
 const create = (userId: string, input: any) => service.createFeed(userId, "family-1", { name: input.name, includeReminders: false, includeSchoolWeekReminders: false, ...input });
 
@@ -58,6 +63,23 @@ async function run() {
   assert.equal((await service.listFeeds("user-1", "family-1")).length, 2, "multiple feeds can coexist");
   const mealsIcs = await service.renderFeed(tokenFromUrl(mealsOnly.privateUrl));
   assert.match(mealsIcs, /SUMMARY:Middag: Taco/); assert.doesNotMatch(mealsIcs, /SUMMARY:Barn 1/);
+
+  const wasteDisabled = await create("user-1", { name: "Uten renovasjon", includeWasteCollection: false });
+  assert.equal(wasteDisabled.includeWasteCollection, false);
+  assert.doesNotMatch(await service.renderFeed(tokenFromUrl(wasteDisabled.privateUrl)), /Renovasjon:/);
+  const wasteOnly = await create("user-1", { name: "Renovasjon", includeEvents: false, includeMeals: false, includeWasteCollection: true });
+  assert.equal(wasteOnly.includeWasteCollection, true);
+  const wasteIcs = await service.renderFeed(tokenFromUrl(wasteOnly.privateUrl));
+  assert.match(wasteIcs, /SUMMARY:Renovasjon: Papir og papp/);
+  assert.match(wasteIcs, /SUMMARY:Renovasjon: Matavfall/);
+  assert.equal((wasteIcs.match(/DTSTART;VALUE=DATE:20260923/g) ?? []).length, 2, "fractions remain separate all-day events");
+  assert.equal((wasteIcs.match(/DTEND;VALUE=DATE:20260924/g) ?? []).length, 2, "exclusive end uses local calendar arithmetic");
+  assert.doesNotMatch(wasteIcs, /DTSTART[^\r\n]*20260923T|DTSTART[^\r\n]*Z/, "waste dates never become instants");
+  const wasteUids = wasteIcs.match(/UID:waste-[^\r\n]+/g);
+  assert.deepEqual(wasteUids, (await service.renderFeed(tokenFromUrl(wasteOnly.privateUrl))).match(/UID:waste-[^\r\n]+/g), "waste UIDs are deterministic");
+  const disabledAgain = await service.updateFeed("user-1", "family-1", wasteOnly.id, { includeWasteCollection: false, includeMeals: true });
+  assert.equal(disabledAgain.includeWasteCollection, false, "the setting survives editing");
+  assert.doesNotMatch(await service.renderFeed(tokenFromUrl(disabledAgain.privateUrl)), /Renovasjon:/);
 
   const selected = await create("user-1", { name: "Barna", scope: "selectedParticipant", selectedMemberIds: ["member-1", "member-2"] });
   const selectedIcs = await service.renderFeed(tokenFromUrl(selected.privateUrl));
@@ -110,6 +132,8 @@ async function run() {
 
   const sql = readFileSync("prisma/migrations/20260908120000_multiple_calendar_export_feeds/migration.sql", "utf8");
   assert.doesNotMatch(sql, /UPDATE "calendar_export_feeds" SET "token"/i, "migration must preserve existing tokens");
+  const wasteSql = readFileSync("prisma/migrations/20260923130000_add_waste_collection_to_calendar_feeds/migration.sql", "utf8");
+  assert.match(wasteSql, /DEFAULT false/i, "existing feeds remain opted out of the newly introduced category");
   console.log("multiple calendar feeds: ok");
 }
 void run();

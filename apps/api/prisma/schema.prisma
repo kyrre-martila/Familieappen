@@ -1036,6 +1036,7 @@ model CalendarExportFeed {
   includeMeals               Boolean  @default(true)
   includeReminders           Boolean  @default(true)
   includeSchoolWeekReminders Boolean  @default(true)
+  includeWasteCollection     Boolean  @default(false)
   scope                      String   @default("family")
   selectedFamilyMemberId     String?
   createdByFamilyMemberId    String?

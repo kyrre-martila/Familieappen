@@ -6,7 +6,7 @@ import { Badge, Button, Card, SectionHeader } from "../../../../components/ui";
 import { ApiError, listCalendarExportFeeds, type CalendarExportFeedSettings } from "../../../../lib/api";
 import { useFamilyMembers } from "../../../../features/family/hooks/useFamilyMembers";
 
-const contents = (f: CalendarExportFeedSettings) => [f.includeEvents&&"Kalender",f.includeMeals&&"Middager",f.includeReminders&&"Husk",f.includeSchoolWeekReminders&&"Skoleuka"].filter(Boolean).join(" · ");
+const contents = (f: CalendarExportFeedSettings) => [f.includeEvents&&"Kalender",f.includeMeals&&"Middager",f.includeReminders&&"Husk",f.includeSchoolWeekReminders&&"Skoleuka",f.includeWasteCollection&&"Renovasjon"].filter(Boolean).join(" · ");
 export function CalendarExportSettingsClient() {
  const {family,familyMembers}=useFamilyMembers(); const [feeds,setFeeds]=useState<CalendarExportFeedSettings[]>([]); const [error,setError]=useState<string|null>(null);
  const load=useCallback(async()=>{if(!family?.id)return; try{setFeeds(await listCalendarExportFeeds(family.id));setError(null)}catch(e){setError(e instanceof ApiError?e.message:"Kunne ikke hente kalenderfeedene")}},[family?.id]);

@@ -3,16 +3,17 @@ import { randomBytes } from "crypto";
 import { FamilyMemberRoleDto } from "../families/dto/family.dto";
 import { FamilyAuthorizationService } from "../families/family-authorization.service";
 import { PrismaService } from "../prisma";
+import { WasteCollectionService } from "../waste-collection/waste-collection.service";
 import { CalendarExportFeedDto, CreateCalendarExportFeedRequestDto, LegacyCalendarExportFeedDto, UpdateCalendarExportFeedRequestDto } from "./dto/calendar-ics.dto";
 
 type ExportFeedRecord = {
   id: string; familyId: string; name: string; token: string; enabled: boolean;
   includeEvents: boolean; includeMeals: boolean; includeReminders: boolean;
-  includeSchoolWeekReminders: boolean; scope: string; selectedFamilyMemberId: string | null;
+  includeSchoolWeekReminders: boolean; includeWasteCollection: boolean; scope: string; selectedFamilyMemberId: string | null;
   createdByFamilyMemberId: string | null; mineFamilyMemberId: string | null; createdAt: Date; updatedAt: Date;
   selectedMembers?: Array<{ familyMemberId: string }>;
 };
-type IcsItem = { uid: string; title: string; description: string | null; location?: string | null; startsAt: Date; endsAt?: Date | null; allDay: boolean; updatedAt: Date };
+type IcsItem = { uid: string; title: string; description: string | null; location?: string | null; startsAt?: Date; endsAt?: Date | null; localDate?: string; allDay: boolean; updatedAt: Date };
 const ADMIN_ROLES: FamilyMemberRoleDto[] = ["OWNER", "PARENT"];
 const PUBLIC_API_URL = (process.env.PUBLIC_API_URL ?? process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:4000/api").replace(/\/$/, "");
 const FEED_INCLUDE = { selectedMembers: { select: { familyMemberId: true } } };
@@ -20,7 +21,8 @@ const MAX_FEEDS_PER_FAMILY = 20;
 
 @Injectable()
 export class CalendarIcsFeedService {
-  constructor(private readonly prisma: PrismaService, private readonly familyAuthorization: FamilyAuthorizationService) {}
+  constructor(private readonly prisma: PrismaService, private readonly familyAuthorization: FamilyAuthorizationService,
+    private readonly wasteCollection: WasteCollectionService) {}
 
   async listFeeds(userId: string, familyId: string): Promise<CalendarExportFeedDto[]> {
     await this.familyAuthorization.requireFamilyMember(userId, familyId);
@@ -121,7 +123,16 @@ export class CalendarIcsFeedService {
       const reminders = await (this.prisma.client as any).schoolWeekReminder.findMany({ where: { familyId: feed.familyId, deletedAt: null, date: { not: null, gte: from, lte: to }, childFamilyMember: { role: "CHILD", includeInSchoolWeek: true } }, include: { childFamilyMember: true } }) as any[];
       items.push(...reminders.map(reminder => ({ uid: `school-week-${reminder.id}@familieappen`, title: `Skoleuka: ${reminder.title}`, description: [reminder.note, reminder.childFamilyMember?.displayName ? `Gjelder: ${reminder.childFamilyMember.displayName}` : null].filter(Boolean).join("\n") || null, startsAt: reminder.date, allDay: true, updatedAt: reminder.updatedAt })));
     }
-    return items.sort((a,b) => a.startsAt.getTime()-b.startsAt.getTime() || a.title.localeCompare(b.title,"nb"));
+    if (feed.includeWasteCollection) {
+      const fromDate = `${from.getUTCFullYear()}-01-01`;
+      const toDate = `${to.getUTCFullYear()}-12-31`;
+      const events = await this.wasteCollection.listCachedEvents(feed.familyId, fromDate, toDate);
+      items.push(...events.map(event => ({
+        uid: `waste-${event.id}@familieappen`, title: `Renovasjon: ${event.name}`, description: null,
+        localDate: event.collectionDate, allDay: true, updatedAt: feed.updatedAt
+      })));
+    }
+    return items.sort((a,b) => itemSortKey(a).localeCompare(itemSortKey(b)) || a.title.localeCompare(b.title,"nb"));
   }
 
   private async requireFeed(familyId: string, feedId: string): Promise<ExportFeedRecord> {
@@ -139,11 +150,11 @@ export class CalendarIcsFeedService {
   private async validateInput(familyId: string, input: UpdateCalendarExportFeedRequestDto, creating: boolean): Promise<Record<string, any>> {
     const data: Record<string, any> = {};
     if (input.name !== undefined || creating) data.name = validateName(input.name);
-    for (const [key,label] of [["enabled","Enabled"],["includeEvents","Include events"],["includeMeals","Include meals"],["includeReminders","Include reminders"],["includeSchoolWeekReminders","Include school week reminders"]] as const) if (input[key] !== undefined) data[key] = validateBoolean(input[key],label);
+    for (const [key,label] of [["enabled","Enabled"],["includeEvents","Include events"],["includeMeals","Include meals"],["includeReminders","Include reminders"],["includeSchoolWeekReminders","Include school week reminders"],["includeWasteCollection","Include waste collection"]] as const) if (input[key] !== undefined) data[key] = validateBoolean(input[key],label);
     if (input.scope !== undefined) data.scope = validateScope(input.scope);
     if (input.selectedMemberIds !== undefined) data.selectedMemberIds = await this.validateMemberIds(familyId,input.selectedMemberIds);
     if (input.selectedMemberIds === undefined && input.selectedFamilyMemberId !== undefined) data.selectedMemberIds = await this.validateMemberIds(familyId, input.selectedFamilyMemberId ? [input.selectedFamilyMemberId] : []);
-    if (creating) { data.includeEvents ??= true; data.includeMeals ??= true; data.includeReminders ??= true; data.includeSchoolWeekReminders ??= true; data.scope ??= "family"; data.selectedMemberIds ??= []; validateConfiguration(data); }
+    if (creating) { data.includeEvents ??= true; data.includeMeals ??= true; data.includeReminders ??= true; data.includeSchoolWeekReminders ??= true; data.includeWasteCollection ??= true; data.scope ??= "family"; data.selectedMemberIds ??= []; validateConfiguration(data); }
     return data;
   }
   private async validateMemberIds(familyId: string, value: unknown): Promise<string[]> {
@@ -154,11 +165,11 @@ export class CalendarIcsFeedService {
   }
 }
 function createFeedToken() { return randomBytes(32).toString("base64url"); }
-function toFeedDto(feed: ExportFeedRecord): CalendarExportFeedDto { return { id: feed.id, familyId: feed.familyId, name: feed.name, enabled: feed.enabled, privateUrl: `${PUBLIC_API_URL}/calendar/feed/${feed.token}.ics`, includeEvents: feed.includeEvents, includeMeals: feed.includeMeals, includeReminders: feed.includeReminders, includeSchoolWeekReminders: feed.includeSchoolWeekReminders, scope: feed.scope as any, selectedMemberIds: feed.selectedMembers?.map(row => row.familyMemberId) ?? (feed.selectedFamilyMemberId ? [feed.selectedFamilyMemberId] : []), mineFamilyMemberId: feed.mineFamilyMemberId, createdAt: feed.createdAt.toISOString(), updatedAt: feed.updatedAt.toISOString() }; }
+function toFeedDto(feed: ExportFeedRecord): CalendarExportFeedDto { return { id: feed.id, familyId: feed.familyId, name: feed.name, enabled: feed.enabled, privateUrl: `${PUBLIC_API_URL}/calendar/feed/${feed.token}.ics`, includeEvents: feed.includeEvents, includeMeals: feed.includeMeals, includeReminders: feed.includeReminders, includeSchoolWeekReminders: feed.includeSchoolWeekReminders, includeWasteCollection: feed.includeWasteCollection, scope: feed.scope as any, selectedMemberIds: feed.selectedMembers?.map(row => row.familyMemberId) ?? (feed.selectedFamilyMemberId ? [feed.selectedFamilyMemberId] : []), mineFamilyMemberId: feed.mineFamilyMemberId, createdAt: feed.createdAt.toISOString(), updatedAt: feed.updatedAt.toISOString() }; }
 function toLegacyFeedDto(feed: ExportFeedRecord): LegacyCalendarExportFeedDto { return toLegacyDto(toFeedDto(feed)); }
 function toLegacyDto(current: CalendarExportFeedDto): LegacyCalendarExportFeedDto { const { selectedMemberIds, mineFamilyMemberId: _mineFamilyMemberId, ...legacy } = current; return { ...legacy, selectedFamilyMemberId: selectedMemberIds[0] ?? null }; }
 function validateName(value: unknown) { if (typeof value !== "string" || !value.trim()) throw new BadRequestException("Calendar feed name is required"); const name=value.trim(); if(name.length>80) throw new BadRequestException("Calendar feed name must be 80 characters or fewer"); return name; }
-function validateConfiguration(feed: any) { if(!feed.includeEvents&&!feed.includeMeals&&!feed.includeReminders&&!feed.includeSchoolWeekReminders) throw new BadRequestException("Select at least one content category"); if(feed.scope==="selectedParticipant" && !feed.selectedMemberIds?.length) throw new BadRequestException("Select at least one family member"); }
+function validateConfiguration(feed: any) { if(!feed.includeEvents&&!feed.includeMeals&&!feed.includeReminders&&!feed.includeSchoolWeekReminders&&!feed.includeWasteCollection) throw new BadRequestException("Select at least one content category"); if(feed.scope==="selectedParticipant" && !feed.selectedMemberIds?.length) throw new BadRequestException("Select at least one family member"); }
 function validateBoolean(value: unknown,label:string) { if(typeof value!=="boolean") throw new BadRequestException(`${label} must be boolean`); return value; }
 function validateScope(value:unknown) { if(value!=="family"&&value!=="mine"&&value!=="selectedParticipant") throw new BadRequestException("Calendar feed scope is invalid"); return value; }
 
@@ -191,10 +202,15 @@ function renderEvent(familyId: string, item: IcsItem): string[] {
   ];
 
   if (item.allDay) {
-    lines.push(`DTSTART;VALUE=DATE:${formatDate(item.startsAt)}`);
-    lines.push(`DTEND;VALUE=DATE:${formatDate(addUtcDays(item.endsAt ?? item.startsAt, item.endsAt ? 0 : 1))}`);
+    if (item.localDate) {
+      lines.push(`DTSTART;VALUE=DATE:${formatLocalDate(item.localDate)}`);
+      lines.push(`DTEND;VALUE=DATE:${formatLocalDate(nextLocalDate(item.localDate))}`);
+    } else {
+      lines.push(`DTSTART;VALUE=DATE:${formatDate(item.startsAt!)}`);
+      lines.push(`DTEND;VALUE=DATE:${formatDate(addUtcDays(item.endsAt ?? item.startsAt!, item.endsAt ? 0 : 1))}`);
+    }
   } else {
-    lines.push(`DTSTART:${formatDateTime(item.startsAt)}`);
+    lines.push(`DTSTART:${formatDateTime(item.startsAt!)}`);
     if (item.endsAt) lines.push(`DTEND:${formatDateTime(item.endsAt)}`);
   }
 
@@ -203,6 +219,18 @@ function renderEvent(familyId: string, item: IcsItem): string[] {
   lines.push(`CATEGORIES:${escapeIcsText(`FamilieAppen ${familyId}`)}`);
   lines.push("END:VEVENT");
   return lines;
+}
+
+function itemSortKey(item: IcsItem): string { return item.localDate ?? item.startsAt!.toISOString(); }
+function formatLocalDate(value: string): string { return value.replaceAll("-", ""); }
+function nextLocalDate(value: string): string {
+  let [year, month, day] = value.split("-").map(Number);
+  const leap = year % 4 === 0 && (year % 100 !== 0 || year % 400 === 0);
+  const daysInMonth = [31, leap ? 29 : 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31];
+  day += 1;
+  if (day > daysInMonth[month - 1]) { day = 1; month += 1; }
+  if (month > 12) { month = 1; year += 1; }
+  return `${year}-${String(month).padStart(2, "0")}-${String(day).padStart(2, "0")}`;
 }
 
 function withParticipants(text: string | null, audience: Array<any>): string | null {
